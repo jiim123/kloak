@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import {
   Folder,
+  FolderPlus,
   Plus,
   Settings,
   Home,
@@ -14,6 +15,7 @@ import {
   CheckCheck,
   BellOff,
   Bell,
+  GripVertical,
 } from "lucide-react";
 import { evaluatePermission } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
@@ -363,25 +365,25 @@ const HorizontalFolderItem = ({
                   </ContextMenuTrigger>
                   <ContextMenuContent>
                     <ContextMenuItem onSelect={() => onMarkAsRead(channelIds)}>
-                      <CheckCheck className="w-4 h-4 mr-2" />
+                      <CheckCheck className="w-4 h-4" />
                       Mark as Read
                     </ContextMenuItem>
                     <ContextMenuItem onSelect={() => onToggleMute(server.id)}>
                       {server.is_muted ? (
                         <>
-                          <Bell className="w-4 h-4 mr-2" />
+                          <Bell className="w-4 h-4" />
                           Unmute Server
                         </>
                       ) : (
                         <>
-                          <BellOff className="w-4 h-4 mr-2" />
+                          <BellOff className="w-4 h-4" />
                           Mute Server
                         </>
                       )}
                     </ContextMenuItem>
                     {canManageServer && (
                       <ContextMenuItem onSelect={() => onOpenSettings(server)}>
-                        <Settings className="w-4 h-4 mr-2" />
+                        <Settings className="w-4 h-4" />
                         Server Settings
                       </ContextMenuItem>
                     )}
@@ -394,7 +396,7 @@ const HorizontalFolderItem = ({
                         }}
                         className="text-destructive focus:text-destructive"
                       >
-                        <LogOut className="w-4 h-4 mr-2" />
+                        <LogOut className="w-4 h-4" />
                         Leave Server
                       </ContextMenuItem>
                     )}
@@ -406,18 +408,18 @@ const HorizontalFolderItem = ({
         </Popover>
       </ContextMenuTrigger>
 
-      <ContextMenuContent className="w-52 rounded-xl border-border/50 p-1.5">
+      <ContextMenuContent className="w-52">
         <ContextMenuItem onSelect={() => onRename(folder.id)}>
-          <Edit2 className="w-4 h-4 mr-2" />
+          <Edit2 className="w-4 h-4" />
           Rename folder
         </ContextMenuItem>
         <ContextMenuItem onSelect={() => onChangeColor(folder.id)}>
-          <Palette className="w-4 h-4 mr-2" />
+          <Palette className="w-4 h-4" />
           Change color
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem onSelect={() => onDelete(folder.id)} className="text-destructive focus:text-destructive">
-          <Trash2 className="w-4 h-4 mr-2" />
+          <Trash2 className="w-4 h-4" />
           Delete folder
         </ContextMenuItem>
       </ContextMenuContent>
@@ -582,25 +584,25 @@ const HorizontalSortableServerItem = forwardRef<
         </ContextMenuTrigger>
         <ContextMenuContent>
           <ContextMenuItem onSelect={() => onMarkAsRead?.()}>
-            <CheckCheck className="w-4 h-4 mr-2" />
+            <CheckCheck className="w-4 h-4" />
             Mark as Read
           </ContextMenuItem>
           <ContextMenuItem onSelect={() => onToggleMute?.()}>
             {server.is_muted ? (
               <>
-                <Bell className="w-4 h-4 mr-2" />
+                <Bell className="w-4 h-4" />
                 Unmute Server
               </>
             ) : (
               <>
-                <BellOff className="w-4 h-4 mr-2" />
+                <BellOff className="w-4 h-4" />
                 Mute Server
               </>
             )}
           </ContextMenuItem>
           {canManageServer && onOpenSettings && (
             <ContextMenuItem onSelect={() => onOpenSettings()}>
-              <Settings className="w-4 h-4 mr-2" />
+              <Settings className="w-4 h-4" />
               Server Settings
             </ContextMenuItem>
           )}
@@ -613,7 +615,7 @@ const HorizontalSortableServerItem = forwardRef<
               }}
               className="text-destructive focus:text-destructive"
             >
-              <LogOut className="w-4 h-4 mr-2" />
+              <LogOut className="w-4 h-4" />
               Leave Server
             </ContextMenuItem>
           )}
@@ -1358,9 +1360,13 @@ export const HorizontalServerSidebar = () => {
             </div>
           </ContextMenuTrigger>
           <ContextMenuContent>
-            <ContextMenuItem onSelect={() => setIsCreateFolderOpen(true)}>Create folder…</ContextMenuItem>
+            <ContextMenuItem onSelect={() => setIsCreateFolderOpen(true)}>
+              <FolderPlus className="w-4 h-4" />
+              Create folder…
+            </ContextMenuItem>
             <ContextMenuSeparator />
             <ContextMenuItem disabled className="text-muted-foreground">
+              <GripVertical className="w-4 h-4" />
               Drag servers onto a folder to organize
             </ContextMenuItem>
           </ContextMenuContent>

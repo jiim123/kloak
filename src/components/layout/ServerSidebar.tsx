@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, forwardRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Folder, Plus, Settings, Home, Mail, Columns3, ChevronDown, ChevronRight, Trash2, Edit2, Palette, LogOut, CheckCheck, BellOff, Bell } from "lucide-react";
+import { Folder, FolderPlus, Plus, Settings, Home, Mail, Columns3, ChevronDown, ChevronRight, Trash2, Edit2, Palette, LogOut, CheckCheck, BellOff, Bell, GripVertical } from "lucide-react";
 import { evaluatePermission } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -218,14 +218,14 @@ const FolderItem = ({
         </TooltipContent>
       </Tooltip>
 
-      <ContextMenuContent className="w-52 rounded-xl border-border/50 p-1.5">
+      <ContextMenuContent className="w-52">
         <ContextMenuItem
           onSelect={(e) => {
             e.preventDefault();
             onRename(folder.id);
           }}
         >
-          <Edit2 className="w-4 h-4 mr-2" />
+          <Edit2 className="w-4 h-4" />
           Rename folder
         </ContextMenuItem>
         <ContextMenuItem
@@ -234,7 +234,7 @@ const FolderItem = ({
             onChangeColor(folder.id);
           }}
         >
-          <Palette className="w-4 h-4 mr-2" />
+          <Palette className="w-4 h-4" />
           Change color
         </ContextMenuItem>
         <ContextMenuSeparator />
@@ -245,7 +245,7 @@ const FolderItem = ({
           }}
           className="text-destructive focus:text-destructive"
         >
-          <Trash2 className="w-4 h-4 mr-2" />
+          <Trash2 className="w-4 h-4" />
           Delete folder
         </ContextMenuItem>
       </ContextMenuContent>
@@ -403,7 +403,7 @@ const DraggableServerItem = forwardRef<
               onMarkAsRead?.();
             }}
           >
-            <CheckCheck className="w-4 h-4 mr-2" />
+            <CheckCheck className="w-4 h-4" />
             Mark as Read
           </ContextMenuItem>
           <ContextMenuItem
@@ -414,12 +414,12 @@ const DraggableServerItem = forwardRef<
           >
             {server.is_muted ? (
               <>
-                <Bell className="w-4 h-4 mr-2" />
+                <Bell className="w-4 h-4" />
                 Unmute Server
               </>
             ) : (
               <>
-                <BellOff className="w-4 h-4 mr-2" />
+                <BellOff className="w-4 h-4" />
                 Mute Server
               </>
             )}
@@ -431,7 +431,7 @@ const DraggableServerItem = forwardRef<
                 onOpenSettings();
               }}
             >
-              <Settings className="w-4 h-4 mr-2" />
+              <Settings className="w-4 h-4" />
               Server Settings
             </ContextMenuItem>
           )}
@@ -445,7 +445,7 @@ const DraggableServerItem = forwardRef<
               }}
               className="text-destructive focus:text-destructive"
             >
-              <LogOut className="w-4 h-4 mr-2" />
+              <LogOut className="w-4 h-4" />
               Leave Server
             </ContextMenuItem>
           )}
@@ -1098,10 +1098,12 @@ export const ServerSidebar = () => {
                 setNewFolderName("");
               }}
             >
+              <FolderPlus className="w-4 h-4" />
               Create folder…
             </ContextMenuItem>
             <ContextMenuSeparator />
             <ContextMenuItem disabled className="text-muted-foreground">
+              <GripVertical className="w-4 h-4" />
               Drag servers onto a folder to organize
             </ContextMenuItem>
           </ContextMenuContent>

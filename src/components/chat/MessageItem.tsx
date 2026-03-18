@@ -1052,11 +1052,11 @@ export const MessageItem = memo(function MessageItem({
                                 freezeGifUntilHover
                               />
                             </ContextMenuTrigger>
-                            <ContextMenuContent className="w-48 rounded-xl border-border/50 p-1.5 z-[60]">
+                            <ContextMenuContent className="w-48 z-[60]">
                               {canKickUser && (
                                 <ContextMenuItem
                                   onClick={handleKickUser}
-                                  className="rounded-lg gap-3 text-orange-400 focus:text-orange-400"
+                                  className="text-orange-400 focus:text-orange-400"
                                 >
                                   <UserX className="w-4 h-4" />
                                   Kick {displayName}
@@ -1065,7 +1065,7 @@ export const MessageItem = memo(function MessageItem({
                               {canBanUser && (
                                 <ContextMenuItem
                                   onClick={handleBanUser}
-                                  className="rounded-lg gap-3 text-destructive focus:text-destructive"
+                                  className="text-destructive focus:text-destructive"
                                 >
                                   <Ban className="w-4 h-4" />
                                   Ban {displayName}
@@ -1608,19 +1608,19 @@ export const MessageItem = memo(function MessageItem({
           <ContextMenuContent>
             {!isBlockedUser && (
               <ContextMenuItem onClick={() => setReplyingTo(message)}>
-                <Reply className="w-4 h-4 mr-2" />
+                <Reply className="w-4 h-4" />
                 Reply
               </ContextMenuItem>
             )}
             <ContextMenuItem onClick={handleCopyText}>
-              <Copy className="w-4 h-4 mr-2" />
+              <Copy className="w-4 h-4" />
               Copy Text
             </ContextMenuItem>
             {isOwnMessage && (
               <>
                 <ContextMenuSeparator />
                 <ContextMenuItem onClick={handleStartEditing}>
-                  <Pencil className="w-4 h-4 mr-2" />
+                  <Pencil className="w-4 h-4" />
                   Edit Message
                 </ContextMenuItem>
               </>
@@ -1629,7 +1629,7 @@ export const MessageItem = memo(function MessageItem({
               <>
                 <ContextMenuSeparator />
                 <ContextMenuItem onClick={handlePin}>
-                  <Pin className="w-4 h-4 mr-2" />
+                  <Pin className="w-4 h-4" />
                   {message.is_pinned ? "Unpin Message" : "Pin Message"}
                 </ContextMenuItem>
               </>
@@ -1638,7 +1638,7 @@ export const MessageItem = memo(function MessageItem({
               <>
                 <ContextMenuSeparator />
                 <ContextMenuItem onClick={handleRemoveEmbed}>
-                  <EyeOff className="w-4 h-4 mr-2" />
+                  <EyeOff className="w-4 h-4" />
                   Remove Embed
                 </ContextMenuItem>
               </>
@@ -1650,7 +1650,7 @@ export const MessageItem = memo(function MessageItem({
                   onClick={() => setShowDeleteModal(true)}
                   className="text-destructive focus:text-destructive"
                 >
-                  <Trash2 className="w-4 h-4 mr-2" />
+                  <Trash2 className="w-4 h-4" />
                   Delete Message
                 </ContextMenuItem>
               </>
