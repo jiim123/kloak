@@ -9,7 +9,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { useDMStore } from "@/stores/dmStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { useRealtimeMembers } from "@/hooks/useRealtimeMembers";
 import { canModerateByRoles } from "@/lib/permissions";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
