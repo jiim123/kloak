@@ -28,6 +28,7 @@ import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { BotTag } from "@/components/ui/bot-tag";
 import { RoleIconPreview } from "@/components/ui/role-icon-preview";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 import type { ServerMember, CustomServerRole, UserStatus } from "@/types";
 import { getEffectivePresence } from "@/lib/presence";
 import { hasRecentRealtimePresence } from "@/hooks/useRealtimeUsers";
