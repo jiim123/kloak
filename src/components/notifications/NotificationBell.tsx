@@ -404,8 +404,9 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
                                         className="font-medium text-foreground hover:underline cursor-pointer"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          if (request?.requester_id) {
-                                            openUserProfileModal(openModal, request.requester_id);
+                                          if (request?.id) {
+                                            const { openModal: open } = useUIStore.getState();
+                                            openUserProfileModal(open, request.id);
                                           }
                                         }}
                                       >
