@@ -25,7 +25,7 @@ const DropdownMenuSubTrigger = React.forwardRef<
   <DropdownMenuPrimitive.SubTrigger
     ref={ref}
     className={cn(
-      "flex cursor-default select-none items-center gap-3 rounded-lg px-3 py-2 text-sm outline-none hover:bg-accent/30 focus:bg-accent/40 data-[state=open]:bg-accent/40",
+      "flex cursor-default select-none items-center gap-3 rounded-lg px-3 py-2 text-sm outline-none hover:bg-white/[0.04] focus:bg-white/[0.06] data-[state=open]:bg-white/[0.06]",
       inset && "pl-8",
       className,
     )}
@@ -79,7 +79,7 @@ const DropdownMenuItem = React.forwardRef<
   <DropdownMenuPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center gap-3 rounded-lg px-3 py-2 text-sm outline-none transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-50 hover:bg-accent/30 focus:bg-accent/40",
+      "relative flex cursor-default select-none items-center gap-3 rounded-lg px-3 py-2 text-sm outline-none transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-50 hover:bg-white/[0.04] focus:bg-white/[0.06]",
       inset && "pl-8",
       className,
     )}
@@ -95,7 +95,7 @@ const DropdownMenuCheckboxItem = React.forwardRef<
   <DropdownMenuPrimitive.CheckboxItem
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center rounded-lg py-2 pl-9 pr-3 text-sm outline-none transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-50 hover:bg-accent/30 focus:bg-accent/40",
+      "relative flex cursor-default select-none items-center rounded-lg py-2 pl-9 pr-3 text-sm outline-none transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-50 hover:bg-white/[0.04] focus:bg-white/[0.06]",
       className,
     )}
     checked={checked}
@@ -118,7 +118,7 @@ const DropdownMenuRadioItem = React.forwardRef<
   <DropdownMenuPrimitive.RadioItem
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center rounded-lg py-2 pl-9 pr-3 text-sm outline-none transition-colors text-popover-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 hover:bg-accent/30 focus:bg-accent/40",
+      "relative flex cursor-default select-none items-center rounded-lg py-2 pl-9 pr-3 text-sm outline-none transition-colors text-popover-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 hover:bg-white/[0.04] focus:bg-white/[0.06]",
       className,
     )}
     {...props}
