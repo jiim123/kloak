@@ -132,18 +132,13 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     setDmPrivacy,
   } = useUIStore();
   const { playTestSound } = useNotificationSound();
-  const { user, updateUser, logout, resetSecretKey } = useAuthStore();
+  const { user, updateUser, logout } = useAuthStore();
   const { blockedUsers, unblockUser, fetchFriends, isLoading: isFriendsLoading } = useFriendStore();
 
   const [activeTab, setActiveTab] = useState("account");
   const [isLoading, setIsLoading] = useState(false);
   const [showSecretKey, _setShowSecretKey] = useState(false);
   const [showKeyConfirm, setShowKeyConfirm] = useState(false);
-  const [showResetKeyConfirm, setShowResetKeyConfirm] = useState(false);
-  const [newSecretKey, setNewSecretKey] = useState<string | null>(null);
-  const [showNewKeyModal, setShowNewKeyModal] = useState(false);
-  const [isResettingKey, setIsResettingKey] = useState(false);
-  const [resetCooldownEndsAt, setResetCooldownEndsAt] = useState<Date | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDeletePreview, setShowDeletePreview] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -608,60 +603,6 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           </div>
         </div>
 
-        {/* Reset Secret Key Card */}
-        <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
-              <RefreshCw className="w-5 h-5 text-amber-500" />
-            </div>
-            <div className="flex-1">
-              <h4 className="text-sm font-medium text-amber-500">Reset Secret Key</h4>
-              <p className="text-xs text-muted-foreground">Generate a new key if compromised</p>
-            </div>
-          </div>
-
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            If you believe your key has been compromised, you can generate a new one. Your old key will be invalidated
-            immediately.
-          </p>
-
-          {resetCooldownEndsAt && resetCooldownEndsAt > new Date() ? (
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-              <Clock className="w-4 h-4 text-amber-500 flex-shrink-0" />
-              <div className="text-xs">
-                <span className="text-amber-500 font-medium">Cooldown active</span>
-                <span className="text-muted-foreground ml-1">
-                  – Available{" "}
-                  {new Date(resetCooldownEndsAt).toLocaleString(undefined, {
-                    month: "short",
-                    day: "numeric",
-                    hour: "numeric",
-                    minute: "2-digit",
-                  })}
-                </span>
-              </div>
-            </div>
-          ) : (
-            <Button
-              variant="secondary"
-              onClick={() => setShowResetKeyConfirm(true)}
-              disabled={isResettingKey}
-              className="w-full h-11 rounded-xl border-amber-500/30 hover:border-amber-500/50 hover:bg-amber-500/10"
-            >
-              {isResettingKey ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <RefreshCw className="w-4 h-4 mr-2" />
-              )}
-              Reset Secret Key
-            </Button>
-          )}
-
-          <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <Clock className="w-3 h-3" />
-            24-hour cooldown between resets
-          </p>
-        </div>
       </div>
 
       {/* App Updates - Only show in Tauri */}
@@ -1611,109 +1552,6 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Reset Key Confirmation */}
-      <AlertDialog open={showResetKeyConfirm} onOpenChange={setShowResetKeyConfirm}>
-        <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md rounded-2xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-amber-500">
-              <AlertTriangle className="w-5 h-5" />
-              Reset Secret Key?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="leading-relaxed space-y-2">
-              <span className="block">
-                This will generate a new secret key and immediately invalidate your current one.
-              </span>
-              <span className="block font-medium text-foreground">
-                Make sure to save the new key - you won't be able to recover it later!
-              </span>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-            <AlertDialogCancel className="m-0 rounded-xl">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={async () => {
-                setShowResetKeyConfirm(false);
-                setIsResettingKey(true);
-                const result = await resetSecretKey();
-                setIsResettingKey(false);
-                if (result) {
-                  // Check if it's a cooldown error
-                  if ("error" in result && result.error === "cooldown") {
-                    if (result.cooldownEndsAt) {
-                      setResetCooldownEndsAt(new Date(result.cooldownEndsAt));
-                    }
-                    const hoursLeft = result.hoursRemaining ? Math.ceil(result.hoursRemaining) : 24;
-                    toast.error(`You can reset your key again in ${hoursLeft} hour${hoursLeft !== 1 ? "s" : ""}`);
-                  } else if ("newSecretKey" in result) {
-                    setNewSecretKey(result.newSecretKey);
-                    setShowNewKeyModal(true);
-                    toast.success("Secret key reset successfully!");
-                  }
-                } else {
-                  toast.error("Failed to reset secret key");
-                }
-              }}
-              className="rounded-xl bg-amber-600 text-white hover:bg-amber-700"
-            >
-              {isResettingKey ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <RefreshCw className="w-4 h-4 mr-2" />
-              )}
-              Reset Key
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* New Secret Key Display Modal */}
-      <AlertDialog
-        open={showNewKeyModal}
-        onOpenChange={(open) => {
-          if (!open) {
-            setShowNewKeyModal(false);
-            setNewSecretKey(null);
-            // Clear raw key from store memory after user confirms they saved it
-            useAuthStore.getState().setSecretKey(null);
-          }
-        }}
-      >
-        <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-lg rounded-2xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-emerald-500">
-              <Check className="w-5 h-5" />
-              New Secret Key Generated
-            </AlertDialogTitle>
-            <AlertDialogDescription className="leading-relaxed">
-              Your old key has been invalidated. Save this new key now - it will only be shown once!
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="space-y-4">
-            <div className="p-4 bg-secondary/50 rounded-xl border border-border/50">
-              <code className="text-xs font-mono break-all select-all">{newSecretKey}</code>
-            </div>
-            <Button
-              onClick={async () => {
-                if (newSecretKey) {
-                  await navigator.clipboard.writeText(newSecretKey);
-                  toast.success("New secret key copied!");
-                }
-              }}
-              className="w-full h-11 rounded-xl"
-            >
-              <Copy className="w-4 h-4 mr-2" />
-              Copy New Key
-            </Button>
-            <p className="text-xs text-destructive flex items-center gap-2">
-              <Key className="w-3 h-3" />
-              Write this down or save it securely. You cannot recover this key!
-            </p>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogAction className="w-full rounded-xl">I've Saved My Key</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Avatar Decoration Modal */}
       <AvatarDecorationModal
