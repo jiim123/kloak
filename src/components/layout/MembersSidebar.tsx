@@ -1078,12 +1078,21 @@ export const MembersSidebar = () => {
             </button>
           </div>
         ) : (
-          <>
+          <div className="flex items-center justify-between">
             <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
               <span>{onlineCount} online</span>
             </p>
-          </>
+            {isMobile && (
+              <button
+                type="button"
+                onClick={() => setMemberSidebarOpen(false)}
+                className="p-1 rounded-md hover:bg-secondary/60 transition-colors"
+              >
+                <X className="w-4 h-4 text-muted-foreground" />
+              </button>
+            )}
+          </div>
         )}
       </div>
 
