@@ -14,6 +14,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useUIStore } from "@/stores/uiStore";
 import { requestNotificationPermission } from "@/hooks/useRealtimeNotifications";
+import { openUserProfileModal } from "@/lib/userProfilePopover";
 import { cn } from "@/lib/utils";
 import type { Notification } from "@/types";
 
@@ -168,33 +169,47 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
 
   const handleNotificationClick = (notificationId: string, link: string | null, notificationType: string) => {
     markAsRead(notificationId);
-    if (link) {
-      // Parse the link to extract server, channel, and message IDs
-      const url = new URL(link, window.location.origin);
-      const serverId = url.searchParams.get("server");
-      const channelId = url.searchParams.get("channel");
-      const messageId = url.searchParams.get("message");
-      const conversationId = url.searchParams.get("conversation");
-
-      // For mentions, navigate to the proper server/channel route
-      if (notificationType === "mention" && serverId && channelId) {
-        // Clear current server state to force a fresh load
-        useServerStore.getState().clearServerState();
-
-        // Navigate with message ID for scroll-to-message
-        if (messageId) {
-          navigate(`/app/servers/${serverId}/channels/${channelId}?message=${messageId}`);
-        } else {
-          navigate(`/app/servers/${serverId}/channels/${channelId}`);
-        }
-      } else if (conversationId) {
-        // DM navigation
-        navigate(`/app?conversation=${conversationId}`);
-      } else {
-        // Fallback to the link as-is
-        navigate(link);
-      }
+    if (!link) {
+      setIsOpen(false);
+      return;
     }
+
+    const url = new URL(link, window.location.origin);
+    const serverId = url.searchParams.get("server");
+    const channelId = url.searchParams.get("channel");
+    const messageId = url.searchParams.get("message");
+    const conversationId = url.searchParams.get("conversation");
+
+    // Mention: navigate to channel with message highlight
+    if (notificationType === "mention" && serverId && channelId) {
+      const path = `/app/servers/${serverId}/channels/${channelId}`;
+      const params = messageId ? `?message=${messageId}` : '';
+      setIsOpen(false);
+      setTimeout(() => {
+        navigate(path + params);
+        if (messageId) {
+          setTimeout(() => {
+            window.dispatchEvent(
+              new CustomEvent("scrollToMessage", { detail: { messageId } })
+            );
+          }, 500);
+        }
+      }, 100);
+      return;
+    }
+
+    // DM: clear server context and navigate to conversation
+    if (conversationId) {
+      setIsOpen(false);
+      useServerStore.getState().setCurrentServer(null);
+      setTimeout(() => {
+        navigate(`/app?conversation=${conversationId}`);
+      }, 100);
+      return;
+    }
+
+    // Fallback
+    navigate(link);
     setIsOpen(false);
   };
 
@@ -376,7 +391,36 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
                         </p>
                         {notification.body && (
                           <p className="text-xs text-muted-foreground line-clamp-1 mt-1 break-all">
-                            {notification.body}
+                            {notification.type === 'friend_request' ? (
+                              (() => {
+                                const username = extractUsernameFromBody(notification.body);
+                                if (username) {
+                                  const request = pendingRequests.find(
+                                    (r) => r.username?.toLowerCase() === username.toLowerCase()
+                                  );
+                                  return (
+                                    <>
+                                      <span
+                                        className="font-medium text-foreground hover:underline cursor-pointer"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (request?.id) {
+                                            const { openModal: open } = useUIStore.getState();
+                                            openUserProfileModal(open, request.id);
+                                          }
+                                        }}
+                                      >
+                                        {username}
+                                      </span>
+                                      {' sent you a friend request'}
+                                    </>
+                                  );
+                                }
+                                return notification.body;
+                              })()
+                            ) : (
+                              notification.body
+                            )}
                           </p>
                         )}
                         <p className="text-xs text-muted-foreground/70 mt-1.5">
