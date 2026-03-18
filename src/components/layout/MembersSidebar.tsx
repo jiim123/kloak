@@ -146,24 +146,13 @@ const StatusIndicator = memo(
 
     switch (status) {
       case "online":
-        return <div className={cn("w-2.5 h-2.5 rounded-full bg-emerald-500", className)} />;
+        return <div className={cn("w-2.5 h-2.5 rounded-full bg-kloak-online", className)} />;
       case "idle":
-        return (
-          <div className={cn("w-2.5 h-2.5 rounded-full bg-amber-500 relative", className)}>
-            <div
-              className="absolute inset-[3px] bg-background rounded-full"
-              style={{ clipPath: "polygon(50% 0%, 100% 0%, 100% 100%, 50% 100%)" }}
-            />
-          </div>
-        );
+        return <div className={cn("w-2.5 h-2.5 rounded-full bg-kloak-idle", className)} />;
       case "dnd":
-        return (
-          <div className={cn("w-2.5 h-2.5 rounded-full bg-red-500 flex items-center justify-center", className)}>
-            <div className="w-1.5 h-[2px] bg-background rounded-full" />
-          </div>
-        );
+        return <div className={cn("w-2.5 h-2.5 rounded-full bg-kloak-dnd", className)} />;
       default:
-        return <div className={cn("w-2.5 h-2.5 rounded-full bg-zinc-500", className)} />;
+        return <div className={cn("w-2.5 h-2.5 rounded-full bg-kloak-offline", className)} />;
     }
   },
 );
