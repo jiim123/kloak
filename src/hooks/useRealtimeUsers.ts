@@ -320,10 +320,12 @@ export const useRealtimeUsers = () => {
         }
       }
 
-      targetIds.forEach((targetId) => {
+    targetIds.forEach((targetId) => {
+        // Skip own user — usePresence hook manages our own status
+        if (targetId === userId) return;
+
         const meta = latestByUser.get(targetId);
         if (!meta) {
-          if (targetId === userId) return;
           const absentSince = absenceStartedAtByUser.get(targetId);
           if (typeof absentSince !== 'number') {
             absenceStartedAtByUser.set(targetId, nowMs);
@@ -459,9 +461,12 @@ export const useRealtimeUsers = () => {
 
       // Patch each user's presence
       const rows = Array.isArray(data) ? (data as PresenceRow[]) : [];
+      const nowMs = Date.now();
       rows.forEach((presence) => {
         // Don't overwrite status from realtime Presence with stale DB data
-        if (hasRecentRealtimePresence(presence.id)) return;
+        if (hasRecentRealtimePresence(presence.id, nowMs)) return;
+        // Never overwrite own status from poll — usePresence manages it
+        if (presence.id === userId) return;
         patchUserAcrossStores({
           id: presence.id,
           status: toUserStatus(presence.status, 'offline'),
