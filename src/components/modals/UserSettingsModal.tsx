@@ -608,60 +608,6 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           </div>
         </div>
 
-        {/* Reset Secret Key Card */}
-        <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
-              <RefreshCw className="w-5 h-5 text-amber-500" />
-            </div>
-            <div className="flex-1">
-              <h4 className="text-sm font-medium text-amber-500">Reset Secret Key</h4>
-              <p className="text-xs text-muted-foreground">Generate a new key if compromised</p>
-            </div>
-          </div>
-
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            If you believe your key has been compromised, you can generate a new one. Your old key will be invalidated
-            immediately.
-          </p>
-
-          {resetCooldownEndsAt && resetCooldownEndsAt > new Date() ? (
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-              <Clock className="w-4 h-4 text-amber-500 flex-shrink-0" />
-              <div className="text-xs">
-                <span className="text-amber-500 font-medium">Cooldown active</span>
-                <span className="text-muted-foreground ml-1">
-                  – Available{" "}
-                  {new Date(resetCooldownEndsAt).toLocaleString(undefined, {
-                    month: "short",
-                    day: "numeric",
-                    hour: "numeric",
-                    minute: "2-digit",
-                  })}
-                </span>
-              </div>
-            </div>
-          ) : (
-            <Button
-              variant="secondary"
-              onClick={() => setShowResetKeyConfirm(true)}
-              disabled={isResettingKey}
-              className="w-full h-11 rounded-xl border-amber-500/30 hover:border-amber-500/50 hover:bg-amber-500/10"
-            >
-              {isResettingKey ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <RefreshCw className="w-4 h-4 mr-2" />
-              )}
-              Reset Secret Key
-            </Button>
-          )}
-
-          <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <Clock className="w-3 h-3" />
-            24-hour cooldown between resets
-          </p>
-        </div>
       </div>
 
       {/* App Updates - Only show in Tauri */}
