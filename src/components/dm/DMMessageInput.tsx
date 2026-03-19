@@ -256,8 +256,12 @@ export const DMMessageInput = ({ conversationId, otherUsername, replyingTo, onCa
     setPendingAttachments((prev) => prev.map((a) => ({ ...a, uploading: true })));
     const urls: string[] = [];
     for (const att of pendingAttachments) {
+      let fileToUpload = att.file;
+      if (fileToUpload.type.startsWith("image/")) {
+        fileToUpload = await compressAttachmentImage(fileToUpload);
+      }
       const timestamp = Date.now();
-      const fileExt = att.file.name.split(".").pop() || "png";
+      const fileExt = fileToUpload.name.split(".").pop() || "bin";
       const fileName = `${user.id}/${timestamp}-${crypto.randomUUID()}.${fileExt}`;
 
       const result = await secureUpload("attachments", fileName, att.file, {
