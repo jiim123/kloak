@@ -138,7 +138,7 @@ export const AudioPlayer = memo(function AudioPlayer({ src, fileName, fileSize, 
     : null;
 
   return (
-    <div className="rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm max-w-[480px] min-w-[400px] w-full p-4 space-y-3">
+    <div className="rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm max-w-[480px] min-w-0 w-full p-4 space-y-3">
       <audio ref={audioRef} src={src} preload="metadata" onError={onError} />
 
       {/* Top row: audio icon + file info */}
