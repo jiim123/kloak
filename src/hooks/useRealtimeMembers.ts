@@ -59,12 +59,6 @@ export const useRealtimeMembers = (serverId: string | null, opts?: { full?: bool
       const event = payload as { table?: string } | null;
       if (!event?.table) return;
 
-      if (event.table === 'server_members') {
-        toast({
-          title: 'Server members updated',
-          duration: 2000,
-        });
-      }
 
       if (
         event.table === 'server_members' ||
