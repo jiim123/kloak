@@ -140,7 +140,7 @@ export const VideoPlayer = memo(function VideoPlayer({ src, fileName, uploaderNa
   }, []);
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
-  const displayName = fileName || "Video";
+  const topLabel = uploaderName ? `Uploaded by ${uploaderName}` : (fileName || "Video");
 
   return (
     <div
