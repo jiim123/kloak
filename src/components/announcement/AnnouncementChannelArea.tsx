@@ -29,6 +29,7 @@ import type { Message, User, ServerMember, CustomServerRole } from "@/types";
 import { TiptapEditor } from "./TiptapEditor";
 import { AnnouncementView } from "./AnnouncementView";
 import { cn } from "@/lib/utils";
+import { encodeCustomEmojisForTransport } from "@/lib/globalEmojiResolver";
 import { getUserFromCache, getOrFetchUser } from "@/stores/userCacheStore";
 
 const ROLE_COLORS: Record<string, string> = {
@@ -491,12 +492,13 @@ export const AnnouncementChannelArea = () => {
       const fullContent = finalContent
         ? `${finalTitle}\n\n${finalContent}`
         : finalTitle;
+      const encodedFullContent = await encodeCustomEmojisForTransport(fullContent);
       
       if (!fullContent.trim()) return;
 
       setIsCreatingAnnouncement(true);
       try {
-        const message = await sendMessage(currentChannel.id, user.id, fullContent);
+        const message = await sendMessage(currentChannel.id, user.id, encodedFullContent);
         if (!message) {
           throw new Error("Failed to send announcement");
         }
@@ -600,12 +602,13 @@ export const AnnouncementChannelArea = () => {
     const fullContent = finalContent
       ? `${finalTitle}\n\n${finalContent}`
       : finalTitle;
+    const encodedFullContent = await encodeCustomEmojisForTransport(fullContent);
     
     if (!fullContent.trim()) return;
 
     setIsCreatingAnnouncement(true);
     try {
-      await editMessage(editingMessage.id, fullContent, user.id);
+      await editMessage(editingMessage.id, encodedFullContent, user.id);
       await fetchAnnouncements();
       showSuccess("Announcement updated successfully");
       handleCancelCreate();

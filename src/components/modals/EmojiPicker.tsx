@@ -10,6 +10,7 @@ import { getGlobalEmojiDuplicates } from "@/lib/globalEmojiResolver";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { EMOJI_DATA, EmojiCategory } from "@/data/emojiData";
 import { getRecentEmojis, saveRecentEmoji } from "@/lib/emojiRecents";
+import { supabase } from "@/integrations/supabase/client";
 
 interface EmojiPickerProps {
   children: React.ReactNode;
@@ -17,9 +18,19 @@ interface EmojiPickerProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   serverId?: string;
+  customEmojiFormat?: "legacy" | "inline_token";
 }
 
-export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange, serverId }: EmojiPickerProps) => {
+const INLINE_CUSTOM_EMOJI_TOKEN_REGEX = /^:ce\[([a-z0-9_]{2,12})\|([a-z0-9/_\.-]{1,300})\]:$/;
+
+export const EmojiPicker = ({
+  children,
+  onEmojiSelect,
+  open,
+  onOpenChange,
+  serverId,
+  customEmojiFormat = "legacy",
+}: EmojiPickerProps) => {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("recent");
   const [selectedServerForEmoji, setSelectedServerForEmoji] = useState<string | null>(null);
@@ -134,6 +145,14 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange, serve
   // Handle custom emoji selection — qualify with server name when duplicate
   const handleCustomEmojiSelect = useCallback(
     (emoji: ServerEmoji) => {
+      if (customEmojiFormat === "inline_token") {
+        const token = `:ce[${emoji.name}|${emoji.file_path}]:`;
+        saveRecentEmoji(token);
+        onEmojiSelect(token);
+        onOpenChange?.(false);
+        return;
+      }
+
       const duplicates = getGlobalEmojiDuplicates();
       const isDuplicate = duplicates.has(emoji.name);
 
@@ -150,7 +169,7 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange, serve
       onEmojiSelect(customEmojiString);
       onOpenChange?.(false);
     },
-    [onEmojiSelect, onOpenChange, selectedServerForEmoji, servers],
+    [customEmojiFormat, onEmojiSelect, onOpenChange, selectedServerForEmoji, servers],
   );
 
   // Reset search and set category when picker opens/closes
@@ -457,9 +476,32 @@ export const EmojiPicker = ({ children, onEmojiSelect, open, onOpenChange, serve
                         <div className="grid grid-cols-4 gap-1">
                           {cat.emojis.map((emoji, i) => {
                             // Check if this is a custom emoji (format: :name:)
-                            const isCustomEmoji = cat.key === "recent" && emoji.startsWith(":") && emoji.endsWith(":") && emoji.length > 2;
+                            const isCustomEmoji =
+                              cat.key === "recent" && emoji.startsWith(":") && emoji.endsWith(":") && emoji.length > 2;
                             
                             if (isCustomEmoji) {
+                              const inlineMatch = emoji.match(INLINE_CUSTOM_EMOJI_TOKEN_REGEX);
+                              if (inlineMatch) {
+                                const filePath = inlineMatch[2];
+                                const { data: urlData } = supabase.storage.from("server-emojis").getPublicUrl(filePath);
+                                return (
+                                  <button
+                                    key={`${cat.key}-${emoji}-${i}`}
+                                    type="button"
+                                    className="aspect-square hover:bg-muted/50 active:scale-90 rounded-lg flex items-center justify-center transition-all duration-150 p-1"
+                                    onClick={() => handleSelect(emoji)}
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    title={emoji}
+                                  >
+                                    <img
+                                      src={urlData.publicUrl}
+                                      alt={inlineMatch[1]}
+                                      className="w-9 h-9 object-contain"
+                                    />
+                                  </button>
+                                );
+                              }
+
                               // Find the custom emoji in loaded server emojis
                               const emojiName = emoji.slice(1, -1);
                               let customEmoji: ServerEmoji | undefined;

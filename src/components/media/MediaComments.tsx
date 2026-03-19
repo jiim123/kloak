@@ -26,6 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { handleError } from "@/lib/errorHandler";
 import { formatMessageTimestamp } from "@/lib/format";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
+import { encodeCustomEmojisForTransport } from "@/lib/globalEmojiResolver";
 import { getUserFromCache, getOrFetchUser } from "@/stores/userCacheStore";
 import { pickFirstNonBlank } from "@/lib/utils";
 import type { User, ReactionGroup, CustomServerRole, ServerRole } from "@/types";
@@ -657,6 +658,7 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
       if (!user || !replyContent.trim()) return;
 
       const content = replyContent.trim();
+      const encodedContent = await encodeCustomEmojisForTransport(content);
       setIsSendingReply(true);
       const replyToId = replyingToComment || null;
       
@@ -667,7 +669,7 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
         const { data, error } = await (supabase.rpc as any)('insert_media_comment', {
           _media_id: mediaId,
           _user_id: user.id,
-          _content: content,
+          _content: encodedContent,
           _reply_to_id: replyToId
         });
 
@@ -688,11 +690,12 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
     if (!editingCommentId || !editContent.trim()) return;
 
     const content = editContent.trim();
+    const encodedContent = await encodeCustomEmojisForTransport(content);
     try {
       const { error } = await (supabase.rpc as any)('edit_media_comment', {
         _comment_id: editingCommentId,
         _user_id: user?.id,
-        _content: content
+        _content: encodedContent
       });
 
       if (error) throw error;

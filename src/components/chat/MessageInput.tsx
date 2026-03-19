@@ -44,6 +44,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { showWarning, handleError } from "@/lib/errorHandler";
 import { messageRateLimiter, validateMessageContent } from "@/lib/security";
 import { canRevealGhostIdentityForUser } from "@/lib/ghostIdentity";
+import { encodeCustomEmojisForTransport } from "@/lib/globalEmojiResolver";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
@@ -484,9 +485,10 @@ export const MessageInput = ({
 
     setIsSending(true);
     const contentToSend = convertMentionsForSend(content.trim());
+    const transportReadyContent = await encodeCustomEmojisForTransport(contentToSend);
 
     try {
-      let finalContent = contentToSend;
+      let finalContent = transportReadyContent;
       const uploadedUrls: string[] = [];
 
       // Separate GIF URLs from file attachments

@@ -62,6 +62,7 @@ import { isImageOnlyMessage } from "@/lib/message";
 import { isPollMessageContent } from "@/lib/poll";
 import { MessageContent, ReplyPreview } from "@/components/chat/MessageContent";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
+import { encodeCustomEmojisForTransport } from "@/lib/globalEmojiResolver";
 import { getUserFromCache, getOrFetchUser, useMessageUser, bulkSetUsersInCache } from "@/stores/userCacheStore";
 import { cn, pickFirstNonBlank } from "@/lib/utils";
 import type { Message, User, ReactionGroup, CustomServerRole, ServerMember, ServerRole } from "@/types";
@@ -1186,9 +1187,10 @@ export const ForumChannelArea = () => {
       const attachmentUrls = await uploadPendingAttachments(createPendingAttachments);
       const contentWithAttachments = [finalContent, ...attachmentUrls].filter(Boolean).join("\n").trim();
       const fullContent = contentWithAttachments ? `${finalTitle}\n\n${contentWithAttachments}` : finalTitle;
+      const encodedFullContent = await encodeCustomEmojisForTransport(fullContent);
 
       // First, send a message with title and content
-      const message = await sendMessage(currentChannel.id, user.id, fullContent);
+      const message = await sendMessage(currentChannel.id, user.id, encodedFullContent);
       if (!message) {
         throw new Error("Failed to send message");
       }
@@ -1258,11 +1260,12 @@ export const ForumChannelArea = () => {
       try {
         const attachmentUrls = await uploadPendingAttachments(replyPendingAttachments);
         const finalContent = [content, ...attachmentUrls].filter(Boolean).join("\n").trim();
+        const encodedFinalContent = await encodeCustomEmojisForTransport(finalContent);
 
         const { data: result, error } = await supabase.rpc("send_thread_message", {
           _thread_id: threadId,
           _user_id: user.id,
-          _content: finalContent,
+          _content: encodedFinalContent,
           _reply_to_id: replyToId,
         });
 
@@ -1291,7 +1294,7 @@ export const ForumChannelArea = () => {
           const newMessage: Message = {
             id: messageData.id,
             user_id: user.id,
-            content: finalContent,
+            content: encodedFinalContent,
             reply_to_id: messageData.reply_to_id || null,
             reply_to: replyToData,
             edited_at: messageData.edited_at || null,
@@ -1495,13 +1498,14 @@ export const ForumChannelArea = () => {
       }
 
       const content = body ? `${title}\n\n${body}` : title;
+      const encodedBody = await encodeCustomEmojisForTransport(body);
       setIsSavingThreadPostEdit(true);
 
       try {
         const { data, error } = await (supabase.rpc as any)("edit_forum_thread_post", {
           _thread_id: threadId,
           _title: title,
-          _content: body,
+          _content: encodedBody,
         });
 
         if (error) {
@@ -1547,9 +1551,10 @@ export const ForumChannelArea = () => {
 
       try {
         const trimmed = editContent.trim();
+        const encodedTrimmed = await encodeCustomEmojisForTransport(trimmed);
         const { data, error } = await (supabase.rpc as any)("edit_thread_message", {
           _message_id: messageId,
-          _content: trimmed,
+          _content: encodedTrimmed,
         });
 
         if (error) throw error;

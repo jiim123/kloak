@@ -4124,6 +4124,15 @@ export type Database = {
       }
       request_client_identifier: { Args: never; Returns: string }
       requesting_user_id: { Args: never; Returns: string }
+      resolve_custom_emojis_for_render: {
+        Args: { _names?: string[]; _qualified?: string[] }
+        Returns: {
+          emoji_name: string
+          file_path: string
+          lookup_key: string
+          server_name: string
+        }[]
+      }
       reset_user_secret_key: {
         Args: { _new_key_hash: string; _user_id: string }
         Returns: Json

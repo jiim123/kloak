@@ -20,6 +20,7 @@ import { isImageOnlyMessage } from "@/lib/message";
 import { isPollMessageContent } from "@/lib/poll";
 import { ReplyPreview } from "@/components/chat/MessageContent";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
+import { encodeCustomEmojisForTransport } from "@/lib/globalEmojiResolver";
 import { getUserFromCache, getOrFetchUser } from "@/stores/userCacheStore";
 import type { Message, User, ReactionGroup } from "@/types";
 
@@ -535,6 +536,7 @@ export const AnnouncementView = ({ message, onClose }: AnnouncementViewProps) =>
       if (!user || !replyContent.trim()) return;
 
       const content = replyContent.trim();
+      const encodedContent = await encodeCustomEmojisForTransport(content);
       setIsSendingReply(true);
       const replyToId = replyingToComment || null;
       
@@ -547,7 +549,7 @@ export const AnnouncementView = ({ message, onClose }: AnnouncementViewProps) =>
           .insert({
             message_id: message.id,
             user_id: user.id,
-            content: content,
+            content: encodedContent,
             reply_to_id: replyToId,
           })
           .select(`
@@ -611,10 +613,11 @@ export const AnnouncementView = ({ message, onClose }: AnnouncementViewProps) =>
     if (!user || !editContent.trim()) return;
     
     try {
+      const encodedContent = await encodeCustomEmojisForTransport(editContent.trim());
       const { error } = await supabase
         .from("announcement_comments")
         .update({ 
-          content: editContent.trim(),
+          content: encodedContent,
           edited_at: new Date().toISOString()
         })
         .eq("id", commentId)

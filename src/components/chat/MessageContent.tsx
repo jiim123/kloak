@@ -2,6 +2,7 @@ import { useMemo, useCallback, useEffect, useState, useRef } from "react";
 import { isSupabaseAttachmentUrl, resolveSignedUrl } from "@/lib/signedUrl";
 import { replaceNativeEmojisInElement } from "@/lib/fluentEmoji";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { CodeBlock, InlineCode } from "./CodeBlock";
 import { LinkPreview } from "./LinkPreview";
 import { InviteLinkPreview } from "./InviteLinkPreview";
@@ -17,7 +18,7 @@ import {
   getGlobalEmojiDuplicates,
   resolveQualifiedEmoji,
   resolveEmojisByNameFallback,
-  resolveQualifiedEmojiByNameFallback,
+  resolveQualifiedEmojisByNameFallback,
   type ResolvedEmoji,
 } from "@/lib/globalEmojiResolver";
 import { openUserProfileModal, SIDE_ALIGNED_USER_PROFILE_POPOVER } from "@/lib/userProfilePopover";
@@ -51,6 +52,16 @@ interface ParsedSegment {
   content: string;
   language?: string;
 }
+
+const INLINE_CUSTOM_EMOJI_TOKEN_REGEX = /:ce\[([a-z0-9_]{2,12})\|([a-z0-9/_\.-]{1,300})\]:/g;
+const CUSTOM_EMOJI_TEXT_REGEX = /:([a-z0-9_]{2,12})(?:~([^:]{1,50}))?:/g;
+const CUSTOM_EMOJI_RENDER_REGEX =
+  /:ce\[([a-z0-9_]{2,12})\|([a-z0-9/_\.-]{1,300})\]:|:([a-z0-9_]{2,12})(?:~([^:]{1,50}))?:/g;
+
+const getServerEmojiPublicUrl = (filePath: string): string => {
+  const { data } = supabase.storage.from("server-emojis").getPublicUrl(filePath);
+  return data.publicUrl;
+};
 
 // Check if URL is an image (including GIFs)
 const isImageUrl = (url: string): boolean => {
@@ -329,7 +340,7 @@ export const parseTextContent = (
   });
 
   // Custom emojis :name: or :name~ServerName: — check current server first, then global (cross-server)
-  parsed = parsed.replace(/:([a-z0-9_]{2,12})(?:~([^:]{1,50}))?:/g, (full, name: string, qualifier?: string) => {
+  parsed = parsed.replace(CUSTOM_EMOJI_TEXT_REGEX, (full, name: string, qualifier?: string) => {
     // 1. Current server emoji (no popup needed) — only for unqualified names
     if (!qualifier) {
       const localUrl = customEmojiMap?.get(name);
@@ -358,6 +369,16 @@ export const parseTextContent = (
       return `<img src="${safeUrl}" alt=":${safeName}:" title=":${safeName}:" class="inline-block w-8 h-8 align-middle object-contain cursor-pointer hover:scale-110 transition-transform" loading="lazy" data-cross-emoji="${safeName}" />`;
     }
     return full;
+  });
+
+  // Inline custom emoji token with embedded file path:
+  // :ce[name|server_id/file-name.ext]:
+  // Run this after the normal :name: pass so the `alt`/`title` attributes we generate
+  // do not get re-matched and corrupt the emitted <img> HTML.
+  parsed = parsed.replace(INLINE_CUSTOM_EMOJI_TOKEN_REGEX, (_full, name: string, filePath: string) => {
+    const safeName = escapeHtml(name);
+    const safeUrl = escapeHtml(getServerEmojiPublicUrl(filePath));
+    return `<img src="${safeUrl}" alt=":${safeName}:" title=":${safeName}:" class="inline-block w-8 h-8 align-middle object-contain cursor-pointer hover:scale-110 transition-transform" loading="lazy" data-cross-emoji="${safeName}" data-cross-emoji-file-path="${escapeHtml(filePath)}" />`;
   });
 
   // Convert newlines to <br>
@@ -463,8 +484,16 @@ export const MessageContent = ({
     if (!el) return;
 
     // Find all text nodes that still contain unresolved :emojiname: patterns
-    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
-    const emojiPattern = /:([a-z0-9_]{2,12})(?:~([^:]{1,50}))?:/g;
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, {
+      acceptNode(textNode) {
+        const parent = textNode.parentElement;
+        if (!parent) return NodeFilter.FILTER_REJECT;
+        if (parent.tagName === "CODE" || parent.tagName === "PRE" || parent.tagName === "IMG" || parent.tagName === "SCRIPT") {
+          return NodeFilter.FILTER_REJECT;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
     const nodesToProcess = new Set<Text>();
     const simpleNames = new Set<string>();
     const qualifiedPairs = new Set<string>(); // "name~ServerName"
@@ -473,14 +502,14 @@ export const MessageContent = ({
     while ((node = walker.nextNode() as Text | null)) {
       const text = node.textContent || "";
       let m: RegExpExecArray | null;
-      emojiPattern.lastIndex = 0;
-      while ((m = emojiPattern.exec(text)) !== null) {
-        const name = m[1];
-        const qualifier = m[2];
+      CUSTOM_EMOJI_RENDER_REGEX.lastIndex = 0;
+      while ((m = CUSTOM_EMOJI_RENDER_REGEX.exec(text)) !== null) {
+        const name = m[1] || m[3];
+        const qualifier = m[4];
         nodesToProcess.add(node);
-        if (qualifier) {
+        if (!m[1] && qualifier) {
           qualifiedPairs.add(`${name}~${qualifier}`);
-        } else {
+        } else if (!m[1]) {
           simpleNames.add(name);
         }
       }
@@ -492,41 +521,36 @@ export const MessageContent = ({
 
     (async () => {
       const resolvedSimple = await resolveEmojisByNameFallback(Array.from(simpleNames));
-
-      const qualified = Array.from(qualifiedPairs);
-      const resolvedQualified = new Map<string, string | null>();
-      await Promise.all(
-        qualified.map(async (key) => {
-          const idx = key.indexOf("~");
-          const name = key.slice(0, idx);
-          const serverName = key.slice(idx + 1);
-          const url = await resolveQualifiedEmojiByNameFallback(name, serverName);
-          resolvedQualified.set(key, url);
-        }),
-      );
+      const resolvedQualified = await resolveQualifiedEmojisByNameFallback(Array.from(qualifiedPairs));
 
       for (const textNode of nodesToProcess) {
         if (cancelled) return;
         if (!textNode.parentNode) continue;
 
         const text = textNode.textContent || "";
-        emojiPattern.lastIndex = 0;
+        CUSTOM_EMOJI_RENDER_REGEX.lastIndex = 0;
         let lastIndex = 0;
         let match: RegExpExecArray | null;
 
         const frag = document.createDocumentFragment();
 
-        while ((match = emojiPattern.exec(text)) !== null) {
+        while ((match = CUSTOM_EMOJI_RENDER_REGEX.exec(text)) !== null) {
           const full = match[0];
-          const name = match[1];
-          const qualifier = match[2];
+          const tokenName = match[1];
+          const tokenFilePath = match[2];
+          const name = tokenName || match[3];
+          const qualifier = match[4];
           const start = match.index;
 
           if (start > lastIndex) {
             frag.appendChild(document.createTextNode(text.slice(lastIndex, start)));
           }
 
-          const url = qualifier ? resolvedQualified.get(`${name}~${qualifier}`) : resolvedSimple.get(name);
+          const url = tokenFilePath
+            ? getServerEmojiPublicUrl(tokenFilePath)
+            : qualifier
+              ? resolvedQualified.get(`${name}~${qualifier}`)
+              : resolvedSimple.get(name);
 
           if (url) {
             const img = document.createElement("img");
@@ -537,6 +561,7 @@ export const MessageContent = ({
               "inline-block w-8 h-8 align-middle object-contain cursor-pointer";
             img.decoding = "async";
             img.dataset.crossEmoji = name;
+            if (tokenFilePath) img.dataset.crossEmojiFilePath = tokenFilePath;
             if (qualifier) img.dataset.crossEmojiServer = qualifier;
             frag.appendChild(img);
           } else {
@@ -1074,17 +1099,46 @@ export const ReplyPreview = ({
 
   // Replace custom emojis
   const rendered = useMemo(() => {
-    if (customEmojiMap.size === 0) return stripped;
-
     const parts: (string | JSX.Element)[] = [];
     let lastIndex = 0;
+    const inlineTokenRegex = /:ce\[([a-z0-9_]{2,12})\|([a-z0-9/_\.-]{1,300})\]:/g;
+    let tokenMatch: RegExpExecArray | null;
+
+    while ((tokenMatch = inlineTokenRegex.exec(stripped)) !== null) {
+      if (tokenMatch.index > lastIndex) {
+        parts.push(stripped.slice(lastIndex, tokenMatch.index));
+      }
+
+      const emojiName = tokenMatch[1];
+      const filePath = tokenMatch[2];
+      const emojiUrl = getServerEmojiPublicUrl(filePath);
+      parts.push(
+        <img
+          key={`token-emoji-${tokenMatch.index}`}
+          src={emojiUrl}
+          alt={`:${emojiName}:`}
+          title={`:${emojiName}:`}
+          className="inline-block w-4 h-4 align-text-bottom object-contain"
+          loading="lazy"
+        />,
+      );
+
+      lastIndex = tokenMatch.index + tokenMatch[0].length;
+    }
+
+    const remaining = stripped.slice(lastIndex);
+    if (!remaining) {
+      return parts.length > 0 ? parts : stripped;
+    }
+
+    lastIndex = 0;
     const emojiRegex = /:([a-z0-9_]{2,12}):/g;
     let match;
 
-    while ((match = emojiRegex.exec(stripped)) !== null) {
+    while ((match = emojiRegex.exec(remaining)) !== null) {
       // Add text before emoji
       if (match.index > lastIndex) {
-        parts.push(stripped.slice(lastIndex, match.index));
+        parts.push(remaining.slice(lastIndex, match.index));
       }
 
       // Add emoji if found (check local first, then global)
@@ -1109,8 +1163,8 @@ export const ReplyPreview = ({
     }
 
     // Add remaining text
-    if (lastIndex < stripped.length) {
-      parts.push(stripped.slice(lastIndex));
+    if (lastIndex < remaining.length) {
+      parts.push(remaining.slice(lastIndex));
     }
 
     return parts.length > 0 ? parts : stripped;

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, memo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Paperclip, Smile, Send, X, Loader2, MoreHorizontal } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
@@ -18,6 +19,7 @@ import { secureUpload } from "@/lib/storageUpload";
 import { compressAttachmentImage } from "@/lib/imageCompression";
 import { showSuccess } from "@/lib/errorHandler";
 import { cn } from "@/lib/utils";
+import { encodeCustomEmojisForTransport } from "@/lib/globalEmojiResolver";
 import { toast } from "sonner";
 
 interface DMMessageInputProps {
@@ -105,7 +107,11 @@ const ActionBar = memo(
 
           <div className="w-px h-5 bg-border/40 mx-0.5" />
 
-          <EmojiPicker open={showEmojiPicker} onOpenChange={setShowEmojiPicker} onEmojiSelect={onEmojiSelect}>
+          <EmojiPicker
+            open={showEmojiPicker}
+            onOpenChange={setShowEmojiPicker}
+            onEmojiSelect={onEmojiSelect}
+          >
             <button type="button" className={iconBtnClass} onMouseDown={(e) => e.preventDefault()}>
               <Smile className="w-5 h-5" />
             </button>
@@ -114,13 +120,19 @@ const ActionBar = memo(
 
         {/* Right side */}
         <div className="flex items-center gap-1.5">
-          {showCharacterWarning && (
-            <span
-              className={`text-[13px] font-[Inter,system-ui,sans-serif] ${content.length > MAX_LENGTH - 50 ? "text-destructive" : "text-muted-foreground"}`}
-            >
-              {MAX_LENGTH - content.length}
-            </span>
-          )}
+          <AnimatePresence>
+            {showCharacterWarning && (
+              <motion.span
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.15, ease: "easeOut" }}
+                className={`text-[13px] font-[Inter,system-ui,sans-serif] ${content.length > MAX_LENGTH - 50 ? "text-destructive" : "text-muted-foreground"}`}
+              >
+                {MAX_LENGTH - content.length}
+              </motion.span>
+            )}
+          </AnimatePresence>
           <button
             onClick={onSubmit}
             disabled={!canSend}
@@ -131,7 +143,31 @@ const ActionBar = memo(
                 : "bg-muted/50 text-muted-foreground/50 cursor-not-allowed",
             )}
           >
-            {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            <AnimatePresence mode="wait">
+              {isSending ? (
+                <motion.span
+                  key="loader"
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.5 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="flex items-center justify-center"
+                >
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                </motion.span>
+              ) : (
+                <motion.span
+                  key="send"
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.5 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="flex items-center justify-center"
+                >
+                  <Send className="w-4 h-4" />
+                </motion.span>
+              )}
+            </AnimatePresence>
           </button>
         </div>
       </div>
@@ -287,6 +323,7 @@ export const DMMessageInput = ({ conversationId, otherUsername, replyingTo, onCa
     if ((!hasText && !hasAttachments) || !user || isSending) return;
 
     const messageContent = content.trim();
+    const transportReadyContent = await encodeCustomEmojisForTransport(messageContent);
 
     setContent("");
     if (draftSaveTimeoutRef.current) {
@@ -303,7 +340,7 @@ export const DMMessageInput = ({ conversationId, otherUsername, replyingTo, onCa
 
     setIsSending(true);
     try {
-      let finalContent = messageContent;
+      let finalContent = transportReadyContent;
       let uploadedUrls: string[] = [];
 
       // Save attachment metadata before clearing

@@ -229,7 +229,6 @@ const fallbackCache = new Map<string, FallbackCacheEntry>();
 
 // Qualified fallback cache: "name~ServerName" → url|null
 const qualifiedFallbackCache = new Map<string, FallbackCacheEntry>();
-const qualifiedFallbackInflight = new Map<string, Promise<string | null>>();
 
 // Micro-batched, cross-call request coalescing:
 // many message components may ask for different subsets of names at the same time.
@@ -239,6 +238,13 @@ type Deferred<T> = { promise: Promise<T>; resolve: (v: T) => void; reject: (e: u
 const fallbackInflightByName = new Map<string, Deferred<string | null>>();
 const pendingFallbackNames = new Set<string>();
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
+
+type EmojiRenderVariantRow = {
+  name: string;
+  server_name: string;
+  file_path: string;
+  created_at: string;
+};
 
 function getCachedFallback(name: string): string | null | undefined {
   const entry = fallbackCache.get(name);
@@ -260,6 +266,52 @@ function getCachedQualifiedFallback(key: string): string | null | undefined {
   return entry.value;
 }
 
+async function fetchEmojiRenderVariantsByNames(names: string[]): Promise<EmojiRenderVariantRow[] | null> {
+  if (names.length === 0) return [];
+  const { data, error } = await (supabase.from as any)('emoji_render_variants')
+    .select('name,server_name,file_path,created_at')
+    .in('name', names)
+    .order('created_at', { ascending: true });
+  if (error || !data) return null;
+  return data as EmojiRenderVariantRow[];
+}
+
+async function fetchEmojiRenderVariantsByQualifiedKeys(keys: string[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const parsed = keys
+    .map((key) => {
+      const idx = key.indexOf('~');
+      if (idx <= 0 || idx >= key.length - 1) return null;
+      return {
+        key,
+        name: key.slice(0, idx),
+        serverName: key.slice(idx + 1),
+      };
+    })
+    .filter(Boolean) as Array<{ key: string; name: string; serverName: string }>;
+
+  if (parsed.length === 0) return out;
+
+  const names = Array.from(new Set(parsed.map((item) => item.name)));
+  const rows = await fetchEmojiRenderVariantsByNames(names);
+  if (!rows) return out;
+
+  const rowsByQualified = new Map<string, string>();
+  for (const row of rows) {
+    const qualifiedKey = `${row.name}~${row.server_name}`;
+    if (!rowsByQualified.has(qualifiedKey)) {
+      rowsByQualified.set(qualifiedKey, row.file_path);
+    }
+  }
+
+  for (const item of parsed) {
+    const filePath = rowsByQualified.get(item.key);
+    if (filePath) out.set(item.key, filePath);
+  }
+
+  return out;
+}
+
 function scheduleFallbackFlush() {
   if (flushTimer) return;
 
@@ -272,9 +324,9 @@ function scheduleFallbackFlush() {
     if (names.length === 0) return;
 
     try {
-      const { data, error } = await supabase.from('server_emojis').select('name,file_path').in('name', names);
+      const rows = await fetchEmojiRenderVariantsByNames(names);
 
-      if (error || !data) {
+      if (!rows) {
         // Do not cache failures; just resolve current inflight as null.
         for (const name of names) {
           const d = fallbackInflightByName.get(name);
@@ -287,7 +339,7 @@ function scheduleFallbackFlush() {
 
       // Choose first match per name (names may exist in multiple servers).
       const firstFilePathByName = new Map<string, string>();
-      for (const row of data as Array<{ name: string; file_path: string }>) {
+      for (const row of rows) {
         if (!row?.name || !row?.file_path) continue;
         if (!firstFilePathByName.has(row.name)) {
           firstFilePathByName.set(row.name, row.file_path);
@@ -373,47 +425,116 @@ export async function resolveEmojiByNameFallback(name: string): Promise<string |
  *
  * Note: server names are not guaranteed unique. This best-effort resolver returns the first match.
  */
+export async function resolveQualifiedEmojisByNameFallback(keys: string[]): Promise<Map<string, string | null>> {
+  const out = new Map<string, string | null>();
+  const unique = Array.from(new Set(keys)).filter(Boolean);
+  if (unique.length === 0) return out;
+
+  const unresolved: string[] = [];
+  for (const key of unique) {
+    const cached = getCachedQualifiedFallback(key);
+    if (cached !== undefined) {
+      out.set(key, cached);
+    } else {
+      unresolved.push(key);
+    }
+  }
+
+  if (unresolved.length === 0) return out;
+
+  try {
+    const fileByKey = await fetchEmojiRenderVariantsByQualifiedKeys(unresolved);
+
+    if (fileByKey.size === 0) {
+      for (const key of unresolved) {
+        qualifiedFallbackCache.set(key, { value: null, cachedAt: Date.now() });
+        out.set(key, null);
+      }
+      return out;
+    }
+
+    for (const key of unresolved) {
+      const filePath = fileByKey.get(key);
+      let value: string | null = null;
+      if (filePath) {
+        const { data: urlData } = supabase.storage.from('server-emojis').getPublicUrl(filePath);
+        value = urlData.publicUrl || null;
+      }
+      qualifiedFallbackCache.set(key, { value, cachedAt: Date.now() });
+      out.set(key, value);
+    }
+  } catch {
+    for (const key of unresolved) {
+      qualifiedFallbackCache.set(key, { value: null, cachedAt: Date.now() });
+      out.set(key, null);
+    }
+  }
+
+  return out;
+}
+
 export async function resolveQualifiedEmojiByNameFallback(name: string, serverName: string): Promise<string | null> {
   const key = `${name}~${serverName}`;
-  const cached = getCachedQualifiedFallback(key);
-  if (cached !== undefined) return cached;
+  const results = await resolveQualifiedEmojisByNameFallback([key]);
+  return results.get(key) ?? null;
+}
 
-  const existing = qualifiedFallbackInflight.get(key);
-  if (existing) return existing;
+const CUSTOM_EMOJI_TOKEN_PATTERN = /:([a-z0-9_]{2,12})(?:~([^:]{1,64}))?:/g;
 
-  const p = (async () => {
-    try {
-      const { data, error } = await supabase
-        .from('server_emojis')
-        .select('file_path, servers!inner(name)')
-        .eq('name', name)
-        .eq('servers.name', serverName)
-        .limit(1);
+/**
+ * Convert visible custom emoji text tokens into transport-safe inline tokens
+ * right before sending message content:
+ *   :name:            -> :ce[name|file_path]:
+ *   :name~ServerName: -> :ce[name|file_path]:
+ *
+ * Unresolvable tokens are kept as-is.
+ */
+export async function encodeCustomEmojisForTransport(content: string): Promise<string> {
+  if (!content || content.indexOf(":") === -1) return content;
 
-      if (error || !data || data.length === 0) {
-        qualifiedFallbackCache.set(key, { value: null, cachedAt: Date.now() });
-        return null;
-      }
+  const names = new Set<string>();
+  const qualified = new Set<string>();
 
-      const filePath = (data[0] as any)?.file_path as string | undefined;
-      if (!filePath) {
-        qualifiedFallbackCache.set(key, { value: null, cachedAt: Date.now() });
-        return null;
-      }
-
-      const { data: urlData } = supabase.storage.from('server-emojis').getPublicUrl(filePath);
-      const url = urlData.publicUrl || null;
-      qualifiedFallbackCache.set(key, { value: url, cachedAt: Date.now() });
-      return url;
-    } catch {
-      qualifiedFallbackCache.set(key, { value: null, cachedAt: Date.now() });
-      return null;
-    } finally {
-      qualifiedFallbackInflight.delete(key);
+  let m: RegExpExecArray | null;
+  CUSTOM_EMOJI_TOKEN_PATTERN.lastIndex = 0;
+  while ((m = CUSTOM_EMOJI_TOKEN_PATTERN.exec(content)) !== null) {
+    const name = m[1];
+    const server = m[2];
+    if (server) {
+      qualified.add(`${name}~${server}`);
+    } else {
+      names.add(name);
     }
-  })();
+  }
 
-  qualifiedFallbackInflight.set(key, p);
-  return await p;
+  if (names.size === 0 && qualified.size === 0) return content;
+
+  try {
+    const filePathByKey = new Map<string, string>();
+    const rows = await fetchEmojiRenderVariantsByNames(Array.from(names));
+    if (rows) {
+      for (const row of rows) {
+        if (!row?.name || !row?.file_path) continue;
+        if (!filePathByKey.has(row.name)) {
+          filePathByKey.set(row.name, row.file_path);
+        }
+      }
+    }
+    const qualifiedRows = await fetchEmojiRenderVariantsByQualifiedKeys(Array.from(qualified));
+    for (const [key, filePath] of qualifiedRows) {
+      if (!filePathByKey.has(key)) {
+        filePathByKey.set(key, filePath);
+      }
+    }
+
+    return content.replace(CUSTOM_EMOJI_TOKEN_PATTERN, (full, name: string, server?: string) => {
+      const key = server ? `${name}~${server}` : name;
+      const filePath = filePathByKey.get(key);
+      if (!filePath) return full;
+      return `:ce[${name}|${filePath}]:`;
+    });
+  } catch {
+    return content;
+  }
 }
 
