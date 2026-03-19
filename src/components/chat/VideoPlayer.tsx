@@ -163,18 +163,20 @@ export const VideoPlayer = memo(function VideoPlayer({ src, fileName, onError }:
   return (
     <div
       ref={containerRef}
-      className="relative rounded-2xl overflow-hidden bg-black/90 max-w-[480px] group cursor-pointer border border-border/60"
+      className="relative rounded-2xl overflow-hidden bg-black max-w-[480px] w-[480px] group cursor-pointer border border-border/60"
       onMouseMove={scheduleHide}
       onMouseLeave={() => { if (isPlaying) setShowControls(false); }}
     >
-      <video
-        ref={videoRef}
-        src={src}
-        preload="metadata"
-        className="w-full max-h-[360px] block"
-        onClick={togglePlay}
-        onError={onError}
-      />
+      <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+        <video
+          ref={videoRef}
+          src={src}
+          preload="metadata"
+          className="absolute inset-0 w-full h-full object-contain block"
+          onClick={togglePlay}
+          onError={onError}
+        />
+      </div>
 
       {/* Kloak emblem — top left, larger in fullscreen */}
       <img
