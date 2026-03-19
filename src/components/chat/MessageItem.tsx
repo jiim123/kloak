@@ -153,9 +153,11 @@ RoleIconWrapper.displayName = "RoleIconWrapper";
 const AttachmentItem = memo(function AttachmentItem({
   attachment,
   onImageClick,
+  uploaderName,
 }: {
   attachment: { id: string; file_url: string; file_name: string; file_type?: string; file_size?: number; width?: number | null; height?: number | null };
   onImageClick?: (url: string) => void;
+  uploaderName?: string;
 }) {
   const { url: signedUrl, refresh } = useSignedUrl(attachment.file_url, { withRefresh: true });
   const isImage = attachment.file_type?.startsWith("image/");
