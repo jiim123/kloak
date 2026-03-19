@@ -928,7 +928,7 @@ export const MessageItem = memo(function MessageItem({
   const innerClassName = useMemo(() => {
     const classes = [
       "group relative flex px-3 rounded-lg hover:bg-muted/40",
-      compactMode ? "gap-2 py-0.5" : isGrouped ? "gap-3 py-0.5" : "gap-3 py-1.5",
+      compactMode ? "gap-2 py-0.5" : isGrouped ? "gap-3 py-[2px]" : "gap-3 py-0.5",
     ];
     if (isAnnouncementChannel && !isGrouped) {
       classes.push("bg-primary/5 border-l-2 border-l-primary/50 ml-1");
