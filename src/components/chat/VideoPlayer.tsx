@@ -145,7 +145,7 @@ export const VideoPlayer = memo(function VideoPlayer({ src, fileName, uploaderNa
   return (
     <div
       ref={containerRef}
-      className="relative rounded-2xl overflow-hidden bg-black/90 max-w-[480px] group cursor-pointer"
+      className="relative rounded-2xl overflow-hidden bg-black/90 max-w-[480px] group cursor-pointer border border-border/40"
       onMouseMove={scheduleHide}
       onMouseLeave={() => { if (isPlaying) setShowControls(false); setShowVolumeSlider(false); }}
     >
