@@ -861,28 +861,36 @@ export const MessageInput = ({
         onRemoveAttachment={(i: number) => setPendingAttachments((p) => p.filter((_, idx) => idx !== i))}
         onAddMore={() => fileInputRef.current?.click()}
       />
-      {showChatNoticePopup && requiresChatNoticeAck && (
-        <div className="absolute inset-x-4 bottom-4 z-30 rounded-2xl border border-border bg-background/95 p-3 shadow-[0_14px_36px_rgba(0,0,0,0.42)] backdrop-blur">
-          <div className="flex items-center gap-2 text-primary">
-            <Info className="h-4 w-4" />
-            <p className="text-lg font-semibold leading-tight">Before you jump in…</p>
-          </div>
-          <p className="mt-2 text-sm text-foreground/90 whitespace-pre-wrap break-words">{activeChatNotice}</p>
-          <Button
-            type="button"
-            onClick={handleAcknowledgeChatNotice}
-            disabled={isAcknowledgingChatNotice}
-            className="mt-3 h-10 w-full rounded-xl"
+      <AnimatePresence>
+        {showChatNoticePopup && requiresChatNoticeAck && (
+          <motion.div
+            initial={{ opacity: 0, y: 8, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.97 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="absolute inset-x-4 bottom-4 z-30 rounded-2xl border border-border bg-background/95 p-3 shadow-[0_14px_36px_rgba(0,0,0,0.42)] backdrop-blur"
           >
-            {isAcknowledgingChatNotice ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Check className="mr-2 h-4 w-4" />
-            )}
-            Understood
-          </Button>
-        </div>
-      )}
+            <div className="flex items-center gap-2 text-primary">
+              <Info className="h-4 w-4" />
+              <p className="text-lg font-semibold leading-tight">Before you jump in…</p>
+            </div>
+            <p className="mt-2 text-sm text-foreground/90 whitespace-pre-wrap break-words">{activeChatNotice}</p>
+            <Button
+              type="button"
+              onClick={handleAcknowledgeChatNotice}
+              disabled={isAcknowledgingChatNotice}
+              className="mt-3 h-10 w-full rounded-xl"
+            >
+              {isAcknowledgingChatNotice ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="mr-2 h-4 w-4" />
+              )}
+              Understood
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <CreatePollModal open={showCreatePoll} onOpenChange={setShowCreatePoll} channelId={channelId} />
     </div>
   );
