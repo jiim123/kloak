@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect, memo } from "react";
 import { Play, Pause, Maximize, Volume2, VolumeX, Volume1 } from "lucide-react";
+import kloakEmblem from "@/assets/kloak-emblem-w.svg";
 
 interface VideoPlayerProps {
   src: string;
