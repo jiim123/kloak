@@ -4,6 +4,7 @@ import { Play, Pause, Maximize, Volume2, VolumeX, Volume1, Film } from "lucide-r
 interface VideoPlayerProps {
   src: string;
   fileName?: string;
+  uploaderName?: string;
   onError?: () => void;
 }
 
