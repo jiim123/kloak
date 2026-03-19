@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useMessageUser } from "@/stores/userCacheStore";
 import {
   Paperclip,
@@ -209,7 +210,31 @@ const ActionBar = memo(
                 : "bg-white/5 text-muted-foreground/50 cursor-not-allowed"
             }`}
           >
-            {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            <AnimatePresence mode="wait">
+              {isSending ? (
+                <motion.span
+                  key="loader"
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.5 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="flex items-center justify-center"
+                >
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                </motion.span>
+              ) : (
+                <motion.span
+                  key="send"
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.5 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="flex items-center justify-center"
+                >
+                  <Send className="w-4 h-4" />
+                </motion.span>
+              )}
+            </AnimatePresence>
           </button>
         </div>
       </div>
