@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, memo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Paperclip, Smile, Send, X, Loader2, MoreHorizontal } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {

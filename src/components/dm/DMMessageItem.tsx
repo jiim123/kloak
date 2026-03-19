@@ -1,9 +1,15 @@
 import { useState, useRef, useCallback, useEffect, useMemo, memo } from "react";
 import { getTopEmojis } from "@/lib/emojiRecents";
 import { FluentEmoji } from "@/components/ui/FluentEmoji";
-import { Smile, Reply, Pencil, Trash2, Copy, CornerUpLeft, MoreHorizontal, Paperclip } from "lucide-react";
+import { Smile, Reply, Pencil, Trash2, Copy, CornerUpLeft, MoreHorizontal, Paperclip, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useSignedUrl } from "@/hooks/useSignedUrl";
+import { VideoPlayer } from "@/components/chat/VideoPlayer";
+import { AudioPlayer } from "@/components/chat/AudioPlayer";
+import { getFileIcon } from "@/lib/fileIcons";
+import { getGifStillPreview } from "@/lib/gifPreview";
+import { ImageLightbox } from "@/components/modals/ImageLightbox";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import {
   ContextMenu,
