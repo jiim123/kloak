@@ -167,8 +167,8 @@ export const VideoPlayer = memo(function VideoPlayer({ src, fileName, onError }:
       onMouseMove={scheduleHide}
       onMouseLeave={() => { if (isPlaying) setShowControls(false); }}
     >
-      {/* Aspect ratio container for consistent sizing */}
-      <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
+      {/* 16:9 aspect ratio container for consistent sizing */}
+      <div className="relative w-full aspect-video">
         <video
           ref={videoRef}
           src={src}
