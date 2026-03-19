@@ -194,6 +194,8 @@ export interface Channel {
   linked_voice_channel_id?: string | null;
   name: string;
   topic: string | null;
+  /** Optional notice shown before first message interaction in this channel */
+  chat_notice: string | null;
   type: ChannelType;
   position: number;
   is_nsfw: boolean;
@@ -563,6 +565,7 @@ export interface CreateChannelForm {
   type: ChannelType;
   category_id?: string;
   topic?: string;
+  chat_notice?: string;
   is_nsfw?: boolean;
 }
 

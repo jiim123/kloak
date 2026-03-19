@@ -510,6 +510,7 @@ export type Database = {
       }
       channel_user_settings: {
         Row: {
+          chat_notice_seen_at: string | null
           channel_id: string
           created_at: string | null
           id: string
@@ -522,6 +523,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          chat_notice_seen_at?: string | null
           channel_id: string
           created_at?: string | null
           id?: string
@@ -534,6 +536,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          chat_notice_seen_at?: string | null
           channel_id?: string
           created_at?: string | null
           id?: string
@@ -574,6 +577,7 @@ export type Database = {
           allowed_link_domains: string[] | null
           block_links: boolean
           category_id: string | null
+          chat_notice: string | null
           created_at: string | null
           ghost_mode: boolean
           icon: string | null
@@ -593,6 +597,7 @@ export type Database = {
           allowed_link_domains?: string[] | null
           block_links?: boolean
           category_id?: string | null
+          chat_notice?: string | null
           created_at?: string | null
           ghost_mode?: boolean
           icon?: string | null
@@ -612,6 +617,7 @@ export type Database = {
           allowed_link_domains?: string[] | null
           block_links?: boolean
           category_id?: string | null
+          chat_notice?: string | null
           created_at?: string | null
           ghost_mode?: boolean
           icon?: string | null

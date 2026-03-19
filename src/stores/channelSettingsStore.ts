@@ -12,6 +12,7 @@ export interface ChannelUserSettings {
   is_pinned: boolean;
   notification_level: NotificationLevel;
   mute_until: string | null;
+  chat_notice_seen_at: string | null;
 }
 
 const CHANNEL_SETTINGS_CACHE_TTL_MS = 5 * 60_000;
@@ -19,6 +20,33 @@ const CHANNEL_SETTINGS_STORAGE_PREFIX = 'kloak:channel-settings:';
 
 const getChannelSettingsCacheKey = (userId: string, channelIds: string[]) =>
   `${CHANNEL_SETTINGS_STORAGE_PREFIX}${userId}:${[...channelIds].sort().join(',')}`;
+
+const invalidateChannelSettingsCacheForUser = (userId: string) => {
+  if (typeof window === 'undefined') return;
+  try {
+    const prefix = `${CHANNEL_SETTINGS_STORAGE_PREFIX}${userId}:`;
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < window.sessionStorage.length; i++) {
+      const key = window.sessionStorage.key(i);
+      if (key && key.startsWith(prefix)) keysToRemove.push(key);
+    }
+    keysToRemove.forEach((key) => window.sessionStorage.removeItem(key));
+  } catch {
+    // ignore storage failures
+  }
+};
+
+const normalizeChannelSettingRow = (row: any): ChannelUserSettings => {
+  const channelId = String(row?.channel_id ?? '');
+  const userId = String(row?.user_id ?? '');
+  return {
+    ...defaultSettings(channelId, userId),
+    ...row,
+    channel_id: channelId,
+    user_id: userId,
+    chat_notice_seen_at: row?.chat_notice_seen_at ?? null,
+  };
+};
 
 const readCachedChannelSettings = (userId: string, channelIds: string[]): Record<string, ChannelUserSettings> | null => {
   if (typeof window === 'undefined' || channelIds.length === 0) return null;
@@ -28,7 +56,11 @@ const readCachedChannelSettings = (userId: string, channelIds: string[]): Record
     const parsed = JSON.parse(raw) as { settings?: Record<string, ChannelUserSettings>; cachedAt?: number };
     if (!parsed?.settings || typeof parsed.cachedAt !== 'number') return null;
     if (Date.now() - parsed.cachedAt >= CHANNEL_SETTINGS_CACHE_TTL_MS) return null;
-    return parsed.settings;
+    const normalized: Record<string, ChannelUserSettings> = {};
+    Object.entries(parsed.settings).forEach(([key, value]) => {
+      normalized[key] = normalizeChannelSettingRow(value);
+    });
+    return normalized;
   } catch {
     return null;
   }
@@ -56,6 +88,7 @@ interface ChannelSettingsState {
   toggleHide: (channelId: string) => Promise<void>;
   togglePin: (channelId: string) => Promise<void>;
   setNotificationLevel: (channelId: string, level: NotificationLevel) => Promise<void>;
+  markChatNoticeSeen: (channelId: string) => Promise<void>;
 
   isMuted: (channelId: string) => boolean;
   isHidden: (channelId: string) => boolean;
@@ -71,11 +104,12 @@ export const useChannelSettingsStore = create<ChannelSettingsState>((set, get) =
     const userId = useAuthStore.getState().user?.id;
     if (!userId || serverChannelIds.length === 0) return;
 
-    const cached = readCachedChannelSettings(userId, serverChannelIds);
-    if (cached) {
-      set({ settings: cached, loading: false });
-      return;
-    }
+      const cached = readCachedChannelSettings(userId, serverChannelIds);
+      if (cached) {
+        persistChannelSettings(userId, serverChannelIds, cached);
+        set({ settings: cached, loading: false });
+        return;
+      }
 
     set({ loading: true });
     try {
@@ -89,7 +123,8 @@ export const useChannelSettingsStore = create<ChannelSettingsState>((set, get) =
 
       const map: Record<string, ChannelUserSettings> = {};
       (data || []).forEach((row: any) => {
-        map[row.channel_id] = row;
+        const normalized = normalizeChannelSettingRow(row);
+        map[normalized.channel_id] = normalized;
       });
       persistChannelSettings(userId, serverChannelIds, map);
       set({ settings: map });
@@ -111,6 +146,7 @@ export const useChannelSettingsStore = create<ChannelSettingsState>((set, get) =
       { onConflict: 'channel_id,user_id' }
     );
     if (error) { console.error(error); return; }
+    invalidateChannelSettingsCacheForUser(userId);
 
     set((s) => ({
       settings: {
@@ -133,6 +169,7 @@ export const useChannelSettingsStore = create<ChannelSettingsState>((set, get) =
       { onConflict: 'channel_id,user_id' }
     );
     if (error) { console.error(error); return; }
+    invalidateChannelSettingsCacheForUser(userId);
 
     set((s) => ({
       settings: {
@@ -153,6 +190,7 @@ export const useChannelSettingsStore = create<ChannelSettingsState>((set, get) =
       { onConflict: 'channel_id,user_id' }
     );
     if (error) { console.error(error); return; }
+    invalidateChannelSettingsCacheForUser(userId);
 
     set((s) => ({
       settings: {
@@ -173,6 +211,7 @@ export const useChannelSettingsStore = create<ChannelSettingsState>((set, get) =
       { onConflict: 'channel_id,user_id' }
     );
     if (error) { console.error(error); return; }
+    invalidateChannelSettingsCacheForUser(userId);
 
     set((s) => ({
       settings: {
@@ -191,11 +230,32 @@ export const useChannelSettingsStore = create<ChannelSettingsState>((set, get) =
       { onConflict: 'channel_id,user_id' }
     );
     if (error) { console.error(error); return; }
+    invalidateChannelSettingsCacheForUser(userId);
 
     set((s) => ({
       settings: {
         ...s.settings,
         [channelId]: { ...defaultSettings(channelId, userId), ...s.settings[channelId], notification_level: level },
+      },
+    }));
+  },
+
+  markChatNoticeSeen: async (channelId: string) => {
+    const userId = useAuthStore.getState().user?.id;
+    if (!userId) return;
+    const seenAt = new Date().toISOString();
+
+    const { error } = await supabase.from('channel_user_settings').upsert(
+      { channel_id: channelId, user_id: userId, chat_notice_seen_at: seenAt },
+      { onConflict: 'channel_id,user_id' }
+    );
+    if (error) { console.error(error); return; }
+    invalidateChannelSettingsCacheForUser(userId);
+
+    set((s) => ({
+      settings: {
+        ...s.settings,
+        [channelId]: { ...defaultSettings(channelId, userId), ...s.settings[channelId], chat_notice_seen_at: seenAt },
       },
     }));
   },
@@ -221,5 +281,6 @@ function defaultSettings(channelId: string, userId: string): ChannelUserSettings
     is_pinned: false,
     notification_level: 'all',
     mute_until: null,
+    chat_notice_seen_at: null,
   };
 }

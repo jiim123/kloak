@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Hash, Trash2, FolderOpen, Settings, Shield, Loader2, Clock, Lock, AlertTriangle, X, Users, Link2, Eye, Plus } from "lucide-react";
+import { Hash, Trash2, FolderOpen, Settings, Shield, Loader2, Clock, Lock, AlertTriangle, X, Users, Link2, Eye, Plus, Info } from "lucide-react";
 import { toast } from "sonner";
 import { ChannelPermissionsEditor } from "./ChannelPermissionsEditor";
 import { CategoryPermissionsEditor } from "./CategoryPermissionsEditor";
@@ -58,6 +58,7 @@ export const EditChannelModal = () => {
 
   const [name, setName] = useState("");
   const [topic, setTopic] = useState("");
+  const [chatNotice, setChatNotice] = useState("");
   const [isNsfw, setIsNsfw] = useState(false);
   const [slowmodeSeconds, setSlowmodeSeconds] = useState("0");
   const [isReadOnly, setIsReadOnly] = useState(false);
@@ -100,6 +101,7 @@ export const EditChannelModal = () => {
     if (isCategory && category) {
       setName(category.name);
       setTopic("");
+      setChatNotice("");
       setIsNsfw(false);
       setSlowmodeSeconds("0");
       setIsReadOnly(false);
@@ -115,6 +117,7 @@ export const EditChannelModal = () => {
     } else if (channel) {
       setName(channel.name);
       setTopic(channel.topic || "");
+      setChatNotice(channel.chat_notice || "");
       setIsNsfw(channel.is_nsfw);
       setSlowmodeSeconds(String(channel.slowmode_seconds));
       setIsReadOnly(channel.is_read_only || false);
@@ -182,6 +185,11 @@ export const EditChannelModal = () => {
 
         const trimmedTopic = topic.trim();
         updates.topic = trimmedTopic || null;
+        const trimmedChatNotice = chatNotice.trim();
+        if (trimmedChatNotice.length > 300) {
+          throw new Error("Before you chat notice must be 300 characters or fewer");
+        }
+        updates.chat_notice = trimmedChatNotice || null;
 
         await updateChannel(channelId, updates, user.id);
         toast.success("Channel updated");
@@ -277,6 +285,28 @@ export const EditChannelModal = () => {
           maxLength={1024}
         />
         <p className="text-xs text-muted-foreground text-right">{topic.length}/1024</p>
+      </div>
+
+      <div className="space-y-3">
+        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          Before You Chat Notice
+          <span className="text-muted-foreground/70 font-normal normal-case ml-1">(optional)</span>
+        </Label>
+        <div className="p-3 rounded-xl border border-border/50 bg-secondary/20 flex items-start gap-2.5">
+          <Info className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+          <p className="text-xs text-muted-foreground leading-relaxed">
+          Shows when the user is about to chat for the first time in this channel.
+          </p>
+        </div>
+        <Textarea
+          id="channel-chat-notice"
+          value={chatNotice}
+          onChange={(e) => setChatNotice(e.target.value)}
+          placeholder="Before you chat..."
+          className="rounded-xl border-border/50 bg-secondary/30 min-h-[92px] resize-none"
+          maxLength={300}
+        />
+        <p className="text-xs text-muted-foreground text-right">{chatNotice.length}/300</p>
       </div>
 
       {error && (

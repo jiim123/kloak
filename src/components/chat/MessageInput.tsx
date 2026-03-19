@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 import { useMessageUser } from "@/stores/userCacheStore";
-import { Paperclip, Smile, Send, X, Loader2, WifiOff, Lock, SquareChartGantt, MoreHorizontal, ImagePlay } from "lucide-react";
+import { Paperclip, Smile, Send, X, Loader2, WifiOff, Lock, SquareChartGantt, MoreHorizontal, ImagePlay, Info, Check } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   DropdownMenu,
@@ -11,6 +11,7 @@ import {
 import { useAuthStore } from "@/stores/authStore";
 import { useMessageStore } from "@/stores/messageStore";
 import { useServerStore } from "@/stores/serverStore";
+import { useChannelSettingsStore } from "@/stores/channelSettingsStore";
 import { useOfflineQueueStore } from "@/stores/offlineQueueStore";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { saveDraft, getDraft, clearDraft } from "@/lib/storage";
@@ -29,6 +30,7 @@ import { showWarning, handleError } from "@/lib/errorHandler";
 import { messageRateLimiter, validateMessageContent } from "@/lib/security";
 import { canRevealGhostIdentityForUser } from "@/lib/ghostIdentity";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 
 interface MessageInputProps {
   channelId: string;
@@ -198,6 +200,8 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping, o
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [slowmodeCooldownByChannel, setSlowmodeCooldownByChannel] = useState<Record<string, number>>({});
   const [slowmodeNowMs, setSlowmodeNowMs] = useState(() => Date.now());
+  const [showChatNoticePopup, setShowChatNoticePopup] = useState(false);
+  const [isAcknowledgingChatNotice, setIsAcknowledgingChatNotice] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -244,6 +248,8 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping, o
   }, [replyingTo]);
 
   const { hasPermission } = useMemberPermissions(channelId);
+  const markChatNoticeSeen = useChannelSettingsStore((state) => state.markChatNoticeSeen);
+  const chatNoticeSeenAt = useChannelSettingsStore((state) => state.settings[channelId]?.chat_notice_seen_at ?? null);
   const currentMember = useMemo(() => members.find((m) => m.user_id === user?.id), [members, user?.id]);
   const isMuted = currentMember?.is_muted || false;
   const activeChannel = useMemo(
@@ -263,6 +269,9 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping, o
   const slowmodeRemainingSeconds = Math.max(0, Math.ceil((slowmodeCooldownUntil - slowmodeNowMs) / 1000));
   const isSlowmodeBlocked = isSlowmodeEnabled && !isSlowmodeExempt && slowmodeRemainingSeconds > 0;
   const canSubmitMessage = canSendMessage && !isSlowmodeBlocked;
+  const activeChatNotice = (activeChannel?.chat_notice ?? "").trim();
+  const requiresChatNoticeAck = activeChatNotice.length > 0 && !chatNoticeSeenAt;
+  const isComposerLockedByNotice = requiresChatNoticeAck;
   const replyingToUser = useMessageUser(replyingTo?.user_id);
   const showReplyAuthorIdentity = useMemo(
     () =>
@@ -292,6 +301,35 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping, o
     }, 250);
     return () => window.clearInterval(timer);
   }, [slowmodeCooldownUntil]);
+
+  useEffect(() => {
+    setShowChatNoticePopup(false);
+    setIsAcknowledgingChatNotice(false);
+  }, [channelId]);
+
+  useEffect(() => {
+    if (!requiresChatNoticeAck) {
+      setShowChatNoticePopup(false);
+    }
+  }, [requiresChatNoticeAck]);
+
+  const openChatNoticePopup = useCallback(() => {
+    if (!requiresChatNoticeAck) return false;
+    setShowChatNoticePopup(true);
+    return true;
+  }, [requiresChatNoticeAck]);
+
+  const handleAcknowledgeChatNotice = useCallback(async () => {
+    if (!requiresChatNoticeAck || isAcknowledgingChatNotice) return;
+    setIsAcknowledgingChatNotice(true);
+    try {
+      await markChatNoticeSeen(channelId);
+      setShowChatNoticePopup(false);
+      requestAnimationFrame(() => textareaRef.current?.focus());
+    } finally {
+      setIsAcknowledgingChatNotice(false);
+    }
+  }, [requiresChatNoticeAck, isAcknowledgingChatNotice, markChatNoticeSeen, channelId]);
 
   useEffect(() => {
     onSlowmodeStatusChange?.({
@@ -326,6 +364,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping, o
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    if (openChatNoticePopup()) return;
     const val = e.target.value;
     if (val.length > MAX_LENGTH) return;
     setContent(val);
@@ -351,6 +390,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping, o
   }, []);
 
   const handleSubmit = useCallback(async () => {
+    if (openChatNoticePopup()) return;
     const hasGifOrAttachments = pendingAttachments.length > 0;
     if ((!content.trim() && !hasGifOrAttachments) || !user || isSending || !canSendMessage) return;
 
@@ -467,9 +507,10 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping, o
     } catch (error) {
       handleError(error, "Failed to send");
     } finally {
-      setIsSending(false);
+    setIsSending(false);
     }
   }, [
+    openChatNoticePopup,
     content,
     pendingAttachments,
     user,
@@ -519,6 +560,16 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping, o
 
   const handleComposerKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (requiresChatNoticeAck) {
+        const isTypingAction =
+          e.key.length === 1 || e.key === "Enter" || e.key === "Backspace" || e.key === "Delete";
+        if (isTypingAction && !e.metaKey && !e.ctrlKey && !e.altKey) {
+          e.preventDefault();
+          openChatNoticePopup();
+          return;
+        }
+      }
+
       const isAutocompleteOpen = (showMentions && hasMentionOptions) || (showChannels && hasChannelOptions);
       const autocompleteKeys = ["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"];
 
@@ -546,6 +597,8 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping, o
     },
     [
       showMentions,
+      requiresChatNoticeAck,
+      openChatNoticePopup,
       hasMentionOptions,
       showChannels,
       hasChannelOptions,
@@ -638,18 +691,29 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping, o
         </div>
       )}
 
-      <MobileOptimizedInput
+        <MobileOptimizedInput
         content={content}
         isFocused={isFocused}
         replyingTo={replyingTo}
         canSendMessage={canSendMessage}
         canSubmitMessage={canSubmitMessage}
+        isLockedByNotice={isComposerLockedByNotice}
         channelName={channelName}
         textareaRef={textareaRef}
         handleChange={handleChange}
         setIsFocused={setIsFocused}
         handleKeyDown={handleComposerKeyDown}
         handlePaste={handlePaste}
+        onInputMouseDown={(e: React.MouseEvent<HTMLTextAreaElement>) => {
+          if (openChatNoticePopup()) {
+            e.preventDefault();
+          }
+        }}
+        onInputFocus={(e: React.FocusEvent<HTMLTextAreaElement>) => {
+          if (openChatNoticePopup()) {
+            e.target.blur();
+          }
+        }}
         showCreatePoll={showCreatePoll}
         setShowCreatePoll={setShowCreatePoll}
         showEmojiPicker={showEmojiPicker}
@@ -686,6 +750,28 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping, o
         onRemoveAttachment={(i: number) => setPendingAttachments((p) => p.filter((_, idx) => idx !== i))}
         onAddMore={() => fileInputRef.current?.click()}
       />
+      {showChatNoticePopup && requiresChatNoticeAck && (
+        <div className="absolute inset-x-4 bottom-4 z-30 rounded-2xl border border-border bg-background/95 p-3 shadow-[0_14px_36px_rgba(0,0,0,0.42)] backdrop-blur">
+          <div className="flex items-center gap-2 text-primary">
+            <Info className="h-4 w-4" />
+            <p className="text-lg font-semibold leading-tight">Before you chat...</p>
+          </div>
+          <p className="mt-2 text-sm text-foreground/90 whitespace-pre-wrap break-words">{activeChatNotice}</p>
+          <Button
+            type="button"
+            onClick={handleAcknowledgeChatNotice}
+            disabled={isAcknowledgingChatNotice}
+            className="mt-3 h-10 w-full rounded-xl"
+          >
+            {isAcknowledgingChatNotice ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Check className="mr-2 h-4 w-4" />
+            )}
+            Understood
+          </Button>
+        </div>
+      )}
       <CreatePollModal open={showCreatePoll} onOpenChange={setShowCreatePoll} channelId={channelId} />
     </div>
   );
@@ -698,12 +784,15 @@ const MobileOptimizedInput = memo(
     replyingTo,
     canSendMessage,
     canSubmitMessage,
+    isLockedByNotice,
     channelName,
     textareaRef,
     handleChange,
     setIsFocused,
     handleKeyDown,
     handlePaste,
+    onInputMouseDown,
+    onInputFocus,
     showCreatePoll,
     setShowCreatePoll,
     showEmojiPicker,
@@ -744,11 +833,15 @@ const MobileOptimizedInput = memo(
             ref={textareaRef}
             value={content}
             onChange={handleChange}
-            onFocus={() => setIsFocused(true)}
+            onFocus={(e) => {
+              setIsFocused(true);
+              onInputFocus?.(e);
+            }}
             onBlur={() => setIsFocused(false)}
+            onMouseDown={onInputMouseDown}
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
-            placeholder={canSendMessage ? "Write a message..." : "Locked"}
+            placeholder={isLockedByNotice ? "Write a message..." : canSendMessage ? "Write a message..." : "Locked"}
             disabled={!canSendMessage}
             rows={1}
             className="message-input-textarea w-full bg-transparent resize-none outline-none py-1 min-h-[36px] max-h-[160px] overflow-y-auto text-foreground placeholder:text-muted-foreground/60 font-[General_Sans,system-ui,sans-serif]"
@@ -768,8 +861,8 @@ const MobileOptimizedInput = memo(
           setShowEmojiPicker={setShowEmojiPicker}
           showGifPicker={showGifPicker}
           setShowGifPicker={setShowGifPicker}
-          canSendMessage={canSendMessage}
-          canSubmitMessage={canSubmitMessage}
+          canSendMessage={canSendMessage && !isLockedByNotice}
+          canSubmitMessage={canSubmitMessage && !isLockedByNotice}
           content={content}
           isSending={isSending}
           hasAttachments={hasAttachments}
