@@ -44,22 +44,15 @@ export const AttachmentPreviewBar = memo(({ attachments, onRemove, onAddMore, di
                   alt={att.file.name}
                   className="w-full h-full object-cover"
                 />
-              ) : att.file.type.startsWith("video/") ? (
-                <div className="w-full h-full flex flex-col items-center justify-center gap-1">
-                  <Film className="w-5 h-5 text-muted-foreground" />
-                  <p className="text-[9px] text-muted-foreground truncate max-w-[60px] px-1">{att.file.name}</p>
-                </div>
-              ) : att.file.type.startsWith("audio/") ? (
-                <div className="w-full h-full flex flex-col items-center justify-center gap-1">
-                  <Music className="w-5 h-5 text-muted-foreground" />
-                  <p className="text-[9px] text-muted-foreground truncate max-w-[60px] px-1">{att.file.name}</p>
-                </div>
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center gap-1">
-                  <FileIcon className="w-5 h-5 text-muted-foreground" />
-                  <p className="text-[9px] text-muted-foreground truncate max-w-[60px] px-1">{att.file.name}</p>
-                </div>
-              )}
+              ) : (() => {
+                const Icon = getFileIcon(att.file.type);
+                return (
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-1">
+                    <Icon className="w-5 h-5 text-muted-foreground" />
+                    <p className="text-[9px] text-muted-foreground truncate max-w-[60px] px-1">{att.file.name}</p>
+                  </div>
+                );
+              })()}
 
               {/* Hover filename overlay */}
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent pt-4 pb-1 px-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none hidden sm:block">

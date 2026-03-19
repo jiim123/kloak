@@ -246,19 +246,28 @@ const AttachmentItem = memo(function AttachmentItem({
             <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
           </div>
         )
-      ) : (
-        <a
-          href={signedUrl ?? attachment.file_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 p-3 bg-secondary rounded-lg hover:bg-secondary/80"
-        >
-          <span className="text-sm font-medium">{attachment.file_name}</span>
-          {attachment.file_size && (
-            <span className="text-xs text-muted-foreground">({Math.round(attachment.file_size / 1024)} KB)</span>
-          )}
-        </a>
-      )}
+      ) : (() => {
+        const Icon = getFileIcon(attachment.file_type);
+        const sizeLabel = attachment.file_size
+          ? attachment.file_size >= 1024 * 1024
+            ? `${(attachment.file_size / (1024 * 1024)).toFixed(1)} MB`
+            : `${Math.round(attachment.file_size / 1024)} KB`
+          : null;
+        return (
+          <a
+            href={signedUrl ?? attachment.file_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 p-3 bg-secondary rounded-lg hover:bg-secondary/80 max-w-[400px] transition-colors"
+          >
+            <Icon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+            <span className="text-sm font-medium truncate">{attachment.file_name}</span>
+            {sizeLabel && (
+              <span className="text-xs text-muted-foreground flex-shrink-0">({sizeLabel})</span>
+            )}
+          </a>
+        );
+      })()}
     </div>
   );
 });
