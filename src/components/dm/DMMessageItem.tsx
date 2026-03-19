@@ -845,6 +845,9 @@ export const DMMessageItem = memo(function DMMessageItem({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Attachment image lightbox */}
+      <ImageLightbox imageUrl={attachmentLightboxUrl} onClose={() => setAttachmentLightboxUrl(null)} />
     </>
   );
 });

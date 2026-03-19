@@ -115,13 +115,19 @@ const ActionBar = memo(
 
         {/* Right side */}
         <div className="flex items-center gap-1.5">
-          {showCharacterWarning && (
-            <span
-              className={`text-[13px] font-[Inter,system-ui,sans-serif] ${content.length > MAX_LENGTH - 50 ? "text-destructive" : "text-muted-foreground"}`}
-            >
-              {MAX_LENGTH - content.length}
-            </span>
-          )}
+          <AnimatePresence>
+            {showCharacterWarning && (
+              <motion.span
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.15, ease: "easeOut" }}
+                className={`text-[13px] font-[Inter,system-ui,sans-serif] ${content.length > MAX_LENGTH - 50 ? "text-destructive" : "text-muted-foreground"}`}
+              >
+                {MAX_LENGTH - content.length}
+              </motion.span>
+            )}
+          </AnimatePresence>
           <button
             onClick={onSubmit}
             disabled={!canSend}
@@ -132,7 +138,31 @@ const ActionBar = memo(
                 : "bg-muted/50 text-muted-foreground/50 cursor-not-allowed",
             )}
           >
-            {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            <AnimatePresence mode="wait">
+              {isSending ? (
+                <motion.span
+                  key="loader"
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.5 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="flex items-center justify-center"
+                >
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                </motion.span>
+              ) : (
+                <motion.span
+                  key="send"
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.5 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="flex items-center justify-center"
+                >
+                  <Send className="w-4 h-4" />
+                </motion.span>
+              )}
+            </AnimatePresence>
           </button>
         </div>
       </div>
