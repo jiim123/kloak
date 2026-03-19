@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useMessageUser } from "@/stores/userCacheStore";
 import {
   Paperclip,
