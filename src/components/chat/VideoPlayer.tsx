@@ -52,7 +52,7 @@ function useDraggableSlider(onChange: (ratio: number) => void) {
   return { ref, onMouseDown };
 }
 
-export const VideoPlayer = memo(function VideoPlayer({ src, fileName, uploaderName, onError }: VideoPlayerProps) {
+export const VideoPlayer = memo(function VideoPlayer({ src, fileName, onError }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
