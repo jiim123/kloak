@@ -117,7 +117,7 @@ const ActionBar = memo(
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="min-w-[160px]">
                 <DropdownMenuItem onClick={onAttachClick} disabled={!canSendMessage}>
-                  <Paperclip className="w-4 h-4 mr-2" /> Upload image
+                  <Paperclip className="w-4 h-4 mr-2" /> Attach file
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setShowCreatePoll(true)} disabled={!canSendMessage}>
                   <SquareChartGantt className="w-4 h-4 mr-2" /> Create poll
