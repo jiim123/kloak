@@ -150,25 +150,29 @@ export const AudioPlayer = memo(function AudioPlayer({ src, fileName, fileSize, 
           )}
         </div>
 
-        <span className="text-[11px] text-muted-foreground/50 tabular-nums flex-shrink-0">
-          {formatTime(currentTime)}/{formatTime(duration)}
-        </span>
       </div>
 
-      {/* Progress bar */}
-      <div
-        className="h-1.5 rounded-full bg-muted/50 cursor-pointer"
-        onClick={handleSeek}
-      >
+      {/* Progress bar + time */}
+      <div>
         <div
-          className="h-full rounded-full transition-[width] duration-100 ease-linear"
-          style={{
-            width: `${progress}%`,
-            backgroundColor: isPlaying
-              ? "hsl(var(--kloak-dnd))"
-              : "hsl(var(--kloak-online))",
-          }}
-        />
+          className="h-1.5 rounded-full bg-muted/50 cursor-pointer"
+          onClick={handleSeek}
+        >
+          <div
+            className="h-full rounded-full transition-[width] duration-100 ease-linear"
+            style={{
+              width: `${progress}%`,
+              backgroundColor: isPlaying
+                ? "hsl(var(--kloak-dnd))"
+                : "hsl(var(--kloak-online))",
+            }}
+          />
+        </div>
+        <div className="flex justify-end mt-1.5">
+          <span className="text-[11px] text-muted-foreground tabular-nums">
+            {formatTime(currentTime)} / {formatTime(duration)}
+          </span>
+        </div>
       </div>
 
       {/* Volume row */}
