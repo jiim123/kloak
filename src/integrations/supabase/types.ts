@@ -4137,6 +4137,15 @@ export type Database = {
         Args: { _new_key_hash: string; _user_id: string }
         Returns: Json
       }
+      resolve_custom_emojis_for_render: {
+        Args: { _names?: string[]; _qualified?: string[] }
+        Returns: {
+          emoji_name: string
+          file_path: string
+          lookup_key: string
+          server_name: string
+        }[]
+      }
       revoke_server_invite: {
         Args: { _invite_id: string; _user_id: string }
         Returns: boolean

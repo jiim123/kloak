@@ -163,11 +163,11 @@ export const VideoPlayer = memo(function VideoPlayer({ src, fileName, onError }:
   return (
     <div
       ref={containerRef}
-      className="relative rounded-2xl overflow-hidden bg-black max-w-[480px] w-full group cursor-pointer border border-border/60"
+      className="relative rounded-2xl overflow-hidden bg-black w-full min-w-[200px] max-w-[480px] group cursor-pointer border border-border/60"
       onMouseMove={scheduleHide}
       onMouseLeave={() => { if (isPlaying) setShowControls(false); }}
     >
-      <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+      <div className="relative w-full" style={{ aspectRatio: '16/9' }}>
         <video
           ref={videoRef}
           src={src}
