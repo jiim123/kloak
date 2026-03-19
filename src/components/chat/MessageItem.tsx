@@ -202,8 +202,15 @@ const AttachmentItem = memo(function AttachmentItem({
 
   const imageSrc = isGif && gifPreviewSrc && !isGifHovered ? gifPreviewSrc : signedUrl;
 
-  // Don't render anything until the signed URL is ready (avoids empty placeholders)
-  if (!signedUrl && (isImage || isVideo || isAudio)) return null;
+  // Show a compact loader while the signed URL resolves (don't return null — 
+  // the attachment URL is already stripped from displayContent)
+  if (!signedUrl && (isImage || isVideo || isAudio)) {
+    return (
+      <div className="flex items-center justify-center rounded-lg bg-muted/20 w-16 h-16">
+        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="relative">
