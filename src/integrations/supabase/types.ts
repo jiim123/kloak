@@ -991,6 +991,48 @@ export type Database = {
           },
         ]
       }
+      emoji_render_variants: {
+        Row: {
+          created_at: string
+          emoji_id: string
+          file_path: string
+          name: string
+          server_id: string
+          server_name: string
+        }
+        Insert: {
+          created_at: string
+          emoji_id: string
+          file_path: string
+          name: string
+          server_id: string
+          server_name: string
+        }
+        Update: {
+          created_at?: string
+          emoji_id?: string
+          file_path?: string
+          name?: string
+          server_id?: string
+          server_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "emoji_render_variants_emoji_id_fkey"
+            columns: ["emoji_id"]
+            isOneToOne: true
+            referencedRelation: "server_emojis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "emoji_render_variants_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       friendships: {
         Row: {
           addressee_id: string
@@ -4056,6 +4098,10 @@ export type Database = {
         Returns: boolean
       }
       recompute_poll_results: { Args: { _poll_id: string }; Returns: undefined }
+      refresh_emoji_render_variant: {
+        Args: { _emoji_id: string }
+        Returns: undefined
+      }
       regenerate_invite_code: {
         Args: { _server_id: string; _user_id: string }
         Returns: string
@@ -4124,15 +4170,6 @@ export type Database = {
       }
       request_client_identifier: { Args: never; Returns: string }
       requesting_user_id: { Args: never; Returns: string }
-      resolve_custom_emojis_for_render: {
-        Args: { _names?: string[]; _qualified?: string[] }
-        Returns: {
-          emoji_name: string
-          file_path: string
-          lookup_key: string
-          server_name: string
-        }[]
-      }
       reset_user_secret_key: {
         Args: { _new_key_hash: string; _user_id: string }
         Returns: Json
