@@ -177,23 +177,19 @@ export const VideoPlayer = memo(function VideoPlayer({ src, fileName, uploaderNa
         onError={onError}
       />
 
-      {/* Top bar: file name + duration badge */}
-      <div
-        className="absolute top-0 left-0 right-0 flex items-center justify-between px-3 pt-3 transition-opacity duration-200"
-        style={{ opacity: showControls || !isPlaying ? 1 : 0 }}
-      >
-        <div className="flex items-center gap-1.5 min-w-0 max-w-[65%]">
-          <Film className="w-3.5 h-3.5 text-white/60 flex-shrink-0" />
-          <span className="text-xs text-white/70 truncate">{topLabel}</span>
-        </div>
-        {duration > 0 && (
-          <div className="bg-black/50 backdrop-blur-sm rounded-md px-2 py-0.5 flex-shrink-0">
+      {/* Top bar: duration badge */}
+      {duration > 0 && (
+        <div
+          className="absolute top-0 right-0 px-3 pt-3 transition-opacity duration-200"
+          style={{ opacity: showControls || !isPlaying ? 1 : 0 }}
+        >
+          <div className="bg-black/50 backdrop-blur-sm rounded-md px-2 py-0.5">
             <span className="text-[11px] text-white/80 tabular-nums">
               {formatTime(currentTime)} / {formatTime(duration)}
             </span>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Bottom controls */}
       <div
