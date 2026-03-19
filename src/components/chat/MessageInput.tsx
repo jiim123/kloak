@@ -502,7 +502,13 @@ export const MessageInput = ({
 
       // Upload file attachments to storage (compress images first)
       if (fileAttachments.length > 0) {
-        for (const att of fileAttachments) {
+        // Mark all file attachments as uploading
+        setPendingAttachments((prev) =>
+          prev.map((a) => (a.gifUrl ? a : { ...a, uploading: true }))
+        );
+
+        for (let i = 0; i < fileAttachments.length; i++) {
+          const att = fileAttachments[i];
           let fileToUpload = att.file;
           if (fileToUpload.type.startsWith("image/")) {
             fileToUpload = await compressAttachmentImage(fileToUpload);
