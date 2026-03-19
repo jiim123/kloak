@@ -150,31 +150,24 @@ export const AudioPlayer = memo(function AudioPlayer({ src, fileName, fileSize, 
         )}
       </div>
 
-      {/* Progress bar + time below */}
-      <div>
+      {/* Progress bar */}
+      <div
+        ref={seekSlider.ref}
+        className="h-1.5 rounded-full bg-muted/50 cursor-pointer select-none"
+        onMouseDown={seekSlider.onMouseDown}
+      >
         <div
-          ref={seekSlider.ref}
-          className="h-1.5 rounded-full bg-muted/50 cursor-pointer select-none"
-          onMouseDown={seekSlider.onMouseDown}
-        >
-          <div
-            className="h-full rounded-full transition-[width] duration-100 ease-linear pointer-events-none"
-            style={{
-              width: `${progress}%`,
-              backgroundColor: isPlaying
-                ? "hsl(var(--kloak-dnd))"
-                : "hsl(var(--kloak-online))",
-            }}
-          />
-        </div>
-        <div className="flex justify-end mt-1.5">
-          <span className="text-[11px] text-muted-foreground tabular-nums">
-            {formatTime(currentTime)} / {formatTime(duration)}
-          </span>
-        </div>
+          className="h-full rounded-full transition-[width] duration-100 ease-linear pointer-events-none"
+          style={{
+            width: `${progress}%`,
+            backgroundColor: isPlaying
+              ? "hsl(var(--kloak-dnd))"
+              : "hsl(var(--kloak-online))",
+          }}
+        />
       </div>
 
-      {/* Bottom controls: play + volume (matching video player sizes) */}
+      {/* Bottom controls: play + volume + time */}
       <div className="flex items-center gap-1">
         <button
           onClick={togglePlay}
