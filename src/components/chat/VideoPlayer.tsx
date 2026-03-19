@@ -120,11 +120,11 @@ export const VideoPlayer = memo(function VideoPlayer({ src, onError }: VideoPlay
           onClick={togglePlay}
         >
           <div
-            className="w-14 h-14 rounded-full flex items-center justify-center backdrop-blur-sm"
+            className="w-16 h-16 rounded-full flex items-center justify-center backdrop-blur-sm"
             style={{ backgroundColor: "hsl(var(--kloak-online) / 0.25)" }}
           >
             <Play
-              className="w-6 h-6 ml-0.5"
+              className="w-7 h-7 ml-0.5"
               style={{ color: "hsl(var(--kloak-online))" }}
               fill="hsl(var(--kloak-online))"
             />
@@ -153,7 +153,7 @@ export const VideoPlayer = memo(function VideoPlayer({ src, onError }: VideoPlay
             onClick={(e) => { e.stopPropagation(); togglePlay(); }}
             className="text-white/80 hover:text-white transition-colors"
           >
-            {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" fill="currentColor" />}
+            {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" fill="currentColor" />}
           </button>
 
           <span className="text-[11px] text-white/50 tabular-nums">
@@ -166,14 +166,14 @@ export const VideoPlayer = memo(function VideoPlayer({ src, onError }: VideoPlay
             onClick={(e) => { e.stopPropagation(); toggleMute(); }}
             className="text-white/60 hover:text-white transition-colors"
           >
-            {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+            {isMuted ? <VolumeX className="w-[18px] h-[18px]" /> : <Volume2 className="w-[18px] h-[18px]" />}
           </button>
 
           <button
             onClick={(e) => { e.stopPropagation(); handleFullscreen(); }}
             className="text-white/60 hover:text-white transition-colors"
           >
-            <Maximize className="w-3.5 h-3.5" />
+            <Maximize className="w-[18px] h-[18px]" />
           </button>
         </div>
       </div>
