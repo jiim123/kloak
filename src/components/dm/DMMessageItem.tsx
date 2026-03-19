@@ -40,6 +40,114 @@ import { isImageOnlyMessage } from "@/lib/message";
 import { toast } from "sonner";
 import { openUserProfileModal, SIDE_ALIGNED_USER_PROFILE_POPOVER } from "@/lib/userProfilePopover";
 
+// Renders a single DM attachment, using a signed URL for private bucket files
+const DMAttachmentItem = memo(function DMAttachmentItem({
+  attachment,
+  onImageClick,
+}: {
+  attachment: { id: string; file_url: string; file_name: string; file_type?: string | null; file_size?: number | null; width?: number | null; height?: number | null };
+  onImageClick?: (url: string) => void;
+}) {
+  const { url: signedUrl, refresh } = useSignedUrl(attachment.file_url, { withRefresh: true });
+  const isImage = attachment.file_type?.startsWith("image/");
+  const isVideo = attachment.file_type?.startsWith("video/");
+  const isAudio = attachment.file_type?.startsWith("audio/");
+  const isGif = attachment.file_type === "image/gif";
+  const [gifPreviewSrc, setGifPreviewSrc] = useState<string | null>(null);
+  const [isGifHovered, setIsGifHovered] = useState(false);
+
+  const reservedStyle = useMemo(() => {
+    if (!isImage || !attachment.width || !attachment.height) {
+      return isImage ? { width: 300, height: 200 } : undefined;
+    }
+    const maxW = 400;
+    const maxH = 300;
+    let w = attachment.width;
+    let h = attachment.height;
+    if (w > maxW) { h = Math.round(h * (maxW / w)); w = maxW; }
+    if (h > maxH) { w = Math.round(w * (maxH / h)); h = maxH; }
+    return { width: w, height: h };
+  }, [isImage, attachment.width, attachment.height]);
+
+  useEffect(() => {
+    if (!isGif || !signedUrl) {
+      setGifPreviewSrc(null);
+      setIsGifHovered(false);
+      return;
+    }
+    let cancelled = false;
+    getGifStillPreview(signedUrl).then((previewSrc) => {
+      if (cancelled) return;
+      setGifPreviewSrc(previewSrc);
+    });
+    return () => { cancelled = true; };
+  }, [isGif, signedUrl]);
+
+  const imageSrc = isGif && gifPreviewSrc && !isGifHovered ? gifPreviewSrc : signedUrl;
+
+  if (!signedUrl && (isImage || isVideo || isAudio)) {
+    return (
+      <div className="flex items-center justify-center rounded-lg bg-muted/20 w-16 h-16">
+        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn("relative", isVideo && "w-full max-w-[480px]")}>
+      {isImage ? (
+        <div
+          className="rounded-lg overflow-hidden bg-muted/30"
+          style={reservedStyle ? { width: reservedStyle.width, height: reservedStyle.height } : undefined}
+        >
+          <img
+            src={imageSrc}
+            alt={attachment.file_name}
+            className="w-full h-full object-contain rounded-lg cursor-pointer hover:opacity-90"
+            decoding="async"
+            onClick={() => signedUrl && onImageClick?.(signedUrl)}
+            onMouseEnter={isGif ? () => setIsGifHovered(true) : undefined}
+            onMouseLeave={isGif ? () => setIsGifHovered(false) : undefined}
+            onFocus={isGif ? () => setIsGifHovered(true) : undefined}
+            onBlur={isGif ? () => setIsGifHovered(false) : undefined}
+            onError={refresh}
+          />
+        </div>
+      ) : isVideo ? (
+        <VideoPlayer src={signedUrl!} fileName={attachment.file_name} onError={refresh} />
+      ) : isAudio ? (
+        <AudioPlayer
+          src={signedUrl!}
+          fileName={attachment.file_name}
+          fileSize={attachment.file_size}
+          onError={refresh}
+        />
+      ) : (() => {
+        const Icon = getFileIcon(attachment.file_type);
+        const sizeLabel = attachment.file_size
+          ? attachment.file_size >= 1024 * 1024
+            ? `${(attachment.file_size / (1024 * 1024)).toFixed(1)} MB`
+            : `${Math.round(attachment.file_size / 1024)} KB`
+          : null;
+        return (
+          <a
+            href={signedUrl ?? attachment.file_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 p-3 bg-secondary rounded-lg hover:bg-secondary/80 max-w-[400px] transition-colors"
+          >
+            <Icon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+            <span className="text-sm font-medium truncate">{attachment.file_name}</span>
+            {sizeLabel && (
+              <span className="text-xs text-muted-foreground flex-shrink-0">({sizeLabel})</span>
+            )}
+          </a>
+        );
+      })()}
+    </div>
+  );
+});
+
 interface DMMessageItemProps {
   message: DirectMessage;
   isFirst: boolean;
