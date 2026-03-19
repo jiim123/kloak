@@ -15,6 +15,7 @@ import { SelectionFormatToolbar, FORMAT_SYNTAX, getCodeBlockSyntax } from "@/com
 import { AttachmentPreviewBar, PendingAttachment } from "@/components/chat/AttachmentPreviewBar";
 import { supabase } from "@/integrations/supabase/client";
 import { secureUpload } from "@/lib/storageUpload";
+import { compressAttachmentImage } from "@/lib/imageCompression";
 import { showSuccess } from "@/lib/errorHandler";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
