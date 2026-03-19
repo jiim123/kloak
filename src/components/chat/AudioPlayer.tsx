@@ -150,9 +150,6 @@ export const AudioPlayer = memo(function AudioPlayer({ src, fileName, fileSize, 
           )}
         </div>
 
-        <span className="text-[11px] text-muted-foreground/50 tabular-nums flex-shrink-0">
-          {formatTime(currentTime)}/{formatTime(duration)}
-        </span>
       </div>
 
       {/* Progress bar */}
