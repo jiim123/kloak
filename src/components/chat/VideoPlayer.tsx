@@ -159,7 +159,6 @@ export const VideoPlayer = memo(function VideoPlayer({ src, fileName, uploaderNa
   const volumeSlider = useDraggableSlider(applyVolume);
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
-  const topLabel = uploaderName ? `Uploaded by ${uploaderName}` : (fileName || "Video");
 
   return (
     <div
