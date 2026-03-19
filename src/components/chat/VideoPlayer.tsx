@@ -1,8 +1,9 @@
 import { useState, useRef, useCallback, useEffect, memo } from "react";
-import { Play, Pause, Maximize, Volume2, VolumeX, Volume1 } from "lucide-react";
+import { Play, Pause, Maximize, Volume2, VolumeX, Volume1, Film } from "lucide-react";
 
 interface VideoPlayerProps {
   src: string;
+  fileName?: string;
   onError?: () => void;
 }
 
@@ -19,7 +20,7 @@ function VolumeIcon({ volume, muted }: { volume: number; muted: boolean }) {
   return <Volume2 className="w-5 h-5" />;
 }
 
-export const VideoPlayer = memo(function VideoPlayer({ src, onError }: VideoPlayerProps) {
+export const VideoPlayer = memo(function VideoPlayer({ src, fileName, onError }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -138,6 +139,7 @@ export const VideoPlayer = memo(function VideoPlayer({ src, onError }: VideoPlay
   }, []);
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const displayName = fileName || "Video";
 
   return (
     <div
@@ -155,24 +157,23 @@ export const VideoPlayer = memo(function VideoPlayer({ src, onError }: VideoPlay
         onError={onError}
       />
 
-      {/* Center play overlay when paused */}
-      {!isPlaying && (
-        <div
-          className="absolute inset-0 flex items-center justify-center bg-black/20"
-          onClick={togglePlay}
-        >
-          <div
-            className="w-16 h-16 rounded-full flex items-center justify-center backdrop-blur-sm"
-            style={{ backgroundColor: "hsl(var(--kloak-online) / 0.25)" }}
-          >
-            <Play
-              className="w-7 h-7 ml-0.5"
-              style={{ color: "hsl(var(--kloak-online))" }}
-              fill="hsl(var(--kloak-online))"
-            />
-          </div>
+      {/* Top bar: file name + duration badge */}
+      <div
+        className="absolute top-0 left-0 right-0 flex items-center justify-between px-3 pt-3 transition-opacity duration-200"
+        style={{ opacity: showControls || !isPlaying ? 1 : 0 }}
+      >
+        <div className="flex items-center gap-1.5 min-w-0 max-w-[65%]">
+          <Film className="w-3.5 h-3.5 text-white/60 flex-shrink-0" />
+          <span className="text-xs text-white/70 truncate">{displayName}</span>
         </div>
-      )}
+        {duration > 0 && (
+          <div className="bg-black/50 backdrop-blur-sm rounded-md px-2 py-0.5 flex-shrink-0">
+            <span className="text-[11px] text-white/80 tabular-nums">
+              {formatTime(currentTime)} / {formatTime(duration)}
+            </span>
+          </div>
+        )}
+      </div>
 
       {/* Bottom controls */}
       <div
@@ -181,7 +182,7 @@ export const VideoPlayer = memo(function VideoPlayer({ src, onError }: VideoPlay
       >
         {/* Progress bar */}
         <div
-          className="h-1.5 mx-4 mb-2 rounded-full bg-white/20 cursor-pointer group/seek"
+          className="h-1.5 mx-4 mb-2 rounded-full bg-white/20 cursor-pointer"
           onClick={(e) => { e.stopPropagation(); handleSeek(e); }}
         >
           <div
@@ -190,7 +191,7 @@ export const VideoPlayer = memo(function VideoPlayer({ src, onError }: VideoPlay
           />
         </div>
 
-        <div className="flex items-center gap-1 px-2 pb-3 pt-0.5">
+        <div className="flex items-center gap-1.5 px-2 pb-3 pt-0.5">
           {/* Play/Pause */}
           <button
             onClick={(e) => { e.stopPropagation(); togglePlay(); }}
@@ -228,10 +229,6 @@ export const VideoPlayer = memo(function VideoPlayer({ src, onError }: VideoPlay
               </div>
             </div>
           </div>
-
-          <span className="text-[11px] text-white/50 tabular-nums ml-1">
-            {formatTime(currentTime)} / {formatTime(duration)}
-          </span>
 
           <div className="flex-1" />
 
