@@ -140,12 +140,16 @@ export function useAttachmentQueue(
 
       const urls: string[] = [];
       for (const att of pendingAttachments) {
+        let fileToUpload = att.file;
+        if (fileToUpload.type.startsWith("image/")) {
+          fileToUpload = await compressAttachmentImage(fileToUpload);
+        }
         const timestamp = Date.now();
-        const fileExt = att.file.name.split(".").pop() || "png";
+        const fileExt = fileToUpload.name.split(".").pop() || "bin";
         const fileName = `${userId}/${timestamp}-${crypto.randomUUID()}.${fileExt}`;
 
-        const result = await secureUpload("attachments", fileName, att.file, {
-          contentType: att.file.type || "application/octet-stream",
+        const result = await secureUpload("attachments", fileName, fileToUpload, {
+          contentType: fileToUpload.type || "application/octet-stream",
           upsert: false,
         });
 
