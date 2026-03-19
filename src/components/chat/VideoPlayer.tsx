@@ -120,11 +120,11 @@ export const VideoPlayer = memo(function VideoPlayer({ src, onError }: VideoPlay
           onClick={togglePlay}
         >
           <div
-            className="w-14 h-14 rounded-full flex items-center justify-center backdrop-blur-sm"
+            className="w-16 h-16 rounded-full flex items-center justify-center backdrop-blur-sm"
             style={{ backgroundColor: "hsl(var(--kloak-online) / 0.25)" }}
           >
             <Play
-              className="w-6 h-6 ml-0.5"
+              className="w-7 h-7 ml-0.5"
               style={{ color: "hsl(var(--kloak-online))" }}
               fill="hsl(var(--kloak-online))"
             />
