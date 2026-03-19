@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback, useEffect, memo } from "react";
 import { Play, Pause, Maximize, Volume2, VolumeX, Volume1 } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
 import kloakEmblem from "@/assets/kloak-emblem-w.svg";
 
 interface VideoPlayerProps {
@@ -33,23 +32,25 @@ function useDraggableSlider(onChange: (ratio: number) => void) {
     return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
   }, []);
 
-  const onPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+  const onMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     dragging.current = true;
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
     onChange(getRatio(e.clientX));
+
+    const onMove = (ev: MouseEvent) => {
+      if (dragging.current) onChange(getRatio(ev.clientX));
+    };
+    const onUp = () => {
+      dragging.current = false;
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
   }, [onChange, getRatio]);
 
-  const onPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (dragging.current) onChange(getRatio(e.clientX));
-  }, [onChange, getRatio]);
-
-  const onPointerUp = useCallback(() => {
-    dragging.current = false;
-  }, []);
-
-  return { ref, onPointerDown, onPointerMove, onPointerUp };
+  return { ref, onMouseDown };
 }
 
 export const VideoPlayer = memo(function VideoPlayer({ src, fileName, onError }: VideoPlayerProps) {
@@ -63,7 +64,6 @@ export const VideoPlayer = memo(function VideoPlayer({ src, fileName, onError }:
   const [showControls, setShowControls] = useState(true);
   const hideTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const prevVolumeRef = useRef(1);
-  const isMobile = useIsMobile();
 
   useEffect(() => {
     const video = videoRef.current;
@@ -163,23 +163,20 @@ export const VideoPlayer = memo(function VideoPlayer({ src, fileName, onError }:
   return (
     <div
       ref={containerRef}
-      className="relative rounded-2xl overflow-hidden bg-black/90 w-full max-w-[480px] group cursor-pointer border border-border/60"
+      className="relative rounded-2xl overflow-hidden bg-black/90 max-w-[480px] group cursor-pointer border border-border/60"
       onMouseMove={scheduleHide}
       onMouseLeave={() => { if (isPlaying) setShowControls(false); }}
     >
-      {/* 16:9 aspect ratio container for consistent sizing */}
-      <div className="relative w-full aspect-video">
-        <video
-          ref={videoRef}
-          src={src}
-          preload="metadata"
-          className="absolute inset-0 w-full h-full object-contain bg-black"
-          onClick={togglePlay}
-          onError={onError}
-        />
-      </div>
+      <video
+        ref={videoRef}
+        src={src}
+        preload="metadata"
+        className="w-full max-h-[360px] block"
+        onClick={togglePlay}
+        onError={onError}
+      />
 
-      {/* Kloak emblem — top left */}
+      {/* Kloak emblem — top left, larger in fullscreen */}
       <img
         src={kloakEmblem}
         alt=""
@@ -194,7 +191,7 @@ export const VideoPlayer = memo(function VideoPlayer({ src, fileName, onError }:
       >
         {/* Progress bar */}
         <div
-          className="h-1.5 mx-3 sm:mx-4 mb-2 rounded-full bg-white/20 cursor-pointer"
+          className="h-1.5 mx-4 mb-2 rounded-full bg-white/20 cursor-pointer"
           onClick={(e) => { e.stopPropagation(); handleSeek(e); }}
         >
           <div
@@ -203,58 +200,52 @@ export const VideoPlayer = memo(function VideoPlayer({ src, fileName, onError }:
           />
         </div>
 
-        <div className="flex items-center gap-0.5 sm:gap-1.5 px-1.5 sm:px-2 pb-2 sm:pb-3 pt-0.5">
+        <div className="flex items-center gap-1.5 px-2 pb-3 pt-0.5">
           {/* Play/Pause */}
           <button
             onClick={(e) => { e.stopPropagation(); togglePlay(); }}
-            className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+            className="w-10 h-10 flex items-center justify-center rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
           >
-            {isPlaying ? <Pause className="w-4 h-4 sm:w-5 sm:h-5" /> : <Play className="w-4 h-4 sm:w-5 sm:h-5 ml-0.5" fill="currentColor" />}
+            {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" fill="currentColor" />}
           </button>
 
-          {/* Volume — icon always, slider hidden on mobile */}
+          {/* Volume group — always visible */}
           <div className="flex items-center">
             <button
               onClick={(e) => { e.stopPropagation(); toggleMute(); }}
-              className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+              className="w-10 h-10 flex items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
             >
               <VolumeIcon volume={volume} muted={isMuted} />
             </button>
 
-            {!isMobile && (
-              <>
-                <div
-                  ref={volumeSlider.ref}
-                  className="h-1.5 w-[72px] ml-1 rounded-full bg-white/20 cursor-pointer flex-shrink-0 select-none"
-                  onPointerDown={volumeSlider.onPointerDown}
-                  onPointerMove={volumeSlider.onPointerMove}
-                  onPointerUp={volumeSlider.onPointerUp}
-                >
-                  <div
-                    className="h-full rounded-full bg-white/70 transition-[width] duration-75 pointer-events-none"
-                    style={{ width: `${(isMuted ? 0 : volume) * 100}%` }}
-                  />
-                </div>
-                <span className="text-[11px] text-white/60 tabular-nums ml-1.5 w-[28px] text-right flex-shrink-0">
-                  {Math.round((isMuted ? 0 : volume) * 100)}%
-                </span>
-              </>
-            )}
+            <div
+              ref={volumeSlider.ref}
+              className="h-1.5 w-[72px] ml-1 rounded-full bg-white/20 cursor-pointer flex-shrink-0 select-none"
+              onMouseDown={volumeSlider.onMouseDown}
+            >
+              <div
+                className="h-full rounded-full bg-white/70 transition-[width] duration-75 pointer-events-none"
+                style={{ width: `${(isMuted ? 0 : volume) * 100}%` }}
+              />
+            </div>
+            <span className="text-[11px] text-white/60 tabular-nums ml-1.5 w-[28px] text-right flex-shrink-0">
+              {Math.round((isMuted ? 0 : volume) * 100)}%
+            </span>
           </div>
 
           <div className="flex-1" />
 
           {/* Timestamp + Fullscreen */}
           {duration > 0 && (
-            <span className="text-[10px] sm:text-[11px] text-white/60 tabular-nums mr-0.5">
-              {formatTime(currentTime)}{!isMobile && ` / ${formatTime(duration)}`}
+            <span className="text-[11px] text-white/60 tabular-nums mr-0.5">
+              {formatTime(currentTime)} / {formatTime(duration)}
             </span>
           )}
           <button
             onClick={(e) => { e.stopPropagation(); handleFullscreen(); }}
-            className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+            className="w-10 h-10 flex items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
           >
-            <Maximize className="w-4 h-4 sm:w-5 sm:h-5" />
+            <Maximize className="w-5 h-5" />
           </button>
         </div>
       </div>

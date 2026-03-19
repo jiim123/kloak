@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback, useEffect, memo } from "react";
 import { Play, Square, Volume2, VolumeX, Volume1, Music } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface AudioPlayerProps {
   src: string;
@@ -33,22 +32,24 @@ function useDraggableSlider(onChange: (ratio: number) => void) {
     return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
   }, []);
 
-  const onPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+  const onMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
     dragging.current = true;
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
     onChange(getRatio(e.clientX));
+
+    const onMove = (ev: MouseEvent) => {
+      if (dragging.current) onChange(getRatio(ev.clientX));
+    };
+    const onUp = () => {
+      dragging.current = false;
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
   }, [onChange, getRatio]);
 
-  const onPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (dragging.current) onChange(getRatio(e.clientX));
-  }, [onChange, getRatio]);
-
-  const onPointerUp = useCallback(() => {
-    dragging.current = false;
-  }, []);
-
-  return { ref, onPointerDown, onPointerMove, onPointerUp };
+  return { ref, onMouseDown };
 }
 
 export const AudioPlayer = memo(function AudioPlayer({ src, fileName, fileSize, onError }: AudioPlayerProps) {
@@ -58,8 +59,8 @@ export const AudioPlayer = memo(function AudioPlayer({ src, fileName, fileSize, 
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
+  const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   const prevVolumeRef = useRef(1);
-  const isMobile = useIsMobile();
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -137,7 +138,7 @@ export const AudioPlayer = memo(function AudioPlayer({ src, fileName, fileSize, 
     : null;
 
   return (
-    <div className="rounded-2xl border border-border/60 bg-card w-full max-w-[480px] min-w-0 p-3 sm:p-4 space-y-2.5 sm:space-y-3">
+    <div className="rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm max-w-[480px] min-w-[400px] w-full p-4 space-y-3">
       <audio ref={audioRef} src={src} preload="metadata" onError={onError} />
 
       {/* Top row: audio icon + file info */}
@@ -152,10 +153,8 @@ export const AudioPlayer = memo(function AudioPlayer({ src, fileName, fileSize, 
       {/* Progress bar */}
       <div
         ref={seekSlider.ref}
-        className="h-1.5 rounded-full bg-muted/50 cursor-pointer select-none touch-none"
-        onPointerDown={seekSlider.onPointerDown}
-        onPointerMove={seekSlider.onPointerMove}
-        onPointerUp={seekSlider.onPointerUp}
+        className="h-1.5 rounded-full bg-muted/50 cursor-pointer select-none"
+        onMouseDown={seekSlider.onMouseDown}
       >
         <div
           className="h-full rounded-full transition-[width] duration-100 ease-linear pointer-events-none"
@@ -169,10 +168,10 @@ export const AudioPlayer = memo(function AudioPlayer({ src, fileName, fileSize, 
       </div>
 
       {/* Bottom controls: play + volume + time */}
-      <div className="flex items-center gap-0.5 sm:gap-1">
+      <div className="flex items-center gap-1">
         <button
           onClick={togglePlay}
-          className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center transition-colors hover:bg-muted/50"
+          className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center transition-colors hover:bg-muted/50"
           style={{
             color: isPlaying
               ? "hsl(var(--kloak-dnd))"
@@ -180,45 +179,39 @@ export const AudioPlayer = memo(function AudioPlayer({ src, fileName, fileSize, 
           }}
         >
           {isPlaying ? (
-            <Square className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" />
+            <Square className="w-5 h-5" fill="currentColor" />
           ) : (
-            <Play className="w-4 h-4 sm:w-5 sm:h-5 ml-0.5" fill="currentColor" />
+            <Play className="w-5 h-5 ml-0.5" fill="currentColor" />
           )}
         </button>
 
-        {/* Volume group — slider hidden on mobile */}
+        {/* Volume group — always visible */}
         <div className="flex items-center">
           <button
             onClick={toggleMute}
-            className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+            className="w-10 h-10 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
           >
-            <VolumeIcon volume={volume} muted={isMuted} className="w-4 h-4 sm:w-5 sm:h-5" />
+            <VolumeIcon volume={volume} muted={isMuted} className="w-5 h-5" />
           </button>
 
-          {!isMobile && (
-            <>
-              <div
-                ref={volumeSlider.ref}
-                className="h-1.5 w-[72px] ml-1 rounded-full bg-muted/40 cursor-pointer flex-shrink-0 select-none touch-none"
-                onPointerDown={volumeSlider.onPointerDown}
-                onPointerMove={volumeSlider.onPointerMove}
-                onPointerUp={volumeSlider.onPointerUp}
-              >
-                <div
-                  className="h-full rounded-full bg-muted-foreground/50 transition-[width] duration-75 pointer-events-none"
-                  style={{ width: `${(isMuted ? 0 : volume) * 100}%` }}
-                />
-              </div>
-              <span className="text-[11px] text-muted-foreground tabular-nums ml-1.5 w-[28px] text-right flex-shrink-0">
-                {Math.round((isMuted ? 0 : volume) * 100)}%
-              </span>
-            </>
-          )}
+          <div
+            ref={volumeSlider.ref}
+            className="h-1.5 w-[72px] ml-1 rounded-full bg-muted/40 cursor-pointer flex-shrink-0 select-none"
+            onMouseDown={volumeSlider.onMouseDown}
+          >
+            <div
+              className="h-full rounded-full bg-muted-foreground/50 transition-[width] duration-75 pointer-events-none"
+              style={{ width: `${(isMuted ? 0 : volume) * 100}%` }}
+            />
+          </div>
+          <span className="text-[11px] text-muted-foreground tabular-nums ml-1.5 w-[28px] text-right flex-shrink-0">
+            {Math.round((isMuted ? 0 : volume) * 100)}%
+          </span>
         </div>
 
         <div className="flex-1" />
 
-        <span className="text-[10px] sm:text-[11px] text-muted-foreground tabular-nums pr-1">
+        <span className="text-[11px] text-muted-foreground tabular-nums pr-1">
           {formatTime(currentTime)} / {formatTime(duration)}
         </span>
       </div>
