@@ -544,11 +544,11 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping, o
       // Prefer clipboardData.files — it de-duplicates across browsers
       const files = e.clipboardData?.files;
       if (!files || files.length === 0) return;
-      const imageFile = Array.from(files).find((f) => f.type.startsWith("image/"));
-      if (!imageFile) return;
+      const pasteFile = Array.from(files).find((f) => ALLOWED_FILE_TYPES.includes(f.type));
+      if (!pasteFile) return;
       e.preventDefault();
       e.stopPropagation();
-      const attachment = { file: imageFile, preview: URL.createObjectURL(imageFile) };
+      const attachment = { file: pasteFile, preview: pasteFile.type.startsWith("image/") ? URL.createObjectURL(pasteFile) : "" };
       setPendingAttachments((prev) => [...prev, attachment].slice(0, MAX_ATTACHMENTS));
     },
     [user, isSending],
