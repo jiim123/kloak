@@ -1,5 +1,6 @@
 import { memo } from "react";
-import { X, Plus, Loader2, FileIcon, Film, Music } from "lucide-react";
+import { X, Plus, Loader2 } from "lucide-react";
+import { getFileIcon } from "@/lib/fileIcons";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export interface PendingAttachment {
