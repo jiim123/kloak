@@ -914,11 +914,13 @@ export const MessageItem = memo(function MessageItem({
     [handleEdit, handleCancelEdit],
   );
 
-  // Computed class names
+  // Computed class names — Discord-style spacing:
+  // Non-grouped (first in group): top margin for visual group separation
+  // Grouped (chained): zero extra spacing for uniform line density
   const outerClassName = useMemo(() => {
     const base = "px-2";
-    const padding = compactMode ? "py-0" : isGrouped ? "py-px" : "py-1";
-    return `${base} ${padding}`.trim();
+    const spacing = compactMode ? "py-0" : isGrouped ? "" : "mt-[17px]";
+    return `${base} ${spacing}`.trim();
   }, [compactMode, isGrouped]);
 
   const isAnnouncementChannel = currentChannel?.type === "announcement";
@@ -926,7 +928,7 @@ export const MessageItem = memo(function MessageItem({
   const innerClassName = useMemo(() => {
     const classes = [
       "group relative flex px-3 rounded-lg hover:bg-muted/40",
-      compactMode ? "gap-2 py-0.5" : isGrouped ? "gap-3 py-0.5" : "gap-3 py-1.5",
+      compactMode ? "gap-2 py-0.5" : isGrouped ? "gap-3 py-[2px]" : "gap-3 py-0.5",
     ];
     if (isAnnouncementChannel && !isGrouped) {
       classes.push("bg-primary/5 border-l-2 border-l-primary/50 ml-1");
