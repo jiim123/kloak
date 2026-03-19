@@ -988,7 +988,14 @@ export const HorizontalServerSidebar = () => {
       if (posA === posB) return 0;
       return posA - posB;
     });
-    setOrderedServerIds(sorted.map((s) => s.id));
+    const sortedIds = sorted.map((s) => s.id);
+    setOrderedServerIds((prev) => {
+      if (prev.length === 0) return sortedIds;
+      const sortedSet = new Set(sortedIds);
+      const kept = prev.filter((id) => sortedSet.has(id));
+      const missing = sortedIds.filter((id) => !kept.includes(id));
+      return [...kept, ...missing];
+    });
   }, [servers]);
 
   // Save server order to database
@@ -1040,21 +1047,42 @@ export const HorizontalServerSidebar = () => {
       if (overId.startsWith("server:")) {
         const overServerId = overId.slice("server:".length);
         if (serverId !== overServerId) {
-          setOrderedServerIds((prev) => {
-            const oldIndex = prev.indexOf(serverId);
-            const newIndex = prev.indexOf(overServerId);
-            if (oldIndex === -1 || newIndex === -1) return prev;
-            const newOrder = arrayMove(prev, oldIndex, newIndex);
-            // Save to database
-            saveServerOrder(newOrder);
-            return newOrder;
-          });
+          const overServerFolderId = folderState.serverToFolder[overServerId] ?? null;
+
+          if (overServerFolderId) {
+            moveServerToFolder(serverId, overServerFolderId);
+            setFolderState((prev) => ({
+              ...prev,
+              folders: prev.folders.map((f) => {
+                if (f.id !== overServerFolderId) return f;
+                const withoutMoved = f.serverIds.filter((id) => id !== serverId);
+                const insertAt = withoutMoved.indexOf(overServerId);
+                if (insertAt === -1) return { ...f, serverIds: [...withoutMoved, serverId] };
+                return {
+                  ...f,
+                  serverIds: [...withoutMoved.slice(0, insertAt), serverId, ...withoutMoved.slice(insertAt)],
+                };
+              }),
+            }));
+          } else {
+            moveServerToFolder(serverId, null);
+            setOrderedServerIds((prev) => {
+              const next = [...prev];
+              if (!next.includes(serverId)) next.push(serverId);
+              const oldIndex = next.indexOf(serverId);
+              const newIndex = next.indexOf(overServerId);
+              if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return next;
+              const newOrder = arrayMove(next, oldIndex, newIndex);
+              saveServerOrder(newOrder);
+              return newOrder;
+            });
+          }
         }
       }
 
       setActiveDragServerId(null);
     },
-    [moveServerToFolder, saveServerOrder],
+    [folderState.serverToFolder, moveServerToFolder, saveServerOrder],
   );
 
   const folderById = useMemo(() => new Map(folderState.folders.map((f) => [f.id, f])), [folderState.folders]);

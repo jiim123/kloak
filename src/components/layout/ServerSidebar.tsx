@@ -297,7 +297,10 @@ const DraggableServerItem = forwardRef<
     },
     ref,
   ) => {
-    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    const { attributes, listeners, setNodeRef: setDragRef, transform, isDragging } = useDraggable({
+      id: getServerDragId(server.id),
+    });
+    const { setNodeRef: setDropRef } = useDroppable({
       id: getServerDragId(server.id),
     });
 
@@ -311,7 +314,8 @@ const DraggableServerItem = forwardRef<
         <ContextMenuTrigger asChild>
           <motion.div
             ref={(node) => {
-              setNodeRef(node);
+              setDragRef(node);
+              setDropRef(node);
               if (typeof ref === "function") {
                 ref(node);
               } else if (ref) {
@@ -786,6 +790,44 @@ export const ServerSidebar = () => {
     setActiveDragServerId(null);
   }, []);
 
+  const [orderedServerIds, setOrderedServerIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (servers.length === 0) {
+      setOrderedServerIds([]);
+      return;
+    }
+    const sorted = [...servers].sort((a, b) => {
+      const posA = (a as any).position ?? Infinity;
+      const posB = (b as any).position ?? Infinity;
+      if (posA === posB) return 0;
+      return posA - posB;
+    });
+    const sortedIds = sorted.map((s) => s.id);
+    setOrderedServerIds((prev) => {
+      if (prev.length === 0) return sortedIds;
+      const sortedSet = new Set(sortedIds);
+      const kept = prev.filter((id) => sortedSet.has(id));
+      const missing = sortedIds.filter((id) => !kept.includes(id));
+      return [...kept, ...missing];
+    });
+  }, [servers]);
+
+  const saveServerOrder = useCallback(
+    async (newOrderIds: string[]) => {
+      if (!user?.id) return;
+      try {
+        await supabase.rpc("reorder_user_servers" as any, {
+          _user_id: user.id,
+          _server_ids: newOrderIds,
+        });
+      } catch (err) {
+        console.error("Failed to save server order:", err);
+      }
+    },
+    [user?.id],
+  );
+
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const activeId = String(event.active.id);
@@ -805,20 +847,77 @@ export const ServerSidebar = () => {
 
       if (overId === "root") {
         moveServerToFolder(serverId, null);
+        setOrderedServerIds((prev) => {
+          if (prev.includes(serverId)) return prev;
+          const next = [...prev, serverId];
+          saveServerOrder(next);
+          return next;
+        });
       } else if (overId.startsWith("folder:")) {
         const folderId = overId.slice("folder:".length);
         moveServerToFolder(serverId, folderId);
+      } else if (overId.startsWith("server:")) {
+        const overServerId = overId.slice("server:".length);
+        if (serverId !== overServerId) {
+          const overServerFolderId = folderState.serverToFolder[overServerId] ?? null;
+
+          if (overServerFolderId) {
+            moveServerToFolder(serverId, overServerFolderId);
+            setFolderState((prev) => ({
+              ...prev,
+              folders: prev.folders.map((f) => {
+                if (f.id !== overServerFolderId) return f;
+                const withoutMoved = f.serverIds.filter((id) => id !== serverId);
+                const insertAt = withoutMoved.indexOf(overServerId);
+                if (insertAt === -1) return { ...f, serverIds: [...withoutMoved, serverId] };
+                return {
+                  ...f,
+                  serverIds: [
+                    ...withoutMoved.slice(0, insertAt),
+                    serverId,
+                    ...withoutMoved.slice(insertAt),
+                  ],
+                };
+              }),
+            }));
+          } else {
+            moveServerToFolder(serverId, null);
+            setOrderedServerIds((prev) => {
+              const next = [...prev];
+              if (!next.includes(serverId)) next.push(serverId);
+              const fromIndex = next.indexOf(serverId);
+              const toIndex = next.indexOf(overServerId);
+              if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return next;
+              const [moved] = next.splice(fromIndex, 1);
+              next.splice(toIndex, 0, moved);
+              saveServerOrder(next);
+              return next;
+            });
+          }
+        }
       }
 
       setActiveDragServerId(null);
     },
-    [moveServerToFolder],
+    [folderState.serverToFolder, moveServerToFolder, saveServerOrder],
   );
 
   const folderById = useMemo(() => new Map(folderState.folders.map((f) => [f.id, f])), [folderState.folders]);
   const rootServers = useMemo(() => {
-    return servers.filter((s) => !folderById.has(folderState.serverToFolder[s.id] || ""));
-  }, [servers, folderState.serverToFolder, folderById]);
+    const notInFolder = servers.filter((s) => !folderById.has(folderState.serverToFolder[s.id] || ""));
+    const serversMap = new Map(notInFolder.map((s) => [s.id, s]));
+    const ordered: ServerWithMembership[] = [];
+    for (const id of orderedServerIds) {
+      const server = serversMap.get(id);
+      if (server) ordered.push(server);
+    }
+    for (const server of notInFolder) {
+      if (!orderedServerIds.includes(server.id)) {
+        ordered.push(server);
+      }
+    }
+    return ordered;
+  }, [servers, folderState.serverToFolder, folderById, orderedServerIds]);
 
   const serversById = useMemo(() => new Map(servers.map((s) => [s.id, s])), [servers]);
 
@@ -957,7 +1056,7 @@ export const ServerSidebar = () => {
               <div className="w-8 h-px bg-white/10 mb-1 shrink-0" />
 
               {/* Folder items + servers */}
-              <AnimatePresence mode="popLayout">
+              <AnimatePresence>
                 {foldersWithServers.map(({ folder, servers: folderServers }) => (
                   <div key={folder.id} className="w-full flex flex-col items-center gap-2">
                     <FolderItem
@@ -969,9 +1068,23 @@ export const ServerSidebar = () => {
                       onDelete={deleteFolder}
                     />
 
-                    <AnimatePresence mode="popLayout">
-                      {!folder.isCollapsed &&
-                        folderServers.map((server, index) => {
+                    <motion.div
+                      layout
+                      initial={false}
+                      animate={
+                        folder.isCollapsed
+                          ? { height: 0, opacity: 0, y: -8 }
+                          : { height: "auto", opacity: 1, y: 0 }
+                      }
+                      transition={{
+                        height: { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
+                        opacity: { duration: 0.14, ease: "easeOut" },
+                        y: { duration: 0.2, ease: [0.22, 1, 0.36, 1] },
+                      }}
+                      className={cn("w-full overflow-hidden", folder.isCollapsed && "pointer-events-none")}
+                    >
+                      <div className="w-full flex flex-col items-center gap-2 pt-2">
+                        {folderServers.map((server, index) => {
                           const isActive = currentServer?.id === server.id;
                           const channelIds = serverChannels[server.id] || [];
                           const { hasUnread, totalMentions } = getServerUnreadInfo(channelIds);
@@ -1026,7 +1139,8 @@ export const ServerSidebar = () => {
                             />
                           );
                         })}
-                    </AnimatePresence>
+                      </div>
+                    </motion.div>
                   </div>
                 ))}
 
