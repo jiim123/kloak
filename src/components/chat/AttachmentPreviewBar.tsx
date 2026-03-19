@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { X, Plus, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { getFileIcon } from "@/lib/fileIcons";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
