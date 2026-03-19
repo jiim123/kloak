@@ -1430,7 +1430,7 @@ export const MessageItem = memo(function MessageItem({
 
                     {/* Attachments - skip for system messages */}
                     {!message.is_system_message && message.attachments && message.attachments.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-2">
+                      <div className="flex flex-wrap gap-2 mt-2 w-full">
                         {message.attachments.map((attachment) => (
                           <AttachmentItem key={attachment.id} attachment={attachment} onImageClick={setAttachmentLightboxUrl} uploaderName={displayName} />
                         ))}
