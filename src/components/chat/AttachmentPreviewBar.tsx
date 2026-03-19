@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { X, Plus, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { getFileIcon } from "@/lib/fileIcons";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -28,8 +29,17 @@ export const AttachmentPreviewBar = memo(({ attachments, onRemove, onAddMore, di
   return (
     <div className="border-t border-border/30 px-3 pt-2.5 pb-1.5">
       <div className="flex items-end gap-2 overflow-x-auto scrollbar-thin pb-1" style={{ WebkitOverflowScrolling: "touch" }}>
+        <AnimatePresence mode="popLayout">
         {attachments.map((att, index) => (
-          <div key={index} className="relative group flex-shrink-0">
+          <motion.div
+            key={att.gifUrl || att.file.name + index}
+            layout
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="relative group flex-shrink-0"
+          >
             {/* Thumbnail */}
             <div className="w-[68px] h-[68px] rounded-lg border border-border/50 overflow-hidden bg-muted/30 relative">
               {att.gifUrl ? (
@@ -62,11 +72,25 @@ export const AttachmentPreviewBar = memo(({ attachments, onRemove, onAddMore, di
               </div>
 
               {/* Upload spinner overlay */}
-              {att.uploading && (
-                <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
-                  <Loader2 className="w-5 h-5 text-primary animate-spin" />
-                </div>
-              )}
+              <AnimatePresence>
+                {att.uploading && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute inset-0 bg-background/80 flex items-center justify-center"
+                  >
+                    <motion.div
+                      initial={{ scale: 0.5 }}
+                      animate={{ scale: 1 }}
+                      transition={{ duration: 0.2, ease: "easeOut" }}
+                    >
+                      <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* Remove button */}
@@ -78,8 +102,9 @@ export const AttachmentPreviewBar = memo(({ attachments, onRemove, onAddMore, di
                 <X className="w-3 h-3 text-foreground" />
               </button>
             )}
-          </div>
+          </motion.div>
         ))}
+        </AnimatePresence>
 
         {/* Add more button */}
         {canAddMore && !disabled && (
