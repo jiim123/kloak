@@ -185,40 +185,28 @@ export const AudioPlayer = memo(function AudioPlayer({ src, fileName, fileSize, 
           )}
         </button>
 
-        {/* Volume group — click to toggle slider */}
-        <div className="relative flex items-center">
+        {/* Volume group — always visible */}
+        <div className="flex items-center">
           <button
-            onClick={() => {
-              if (showVolumeSlider) {
-                setShowVolumeSlider(false);
-              } else {
-                setShowVolumeSlider(true);
-              }
-            }}
-            onContextMenu={(e) => { e.preventDefault(); toggleMute(); }}
+            onClick={toggleMute}
             className="w-10 h-10 flex items-center justify-center rounded-lg text-muted-foreground/60 hover:text-foreground/80 hover:bg-muted/50 transition-colors"
           >
             <VolumeIcon volume={volume} muted={isMuted} className="w-5 h-5" />
           </button>
 
           <div
-            className="overflow-hidden transition-all duration-200 ease-out flex items-center"
-            style={{ width: showVolumeSlider ? 112 : 0, opacity: showVolumeSlider ? 1 : 0 }}
+            ref={volumeSlider.ref}
+            className="h-1.5 w-[72px] ml-1 rounded-full bg-muted/40 cursor-pointer flex-shrink-0 select-none"
+            onMouseDown={volumeSlider.onMouseDown}
           >
             <div
-              ref={volumeSlider.ref}
-              className="h-1.5 w-[72px] ml-1 rounded-full bg-muted/40 cursor-pointer flex-shrink-0 select-none"
-              onMouseDown={volumeSlider.onMouseDown}
-            >
-              <div
-                className="h-full rounded-full bg-muted-foreground/30 transition-[width] duration-75 pointer-events-none"
-                style={{ width: `${(isMuted ? 0 : volume) * 100}%` }}
-              />
-            </div>
-            <span className="text-[11px] text-muted-foreground tabular-nums ml-1.5 w-[28px] text-right flex-shrink-0">
-              {Math.round((isMuted ? 0 : volume) * 100)}%
-            </span>
+              className="h-full rounded-full bg-muted-foreground/30 transition-[width] duration-75 pointer-events-none"
+              style={{ width: `${(isMuted ? 0 : volume) * 100}%` }}
+            />
           </div>
+          <span className="text-[11px] text-muted-foreground tabular-nums ml-1.5 w-[28px] text-right flex-shrink-0">
+            {Math.round((isMuted ? 0 : volume) * 100)}%
+          </span>
         </div>
 
         <div className="flex-1" />
