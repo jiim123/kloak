@@ -1,10 +1,9 @@
 import { useState, useRef, useCallback, useEffect, memo } from "react";
-import { Play, Pause, Maximize, Volume2, VolumeX, Volume1, Film } from "lucide-react";
+import { Play, Pause, Maximize, Volume2, VolumeX, Volume1 } from "lucide-react";
 
 interface VideoPlayerProps {
   src: string;
   fileName?: string;
-  uploaderName?: string;
   onError?: () => void;
 }
 
