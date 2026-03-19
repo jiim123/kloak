@@ -364,24 +364,23 @@ export const DMMessageInput = ({ conversationId, otherUsername, replyingTo, onCa
     }
   };
 
-  // Paste handler: queue images
+  // Paste handler: queue files
   const handlePaste = useCallback(
     (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
       if (!user || isSending) return;
-      // Prefer clipboardData.files to avoid duplicate items across browsers
       const files = e.clipboardData?.files;
       if (!files || files.length === 0) {
         requestAnimationFrame(() => resizeTextarea());
         return;
       }
-      const imageFile = Array.from(files).find((f) => f.type.startsWith("image/"));
-      if (!imageFile) {
+      const pasteFile = Array.from(files).find((f) => ALLOWED_FILE_TYPES.includes(f.type));
+      if (!pasteFile) {
         requestAnimationFrame(() => resizeTextarea());
         return;
       }
       e.preventDefault();
       e.stopPropagation();
-      addFilesToQueue([imageFile]);
+      addFilesToQueue([pasteFile]);
     },
     [user, isSending, addFilesToQueue, resizeTextarea],
   );
