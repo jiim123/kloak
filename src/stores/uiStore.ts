@@ -36,6 +36,7 @@ export type ModalType =
   | "permission-debug"
   | "import-discord-template"
   | "import-emoji-pack"
+  | "set-status"
   | null;
 
 interface ModalData {

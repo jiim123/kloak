@@ -39,6 +39,7 @@ export const LoggedInUserPanel = ({
 
   const activeChannelId = connection.channelId ?? joinedVoiceChannelId;
   const isVoiceActive = !!activeChannelId && connection.status !== "idle";
+  const statusLabel = user?.custom_status?.trim() || "Set a status";
 
   const toggleMute = () => {
     if (!activeChannelId) return;
@@ -61,7 +62,7 @@ export const LoggedInUserPanel = ({
     >
       {/* Avatar with status */}
       <StatusSelector side="top" align="start">
-        <button className="relative flex-shrink-0 group">
+        <button type="button" className="relative flex-shrink-0 group">
           <motion.div
             className="w-8 h-8 cursor-pointer overflow-hidden rounded-full"
             onHoverStart={() => setIsUserAvatarHovered(true)}
@@ -92,19 +93,15 @@ export const LoggedInUserPanel = ({
 
       {/* User info */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-foreground truncate">{user?.display_name || user?.username}</p>
-        <p className="text-xs text-muted-foreground truncate">
-          {user?.custom_status ||
-            (manualStatus === "offline"
-              ? "Invisible"
-              : user?.status === "online"
-                ? "Online"
-                : user?.status === "idle"
-                  ? "Idle"
-                  : user?.status === "dnd"
-                    ? "Do Not Disturb"
-                    : "Offline")}
-        </p>
+        <p className="truncate text-sm font-medium leading-tight text-foreground">{user?.display_name || user?.username}</p>
+        <button
+          type="button"
+          onClick={() => openModal("set-status")}
+          className="mt-0.5 truncate text-xs text-muted-foreground transition-colors hover:text-foreground"
+          title={statusLabel}
+        >
+          {statusLabel}
+        </button>
       </div>
 
       {/* Action buttons */}

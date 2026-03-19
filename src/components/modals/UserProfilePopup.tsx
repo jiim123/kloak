@@ -162,7 +162,7 @@ const getAnchoredPosition = (
 };
 
 export const UserProfilePopup = () => {
-  const { activeModal, modalData, closeModal } = useUIStore();
+  const { activeModal, modalData, closeModal, openModal } = useUIStore();
   const { user: currentUser } = useAuthStore();
   const navigate = useNavigate();
   const { servers, setCurrentServer, currentServer, members } = useServerStore();
@@ -594,6 +594,7 @@ export const UserProfilePopup = () => {
     const bioText = profileUser.bio?.trim();
     const shouldCollapseBio = Boolean(bioText && bioText.length > 50);
     const statusText = profileUser.custom_status?.trim();
+    const selfStatusLabel = statusText || "Set a status";
     const themeStyle: CSSProperties = {
       color: fg,
       background:
@@ -663,6 +664,19 @@ export const UserProfilePopup = () => {
                   <p className="mt-1 truncate text-[13px] font-medium text-[color:var(--profile-muted)]">
                     @{profileUser.username}
                   </p>
+                  {isSelf && (
+                    <button
+                      type="button"
+                      onClick={() => openModal("set-status")}
+                      className={cn(
+                        "mt-1 truncate text-left text-[13px] font-medium text-[color:var(--profile-muted)] transition-opacity hover:opacity-80",
+                        !statusText && "font-semibold",
+                      )}
+                      title={selfStatusLabel}
+                    >
+                      {selfStatusLabel}
+                    </button>
+                  )}
                 </div>
                 {userBadges.length > 0 && (
                   <div className="shrink-0 self-start pt-0.5">
@@ -700,7 +714,7 @@ export const UserProfilePopup = () => {
                       {joinedAt}
                     </span>
                   </div>
-                  {statusText && (
+                  {!isSelf && statusText && (
                     <p className="mt-2 truncate text-[13px] font-medium text-[color:var(--profile-muted)]">{statusText}</p>
                   )}
                 </div>

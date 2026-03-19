@@ -42,6 +42,7 @@ import {
   PermissionDebugPanel,
   ImportDiscordTemplateModal,
   ImportEmojiPackModal,
+  SetStatusModal,
 } from "@/components/modals";
 import { PersistentEmbedContainer } from "@/components/chat/PersistentEmbedContainer";
 import { DesktopTitleBar } from "@/components/layout/DesktopTitleBar";
@@ -673,6 +674,7 @@ const AppLayout = () => {
         <PermissionDebugPanel />
         <ImportDiscordTemplateModal />
         <ImportEmojiPackModal />
+        <SetStatusModal />
 
         {/* Persistent embed container for Twitch/Kick streams */}
         <PersistentEmbedContainer />
