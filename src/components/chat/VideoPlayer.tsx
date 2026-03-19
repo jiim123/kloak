@@ -165,7 +165,7 @@ export const VideoPlayer = memo(function VideoPlayer({ src, fileName, uploaderNa
       >
         <div className="flex items-center gap-1.5 min-w-0 max-w-[65%]">
           <Film className="w-3.5 h-3.5 text-white/60 flex-shrink-0" />
-          <span className="text-xs text-white/70 truncate">{displayName}</span>
+          <span className="text-xs text-white/70 truncate">{topLabel}</span>
         </div>
         {duration > 0 && (
           <div className="bg-black/50 backdrop-blur-sm rounded-md px-2 py-0.5 flex-shrink-0">
