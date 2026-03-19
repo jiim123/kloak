@@ -184,20 +184,6 @@ export const VideoPlayer = memo(function VideoPlayer({ src, fileName, onError }:
         style={{ zIndex: 10 }}
       />
 
-      {/* Top bar: duration badge */}
-      {duration > 0 && (
-        <div
-          className="absolute top-0 right-0 px-3 pt-3 transition-opacity duration-200"
-          style={{ opacity: showControls || !isPlaying ? 1 : 0 }}
-        >
-          <div className="bg-black/50 backdrop-blur-sm rounded-md px-2 py-0.5">
-            <span className="text-[11px] text-white/80 tabular-nums">
-              {formatTime(currentTime)} / {formatTime(duration)}
-            </span>
-          </div>
-        </div>
-      )}
-
       {/* Bottom controls */}
       <div
         className="absolute bottom-0 left-0 right-0 transition-opacity duration-200 bg-gradient-to-t from-black/60 to-transparent pt-8"
@@ -249,7 +235,12 @@ export const VideoPlayer = memo(function VideoPlayer({ src, fileName, onError }:
 
           <div className="flex-1" />
 
-          {/* Fullscreen */}
+          {/* Timestamp + Fullscreen */}
+          {duration > 0 && (
+            <span className="text-[11px] text-white/60 tabular-nums mr-0.5">
+              {formatTime(currentTime)} / {formatTime(duration)}
+            </span>
+          )}
           <button
             onClick={(e) => { e.stopPropagation(); handleFullscreen(); }}
             className="w-10 h-10 flex items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
