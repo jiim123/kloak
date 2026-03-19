@@ -153,7 +153,7 @@ export const VideoPlayer = memo(function VideoPlayer({ src, onError }: VideoPlay
             onClick={(e) => { e.stopPropagation(); togglePlay(); }}
             className="text-white/80 hover:text-white transition-colors"
           >
-            {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" fill="currentColor" />}
+            {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" fill="currentColor" />}
           </button>
 
           <span className="text-[11px] text-white/50 tabular-nums">
