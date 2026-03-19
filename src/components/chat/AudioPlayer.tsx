@@ -202,12 +202,12 @@ export const AudioPlayer = memo(function AudioPlayer({ src, fileName, fileSize, 
           </button>
 
           <div
-            className="overflow-hidden transition-all duration-200 ease-out"
-            style={{ width: showVolumeSlider ? 80 : 0, opacity: showVolumeSlider ? 1 : 0 }}
+            className="overflow-hidden transition-all duration-200 ease-out flex items-center"
+            style={{ width: showVolumeSlider ? 112 : 0, opacity: showVolumeSlider ? 1 : 0 }}
           >
             <div
               ref={volumeSlider.ref}
-              className="h-1.5 w-[72px] ml-1 mr-1 rounded-full bg-muted/40 cursor-pointer flex-shrink-0 select-none"
+              className="h-1.5 w-[72px] ml-1 rounded-full bg-muted/40 cursor-pointer flex-shrink-0 select-none"
               onMouseDown={volumeSlider.onMouseDown}
             >
               <div
@@ -215,6 +215,9 @@ export const AudioPlayer = memo(function AudioPlayer({ src, fileName, fileSize, 
                 style={{ width: `${(isMuted ? 0 : volume) * 100}%` }}
               />
             </div>
+            <span className="text-[11px] text-muted-foreground tabular-nums ml-1.5 w-[28px] text-right flex-shrink-0">
+              {Math.round((isMuted ? 0 : volume) * 100)}%
+            </span>
           </div>
         </div>
 
