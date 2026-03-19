@@ -25,6 +25,7 @@ import { CreatePollModal } from "@/components/modals/CreatePollModal";
 import { SelectionFormatToolbar, FORMAT_SYNTAX, getCodeBlockSyntax } from "./FormatToolbar";
 import { AttachmentPreviewBar, PendingAttachment } from "./AttachmentPreviewBar";
 import { secureUpload } from "@/lib/storageUpload";
+import { compressAttachmentImage } from "@/lib/imageCompression";
 import { supabase } from "@/integrations/supabase/client";
 import { showWarning, handleError } from "@/lib/errorHandler";
 import { messageRateLimiter, validateMessageContent } from "@/lib/security";
