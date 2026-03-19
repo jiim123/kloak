@@ -173,7 +173,7 @@ export const VideoPlayer = memo(function VideoPlayer({ src, onError }: VideoPlay
             onClick={(e) => { e.stopPropagation(); handleFullscreen(); }}
             className="text-white/60 hover:text-white transition-colors"
           >
-            <Maximize className="w-3.5 h-3.5" />
+            <Maximize className="w-[18px] h-[18px]" />
           </button>
         </div>
       </div>
