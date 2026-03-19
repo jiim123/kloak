@@ -623,16 +623,20 @@ export const MessageContent = ({
       const originalUrl = img.dataset.imageUrl;
       if (!originalUrl || !isSupabaseAttachmentUrl(originalUrl)) return;
 
-      // Hide the broken image while we resolve
-      img.style.opacity = "0";
-      img.style.transition = "opacity 0.15s ease-in";
+      img.style.visibility = "hidden";
 
       resolveSignedUrl(originalUrl).then((signedUrl) => {
         if (cancelled || !signedUrl) return;
-        img.src = signedUrl;
-        img.dataset.imageUrl = signedUrl;
-        img.style.opacity = "1";
-        void attachGifHoverBehavior(img, signedUrl);
+
+        const preloadImg = new Image();
+        preloadImg.onload = () => {
+          if (cancelled) return;
+          img.src = signedUrl;
+          img.dataset.imageUrl = signedUrl;
+          img.style.visibility = "visible";
+          void attachGifHoverBehavior(img, signedUrl);
+        };
+        preloadImg.src = signedUrl;
       });
     });
 
