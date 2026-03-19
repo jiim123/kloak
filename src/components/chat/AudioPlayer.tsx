@@ -143,7 +143,7 @@ export const AudioPlayer = memo(function AudioPlayer({ src, fileName, fileSize, 
 
       {/* Top row: audio icon + file info */}
       <div className="flex items-center gap-1.5 min-w-0">
-        <Music className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0" />
+        <Music className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
         <span className="text-xs text-foreground/80 truncate">{fileName}</span>
         {sizeLabel && (
           <span className="text-[11px] text-muted-foreground/60 flex-shrink-0">· {sizeLabel}</span>
@@ -189,7 +189,7 @@ export const AudioPlayer = memo(function AudioPlayer({ src, fileName, fileSize, 
         <div className="flex items-center">
           <button
             onClick={toggleMute}
-            className="w-10 h-10 flex items-center justify-center rounded-lg text-muted-foreground/60 hover:text-foreground/80 hover:bg-muted/50 transition-colors"
+            className="w-10 h-10 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
           >
             <VolumeIcon volume={volume} muted={isMuted} className="w-5 h-5" />
           </button>
@@ -200,7 +200,7 @@ export const AudioPlayer = memo(function AudioPlayer({ src, fileName, fileSize, 
             onMouseDown={volumeSlider.onMouseDown}
           >
             <div
-              className="h-full rounded-full bg-muted-foreground/30 transition-[width] duration-75 pointer-events-none"
+              className="h-full rounded-full bg-muted-foreground/50 transition-[width] duration-75 pointer-events-none"
               style={{ width: `${(isMuted ? 0 : volume) * 100}%` }}
             />
           </div>
