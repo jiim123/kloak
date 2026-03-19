@@ -61,8 +61,8 @@ export function useAttachmentQueue(
 ): UseAttachmentQueueReturn {
   const {
     maxAttachments = MAX_ATTACHMENTS,
-    maxFileSize = MAX_IMAGE_FILE_SIZE,
-    allowedTypes = ALLOWED_IMAGE_TYPES,
+    maxFileSize = MAX_ATTACHMENT_SIZE,
+    allowedTypes = ALLOWED_ATTACHMENT_TYPES as unknown as readonly string[],
   } = options;
 
   const [pendingAttachments, setPendingAttachments] = useState<
