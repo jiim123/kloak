@@ -180,7 +180,7 @@ export const VideoPlayer = memo(function VideoPlayer({ src, fileName, onError }:
       <img
         src={kloakEmblem}
         alt=""
-        className="absolute top-2.5 left-2.5 w-3.5 h-3.5 opacity-50 pointer-events-none"
+        className="absolute top-2.5 left-2.5 w-3.5 h-3.5 opacity-50 pointer-events-none mix-blend-difference"
         style={{ zIndex: 10 }}
       />
 
