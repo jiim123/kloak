@@ -939,14 +939,24 @@ const MobileOptimizedInput = memo(
             : "border-white/6 hover:border-white/10"
         } ${replyingTo ? "rounded-t-none" : ""}`}
       >
-        {hasAttachments && (
-          <AttachmentPreviewBar
-            attachments={pendingAttachments}
-            onRemove={onRemoveAttachment}
-            onAddMore={onAddMore}
-            disabled={isSending}
-          />
-        )}
+        <AnimatePresence>
+          {hasAttachments && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="overflow-hidden"
+            >
+              <AttachmentPreviewBar
+                attachments={pendingAttachments}
+                onRemove={onRemoveAttachment}
+                onAddMore={onAddMore}
+                disabled={isSending}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Textarea area */}
         <div className="px-3.5 sm:px-4 pt-2.5">
