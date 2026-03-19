@@ -202,6 +202,9 @@ const AttachmentItem = memo(function AttachmentItem({
 
   const imageSrc = isGif && gifPreviewSrc && !isGifHovered ? gifPreviewSrc : signedUrl;
 
+  // Don't render anything until the signed URL is ready (avoids empty placeholders)
+  if (!signedUrl && (isImage || isVideo || isAudio)) return null;
+
   return (
     <div className="relative">
       {isImage ? (
@@ -209,46 +212,28 @@ const AttachmentItem = memo(function AttachmentItem({
           className="rounded-lg overflow-hidden bg-muted/30"
           style={reservedStyle ? { width: reservedStyle.width, height: reservedStyle.height } : undefined}
         >
-          {signedUrl ? (
-            <img
-              src={imageSrc}
-              alt={attachment.file_name}
-              className="w-full h-full object-contain rounded-lg cursor-pointer hover:opacity-90"
-              decoding="async"
-              onClick={() => signedUrl && onImageClick?.(signedUrl)}
-              onMouseEnter={isGif ? () => setIsGifHovered(true) : undefined}
-              onMouseLeave={isGif ? () => setIsGifHovered(false) : undefined}
-              onFocus={isGif ? () => setIsGifHovered(true) : undefined}
-              onBlur={isGif ? () => setIsGifHovered(false) : undefined}
-              onError={refresh}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-            </div>
-          )}
-        </div>
-      ) : isVideo ? (
-        signedUrl ? (
-          <VideoPlayer src={signedUrl} fileName={attachment.file_name} onError={refresh} />
-        ) : (
-          <div className="rounded-2xl bg-muted/30 max-w-[480px] h-48 flex items-center justify-center">
-            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-          </div>
-        )
-      ) : isAudio ? (
-        signedUrl ? (
-          <AudioPlayer
-            src={signedUrl}
-            fileName={attachment.file_name}
-            fileSize={attachment.file_size}
+          <img
+            src={imageSrc}
+            alt={attachment.file_name}
+            className="w-full h-full object-contain rounded-lg cursor-pointer hover:opacity-90"
+            decoding="async"
+            onClick={() => signedUrl && onImageClick?.(signedUrl)}
+            onMouseEnter={isGif ? () => setIsGifHovered(true) : undefined}
+            onMouseLeave={isGif ? () => setIsGifHovered(false) : undefined}
+            onFocus={isGif ? () => setIsGifHovered(true) : undefined}
+            onBlur={isGif ? () => setIsGifHovered(false) : undefined}
             onError={refresh}
           />
-        ) : (
-          <div className="rounded-2xl border border-border/40 bg-card/60 max-w-[380px] h-20 flex items-center justify-center">
-            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-          </div>
-        )
+        </div>
+      ) : isVideo ? (
+        <VideoPlayer src={signedUrl!} fileName={attachment.file_name} onError={refresh} />
+      ) : isAudio ? (
+        <AudioPlayer
+          src={signedUrl!}
+          fileName={attachment.file_name}
+          fileSize={attachment.file_size}
+          onError={refresh}
+        />
       ) : (() => {
         const Icon = getFileIcon(attachment.file_type);
         const sizeLabel = attachment.file_size
