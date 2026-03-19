@@ -1,6 +1,19 @@
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 import { useMessageUser } from "@/stores/userCacheStore";
-import { Paperclip, Smile, Send, X, Loader2, WifiOff, Lock, SquareChartGantt, MoreHorizontal, ImagePlay, Info, Check } from "lucide-react";
+import {
+  Paperclip,
+  Smile,
+  Send,
+  X,
+  Loader2,
+  WifiOff,
+  Lock,
+  SquareChartGantt,
+  MoreHorizontal,
+  ImagePlay,
+  Info,
+  Check,
+} from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   DropdownMenu,
@@ -60,11 +73,27 @@ const MAX_LENGTH = 2000;
 const MIN_TEXTAREA_HEIGHT = 40;
 const MAX_TEXTAREA_HEIGHT = 160;
 const ALLOWED_FILE_TYPES: readonly string[] = [
-  "image/jpeg", "image/png", "image/gif", "image/webp", "image/avif", "image/svg+xml",
-  "video/mp4", "video/webm", "video/quicktime",
-  "audio/mpeg", "audio/ogg", "audio/wav", "audio/webm", "audio/mp4", "audio/flac",
-  "application/pdf", "text/plain", "application/zip", "application/x-rar-compressed",
-  "application/gzip", "application/msword",
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "image/avif",
+  "image/svg+xml",
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+  "audio/mpeg",
+  "audio/ogg",
+  "audio/wav",
+  "audio/webm",
+  "audio/mp4",
+  "audio/flac",
+  "application/pdf",
+  "text/plain",
+  "application/zip",
+  "application/x-rar-compressed",
+  "application/gzip",
+  "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/vnd.ms-excel",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -72,7 +101,8 @@ const ALLOWED_FILE_TYPES: readonly string[] = [
 ];
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
 const MAX_ATTACHMENTS = 10;
-const ALLOWED_FILE_EXTENSIONS = ".jpg,.jpeg,.png,.gif,.webp,.avif,.svg,.mp4,.webm,.mov,.mp3,.ogg,.wav,.flac,.m4a,.pdf,.txt,.zip,.rar,.gz,.doc,.docx,.xls,.xlsx,.json";
+const ALLOWED_FILE_EXTENSIONS =
+  ".jpg,.jpeg,.png,.gif,.webp,.avif,.svg,.mp4,.webm,.mov,.mp3,.ogg,.wav,.flac,.m4a,.pdf,.txt,.zip,.rar,.gz,.doc,.docx,.xls,.xlsx,.json";
 const DRAFT_SAVE_DELAY = 500;
 const TYPING_STOP_DELAY = 2000;
 
@@ -188,7 +218,13 @@ const ActionBar = memo(
 );
 ActionBar.displayName = "ActionBar";
 
-export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping, onSlowmodeStatusChange }: MessageInputProps) => {
+export const MessageInput = ({
+  channelId,
+  channelName,
+  onTyping,
+  onStopTyping,
+  onSlowmodeStatusChange,
+}: MessageInputProps) => {
   const { user } = useAuthStore();
   const { replyingTo, setReplyingTo, sendMessage } = useMessageStore();
   const { members, currentServer, currentChannel, channels, fetchRolePermissions } = useServerStore();
@@ -228,7 +264,9 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping, o
     }
     return () => {
       setPendingAttachments((prev) => {
-        prev.forEach((a) => { if (!a.gifUrl) URL.revokeObjectURL(a.preview); });
+        prev.forEach((a) => {
+          if (!a.gifUrl) URL.revokeObjectURL(a.preview);
+        });
         return [];
       });
     };
@@ -463,10 +501,10 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping, o
       // Show toast if mentions were suppressed due to missing permissions
       if (sentMessage && (sentMessage as any)?._mentions_suppressed) {
         const suppressedTypes: string[] = (sentMessage as any)?._suppressed_types || [];
-        if (suppressedTypes.includes('everyone')) {
+        if (suppressedTypes.includes("everyone")) {
           toast.info("You don't have permission to mention @everyone in this channel");
         }
-        if (suppressedTypes.includes('roles')) {
+        if (suppressedTypes.includes("roles")) {
           toast.info("You don't have permission to mention roles in this channel");
         }
       }
@@ -481,9 +519,12 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping, o
           file_type: savedAttachmentMeta[i]?.type || null,
           file_size: savedAttachmentMeta[i]?.size || null,
         }));
-        const { data: insertedAttachments, error: attachError } = await supabase.from("message_attachments").insert(attachmentRows).select();
+        const { data: insertedAttachments, error: attachError } = await supabase
+          .from("message_attachments")
+          .insert(attachmentRows)
+          .select();
         if (attachError) {
-          console.error('[MessageInput] Attachment insert error:', attachError);
+          console.error("[MessageInput] Attachment insert error:", attachError);
         }
         if (insertedAttachments && insertedAttachments.length > 0) {
           const { updateMessage } = useMessageStore.getState();
@@ -524,7 +565,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping, o
     } catch (error) {
       handleError(error, "Failed to send");
     } finally {
-    setIsSending(false);
+      setIsSending(false);
     }
   }, [
     openChatNoticePopup,
@@ -554,7 +595,10 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping, o
       if (!pasteFile) return;
       e.preventDefault();
       e.stopPropagation();
-      const attachment = { file: pasteFile, preview: pasteFile.type.startsWith("image/") ? URL.createObjectURL(pasteFile) : "" };
+      const attachment = {
+        file: pasteFile,
+        preview: pasteFile.type.startsWith("image/") ? URL.createObjectURL(pasteFile) : "",
+      };
       setPendingAttachments((prev) => [...prev, attachment].slice(0, MAX_ATTACHMENTS));
     },
     [user, isSending],
@@ -578,8 +622,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping, o
   const handleComposerKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (requiresChatNoticeAck) {
-        const isTypingAction =
-          e.key.length === 1 || e.key === "Enter" || e.key === "Backspace" || e.key === "Delete";
+        const isTypingAction = e.key.length === 1 || e.key === "Enter" || e.key === "Backspace" || e.key === "Delete";
         if (isTypingAction && !e.metaKey && !e.ctrlKey && !e.altKey) {
           e.preventDefault();
           openChatNoticePopup();
@@ -657,7 +700,10 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping, o
               }
               return true;
             });
-            const mapped = files.map((f) => ({ file: f, preview: f.type.startsWith("image/") ? URL.createObjectURL(f) : "" }));
+            const mapped = files.map((f) => ({
+              file: f,
+              preview: f.type.startsWith("image/") ? URL.createObjectURL(f) : "",
+            }));
             setPendingAttachments((prev) => [...prev, ...mapped].slice(0, MAX_ATTACHMENTS));
           }
           e.target.value = "";
@@ -718,7 +764,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping, o
         </div>
       )}
 
-        <MobileOptimizedInput
+      <MobileOptimizedInput
         content={content}
         isFocused={isFocused}
         replyingTo={replyingTo}
@@ -766,10 +812,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping, o
           }
         }}
         handleGifSelect={(url: string) => {
-          setPendingAttachments((prev) => [
-            ...prev,
-            { file: new File([], "gif"), preview: url, gifUrl: url },
-          ]);
+          setPendingAttachments((prev) => [...prev, { file: new File([], "gif"), preview: url, gifUrl: url }]);
         }}
         currentServer={currentServer}
         onAttachClick={() => fileInputRef.current?.click()}
@@ -781,7 +824,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping, o
         <div className="absolute inset-x-4 bottom-4 z-30 rounded-2xl border border-border bg-background/95 p-3 shadow-[0_14px_36px_rgba(0,0,0,0.42)] backdrop-blur">
           <div className="flex items-center gap-2 text-primary">
             <Info className="h-4 w-4" />
-            <p className="text-lg font-semibold leading-tight">Before you chat...</p>
+            <p className="text-lg font-semibold leading-tight">Before you jump in…</p>
           </div>
           <p className="mt-2 text-sm text-foreground/90 whitespace-pre-wrap break-words">{activeChatNotice}</p>
           <Button
@@ -842,7 +885,9 @@ const MobileOptimizedInput = memo(
     return (
       <div
         className={`rounded-[14px] bg-[rgb(24_24_24_/_55%)] border transition-all duration-200 shadow-[0_8px_30px_rgba(0,0,0,0.22)] ${
-          isFocused ? "border-white/14 shadow-[0_10px_34px_rgba(0,0,0,0.28)] bg-[rgb(24_24_24_/_55%)]" : "border-white/6 hover:border-white/10"
+          isFocused
+            ? "border-white/14 shadow-[0_10px_34px_rgba(0,0,0,0.28)] bg-[rgb(24_24_24_/_55%)]"
+            : "border-white/6 hover:border-white/10"
         } ${replyingTo ? "rounded-t-none" : ""}`}
       >
         {hasAttachments && (
