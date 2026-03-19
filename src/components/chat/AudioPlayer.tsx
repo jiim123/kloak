@@ -200,7 +200,7 @@ export const AudioPlayer = memo(function AudioPlayer({ src, fileName, fileSize, 
             onMouseDown={volumeSlider.onMouseDown}
           >
             <div
-              className="h-full rounded-full bg-muted-foreground/30 transition-[width] duration-75 pointer-events-none"
+              className="h-full rounded-full bg-muted-foreground/50 transition-[width] duration-75 pointer-events-none"
               style={{ width: `${(isMuted ? 0 : volume) * 100}%` }}
             />
           </div>
