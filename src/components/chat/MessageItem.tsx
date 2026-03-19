@@ -153,9 +153,11 @@ RoleIconWrapper.displayName = "RoleIconWrapper";
 const AttachmentItem = memo(function AttachmentItem({
   attachment,
   onImageClick,
+  uploaderName,
 }: {
   attachment: { id: string; file_url: string; file_name: string; file_type?: string; file_size?: number; width?: number | null; height?: number | null };
   onImageClick?: (url: string) => void;
+  uploaderName?: string;
 }) {
   const { url: signedUrl, refresh } = useSignedUrl(attachment.file_url, { withRefresh: true });
   const isImage = attachment.file_type?.startsWith("image/");
@@ -228,7 +230,7 @@ const AttachmentItem = memo(function AttachmentItem({
         </div>
       ) : isVideo ? (
         signedUrl ? (
-          <VideoPlayer src={signedUrl} fileName={attachment.file_name} onError={refresh} />
+          <VideoPlayer src={signedUrl} fileName={attachment.file_name} uploaderName={uploaderName} onError={refresh} />
         ) : (
           <div className="rounded-2xl bg-muted/30 max-w-[480px] h-48 flex items-center justify-center">
             <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
@@ -1436,7 +1438,7 @@ export const MessageItem = memo(function MessageItem({
                     {!message.is_system_message && message.attachments && message.attachments.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-2">
                         {message.attachments.map((attachment) => (
-                          <AttachmentItem key={attachment.id} attachment={attachment} onImageClick={setAttachmentLightboxUrl} />
+                          <AttachmentItem key={attachment.id} attachment={attachment} onImageClick={setAttachmentLightboxUrl} uploaderName={displayName} />
                         ))}
                       </div>
                     )}

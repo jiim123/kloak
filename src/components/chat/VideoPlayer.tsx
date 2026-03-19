@@ -4,6 +4,7 @@ import { Play, Pause, Maximize, Volume2, VolumeX, Volume1, Film } from "lucide-r
 interface VideoPlayerProps {
   src: string;
   fileName?: string;
+  uploaderName?: string;
   onError?: () => void;
 }
 
@@ -20,7 +21,7 @@ function VolumeIcon({ volume, muted }: { volume: number; muted: boolean }) {
   return <Volume2 className="w-5 h-5" />;
 }
 
-export const VideoPlayer = memo(function VideoPlayer({ src, fileName, onError }: VideoPlayerProps) {
+export const VideoPlayer = memo(function VideoPlayer({ src, fileName, uploaderName, onError }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -139,7 +140,7 @@ export const VideoPlayer = memo(function VideoPlayer({ src, fileName, onError }:
   }, []);
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
-  const displayName = fileName || "Video";
+  const topLabel = uploaderName ? `Uploaded by ${uploaderName}` : (fileName || "Video");
 
   return (
     <div
@@ -164,7 +165,7 @@ export const VideoPlayer = memo(function VideoPlayer({ src, fileName, onError }:
       >
         <div className="flex items-center gap-1.5 min-w-0 max-w-[65%]">
           <Film className="w-3.5 h-3.5 text-white/60 flex-shrink-0" />
-          <span className="text-xs text-white/70 truncate">{displayName}</span>
+          <span className="text-xs text-white/70 truncate">{topLabel}</span>
         </div>
         {duration > 0 && (
           <div className="bg-black/50 backdrop-blur-sm rounded-md px-2 py-0.5 flex-shrink-0">
