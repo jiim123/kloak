@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, memo } from "react";
-import { Play, Pause, Maximize, Volume2, VolumeX } from "lucide-react";
+import { Play, Pause, Maximize, Volume2, VolumeX, Volume1 } from "lucide-react";
 
 interface VideoPlayerProps {
   src: string;
@@ -13,15 +13,25 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+function VolumeIcon({ volume, muted }: { volume: number; muted: boolean }) {
+  if (muted || volume === 0) return <VolumeX className="w-5 h-5" />;
+  if (volume < 0.5) return <Volume1 className="w-5 h-5" />;
+  return <Volume2 className="w-5 h-5" />;
+}
+
 export const VideoPlayer = memo(function VideoPlayer({ src, onError }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [volume, setVolume] = useState(1);
+  const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [showControls, setShowControls] = useState(true);
   const hideTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const volumeHideRef = useRef<ReturnType<typeof setTimeout>>();
+  const prevVolumeRef = useRef(1);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -54,6 +64,7 @@ export const VideoPlayer = memo(function VideoPlayer({ src, onError }: VideoPlay
     hideTimeoutRef.current = setTimeout(() => {
       if (videoRef.current && !videoRef.current.paused) {
         setShowControls(false);
+        setShowVolumeSlider(false);
       }
     }, 2500);
   }, []);
@@ -73,8 +84,30 @@ export const VideoPlayer = memo(function VideoPlayer({ src, onError }: VideoPlay
   const toggleMute = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
-    video.muted = !video.muted;
-    setIsMuted(video.muted);
+    if (isMuted || volume === 0) {
+      const restore = prevVolumeRef.current || 1;
+      video.muted = false;
+      video.volume = restore;
+      setIsMuted(false);
+      setVolume(restore);
+    } else {
+      prevVolumeRef.current = volume;
+      video.muted = true;
+      setIsMuted(true);
+    }
+  }, [isMuted, volume]);
+
+  const handleVolumeChange = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const video = videoRef.current;
+    if (!video) return;
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    video.volume = ratio;
+    video.muted = ratio === 0;
+    setVolume(ratio);
+    setIsMuted(ratio === 0);
+    if (ratio > 0) prevVolumeRef.current = ratio;
   }, []);
 
   const handleSeek = useCallback(
@@ -95,6 +128,15 @@ export const VideoPlayer = memo(function VideoPlayer({ src, onError }: VideoPlay
     if (video.requestFullscreen) video.requestFullscreen();
   }, []);
 
+  const handleVolumeHover = useCallback((show: boolean) => {
+    if (volumeHideRef.current) clearTimeout(volumeHideRef.current);
+    if (show) {
+      setShowVolumeSlider(true);
+    } else {
+      volumeHideRef.current = setTimeout(() => setShowVolumeSlider(false), 300);
+    }
+  }, []);
+
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
@@ -102,7 +144,7 @@ export const VideoPlayer = memo(function VideoPlayer({ src, onError }: VideoPlay
       ref={containerRef}
       className="relative rounded-2xl overflow-hidden bg-black/90 max-w-[480px] group cursor-pointer"
       onMouseMove={scheduleHide}
-      onMouseLeave={() => { if (isPlaying) setShowControls(false); }}
+      onMouseLeave={() => { if (isPlaying) setShowControls(false); setShowVolumeSlider(false); }}
     >
       <video
         ref={videoRef}
@@ -134,12 +176,12 @@ export const VideoPlayer = memo(function VideoPlayer({ src, onError }: VideoPlay
 
       {/* Bottom controls */}
       <div
-        className="absolute bottom-0 left-0 right-0 transition-opacity duration-200"
-        style={{ opacity: showControls ? 1 : 0 }}
+        className="absolute bottom-0 left-0 right-0 transition-opacity duration-200 bg-gradient-to-t from-black/60 to-transparent pt-8"
+        style={{ opacity: showControls ? 1 : 0, pointerEvents: showControls ? "auto" : "none" }}
       >
         {/* Progress bar */}
         <div
-          className="h-1 mx-3 mb-1 rounded-full bg-white/20 cursor-pointer"
+          className="h-1.5 mx-4 mb-2 rounded-full bg-white/20 cursor-pointer group/seek"
           onClick={(e) => { e.stopPropagation(); handleSeek(e); }}
         >
           <div
@@ -148,32 +190,57 @@ export const VideoPlayer = memo(function VideoPlayer({ src, onError }: VideoPlay
           />
         </div>
 
-        <div className="flex items-center gap-2 px-3 pb-2.5 pt-0.5">
+        <div className="flex items-center gap-1 px-2 pb-3 pt-0.5">
+          {/* Play/Pause */}
           <button
             onClick={(e) => { e.stopPropagation(); togglePlay(); }}
-            className="text-white/80 hover:text-white transition-colors"
+            className="w-10 h-10 flex items-center justify-center rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
           >
             {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" fill="currentColor" />}
           </button>
 
-          <span className="text-[11px] text-white/50 tabular-nums">
+          {/* Volume group */}
+          <div
+            className="relative flex items-center"
+            onMouseEnter={() => handleVolumeHover(true)}
+            onMouseLeave={() => handleVolumeHover(false)}
+          >
+            <button
+              onClick={(e) => { e.stopPropagation(); toggleMute(); }}
+              className="w-10 h-10 flex items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <VolumeIcon volume={volume} muted={isMuted} />
+            </button>
+
+            {/* Volume slider */}
+            <div
+              className="overflow-hidden transition-all duration-200 ease-out"
+              style={{ width: showVolumeSlider ? 80 : 0, opacity: showVolumeSlider ? 1 : 0 }}
+            >
+              <div
+                className="h-1.5 w-[72px] ml-1 mr-1 rounded-full bg-white/20 cursor-pointer flex-shrink-0"
+                onClick={handleVolumeChange}
+              >
+                <div
+                  className="h-full rounded-full bg-white/70 transition-[width] duration-75"
+                  style={{ width: `${(isMuted ? 0 : volume) * 100}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <span className="text-[11px] text-white/50 tabular-nums ml-1">
             {formatTime(currentTime)} / {formatTime(duration)}
           </span>
 
           <div className="flex-1" />
 
-          <button
-            onClick={(e) => { e.stopPropagation(); toggleMute(); }}
-            className="text-white/60 hover:text-white transition-colors"
-          >
-            {isMuted ? <VolumeX className="w-[18px] h-[18px]" /> : <Volume2 className="w-[18px] h-[18px]" />}
-          </button>
-
+          {/* Fullscreen */}
           <button
             onClick={(e) => { e.stopPropagation(); handleFullscreen(); }}
-            className="text-white/60 hover:text-white transition-colors"
+            className="w-10 h-10 flex items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
           >
-            <Maximize className="w-[18px] h-[18px]" />
+            <Maximize className="w-5 h-5" />
           </button>
         </div>
       </div>
