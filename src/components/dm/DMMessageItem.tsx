@@ -236,18 +236,18 @@ export const DMMessageItem = memo(function DMMessageItem({
     }
   }, [isEditing]);
 
-  // Computed class names
+  // Computed class names — Discord-style spacing
   const outerClassName = useMemo(() => {
     const base = "px-0";
-    const padding = isFirst ? "py-1" : "py-px";
+    const spacing = isFirst ? "mt-[17px]" : "";
     const animation = shouldAnimate ? "animate-message-slide-in" : "";
-    return `${base} ${padding} ${animation}`.trim();
+    return `${base} ${spacing} ${animation}`.trim();
   }, [isFirst, shouldAnimate]);
 
   const innerClassName = useMemo(() => {
     const classes = [
       "group relative flex px-3 rounded-lg transition-colors duration-200 hover:bg-muted/40",
-      isFirst ? "gap-3 py-1.5" : "gap-3 py-0.5",
+      isFirst ? "gap-3 py-0.5" : "gap-3 py-[2px]",
     ];
     if (isMentioned) classes.push("bg-amber-950/50 border-l-2 border-l-amber-500");
     if (isHighlighted) classes.push("animate-highlight-message bg-primary/20 ring-2 ring-primary/50");
