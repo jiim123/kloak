@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect, memo } from "react";
 import { Play, Pause, Maximize, Volume2, VolumeX, Volume1 } from "lucide-react";
+import kloakEmblem from "@/assets/kloak-emblem-w.svg";
 
 interface VideoPlayerProps {
   src: string;
@@ -173,6 +174,14 @@ export const VideoPlayer = memo(function VideoPlayer({ src, fileName, onError }:
         className="w-full max-h-[360px] block"
         onClick={togglePlay}
         onError={onError}
+      />
+
+      {/* Kloak emblem — top left, larger in fullscreen */}
+      <img
+        src={kloakEmblem}
+        alt=""
+        className="absolute top-2.5 left-2.5 w-3.5 h-3.5 opacity-50 pointer-events-none"
+        style={{ zIndex: 10 }}
       />
 
       {/* Top bar: duration badge */}
