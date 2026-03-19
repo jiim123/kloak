@@ -217,6 +217,12 @@ export const AudioPlayer = memo(function AudioPlayer({ src, fileName, fileSize, 
             </div>
           </div>
         </div>
+
+        <div className="flex-1" />
+
+        <span className="text-[11px] text-muted-foreground tabular-nums pr-1">
+          {formatTime(currentTime)} / {formatTime(duration)}
+        </span>
       </div>
     </div>
   );
