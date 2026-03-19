@@ -224,47 +224,26 @@ const AttachmentItem = memo(function AttachmentItem({
           )}
         </div>
       ) : isVideo ? (
-        <div className="rounded-lg overflow-hidden bg-muted/30 max-w-[480px]">
-          {signedUrl ? (
-            <video
-              src={signedUrl}
-              controls
-              preload="metadata"
-              className="w-full rounded-lg max-h-[360px]"
-              onError={refresh}
-            >
-              Your browser does not support video playback.
-            </video>
-          ) : (
-            <div className="w-full h-48 flex items-center justify-center">
-              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-            </div>
-          )}
-        </div>
+        signedUrl ? (
+          <VideoPlayer src={signedUrl} onError={refresh} />
+        ) : (
+          <div className="rounded-2xl bg-muted/30 max-w-[480px] h-48 flex items-center justify-center">
+            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+          </div>
+        )
       ) : isAudio ? (
-        <div className="rounded-lg bg-secondary/50 p-3 max-w-[400px]">
-          {signedUrl ? (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="truncate">{attachment.file_name}</span>
-                {attachment.file_size && (
-                  <span className="text-xs flex-shrink-0">({Math.round(attachment.file_size / 1024)} KB)</span>
-                )}
-              </div>
-              <audio
-                src={signedUrl}
-                controls
-                preload="metadata"
-                className="w-full h-8"
-                onError={refresh}
-              />
-            </div>
-          ) : (
-            <div className="w-full h-12 flex items-center justify-center">
-              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-            </div>
-          )}
-        </div>
+        signedUrl ? (
+          <AudioPlayer
+            src={signedUrl}
+            fileName={attachment.file_name}
+            fileSize={attachment.file_size}
+            onError={refresh}
+          />
+        ) : (
+          <div className="rounded-2xl border border-border/40 bg-card/60 max-w-[380px] h-20 flex items-center justify-center">
+            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+          </div>
+        )
       ) : (
         <a
           href={signedUrl ?? attachment.file_url}
