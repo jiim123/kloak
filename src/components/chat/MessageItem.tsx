@@ -213,7 +213,7 @@ const AttachmentItem = memo(function AttachmentItem({
   }
 
   return (
-    <div className="relative">
+    <div className={cn("relative", isVideo && "w-full max-w-[480px]")}>
       {isImage ? (
         <div
           className="rounded-lg overflow-hidden bg-muted/30"
