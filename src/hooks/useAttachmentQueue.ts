@@ -106,7 +106,7 @@ export function useAttachmentQueue(
 
           validFiles.push({
             file,
-            preview: URL.createObjectURL(file),
+            preview: file.type.startsWith("image/") ? URL.createObjectURL(file) : "",
             uploading: false,
           });
         }
