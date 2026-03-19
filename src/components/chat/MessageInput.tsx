@@ -637,12 +637,22 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping, o
       <input
         ref={fileInputRef}
         type="file"
+        accept={ALLOWED_FILE_EXTENSIONS}
         multiple
         hidden
         onChange={(e) => {
           if (e.target.files) {
-            const files = Array.from(e.target.files).map((f) => ({ file: f, preview: URL.createObjectURL(f) }));
-            setPendingAttachments((prev) => [...prev, ...files].slice(0, MAX_ATTACHMENTS));
+            const files = Array.from(e.target.files).filter((f) => {
+              if (!ALLOWED_FILE_TYPES.includes(f.type)) {
+                return false;
+              }
+              if (f.size > MAX_FILE_SIZE) {
+                return false;
+              }
+              return true;
+            });
+            const mapped = files.map((f) => ({ file: f, preview: f.type.startsWith("image/") ? URL.createObjectURL(f) : "" }));
+            setPendingAttachments((prev) => [...prev, ...mapped].slice(0, MAX_ATTACHMENTS));
           }
           e.target.value = "";
         }}
