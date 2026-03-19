@@ -131,6 +131,15 @@ const sortThreads = (threadList: Thread[]) =>
     return bTime - aTime;
   });
 
+const parseThreadMessageContent = (content: string) => {
+  const trimmed = content.trim();
+  const parts = trimmed.split("\n\n");
+  const title = (parts.length > 1 ? parts[0] : trimmed.split("\n")[0] || "").trim();
+  const description =
+    parts.length > 1 ? parts.slice(1).join("\n\n").trim() : trimmed.split("\n").slice(1).join("\n").trim();
+  return { title, description };
+};
+
 const revokeAttachmentPreviews = (attachments: PendingAttachment[]) => {
   attachments.forEach((attachment) => URL.revokeObjectURL(attachment.preview));
 };
@@ -183,6 +192,10 @@ export const ForumChannelArea = () => {
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
+  const [isEditingThreadPost, setIsEditingThreadPost] = useState(false);
+  const [threadPostEditTitle, setThreadPostEditTitle] = useState("");
+  const [threadPostEditBody, setThreadPostEditBody] = useState("");
+  const [isSavingThreadPostEdit, setIsSavingThreadPostEdit] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState<Message | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
@@ -193,6 +206,7 @@ export const ForumChannelArea = () => {
   const createTopicTextareaRef = useRef<HTMLTextAreaElement>(null);
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
   const editTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const threadPostTitleInputRef = useRef<HTMLInputElement>(null);
   const forumAttachmentInputRef = useRef<HTMLInputElement>(null);
   const createPendingAttachmentsRef = useRef<PendingAttachment[]>([]);
   const replyPendingAttachmentsRef = useRef<PendingAttachment[]>([]);
@@ -208,6 +222,9 @@ export const ForumChannelArea = () => {
     setReplyingToThread(null);
     setEditingMessageId(null);
     setEditContent("");
+    setIsEditingThreadPost(false);
+    setThreadPostEditTitle("");
+    setThreadPostEditBody("");
     setCreatePendingAttachments((prev) => {
       revokeAttachmentPreviews(prev);
       return [];
@@ -217,6 +234,12 @@ export const ForumChannelArea = () => {
       return [];
     });
   }, [currentChannel?.id]);
+
+  useEffect(() => {
+    setIsEditingThreadPost(false);
+    setThreadPostEditTitle("");
+    setThreadPostEditBody("");
+  }, [selectedThreadId]);
 
   useEffect(() => {
     selectedThreadIdRef.current = selectedThreadId;
@@ -1381,6 +1404,9 @@ export const ForumChannelArea = () => {
         return;
       }
 
+      setIsEditingThreadPost(false);
+      setThreadPostEditTitle("");
+      setThreadPostEditBody("");
       setSelectedThreadId(threadId);
       if (currentChannel?.id) {
         void markAsRead(currentChannel.id, messageId);
@@ -1457,21 +1483,80 @@ export const ForumChannelArea = () => {
   const selectedThreadIsClosed = !!selectedThread?.is_closed;
   const canReplyToSelectedThread = !!selectedThread && (!selectedThreadIsClosed || canManageMessages);
 
+  const handleSaveThreadPostEdit = useCallback(
+    async (threadId: string) => {
+      if (!user) return;
+
+      const title = threadPostEditTitle.trim();
+      const body = threadPostEditBody.trim();
+      if (!title) {
+        showWarning("Topic title required", "Add a title before saving.");
+        return;
+      }
+
+      const content = body ? `${title}\n\n${body}` : title;
+      setIsSavingThreadPostEdit(true);
+
+      try {
+        const { data, error } = await (supabase.rpc as any)("edit_forum_thread_post", {
+          _thread_id: threadId,
+          _title: title,
+          _content: body,
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        const updated = typeof data === "string" ? JSON.parse(data) : data;
+        const updatedContent = typeof updated?.content === "string" ? updated.content : content;
+        const updatedEditedAt = updated?.edited_at || new Date().toISOString();
+
+        setThreads((prev) =>
+          sortThreads(
+            prev.map((thread) =>
+              thread.id === threadId
+                ? {
+                    ...thread,
+                    message: thread.message
+                      ? {
+                          ...thread.message,
+                          content: updatedContent,
+                          edited_at: updatedEditedAt,
+                        }
+                      : thread.message,
+                  }
+                : thread,
+            ),
+          ),
+        );
+        setIsEditingThreadPost(false);
+        showSuccess("Topic updated");
+      } catch (error) {
+        handleError(error, "Failed to edit topic");
+      } finally {
+        setIsSavingThreadPostEdit(false);
+      }
+    },
+    [user, threadPostEditTitle, threadPostEditBody],
+  );
+
   const handleEditMessage = useCallback(
     async (messageId: string) => {
       if (!user || !editContent.trim()) return;
 
       try {
-        const { error } = await supabase
-          .from("thread_messages")
-          .update({
-            content: editContent.trim(),
-            edited_at: new Date().toISOString(),
-          })
-          .eq("id", messageId)
-          .eq("user_id", user.id);
+        const trimmed = editContent.trim();
+        const { data, error } = await (supabase.rpc as any)("edit_thread_message", {
+          _message_id: messageId,
+          _content: trimmed,
+        });
 
         if (error) throw error;
+
+        const updatedMsg = typeof data === "string" ? JSON.parse(data) : data;
+        const updatedContent = typeof updatedMsg?.content === "string" ? updatedMsg.content : trimmed;
+        const updatedEditedAt = updatedMsg?.edited_at || new Date().toISOString();
 
         // Update local state
         setThreadMessages((prev) => {
@@ -1481,7 +1566,7 @@ export const ForumChannelArea = () => {
           return {
             ...prev,
             [threadId]: prev[threadId].map((m) =>
-              m.id === messageId ? { ...m, content: editContent.trim(), edited_at: new Date().toISOString() } : m,
+              m.id === messageId ? { ...m, content: updatedContent, edited_at: updatedEditedAt } : m,
             ),
           };
         });
@@ -2153,15 +2238,12 @@ export const ForumChannelArea = () => {
           (() => {
             const selectedThread = threads.find((t) => t.id === selectedThreadId);
             const messageContent = selectedThread?.message?.content || "";
-            const parts = messageContent.split("\n\n");
-            const threadTitle =
-              parts.length > 1 ? parts[0].trim() : messageContent.split("\n")[0].trim() || "No content";
-            const threadDescription =
-              parts.length > 1
-                ? parts.slice(1).join("\n\n").trim()
-                : messageContent.split("\n").slice(1).join("\n").trim();
+            const parsedThread = parseThreadMessageContent(messageContent);
+            const threadTitle = parsedThread.title || "No content";
+            const threadDescription = parsedThread.description;
             const opUser = selectedThread?.message?.user;
             const opUsernameColor = getUsernameColor(selectedThread?.created_by || opUser?.id);
+            const canEditThreadPost = !!selectedThread?.message?.id && user?.id === selectedThread?.created_by;
 
             return (
               <>
@@ -2207,6 +2289,22 @@ export const ForumChannelArea = () => {
                             {selectedThread.is_closed ? <LockOpen className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
                           </Button>
                         </>
+                      )}
+                      {canEditThreadPost && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setThreadPostEditTitle(threadTitle);
+                            setThreadPostEditBody(threadDescription);
+                            setIsEditingThreadPost(true);
+                            setTimeout(() => threadPostTitleInputRef.current?.focus(), 0);
+                          }}
+                          className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                          title="Edit topic"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
                       )}
                       {(user?.id === selectedThread?.created_by || canManageMessages) && (
                         <Button
@@ -2283,6 +2381,9 @@ export const ForumChannelArea = () => {
                                 {selectedThread?.created_at &&
                                   formatDistanceToNow(new Date(selectedThread.created_at), { addSuffix: true })}
                               </span>
+                              {selectedThread?.message?.edited_at && (
+                                <span className="text-[10px] text-muted-foreground">(edited)</span>
+                              )}
                               {selectedThread?.is_pinned && (
                                 <span className={forumMetaChipClass}>
                                   <Pin className="h-3 w-3" />
@@ -2296,22 +2397,72 @@ export const ForumChannelArea = () => {
                                 </span>
                               )}
                             </div>
-                            <div className="text-sm text-foreground">
-                              <MessageContent
-                                content={threadDescription}
-                                currentUserId={user?.id}
-                                messageId={selectedThread?.message?.id}
-                                messageUser={
-                                  opUser
-                                    ? {
-                                        id: opUser.id,
-                                        username: opUser.username,
-                                        display_name: opUser.display_name,
+                            {isEditingThreadPost ? (
+                              <div className="space-y-2">
+                                <Input
+                                  ref={threadPostTitleInputRef}
+                                  value={threadPostEditTitle}
+                                  onChange={(e) => setThreadPostEditTitle(e.target.value)}
+                                  placeholder="Topic title"
+                                  maxLength={200}
+                                />
+                                <Textarea
+                                  value={threadPostEditBody}
+                                  onChange={(e) => setThreadPostEditBody(e.target.value)}
+                                  className="min-h-[100px] resize-y"
+                                  placeholder="Topic content"
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Escape") {
+                                      setIsEditingThreadPost(false);
+                                      setThreadPostEditTitle(threadTitle);
+                                      setThreadPostEditBody(threadDescription);
+                                    } else if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && selectedThread?.id) {
+                                      void handleSaveThreadPostEdit(selectedThread.id);
+                                    }
+                                  }}
+                                />
+                                <div className="flex gap-2 text-xs">
+                                  <button
+                                    className="text-primary hover:underline disabled:opacity-50"
+                                    disabled={isSavingThreadPostEdit}
+                                    onClick={() => {
+                                      if (selectedThread?.id) {
+                                        void handleSaveThreadPostEdit(selectedThread.id);
                                       }
-                                    : null
-                                }
-                              />
-                            </div>
+                                    }}
+                                  >
+                                    {isSavingThreadPostEdit ? "Saving..." : "Save"}
+                                  </button>
+                                  <button
+                                    className="text-muted-foreground hover:underline"
+                                    onClick={() => {
+                                      setIsEditingThreadPost(false);
+                                      setThreadPostEditTitle(threadTitle);
+                                      setThreadPostEditBody(threadDescription);
+                                    }}
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="text-sm text-foreground">
+                                <MessageContent
+                                  content={threadDescription}
+                                  currentUserId={user?.id}
+                                  messageId={selectedThread?.message?.id}
+                                  messageUser={
+                                    opUser
+                                      ? {
+                                          id: opUser.id,
+                                          username: opUser.username,
+                                          display_name: opUser.display_name,
+                                        }
+                                      : null
+                                  }
+                                />
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -2676,6 +2827,22 @@ export const ForumChannelArea = () => {
                           </Button>
                         </>
                       )}
+                      {canEditThreadPost && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setThreadPostEditTitle(threadTitle);
+                            setThreadPostEditBody(threadDescription);
+                            setIsEditingThreadPost(true);
+                            setTimeout(() => threadPostTitleInputRef.current?.focus(), 0);
+                          }}
+                          className="h-9 w-9 p-0 text-muted-foreground hover:text-foreground"
+                          title="Edit topic"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                      )}
                       {(user?.id === selectedThread?.created_by || canManageMessages) && (
                         <Button
                           variant="ghost"
@@ -2739,6 +2906,9 @@ export const ForumChannelArea = () => {
                                   {selectedThread?.created_at &&
                                     formatDistanceToNow(new Date(selectedThread.created_at), { addSuffix: true })}
                                 </span>
+                                {selectedThread?.message?.edited_at && (
+                                  <span className="text-[10px] text-muted-foreground">(edited)</span>
+                                )}
                                 {selectedThread?.is_pinned && (
                                   <span className={forumMetaChipClass}>
                                     <Pin className="h-3 w-3" />
@@ -2752,22 +2922,72 @@ export const ForumChannelArea = () => {
                                   </span>
                                 )}
                               </div>
-                              <div className="text-sm text-foreground">
-                                <MessageContent
-                                  content={threadDescription}
-                                  currentUserId={user?.id}
-                                  messageId={selectedThread?.message?.id}
-                                  messageUser={
-                                    opUser
-                                      ? {
-                                          id: opUser.id,
-                                          username: opUser.username,
-                                          display_name: opUser.display_name,
+                              {isEditingThreadPost ? (
+                                <div className="space-y-2">
+                                  <Input
+                                    ref={threadPostTitleInputRef}
+                                    value={threadPostEditTitle}
+                                    onChange={(e) => setThreadPostEditTitle(e.target.value)}
+                                    placeholder="Topic title"
+                                    maxLength={200}
+                                  />
+                                  <Textarea
+                                    value={threadPostEditBody}
+                                    onChange={(e) => setThreadPostEditBody(e.target.value)}
+                                    className="min-h-[100px] resize-y"
+                                    placeholder="Topic content"
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Escape") {
+                                        setIsEditingThreadPost(false);
+                                        setThreadPostEditTitle(threadTitle);
+                                        setThreadPostEditBody(threadDescription);
+                                      } else if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && selectedThread?.id) {
+                                        void handleSaveThreadPostEdit(selectedThread.id);
+                                      }
+                                    }}
+                                  />
+                                  <div className="flex gap-2 text-xs">
+                                    <button
+                                      className="text-primary hover:underline disabled:opacity-50"
+                                      disabled={isSavingThreadPostEdit}
+                                      onClick={() => {
+                                        if (selectedThread?.id) {
+                                          void handleSaveThreadPostEdit(selectedThread.id);
                                         }
-                                      : null
-                                  }
-                                />
-                              </div>
+                                      }}
+                                    >
+                                      {isSavingThreadPostEdit ? "Saving..." : "Save"}
+                                    </button>
+                                    <button
+                                      className="text-muted-foreground hover:underline"
+                                      onClick={() => {
+                                        setIsEditingThreadPost(false);
+                                        setThreadPostEditTitle(threadTitle);
+                                        setThreadPostEditBody(threadDescription);
+                                      }}
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="text-sm text-foreground">
+                                  <MessageContent
+                                    content={threadDescription}
+                                    currentUserId={user?.id}
+                                    messageId={selectedThread?.message?.id}
+                                    messageUser={
+                                      opUser
+                                        ? {
+                                            id: opUser.id,
+                                            username: opUser.username,
+                                            display_name: opUser.display_name,
+                                          }
+                                        : null
+                                    }
+                                  />
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
