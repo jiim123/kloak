@@ -186,6 +186,7 @@ export const DMMessageItem = memo(function DMMessageItem({
   const [isRowHovered, setIsRowHovered] = useState(false);
   const [reactionDetailsEmoji, setReactionDetailsEmoji] = useState<string | null>(null);
   const [showDesktopEmojiPicker, setShowDesktopEmojiPicker] = useState(false);
+  const [attachmentLightboxUrl, setAttachmentLightboxUrl] = useState<string | null>(null);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
