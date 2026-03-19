@@ -143,7 +143,7 @@ export const AudioPlayer = memo(function AudioPlayer({ src, fileName, fileSize, 
 
       {/* Top row: audio icon + file info */}
       <div className="flex items-center gap-1.5 min-w-0">
-        <Music className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0" />
+        <Music className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
         <span className="text-xs text-foreground/80 truncate">{fileName}</span>
         {sizeLabel && (
           <span className="text-[11px] text-muted-foreground/60 flex-shrink-0">· {sizeLabel}</span>
