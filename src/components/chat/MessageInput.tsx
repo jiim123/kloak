@@ -194,13 +194,19 @@ const ActionBar = memo(
 
         {/* Right side */}
         <div className="flex items-center gap-1.5">
-          {showCharacterWarning && (
-            <span
-              className={`text-[13px] font-sans ${content.length > MAX_LENGTH - 50 ? "text-destructive" : "text-muted-foreground"}`}
-            >
-              {MAX_LENGTH - content.length}
-            </span>
-          )}
+          <AnimatePresence>
+            {showCharacterWarning && (
+              <motion.span
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.15, ease: "easeOut" }}
+                className={`text-[13px] font-sans ${content.length > MAX_LENGTH - 50 ? "text-destructive" : "text-muted-foreground"}`}
+              >
+                {MAX_LENGTH - content.length}
+              </motion.span>
+            )}
+          </AnimatePresence>
           <button
             onClick={onSubmit}
             disabled={!canSend}
@@ -771,23 +777,33 @@ export const MessageInput = ({
 
       <SelectionFormatToolbar textareaRef={textareaRef} onFormat={handleFormat} />
 
-      {replyingTo && (
-        <div className="flex items-center gap-2 px-3.5 py-1.5 bg-white/5 border-b border-white/6 rounded-t-[14px]">
-          <span className="text-xs text-muted-foreground">
-            Replying to{" "}
-            {showReplyAuthorIdentity ? (
-              <span className="text-primary">
-                @{replyingToUser?.display_name || replyingToUser?.username || "unknown"}
+      <AnimatePresence>
+        {replyingTo && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className="overflow-hidden"
+          >
+            <div className="flex items-center gap-2 px-3.5 py-1.5 bg-white/5 border-b border-white/6 rounded-t-[14px]">
+              <span className="text-xs text-muted-foreground">
+                Replying to{" "}
+                {showReplyAuthorIdentity ? (
+                  <span className="text-primary">
+                    @{replyingToUser?.display_name || replyingToUser?.username || "unknown"}
+                  </span>
+                ) : (
+                  <span className="text-primary italic">Anonymous</span>
+                )}
               </span>
-            ) : (
-              <span className="text-primary italic">Anonymous</span>
-            )}
-          </span>
-          <button onClick={() => setReplyingTo(null)} className="ml-auto p-1">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
+              <button onClick={() => setReplyingTo(null)} className="ml-auto p-1">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <MobileOptimizedInput
         content={content}
@@ -845,28 +861,36 @@ export const MessageInput = ({
         onRemoveAttachment={(i: number) => setPendingAttachments((p) => p.filter((_, idx) => idx !== i))}
         onAddMore={() => fileInputRef.current?.click()}
       />
-      {showChatNoticePopup && requiresChatNoticeAck && (
-        <div className="absolute inset-x-4 bottom-4 z-30 rounded-2xl border border-border bg-background/95 p-3 shadow-[0_14px_36px_rgba(0,0,0,0.42)] backdrop-blur">
-          <div className="flex items-center gap-2 text-primary">
-            <Info className="h-4 w-4" />
-            <p className="text-lg font-semibold leading-tight">Before you jump in…</p>
-          </div>
-          <p className="mt-2 text-sm text-foreground/90 whitespace-pre-wrap break-words">{activeChatNotice}</p>
-          <Button
-            type="button"
-            onClick={handleAcknowledgeChatNotice}
-            disabled={isAcknowledgingChatNotice}
-            className="mt-3 h-10 w-full rounded-xl"
+      <AnimatePresence>
+        {showChatNoticePopup && requiresChatNoticeAck && (
+          <motion.div
+            initial={{ opacity: 0, y: 8, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.97 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="absolute inset-x-4 bottom-4 z-30 rounded-2xl border border-border bg-background/95 p-3 shadow-[0_14px_36px_rgba(0,0,0,0.42)] backdrop-blur"
           >
-            {isAcknowledgingChatNotice ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Check className="mr-2 h-4 w-4" />
-            )}
-            Understood
-          </Button>
-        </div>
-      )}
+            <div className="flex items-center gap-2 text-primary">
+              <Info className="h-4 w-4" />
+              <p className="text-lg font-semibold leading-tight">Before you jump in…</p>
+            </div>
+            <p className="mt-2 text-sm text-foreground/90 whitespace-pre-wrap break-words">{activeChatNotice}</p>
+            <Button
+              type="button"
+              onClick={handleAcknowledgeChatNotice}
+              disabled={isAcknowledgingChatNotice}
+              className="mt-3 h-10 w-full rounded-xl"
+            >
+              {isAcknowledgingChatNotice ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="mr-2 h-4 w-4" />
+              )}
+              Understood
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <CreatePollModal open={showCreatePoll} onOpenChange={setShowCreatePoll} channelId={channelId} />
     </div>
   );
@@ -915,14 +939,24 @@ const MobileOptimizedInput = memo(
             : "border-white/6 hover:border-white/10"
         } ${replyingTo ? "rounded-t-none" : ""}`}
       >
-        {hasAttachments && (
-          <AttachmentPreviewBar
-            attachments={pendingAttachments}
-            onRemove={onRemoveAttachment}
-            onAddMore={onAddMore}
-            disabled={isSending}
-          />
-        )}
+        <AnimatePresence>
+          {hasAttachments && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="overflow-hidden"
+            >
+              <AttachmentPreviewBar
+                attachments={pendingAttachments}
+                onRemove={onRemoveAttachment}
+                onAddMore={onAddMore}
+                disabled={isSending}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Textarea area */}
         <div className="px-3.5 sm:px-4 pt-2.5">
