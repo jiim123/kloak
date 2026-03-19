@@ -431,11 +431,16 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping, o
         size: a.file.size,
       }));
 
-      // Upload file attachments to storage
+      // Upload file attachments to storage (compress images first)
       if (fileAttachments.length > 0) {
         for (const att of fileAttachments) {
-          const fileName = `${user.id}/${Date.now()}-${crypto.randomUUID()}.${att.file.name.split(".").pop()}`;
-          const res = await secureUpload("attachments", fileName, att.file, { contentType: att.file.type });
+          let fileToUpload = att.file;
+          if (fileToUpload.type.startsWith("image/")) {
+            fileToUpload = await compressAttachmentImage(fileToUpload);
+          }
+          const ext = fileToUpload.name.split(".").pop() || "bin";
+          const fileName = `${user.id}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+          const res = await secureUpload("attachments", fileName, fileToUpload, { contentType: fileToUpload.type });
           uploadedUrls.push(res.publicUrl);
         }
       }

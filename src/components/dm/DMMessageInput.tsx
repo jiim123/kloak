@@ -513,7 +513,7 @@ export const DMMessageInput = ({ conversationId, otherUsername, replyingTo, onCa
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/gif,image/webp"
+        accept={ALLOWED_FILE_EXTENSIONS}
         multiple
         onChange={handleFileInputChange}
         className="hidden"
