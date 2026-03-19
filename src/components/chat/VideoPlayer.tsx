@@ -21,7 +21,7 @@ function VolumeIcon({ volume, muted }: { volume: number; muted: boolean }) {
   return <Volume2 className="w-5 h-5" />;
 }
 
-export const VideoPlayer = memo(function VideoPlayer({ src, fileName, onError }: VideoPlayerProps) {
+export const VideoPlayer = memo(function VideoPlayer({ src, fileName, uploaderName, onError }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
