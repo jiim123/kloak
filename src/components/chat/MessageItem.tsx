@@ -227,7 +227,7 @@ const AttachmentItem = memo(function AttachmentItem({
         </div>
       ) : isVideo ? (
         signedUrl ? (
-          <VideoPlayer src={signedUrl} onError={refresh} />
+          <VideoPlayer src={signedUrl} fileName={attachment.file_name} onError={refresh} />
         ) : (
           <div className="rounded-2xl bg-muted/30 max-w-[480px] h-48 flex items-center justify-center">
             <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
