@@ -771,23 +771,33 @@ export const MessageInput = ({
 
       <SelectionFormatToolbar textareaRef={textareaRef} onFormat={handleFormat} />
 
-      {replyingTo && (
-        <div className="flex items-center gap-2 px-3.5 py-1.5 bg-white/5 border-b border-white/6 rounded-t-[14px]">
-          <span className="text-xs text-muted-foreground">
-            Replying to{" "}
-            {showReplyAuthorIdentity ? (
-              <span className="text-primary">
-                @{replyingToUser?.display_name || replyingToUser?.username || "unknown"}
+      <AnimatePresence>
+        {replyingTo && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className="overflow-hidden"
+          >
+            <div className="flex items-center gap-2 px-3.5 py-1.5 bg-white/5 border-b border-white/6 rounded-t-[14px]">
+              <span className="text-xs text-muted-foreground">
+                Replying to{" "}
+                {showReplyAuthorIdentity ? (
+                  <span className="text-primary">
+                    @{replyingToUser?.display_name || replyingToUser?.username || "unknown"}
+                  </span>
+                ) : (
+                  <span className="text-primary italic">Anonymous</span>
+                )}
               </span>
-            ) : (
-              <span className="text-primary italic">Anonymous</span>
-            )}
-          </span>
-          <button onClick={() => setReplyingTo(null)} className="ml-auto p-1">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
+              <button onClick={() => setReplyingTo(null)} className="ml-auto p-1">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <MobileOptimizedInput
         content={content}
