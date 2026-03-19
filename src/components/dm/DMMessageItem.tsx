@@ -533,6 +533,19 @@ export const DMMessageItem = memo(function DMMessageItem({
 
                 {message.edited_at && !isEditing && <span className="text-[10px] text-muted-foreground">(edited)</span>}
 
+                {/* Attachments */}
+                {message.attachments && message.attachments.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2 w-full">
+                    {message.attachments.map((attachment: any) => (
+                      <DMAttachmentItem
+                        key={attachment.id}
+                        attachment={attachment}
+                        onImageClick={setAttachmentLightboxUrl}
+                      />
+                    ))}
+                  </div>
+                )}
+
                 {/* Reactions */}
                 {message.reactions && message.reactions.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-2">
