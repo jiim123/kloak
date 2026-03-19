@@ -213,15 +213,15 @@ export const DMMessageInput = ({ conversationId, otherUsername, replyingTo, onCa
       }
       const valid: PendingAttachment[] = [];
       for (const file of toAdd) {
-        if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-          toast.warning("Only JPEG, PNG, GIF, and WebP images are allowed");
+        if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+          toast.warning("This file type is not supported");
           continue;
         }
-        if (file.size > MAX_IMAGE_FILE_SIZE) {
-          toast.warning("File size must be less than 1MB");
+        if (file.size > MAX_FILE_SIZE) {
+          toast.warning("File size must be less than 25MB");
           continue;
         }
-        valid.push({ file, preview: URL.createObjectURL(file) });
+        valid.push({ file, preview: file.type.startsWith("image/") ? URL.createObjectURL(file) : "" });
       }
       return [...prev, ...valid];
     });
