@@ -510,8 +510,8 @@ export type Database = {
       }
       channel_user_settings: {
         Row: {
-          chat_notice_seen_at: string | null
           channel_id: string
+          chat_notice_seen_at: string | null
           created_at: string | null
           id: string
           is_hidden: boolean | null
@@ -523,8 +523,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          chat_notice_seen_at?: string | null
           channel_id: string
+          chat_notice_seen_at?: string | null
           created_at?: string | null
           id?: string
           is_hidden?: boolean | null
@@ -536,8 +536,8 @@ export type Database = {
           user_id: string
         }
         Update: {
-          chat_notice_seen_at?: string | null
           channel_id?: string
+          chat_notice_seen_at?: string | null
           created_at?: string | null
           id?: string
           is_hidden?: boolean | null
@@ -2126,6 +2126,49 @@ export type Database = {
           },
         ]
       }
+      streaming_channel_sessions: {
+        Row: {
+          started_at: string
+          streamer_user_id: string
+          updated_at: string
+          voice_channel_id: string
+        }
+        Insert: {
+          started_at?: string
+          streamer_user_id: string
+          updated_at?: string
+          voice_channel_id: string
+        }
+        Update: {
+          started_at?: string
+          streamer_user_id?: string
+          updated_at?: string
+          voice_channel_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "streaming_channel_sessions_streamer_user_id_fkey"
+            columns: ["streamer_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "streaming_channel_sessions_streamer_user_id_fkey"
+            columns: ["streamer_user_id"]
+            isOneToOne: false
+            referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "streaming_channel_sessions_voice_channel_id_fkey"
+            columns: ["voice_channel_id"]
+            isOneToOne: true
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_assignees: {
         Row: {
           assigned_at: string
@@ -3231,6 +3274,10 @@ export type Database = {
         Args: { _username: string }
         Returns: boolean
       }
+      clear_streaming_chat_on_streamer_leave: {
+        Args: { _user_id: string; _voice_channel_id: string }
+        Returns: boolean
+      }
       close_dm_conversation: {
         Args: { _conversation_id: string; _user_id: string }
         Returns: Json
@@ -4205,6 +4252,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      set_streaming_session_owner: {
+        Args: { _user_id: string; _voice_channel_id: string }
+        Returns: undefined
+      }
       shares_dm_with: {
         Args: { _other_user_id: string; _user_id: string }
         Returns: boolean
@@ -4388,6 +4439,7 @@ export type Database = {
         | "forum"
         | "tasks"
         | "media"
+        | "streaming"
       friendship_status: "pending" | "accepted" | "blocked" | "declined"
       mention_type: "user" | "everyone" | "here" | "role"
       notification_type:
@@ -4573,6 +4625,7 @@ export const Constants = {
         "forum",
         "tasks",
         "media",
+        "streaming",
       ],
       friendship_status: ["pending", "accepted", "blocked", "declined"],
       mention_type: ["user", "everyone", "here", "role"],

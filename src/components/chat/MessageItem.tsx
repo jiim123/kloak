@@ -156,6 +156,8 @@ const AttachmentItem = memo(function AttachmentItem({
 }) {
   const { url: signedUrl, refresh } = useSignedUrl(attachment.file_url, { withRefresh: true });
   const isImage = attachment.file_type?.startsWith("image/");
+  const isVideo = attachment.file_type?.startsWith("video/");
+  const isAudio = attachment.file_type?.startsWith("audio/");
   const isGif = attachment.file_type === "image/gif";
   const [gifPreviewSrc, setGifPreviewSrc] = useState<string | null>(null);
   const [isGifHovered, setIsGifHovered] = useState(false);
@@ -217,6 +219,48 @@ const AttachmentItem = memo(function AttachmentItem({
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            </div>
+          )}
+        </div>
+      ) : isVideo ? (
+        <div className="rounded-lg overflow-hidden bg-muted/30 max-w-[480px]">
+          {signedUrl ? (
+            <video
+              src={signedUrl}
+              controls
+              preload="metadata"
+              className="w-full rounded-lg max-h-[360px]"
+              onError={refresh}
+            >
+              Your browser does not support video playback.
+            </video>
+          ) : (
+            <div className="w-full h-48 flex items-center justify-center">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            </div>
+          )}
+        </div>
+      ) : isAudio ? (
+        <div className="rounded-lg bg-secondary/50 p-3 max-w-[400px]">
+          {signedUrl ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span className="truncate">{attachment.file_name}</span>
+                {attachment.file_size && (
+                  <span className="text-xs flex-shrink-0">({Math.round(attachment.file_size / 1024)} KB)</span>
+                )}
+              </div>
+              <audio
+                src={signedUrl}
+                controls
+                preload="metadata"
+                className="w-full h-8"
+                onError={refresh}
+              />
+            </div>
+          ) : (
+            <div className="w-full h-12 flex items-center justify-center">
               <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
             </div>
           )}

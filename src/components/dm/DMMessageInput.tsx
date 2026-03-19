@@ -15,6 +15,7 @@ import { SelectionFormatToolbar, FORMAT_SYNTAX, getCodeBlockSyntax } from "@/com
 import { AttachmentPreviewBar, PendingAttachment } from "@/components/chat/AttachmentPreviewBar";
 import { supabase } from "@/integrations/supabase/client";
 import { secureUpload } from "@/lib/storageUpload";
+import { compressAttachmentImage } from "@/lib/imageCompression";
 import { showSuccess } from "@/lib/errorHandler";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -30,9 +31,20 @@ const MAX_LENGTH = 2000;
 const MIN_TEXTAREA_HEIGHT = 40;
 const MAX_TEXTAREA_HEIGHT = 160;
 const DRAFT_SAVE_DELAY = 500;
-const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-const MAX_IMAGE_FILE_SIZE = 1 * 1024 * 1024; // 1MB
+const ALLOWED_FILE_TYPES: readonly string[] = [
+  "image/jpeg", "image/png", "image/gif", "image/webp", "image/avif", "image/svg+xml",
+  "video/mp4", "video/webm", "video/quicktime",
+  "audio/mpeg", "audio/ogg", "audio/wav", "audio/webm", "audio/mp4", "audio/flac",
+  "application/pdf", "text/plain", "application/zip", "application/x-rar-compressed",
+  "application/gzip", "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/json",
+];
+const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
 const MAX_ATTACHMENTS = 10;
+const ALLOWED_FILE_EXTENSIONS = ".jpg,.jpeg,.png,.gif,.webp,.avif,.svg,.mp4,.webm,.mov,.mp3,.ogg,.wav,.flac,.m4a,.pdf,.txt,.zip,.rar,.gz,.doc,.docx,.xls,.xlsx,.json";
 
 // Memoized action bar (full-width bottom bar)
 const ActionBar = memo(
@@ -202,15 +214,15 @@ export const DMMessageInput = ({ conversationId, otherUsername, replyingTo, onCa
       }
       const valid: PendingAttachment[] = [];
       for (const file of toAdd) {
-        if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-          toast.warning("Only JPEG, PNG, GIF, and WebP images are allowed");
+        if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+          toast.warning("This file type is not supported");
           continue;
         }
-        if (file.size > MAX_IMAGE_FILE_SIZE) {
-          toast.warning("File size must be less than 1MB");
+        if (file.size > MAX_FILE_SIZE) {
+          toast.warning("File size must be less than 25MB");
           continue;
         }
-        valid.push({ file, preview: URL.createObjectURL(file) });
+        valid.push({ file, preview: file.type.startsWith("image/") ? URL.createObjectURL(file) : "" });
       }
       return [...prev, ...valid];
     });
@@ -244,8 +256,12 @@ export const DMMessageInput = ({ conversationId, otherUsername, replyingTo, onCa
     setPendingAttachments((prev) => prev.map((a) => ({ ...a, uploading: true })));
     const urls: string[] = [];
     for (const att of pendingAttachments) {
+      let fileToUpload = att.file;
+      if (fileToUpload.type.startsWith("image/")) {
+        fileToUpload = await compressAttachmentImage(fileToUpload);
+      }
       const timestamp = Date.now();
-      const fileExt = att.file.name.split(".").pop() || "png";
+      const fileExt = fileToUpload.name.split(".").pop() || "bin";
       const fileName = `${user.id}/${timestamp}-${crypto.randomUUID()}.${fileExt}`;
 
       const result = await secureUpload("attachments", fileName, att.file, {
@@ -348,24 +364,23 @@ export const DMMessageInput = ({ conversationId, otherUsername, replyingTo, onCa
     }
   };
 
-  // Paste handler: queue images
+  // Paste handler: queue files
   const handlePaste = useCallback(
     (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
       if (!user || isSending) return;
-      // Prefer clipboardData.files to avoid duplicate items across browsers
       const files = e.clipboardData?.files;
       if (!files || files.length === 0) {
         requestAnimationFrame(() => resizeTextarea());
         return;
       }
-      const imageFile = Array.from(files).find((f) => f.type.startsWith("image/"));
-      if (!imageFile) {
+      const pasteFile = Array.from(files).find((f) => ALLOWED_FILE_TYPES.includes(f.type));
+      if (!pasteFile) {
         requestAnimationFrame(() => resizeTextarea());
         return;
       }
       e.preventDefault();
       e.stopPropagation();
-      addFilesToQueue([imageFile]);
+      addFilesToQueue([pasteFile]);
     },
     [user, isSending, addFilesToQueue, resizeTextarea],
   );
@@ -502,7 +517,7 @@ export const DMMessageInput = ({ conversationId, otherUsername, replyingTo, onCa
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/gif,image/webp"
+        accept={ALLOWED_FILE_EXTENSIONS}
         multiple
         onChange={handleFileInputChange}
         className="hidden"

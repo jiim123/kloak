@@ -25,6 +25,7 @@ import { CreatePollModal } from "@/components/modals/CreatePollModal";
 import { SelectionFormatToolbar, FORMAT_SYNTAX, getCodeBlockSyntax } from "./FormatToolbar";
 import { AttachmentPreviewBar, PendingAttachment } from "./AttachmentPreviewBar";
 import { secureUpload } from "@/lib/storageUpload";
+import { compressAttachmentImage } from "@/lib/imageCompression";
 import { supabase } from "@/integrations/supabase/client";
 import { showWarning, handleError } from "@/lib/errorHandler";
 import { messageRateLimiter, validateMessageContent } from "@/lib/security";
@@ -58,9 +59,20 @@ interface ChannelMapping {
 const MAX_LENGTH = 2000;
 const MIN_TEXTAREA_HEIGHT = 40;
 const MAX_TEXTAREA_HEIGHT = 160;
-const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-const MAX_IMAGE_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const MAX_ATTACHMENTS = 5;
+const ALLOWED_FILE_TYPES: readonly string[] = [
+  "image/jpeg", "image/png", "image/gif", "image/webp", "image/avif", "image/svg+xml",
+  "video/mp4", "video/webm", "video/quicktime",
+  "audio/mpeg", "audio/ogg", "audio/wav", "audio/webm", "audio/mp4", "audio/flac",
+  "application/pdf", "text/plain", "application/zip", "application/x-rar-compressed",
+  "application/gzip", "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/json",
+];
+const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
+const MAX_ATTACHMENTS = 10;
+const ALLOWED_FILE_EXTENSIONS = ".jpg,.jpeg,.png,.gif,.webp,.avif,.svg,.mp4,.webm,.mov,.mp3,.ogg,.wav,.flac,.m4a,.pdf,.txt,.zip,.rar,.gz,.doc,.docx,.xls,.xlsx,.json";
 const DRAFT_SAVE_DELAY = 500;
 const TYPING_STOP_DELAY = 2000;
 
@@ -105,7 +117,7 @@ const ActionBar = memo(
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="min-w-[160px]">
                 <DropdownMenuItem onClick={onAttachClick} disabled={!canSendMessage}>
-                  <Paperclip className="w-4 h-4 mr-2" /> Upload image
+                  <Paperclip className="w-4 h-4 mr-2" /> Attach file
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setShowCreatePoll(true)} disabled={!canSendMessage}>
                   <SquareChartGantt className="w-4 h-4 mr-2" /> Create poll
@@ -419,11 +431,16 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping, o
         size: a.file.size,
       }));
 
-      // Upload file attachments to storage
+      // Upload file attachments to storage (compress images first)
       if (fileAttachments.length > 0) {
         for (const att of fileAttachments) {
-          const fileName = `${user.id}/${Date.now()}-${crypto.randomUUID()}.${att.file.name.split(".").pop()}`;
-          const res = await secureUpload("attachments", fileName, att.file, { contentType: att.file.type });
+          let fileToUpload = att.file;
+          if (fileToUpload.type.startsWith("image/")) {
+            fileToUpload = await compressAttachmentImage(fileToUpload);
+          }
+          const ext = fileToUpload.name.split(".").pop() || "bin";
+          const fileName = `${user.id}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+          const res = await secureUpload("attachments", fileName, fileToUpload, { contentType: fileToUpload.type });
           uploadedUrls.push(res.publicUrl);
         }
       }
@@ -533,11 +550,11 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping, o
       // Prefer clipboardData.files — it de-duplicates across browsers
       const files = e.clipboardData?.files;
       if (!files || files.length === 0) return;
-      const imageFile = Array.from(files).find((f) => f.type.startsWith("image/"));
-      if (!imageFile) return;
+      const pasteFile = Array.from(files).find((f) => ALLOWED_FILE_TYPES.includes(f.type));
+      if (!pasteFile) return;
       e.preventDefault();
       e.stopPropagation();
-      const attachment = { file: imageFile, preview: URL.createObjectURL(imageFile) };
+      const attachment = { file: pasteFile, preview: pasteFile.type.startsWith("image/") ? URL.createObjectURL(pasteFile) : "" };
       setPendingAttachments((prev) => [...prev, attachment].slice(0, MAX_ATTACHMENTS));
     },
     [user, isSending],
@@ -626,12 +643,22 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping, o
       <input
         ref={fileInputRef}
         type="file"
+        accept={ALLOWED_FILE_EXTENSIONS}
         multiple
         hidden
         onChange={(e) => {
           if (e.target.files) {
-            const files = Array.from(e.target.files).map((f) => ({ file: f, preview: URL.createObjectURL(f) }));
-            setPendingAttachments((prev) => [...prev, ...files].slice(0, MAX_ATTACHMENTS));
+            const files = Array.from(e.target.files).filter((f) => {
+              if (!ALLOWED_FILE_TYPES.includes(f.type)) {
+                return false;
+              }
+              if (f.size > MAX_FILE_SIZE) {
+                return false;
+              }
+              return true;
+            });
+            const mapped = files.map((f) => ({ file: f, preview: f.type.startsWith("image/") ? URL.createObjectURL(f) : "" }));
+            setPendingAttachments((prev) => [...prev, ...mapped].slice(0, MAX_ATTACHMENTS));
           }
           e.target.value = "";
         }}

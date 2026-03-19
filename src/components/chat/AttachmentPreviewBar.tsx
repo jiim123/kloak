@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { X, Plus, Loader2, FileIcon } from "lucide-react";
+import { X, Plus, Loader2, FileIcon, Film, Music } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export interface PendingAttachment {
@@ -37,15 +37,26 @@ export const AttachmentPreviewBar = memo(({ attachments, onRemove, onAddMore, di
                   alt="GIF"
                   className="w-full h-full object-cover"
                 />
-              ) : att.file.type.startsWith("image/") ? (
+              ) : att.file.type.startsWith("image/") && att.preview ? (
                 <img
                   src={att.preview}
                   alt={att.file.name}
                   className="w-full h-full object-cover"
                 />
+              ) : att.file.type.startsWith("video/") ? (
+                <div className="w-full h-full flex flex-col items-center justify-center gap-1">
+                  <Film className="w-5 h-5 text-muted-foreground" />
+                  <p className="text-[9px] text-muted-foreground truncate max-w-[60px] px-1">{att.file.name}</p>
+                </div>
+              ) : att.file.type.startsWith("audio/") ? (
+                <div className="w-full h-full flex flex-col items-center justify-center gap-1">
+                  <Music className="w-5 h-5 text-muted-foreground" />
+                  <p className="text-[9px] text-muted-foreground truncate max-w-[60px] px-1">{att.file.name}</p>
+                </div>
               ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <FileIcon className="w-6 h-6 text-muted-foreground" />
+                <div className="w-full h-full flex flex-col items-center justify-center gap-1">
+                  <FileIcon className="w-5 h-5 text-muted-foreground" />
+                  <p className="text-[9px] text-muted-foreground truncate max-w-[60px] px-1">{att.file.name}</p>
                 </div>
               )}
 
