@@ -1061,6 +1061,7 @@ export const ReplyPreview = ({
   // Strip markdown and prepare content
   const stripped = useMemo(() => {
     let result = content
+      .replace(/:ce\[([a-z0-9_]{2,12})\|[^\]]+\]:/g, ":$1:")
       .replace(/```[\s\S]*?```/g, "[code]")
       .replace(/`[^`]+`/g, "[code]")
       .replace(/\*\*([^*]+)\*\*/g, "$1")
