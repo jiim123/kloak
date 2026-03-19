@@ -166,7 +166,7 @@ export const VideoPlayer = memo(function VideoPlayer({ src, onError }: VideoPlay
             onClick={(e) => { e.stopPropagation(); toggleMute(); }}
             className="text-white/60 hover:text-white transition-colors"
           >
-            {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+            {isMuted ? <VolumeX className="w-[18px] h-[18px]" /> : <Volume2 className="w-[18px] h-[18px]" />}
           </button>
 
           <button
