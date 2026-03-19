@@ -58,9 +58,20 @@ interface ChannelMapping {
 const MAX_LENGTH = 2000;
 const MIN_TEXTAREA_HEIGHT = 40;
 const MAX_TEXTAREA_HEIGHT = 160;
-const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-const MAX_IMAGE_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const MAX_ATTACHMENTS = 5;
+const ALLOWED_FILE_TYPES: readonly string[] = [
+  "image/jpeg", "image/png", "image/gif", "image/webp", "image/avif", "image/svg+xml",
+  "video/mp4", "video/webm", "video/quicktime",
+  "audio/mpeg", "audio/ogg", "audio/wav", "audio/webm", "audio/mp4", "audio/flac",
+  "application/pdf", "text/plain", "application/zip", "application/x-rar-compressed",
+  "application/gzip", "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/json",
+];
+const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
+const MAX_ATTACHMENTS = 10;
+const ALLOWED_FILE_EXTENSIONS = ".jpg,.jpeg,.png,.gif,.webp,.avif,.svg,.mp4,.webm,.mov,.mp3,.ogg,.wav,.flac,.m4a,.pdf,.txt,.zip,.rar,.gz,.doc,.docx,.xls,.xlsx,.json";
 const DRAFT_SAVE_DELAY = 500;
 const TYPING_STOP_DELAY = 2000;
 
