@@ -3505,12 +3505,20 @@ export type Database = {
         Args: { _content: string; _message_id: string; _sender_id: string }
         Returns: Json
       }
+      edit_forum_thread_post: {
+        Args: { _content?: string; _thread_id: string; _title: string }
+        Returns: Json
+      }
       edit_media_comment: {
         Args: { _comment_id: string; _content: string; _user_id: string }
         Returns: boolean
       }
       edit_message: {
         Args: { _content: string; _message_id: string; _user_id: string }
+        Returns: Json
+      }
+      edit_thread_message: {
+        Args: { _content: string; _message_id: string }
         Returns: Json
       }
       enforce_server_raid_protection: {
