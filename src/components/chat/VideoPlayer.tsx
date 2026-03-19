@@ -176,6 +176,14 @@ export const VideoPlayer = memo(function VideoPlayer({ src, fileName, onError }:
         onError={onError}
       />
 
+      {/* Kloak emblem — top left, larger in fullscreen */}
+      <img
+        src={kloakEmblem}
+        alt=""
+        className="absolute top-2.5 left-2.5 w-3.5 h-3.5 opacity-50 pointer-events-none"
+        style={{ zIndex: 10 }}
+      />
+
       {/* Top bar: duration badge */}
       {duration > 0 && (
         <div
