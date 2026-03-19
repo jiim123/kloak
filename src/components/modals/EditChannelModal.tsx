@@ -18,7 +18,23 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Hash, Trash2, FolderOpen, Settings, Shield, Loader2, Clock, Lock, AlertTriangle, X, Users, Link2, Eye, Plus, Info } from "lucide-react";
+import {
+  Hash,
+  Trash2,
+  FolderOpen,
+  Settings,
+  Shield,
+  Loader2,
+  Clock,
+  Lock,
+  AlertTriangle,
+  X,
+  Users,
+  Link2,
+  Eye,
+  Plus,
+  Info,
+} from "lucide-react";
 import { toast } from "sonner";
 import { ChannelPermissionsEditor } from "./ChannelPermissionsEditor";
 import { CategoryPermissionsEditor } from "./CategoryPermissionsEditor";
@@ -135,7 +151,15 @@ export const EditChannelModal = () => {
     if (showDeleteImmediately && hasValidTarget) {
       setShowDeleteConfirm(true);
     }
-  }, [channel, category, isCategory, showDeleteImmediately, hasValidTarget, fetchChannelPermissions, fetchCategoryPermissions]);
+  }, [
+    channel,
+    category,
+    isCategory,
+    showDeleteImmediately,
+    hasValidTarget,
+    fetchChannelPermissions,
+    fetchCategoryPermissions,
+  ]);
 
   const handleClose = () => {
     setError("");
@@ -166,11 +190,7 @@ export const EditChannelModal = () => {
       if (!user) throw new Error("Not authenticated");
 
       if (isCategory && categoryId) {
-        await updateCategory(
-          categoryId,
-          { name: name.trim() },
-          user.id,
-        );
+        await updateCategory(categoryId, { name: name.trim() }, user.id);
         toast.success("Category updated");
       } else if (channelId) {
         const updates: Partial<Channel> = {
@@ -236,10 +256,12 @@ export const EditChannelModal = () => {
     onCheckedChange: (checked: boolean) => void;
     disabled?: boolean;
   }) => (
-    <div className={cn(
-      "flex items-center gap-4 p-4 rounded-xl bg-secondary/30 border border-border/50",
-      disabled && "opacity-60"
-    )}>
+    <div
+      className={cn(
+        "flex items-center gap-4 p-4 rounded-xl bg-secondary/30 border border-border/50",
+        disabled && "opacity-60",
+      )}
+    >
       <div className="w-10 h-10 rounded-xl bg-secondary/80 flex items-center justify-center flex-shrink-0">
         <Icon className="w-5 h-5 text-muted-foreground" />
       </div>
@@ -295,7 +317,8 @@ export const EditChannelModal = () => {
         <div className="p-3 rounded-xl border border-border/50 bg-secondary/20 flex items-start gap-2.5">
           <Info className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
           <p className="text-xs text-muted-foreground leading-relaxed">
-          Shows when the user is about to chat for the first time in this channel.
+            Displays when the user is about to start their first chat in this channel, making it a good opportunity to
+            share channel rules or guidelines.
           </p>
         </div>
         <Textarea
@@ -368,7 +391,11 @@ export const EditChannelModal = () => {
         <ToggleCard
           icon={Eye}
           label="Ghost Mode"
-          description={channel?.ghost_mode ? "Ghost Mode is permanent and cannot be disabled" : "Hide usernames and avatars (admins/owners still visible)"}
+          description={
+            channel?.ghost_mode
+              ? "Ghost Mode is permanent and cannot be disabled"
+              : "Hide usernames and avatars (admins/owners still visible)"
+          }
           checked={ghostMode}
           onCheckedChange={setGhostMode}
           disabled={channel?.ghost_mode}
@@ -397,12 +424,10 @@ export const EditChannelModal = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium">Whitelisted Domains</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Allow links from these domains for all users
-                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">Allow links from these domains for all users</p>
               </div>
             </div>
-            
+
             <div className="flex gap-2">
               <Input
                 value={newDomain}
@@ -412,7 +437,10 @@ export const EditChannelModal = () => {
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
-                    const domain = newDomain.toLowerCase().replace(/^(https?:\/\/)?(www\.)?/, "").replace(/\/.*$/, "");
+                    const domain = newDomain
+                      .toLowerCase()
+                      .replace(/^(https?:\/\/)?(www\.)?/, "")
+                      .replace(/\/.*$/, "");
                     if (domain && !allowedLinkDomains.includes(domain)) {
                       setAllowedLinkDomains([...allowedLinkDomains, domain]);
                       setNewDomain("");
@@ -426,7 +454,10 @@ export const EditChannelModal = () => {
                 size="sm"
                 className="h-9 px-3 rounded-lg"
                 onClick={() => {
-                  const domain = newDomain.toLowerCase().replace(/^(https?:\/\/)?(www\.)?/, "").replace(/\/.*$/, "");
+                  const domain = newDomain
+                    .toLowerCase()
+                    .replace(/^(https?:\/\/)?(www\.)?/, "")
+                    .replace(/\/.*$/, "");
                   if (domain && !allowedLinkDomains.includes(domain)) {
                     setAllowedLinkDomains([...allowedLinkDomains, domain]);
                     setNewDomain("");
@@ -671,14 +702,18 @@ export const EditChannelModal = () => {
           {/* Content */}
           <div className="overflow-y-auto p-5" style={{ maxHeight: "calc(100vh - 300px)" }}>
             {isCategory ? renderCategoryContent() : renderChannelContent()}
-            
+
             {/* Save Button for overview and settings */}
             {showSaveButton && (
               <div className="flex gap-3 pt-6 mt-6 border-t border-border/50">
                 <Button type="button" variant="outline" onClick={handleClose} className="flex-1 h-11 rounded-xl">
                   Cancel
                 </Button>
-                <Button onClick={handleSubmit} disabled={isSubmitting || !name.trim()} className="flex-1 h-11 rounded-xl">
+                <Button
+                  onClick={handleSubmit}
+                  disabled={isSubmitting || !name.trim()}
+                  className="flex-1 h-11 rounded-xl"
+                >
                   {isSubmitting ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
