@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import type { ReactNode } from "react";
 import type { TypingUser } from "@/types";
 
 interface TypingIndicatorProps {
@@ -6,6 +7,7 @@ interface TypingIndicatorProps {
   overlay?: boolean;
   reserveSpace?: boolean;
   className?: string;
+  rightContent?: ReactNode;
 }
 
 export const TypingIndicator = ({
@@ -13,6 +15,7 @@ export const TypingIndicator = ({
   overlay = false,
   reserveSpace = false,
   className,
+  rightContent,
 }: TypingIndicatorProps) => {
   const clampName = (value: string | null | undefined): string => {
     const normalized = (value ?? "").trim();
@@ -34,7 +37,11 @@ export const TypingIndicator = ({
 
   if (typingUsers.length === 0) {
     if (!reserveSpace || overlay) return null;
-    return <div className={cn("min-w-0 px-4 flex items-center shrink-0 overflow-hidden h-6", className)} />;
+    return (
+      <div className={cn("min-w-0 px-4 flex items-center justify-end shrink-0 overflow-hidden h-6", className)}>
+        {rightContent}
+      </div>
+    );
   }
 
   const typingText = `${formatTypingText()}...`;
@@ -64,7 +71,7 @@ export const TypingIndicator = ({
   }
 
   return (
-    <div className="min-w-0 px-4 flex items-center shrink-0 overflow-hidden h-6">
+    <div className="min-w-0 px-4 flex items-center justify-between gap-2 shrink-0 overflow-hidden h-6">
       <div
         className="inline-flex items-center gap-2 px-3 py-1 rounded-full"
         style={{
@@ -74,6 +81,7 @@ export const TypingIndicator = ({
         {dots}
         <span className="text-xs font-medium truncate">{typingText}</span>
       </div>
+      <div className="shrink-0">{rightContent}</div>
     </div>
   );
 };

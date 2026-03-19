@@ -35,6 +35,12 @@ interface MessageInputProps {
   channelName: string;
   onTyping: () => void;
   onStopTyping: () => void;
+  onSlowmodeStatusChange?: (status: {
+    enabled: boolean;
+    blocked: boolean;
+    immune: boolean;
+    remainingSeconds: number;
+  }) => void;
 }
 
 interface MentionMapping {
@@ -69,6 +75,7 @@ const ActionBar = memo(
     content,
     isSending,
     hasAttachments,
+    canSubmitMessage,
     onSubmit,
     onEmojiSelect,
     onGifSelect,
@@ -78,7 +85,7 @@ const ActionBar = memo(
     const showCharacterWarning = content.length > MAX_LENGTH - 200;
     const isMobile = useIsMobile();
     const shouldCollapse = isMobile && content.length > 10;
-    const canSend = (content.trim() || hasAttachments) && !isSending;
+    const canSend = (content.trim() || hasAttachments) && !isSending && canSubmitMessage;
 
     const iconBtnClass =
       "flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-white/6 hover:text-foreground transition-colors";
@@ -167,7 +174,7 @@ const ActionBar = memo(
 );
 ActionBar.displayName = "ActionBar";
 
-export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }: MessageInputProps) => {
+export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping, onSlowmodeStatusChange }: MessageInputProps) => {
   const { user } = useAuthStore();
   const { replyingTo, setReplyingTo, sendMessage } = useMessageStore();
   const { members, currentServer, currentChannel, channels, fetchRolePermissions } = useServerStore();
@@ -189,6 +196,8 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const [showGifPicker, setShowGifPicker] = useState(false);
   const [showCreatePoll, setShowCreatePoll] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
+  const [slowmodeCooldownByChannel, setSlowmodeCooldownByChannel] = useState<Record<string, number>>({});
+  const [slowmodeNowMs, setSlowmodeNowMs] = useState(() => Date.now());
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -243,9 +252,17 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   );
   const isReadOnlyChannel = activeChannel?.is_read_only || false;
   const isGhostMode = activeChannel?.ghost_mode || false;
+  const slowmodeSeconds = Math.max(0, Number(activeChannel?.slowmode_seconds) || 0);
   const canSendMessagesPermission = hasPermission("send_messages");
   const canSendInReadOnly = isReadOnlyChannel ? hasPermission("manage_messages") : true;
   const canSendMessage = !isMuted && canSendMessagesPermission && canSendInReadOnly;
+  const canManageMessages = hasPermission("manage_messages");
+  const isSlowmodeEnabled = slowmodeSeconds > 0;
+  const isSlowmodeExempt = canManageMessages;
+  const slowmodeCooldownUntil = slowmodeCooldownByChannel[channelId] || 0;
+  const slowmodeRemainingSeconds = Math.max(0, Math.ceil((slowmodeCooldownUntil - slowmodeNowMs) / 1000));
+  const isSlowmodeBlocked = isSlowmodeEnabled && !isSlowmodeExempt && slowmodeRemainingSeconds > 0;
+  const canSubmitMessage = canSendMessage && !isSlowmodeBlocked;
   const replyingToUser = useMessageUser(replyingTo?.user_id);
   const showReplyAuthorIdentity = useMemo(
     () =>
@@ -263,6 +280,27 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     textareaRef.current.style.height = "0px";
     textareaRef.current.style.height = `${Math.min(Math.max(textareaRef.current.scrollHeight, MIN_TEXTAREA_HEIGHT), MAX_TEXTAREA_HEIGHT)}px`;
   }, []);
+
+  useEffect(() => {
+    if (slowmodeCooldownUntil <= Date.now()) return;
+    const timer = window.setInterval(() => {
+      const now = Date.now();
+      setSlowmodeNowMs(now);
+      if (now >= slowmodeCooldownUntil) {
+        window.clearInterval(timer);
+      }
+    }, 250);
+    return () => window.clearInterval(timer);
+  }, [slowmodeCooldownUntil]);
+
+  useEffect(() => {
+    onSlowmodeStatusChange?.({
+      enabled: isSlowmodeEnabled,
+      blocked: isSlowmodeBlocked,
+      immune: isSlowmodeExempt,
+      remainingSeconds: slowmodeRemainingSeconds,
+    });
+  }, [onSlowmodeStatusChange, isSlowmodeEnabled, isSlowmodeBlocked, isSlowmodeExempt, slowmodeRemainingSeconds]);
 
   const detectAutocomplete = useCallback((value: string, pos: number) => {
     const textBefore = value.slice(0, pos);
@@ -315,6 +353,8 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
   const handleSubmit = useCallback(async () => {
     const hasGifOrAttachments = pendingAttachments.length > 0;
     if ((!content.trim() && !hasGifOrAttachments) || !user || isSending || !canSendMessage) return;
+
+    if (isSlowmodeBlocked) return;
 
     if (!messageRateLimiter.isAllowed(user.id)) {
       showWarning("Slow down!", `Try again in ${messageRateLimiter.getRemainingTime(user.id)}s`);
@@ -418,6 +458,12 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
           detail: { channelId },
         }),
       );
+
+      if (isSlowmodeEnabled && !isSlowmodeExempt) {
+        const cooldownUntil = Date.now() + slowmodeSeconds * 1000;
+        setSlowmodeCooldownByChannel((prev) => ({ ...prev, [channelId]: cooldownUntil }));
+        setSlowmodeNowMs(Date.now());
+      }
     } catch (error) {
       handleError(error, "Failed to send");
     } finally {
@@ -430,9 +476,14 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
     channelId,
     replyingTo,
     canSendMessage,
+    isSlowmodeBlocked,
+    slowmodeRemainingSeconds,
     isSending,
     convertMentionsForSend,
     sendMessage,
+    isSlowmodeEnabled,
+    isSlowmodeExempt,
+    slowmodeSeconds,
   ]);
 
   const handlePaste = useCallback(
@@ -592,6 +643,7 @@ export const MessageInput = ({ channelId, channelName, onTyping, onStopTyping }:
         isFocused={isFocused}
         replyingTo={replyingTo}
         canSendMessage={canSendMessage}
+        canSubmitMessage={canSubmitMessage}
         channelName={channelName}
         textareaRef={textareaRef}
         handleChange={handleChange}
@@ -645,6 +697,7 @@ const MobileOptimizedInput = memo(
     isFocused,
     replyingTo,
     canSendMessage,
+    canSubmitMessage,
     channelName,
     textareaRef,
     handleChange,
@@ -716,6 +769,7 @@ const MobileOptimizedInput = memo(
           showGifPicker={showGifPicker}
           setShowGifPicker={setShowGifPicker}
           canSendMessage={canSendMessage}
+          canSubmitMessage={canSubmitMessage}
           content={content}
           isSending={isSending}
           hasAttachments={hasAttachments}

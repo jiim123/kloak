@@ -3,6 +3,7 @@ import {
   Eye,
   Maximize2,
   MessageSquareText,
+  Clock3,
   X,
   Mic,
   MicOff,
@@ -38,6 +39,13 @@ import { useTyping } from "@/hooks/useTyping";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Channel, ServerMember } from "@/types";
 import type { VideoTrack } from "livekit-client";
+
+function formatSlowmodeDuration(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes <= 0) return `${seconds}s`;
+  return `${minutes}m ${seconds}s`;
+}
 
 // Video player for screen share
 function VideoPlayer({ track, className }: { track: VideoTrack; className?: string }) {
@@ -214,6 +222,12 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
   const [watchingShareIdentity, setWatchingShareIdentity] = useState<string | null>(null);
   const [isTextPanelOpen, setIsTextPanelOpen] = useState(false);
   const [isStageFullscreen, setIsStageFullscreen] = useState(false);
+  const [slowmodeStatus, setSlowmodeStatus] = useState<{ enabled: boolean; blocked: boolean; immune: boolean; remainingSeconds: number }>({
+    enabled: false,
+    blocked: false,
+    immune: false,
+    remainingSeconds: 0,
+  });
   const stageContainerRef = useRef<HTMLDivElement | null>(null);
 
   const voice = useAgoraRoom({
@@ -773,12 +787,30 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
                   manageCurrentChannel={false}
                 />
                 <div className="shrink-0">
-                  {!isLinkedTextGhostMode && <TypingIndicator typingUsers={typingUsers} reserveSpace />}
+                  {!isLinkedTextGhostMode && (
+                    <TypingIndicator
+                      typingUsers={typingUsers}
+                      reserveSpace
+                      rightContent={
+                        slowmodeStatus.enabled ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/80">
+                            <Clock3 className="h-3.5 w-3.5" />
+                            <span>
+                              {slowmodeStatus.immune
+                                ? "Slowmode Immune"
+                                : `slow mode${slowmodeStatus.blocked ? ` ${formatSlowmodeDuration(slowmodeStatus.remainingSeconds)}` : ""}`}
+                            </span>
+                          </span>
+                        ) : null
+                      }
+                    />
+                  )}
                   <MessageInput
                     channelId={linkedTextChannel.id}
                     channelName={linkedTextChannel.name}
                     onTyping={startTyping}
                     onStopTyping={stopTyping}
+                    onSlowmodeStatusChange={setSlowmodeStatus}
                   />
                 </div>
               </>

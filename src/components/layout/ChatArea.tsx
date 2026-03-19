@@ -13,7 +13,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { useTyping } from "@/hooks/useTyping";
 import { useSwipeGestureRef } from "@/hooks/useSwipeGesture";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { MessageSquare, Hash, Pin } from "lucide-react";
+import { MessageSquare, Hash, Pin, Clock3 } from "lucide-react";
 import { parseTextContent } from "@/components/chat/MessageContent";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
 import { useUserCacheStore } from "@/stores/userCacheStore";
@@ -33,6 +33,13 @@ const selectSetMobileSidebarOpen = (s: ReturnType<typeof useUIStore.getState>) =
 const selectSetMemberSidebarOpen = (s: ReturnType<typeof useUIStore.getState>) => s.setMemberSidebarOpen;
 const selectOpenModal = (s: ReturnType<typeof useUIStore.getState>) => s.openModal;
 const EMPTY_MESSAGES: Message[] = [];
+
+const formatSlowmodeDuration = (totalSeconds: number): string => {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes <= 0) return `${seconds}s`;
+  return `${minutes}m ${seconds}s`;
+};
 
 // ── Empty‑channel placeholder (static, extracted to avoid re‑creation) ──
 
@@ -183,6 +190,12 @@ export const ChatArea = () => {
 
   // Store emojis as a plain object so reference equality checks work with useMemo
   const [customEmojiMap, setCustomEmojiMap] = useState<Record<string, string>>({});
+  const [slowmodeStatus, setSlowmodeStatus] = useState<{ enabled: boolean; blocked: boolean; immune: boolean; remainingSeconds: number }>({
+    enabled: false,
+    blocked: false,
+    immune: false,
+    remainingSeconds: 0,
+  });
 
   // Load custom emoji map for pinned message rendering
   useEffect(() => {
@@ -270,12 +283,30 @@ export const ChatArea = () => {
 
       {/* Composer area */}
       <div className="shrink-0">
-        {!isGhostMode && <TypingIndicator typingUsers={typingUsers} reserveSpace />}
+        {!isGhostMode && (
+          <TypingIndicator
+            typingUsers={typingUsers}
+            reserveSpace
+            rightContent={
+              slowmodeStatus.enabled ? (
+                <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/80">
+                  <Clock3 className="h-3.5 w-3.5" />
+                  <span>
+                    {slowmodeStatus.immune
+                      ? "Slowmode Immune"
+                      : `Slow mode${slowmodeStatus.blocked ? ` ${formatSlowmodeDuration(slowmodeStatus.remainingSeconds)}` : ""}`}
+                  </span>
+                </span>
+              ) : null
+            }
+          />
+        )}
         <MessageInput
           channelId={currentChannel.id}
           channelName={channelName}
           onTyping={startTyping}
           onStopTyping={stopTyping}
+          onSlowmodeStatusChange={setSlowmodeStatus}
         />
       </div>
     </div>
