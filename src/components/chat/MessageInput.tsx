@@ -194,13 +194,19 @@ const ActionBar = memo(
 
         {/* Right side */}
         <div className="flex items-center gap-1.5">
-          {showCharacterWarning && (
-            <span
-              className={`text-[13px] font-sans ${content.length > MAX_LENGTH - 50 ? "text-destructive" : "text-muted-foreground"}`}
-            >
-              {MAX_LENGTH - content.length}
-            </span>
-          )}
+          <AnimatePresence>
+            {showCharacterWarning && (
+              <motion.span
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.15, ease: "easeOut" }}
+                className={`text-[13px] font-sans ${content.length > MAX_LENGTH - 50 ? "text-destructive" : "text-muted-foreground"}`}
+              >
+                {MAX_LENGTH - content.length}
+              </motion.span>
+            )}
+          </AnimatePresence>
           <button
             onClick={onSubmit}
             disabled={!canSend}
