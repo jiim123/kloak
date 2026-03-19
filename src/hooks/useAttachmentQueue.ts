@@ -1,8 +1,9 @@
 import { useState, useCallback } from "react";
 import { secureUpload } from "@/lib/storageUpload";
+import { compressAttachmentImage } from "@/lib/imageCompression";
 import { supabase } from "@/integrations/supabase/client";
 import { showWarning } from "@/lib/errorHandler";
-import { MAX_ATTACHMENTS, MAX_IMAGE_FILE_SIZE, ALLOWED_IMAGE_TYPES } from "@/lib/messageConstants";
+import { MAX_ATTACHMENTS, MAX_ATTACHMENT_SIZE, ALLOWED_ATTACHMENT_TYPES } from "@/lib/messageConstants";
 
 export interface PendingAttachment {
   file: File;
