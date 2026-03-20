@@ -101,6 +101,16 @@ const getGradientTextStyle = (gradient: string): React.CSSProperties =>
     display: "inline-block",
   }) as React.CSSProperties;
 
+export interface DMActions {
+  editMessage: (messageId: string, userId: string, content: string) => Promise<void>;
+  deleteMessage: (messageId: string, userId: string) => Promise<void>;
+  addReaction: (messageId: string, userId: string, emoji: string) => Promise<void>;
+  removeReaction: (messageId: string, userId: string, emoji: string) => Promise<void>;
+  onReply: (message: Message) => void;
+  /** Resolve display name for a user ID (for reaction tooltips) */
+  nameForUserId?: (userId: string) => string;
+}
+
 interface MessageItemProps {
   message: Message;
   isGrouped: boolean;
@@ -116,6 +126,8 @@ interface MessageItemProps {
     nickname?: string | null;
     roles?: CustomServerRole[];
   };
+  /** When provided, component operates in DM mode (skips server features) */
+  dmActions?: DMActions;
 }
 
 const EMPTY_CUSTOM_EMOJI_MAP = new Map<string, string>();
