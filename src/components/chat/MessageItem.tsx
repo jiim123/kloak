@@ -1585,7 +1585,7 @@ export const MessageItem = memo(function MessageItem({
                   {!isBlockedUser && (
                     <button
                       className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                      onClick={() => setReplyingTo(message)}
+                      onClick={handleReply}
                       aria-label="Reply"
                       title="Reply"
                     >
