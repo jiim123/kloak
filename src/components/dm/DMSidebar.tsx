@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, MessageSquare, Compass, UserRoundPlus, Users, LogOut } from "lucide-react";
+import { Search, MessageSquare, Compass, UserRoundPlus, Users, LogOut, Ban } from "lucide-react";
 import {
   ContextMenu,
   ContextMenuContent,
