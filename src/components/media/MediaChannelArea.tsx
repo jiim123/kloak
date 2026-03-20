@@ -394,12 +394,12 @@ export const MediaChannelArea = () => {
         const fileName = `${Date.now()}-${crypto.randomUUID()}.${fileExt}`;
         const filePath = `${user.id}/media/${currentChannel.id}/${fileName}`;
 
-        const { publicUrl } = await secureUpload("attachments", filePath, selectedFile, {
+        const result = await secureUpload("attachments", filePath, selectedFile, {
           contentType: selectedFile.type,
           upsert: false,
         });
 
-        mediaUrl = publicUrl;
+        mediaUrl = `kloak-attachment://${result.path}`;
 
         if (ALLOWED_VIDEO_TYPES.includes(selectedFile.type)) {
           mediaType = "video";

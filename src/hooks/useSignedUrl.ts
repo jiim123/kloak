@@ -43,6 +43,11 @@ export function useSignedUrl(
 ): string | null | UseSignedUrlResult {
   const [signedUrl, setSignedUrl] = useState<string | null>(() => {
     if (!fileUrl) return null;
+    const ATTACHMENT_PREFIX = "kloak-attachment://";
+    if (fileUrl.startsWith(ATTACHMENT_PREFIX)) {
+      const path = fileUrl.slice(ATTACHMENT_PREFIX.length);
+      return _peekCache(path) ?? null;
+    }
     if (!isSupabaseAttachmentUrl(fileUrl)) return fileUrl;
     const path = extractStoragePath(fileUrl);
     if (!path) return fileUrl;
@@ -59,6 +64,27 @@ export function useSignedUrl(
       setSignedUrl(null);
       return;
     }
+
+    // Handle kloak-attachment:// stable references
+    const ATTACHMENT_PREFIX = "kloak-attachment://";
+    if (fileUrl.startsWith(ATTACHMENT_PREFIX)) {
+      const path = fileUrl.slice(ATTACHMENT_PREFIX.length);
+      let cancelled = false;
+
+      const resolve = async () => {
+        const result = await getSignedAttachmentUrl(path);
+        if (cancelled) return;
+        setSignedUrl(result ?? null);
+        timerRef.current = setTimeout(resolve, (1800 - 300) * 1000);
+      };
+
+      resolve();
+      return () => {
+        cancelled = true;
+        if (timerRef.current) clearTimeout(timerRef.current);
+      };
+    }
+
     if (!isSupabaseAttachmentUrl(fileUrl)) {
       setSignedUrl(fileUrl);
       return;
@@ -90,11 +116,13 @@ export function useSignedUrl(
   }, [fileUrl]);
 
   const refresh = useCallback(() => {
-    // Only retry once to avoid infinite loops on genuinely broken images
     if (retriedRef.current || !fileUrl) return;
     retriedRef.current = true;
 
-    const path = extractStoragePath(fileUrl);
+    const ATTACHMENT_PREFIX = "kloak-attachment://";
+    const path = fileUrl.startsWith(ATTACHMENT_PREFIX)
+      ? fileUrl.slice(ATTACHMENT_PREFIX.length)
+      : extractStoragePath(fileUrl);
     if (!path) return;
 
     invalidateCacheEntry(path);

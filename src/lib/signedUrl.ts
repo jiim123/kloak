@@ -234,10 +234,17 @@ export async function resolveSignedUrl(fullUrl: string): Promise<string | null> 
 export async function resolveSignedUrls(
   fullUrls: string[],
 ): Promise<Map<string, string>> {
+  const ATTACHMENT_PREFIX = "kloak-attachment://";
   const results = new Map<string, string>();
   const pathToOriginal = new Map<string, string>();
 
   for (const url of fullUrls) {
+    // Handle kloak-attachment:// stable references
+    if (url.startsWith(ATTACHMENT_PREFIX)) {
+      const path = url.slice(ATTACHMENT_PREFIX.length);
+      pathToOriginal.set(path, url);
+      continue;
+    }
     if (!isSupabaseAttachmentUrl(url)) {
       results.set(url, url);
       continue;

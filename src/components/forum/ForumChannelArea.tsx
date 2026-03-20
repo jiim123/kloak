@@ -577,7 +577,7 @@ export const ForumChannelArea = () => {
         const result = await secureUpload("attachments", fileName, attachment.file, {
           contentType: attachment.file.type,
         });
-        urls.push(result.publicUrl);
+        urls.push(`kloak-attachment://${result.path}`);
       }
       return urls;
     },

@@ -530,14 +530,14 @@ export const AnnouncementChannelArea = () => {
       const fileName = `${Math.random()}.${fileExt}`;
       const filePath = `announcements/${fileName}`;
 
-      const { publicUrl } = await secureUpload('attachments', filePath, file, {
+      const result = await secureUpload('attachments', filePath, file, {
         contentType: file.type,
         upsert: false,
       });
 
       // Insert image using Tiptap's image command with default alignment and size
       editor.chain().focus().setImage({ 
-        src: publicUrl, 
+        src: `kloak-attachment://${result.path}`, 
         alt: 'Image',
         align: 'left',
         width: '400'

@@ -1,5 +1,5 @@
 import { useMemo, useCallback, useEffect, useState, useRef } from "react";
-import { isSupabaseAttachmentUrl, resolveSignedUrl } from "@/lib/signedUrl";
+import { isSupabaseAttachmentUrl, resolveSignedUrl, getSignedAttachmentUrl } from "@/lib/signedUrl";
 import { replaceNativeEmojisInElement } from "@/lib/fluentEmoji";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -302,6 +302,26 @@ export const parseTextContent = (
       return `<img src="${escapeHtml(url)}" alt="Image" ${widthStyle} class="${alignClass} max-w-full rounded-lg my-2 cursor-pointer hover:opacity-90" loading="lazy" data-image-url="${escapeHtml(url)}" data-align="${align}" />`;
     }
     return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="${alignClass} message-link">View image</a>`;
+  });
+
+  // Attachment references: kloak-attachment://path
+  const ATTACHMENT_PREFIX = "kloak-attachment://";
+  parsed = parsed.replace(/kloak-attachment:\/\/([^\s<&]+)/g, (_match, rawPath) => {
+    const path = rawPath.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"');
+    const ext = path.split(".").pop()?.toLowerCase() || "";
+    const imageExts = ["jpg", "jpeg", "png", "gif", "webp", "avif"];
+    const videoExts = ["mp4", "webm", "mov"];
+    const audioExts = ["mp3", "ogg", "wav", "flac", "m4a"];
+
+    if (imageExts.includes(ext)) {
+      return `<img data-attachment-path="${escapeHtml(path)}" alt="Image" class="block mr-auto max-w-[320px] sm:max-w-[400px] max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90 object-contain" loading="lazy" style="visibility:hidden" />`;
+    } else if (videoExts.includes(ext)) {
+      return `<video data-attachment-path="${escapeHtml(path)}" controls preload="metadata" class="block max-w-full w-full sm:max-w-[480px] rounded-lg my-2 aspect-video object-contain bg-black/10">Your browser does not support video.</video>`;
+    } else if (audioExts.includes(ext)) {
+      return `<audio data-attachment-path="${escapeHtml(path)}" controls preload="metadata" class="block w-full max-w-[400px] my-2 h-8"></audio>`;
+    } else {
+      return `<a data-attachment-path="${escapeHtml(path)}" class="message-link" href="#">${escapeHtml(path.split("/").pop() || "Download")}</a>`;
+    }
   });
 
   // URLs - render image URLs inline, others as links (only safe URLs)
@@ -643,6 +663,36 @@ export const MessageContent = ({
       });
     };
 
+    // Resolve kloak-attachment:// references (new format)
+    const attachmentEls = el.querySelectorAll<HTMLElement>("[data-attachment-path]");
+    attachmentEls.forEach((element) => {
+      const path = element.dataset.attachmentPath;
+      if (!path) return;
+
+      getSignedAttachmentUrl(path).then((signedUrl) => {
+        if (cancelled || !signedUrl) return;
+
+        if (element instanceof HTMLImageElement) {
+          const preloadImg = new Image();
+          preloadImg.onload = () => {
+            if (cancelled) return;
+            element.src = signedUrl;
+            element.dataset.imageUrl = signedUrl;
+            element.style.visibility = "visible";
+            void attachGifHoverBehavior(element, signedUrl);
+          };
+          preloadImg.src = signedUrl;
+        } else if (element instanceof HTMLVideoElement || element instanceof HTMLAudioElement) {
+          element.src = signedUrl;
+        } else if (element instanceof HTMLAnchorElement) {
+          element.href = signedUrl;
+          element.target = "_blank";
+          element.rel = "noopener noreferrer";
+        }
+      });
+    });
+
+    // Resolve legacy signed URLs for images
     const imgs = el.querySelectorAll<HTMLImageElement>("img[data-image-url]");
     imgs.forEach((img) => {
       const originalUrl = img.dataset.imageUrl;
@@ -669,6 +719,18 @@ export const MessageContent = ({
       const originalUrl = img.dataset.imageUrl;
       if (!originalUrl || isSupabaseAttachmentUrl(originalUrl)) return;
       void attachGifHoverBehavior(img, originalUrl);
+    });
+
+    // Resolve legacy signed URLs for video/audio elements
+    const mediaEls = el.querySelectorAll<HTMLElement>("video[src], audio[src]");
+    mediaEls.forEach((element) => {
+      const url = (element as HTMLVideoElement | HTMLAudioElement).src || "";
+      if (!isSupabaseAttachmentUrl(url)) return;
+
+      resolveSignedUrl(url).then((freshUrl) => {
+        if (cancelled || !freshUrl) return;
+        (element as HTMLVideoElement | HTMLAudioElement).src = freshUrl;
+      });
     });
 
     return () => {
