@@ -116,11 +116,13 @@ export function useSignedUrl(
   }, [fileUrl]);
 
   const refresh = useCallback(() => {
-    // Only retry once to avoid infinite loops on genuinely broken images
     if (retriedRef.current || !fileUrl) return;
     retriedRef.current = true;
 
-    const path = extractStoragePath(fileUrl);
+    const ATTACHMENT_PREFIX = "kloak-attachment://";
+    const path = fileUrl.startsWith(ATTACHMENT_PREFIX)
+      ? fileUrl.slice(ATTACHMENT_PREFIX.length)
+      : extractStoragePath(fileUrl);
     if (!path) return;
 
     invalidateCacheEntry(path);
