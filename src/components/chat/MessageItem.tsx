@@ -290,6 +290,7 @@ export const MessageItem = memo(function MessageItem({
   customEmojiMap: sharedCustomEmojiMap,
   globalEmojiMap: sharedGlobalEmojiMap,
   authorStyleFallback,
+  dmActions,
 }: MessageItemProps) {
   const isDM = !!dmActions;
   // Selectors - granular to prevent unnecessary re-renders
