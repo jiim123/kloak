@@ -993,6 +993,7 @@ const MobileOptimizedInput = memo(
     canSubmitMessage,
     isLockedByNotice,
     channelName,
+    dmPlaceholder,
     textareaRef,
     handleChange,
     setIsFocused,
