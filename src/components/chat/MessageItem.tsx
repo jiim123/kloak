@@ -313,6 +313,17 @@ export const MessageItem = memo(function MessageItem({
   const isMobile = useIsMobile();
   const topEmojis = useMemo(() => getTopEmojis(3), []);
 
+  // Unified action wrappers — in DM mode, delegate to dmActions; in channel mode, use stores
+  const editMessage = isDM
+    ? (id: string, content: string, userId: string) => dmActions!.editMessage(id, userId, content)
+    : channelEditMessage;
+  const addReaction = isDM
+    ? (id: string, userId: string, emoji: string) => dmActions!.addReaction(id, userId, emoji)
+    : channelAddReaction;
+  const removeReaction = isDM
+    ? (id: string, userId: string, emoji: string) => dmActions!.removeReaction(id, userId, emoji)
+    : channelRemoveReaction;
+
   // State - SEPARATE states for desktop and mobile emoji pickers
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
