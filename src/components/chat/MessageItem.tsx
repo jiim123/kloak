@@ -1672,7 +1672,7 @@ export const MessageItem = memo(function MessageItem({
 
           <ContextMenuContent>
             {!isBlockedUser && (
-              <ContextMenuItem onClick={() => setReplyingTo(message)}>
+              <ContextMenuItem onClick={handleReply}>
                 <Reply className="w-4 h-4" />
                 Reply
               </ContextMenuItem>
