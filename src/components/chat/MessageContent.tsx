@@ -304,6 +304,26 @@ export const parseTextContent = (
     return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="${alignClass} message-link">View image</a>`;
   });
 
+  // Attachment references: kloak-attachment://path
+  const ATTACHMENT_PREFIX = "kloak-attachment://";
+  parsed = parsed.replace(/kloak-attachment:\/\/([^\s<&]+)/g, (_match, rawPath) => {
+    const path = rawPath.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"');
+    const ext = path.split(".").pop()?.toLowerCase() || "";
+    const imageExts = ["jpg", "jpeg", "png", "gif", "webp", "avif"];
+    const videoExts = ["mp4", "webm", "mov"];
+    const audioExts = ["mp3", "ogg", "wav", "flac", "m4a"];
+
+    if (imageExts.includes(ext)) {
+      return `<img data-attachment-path="${escapeHtml(path)}" alt="Image" class="block mr-auto max-w-[320px] sm:max-w-[400px] max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90 object-contain" loading="lazy" style="visibility:hidden" />`;
+    } else if (videoExts.includes(ext)) {
+      return `<video data-attachment-path="${escapeHtml(path)}" controls preload="metadata" class="block max-w-full w-full sm:max-w-[480px] rounded-lg my-2 aspect-video object-contain bg-black/10">Your browser does not support video.</video>`;
+    } else if (audioExts.includes(ext)) {
+      return `<audio data-attachment-path="${escapeHtml(path)}" controls preload="metadata" class="block w-full max-w-[400px] my-2 h-8"></audio>`;
+    } else {
+      return `<a data-attachment-path="${escapeHtml(path)}" class="message-link" href="#">${escapeHtml(path.split("/").pop() || "Download")}</a>`;
+    }
+  });
+
   // URLs - render image URLs inline, others as links (only safe URLs)
   const urlPattern = /https?:\/\/[^\s<]+/g;
   parsed = parsed.replace(urlPattern, (url) => {
