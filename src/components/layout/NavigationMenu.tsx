@@ -33,7 +33,7 @@ export const NavigationMenu = () => {
     <header
       className={cn(
         "fixed top-0 left-0 right-0 z-40 w-full transition-all duration-300",
-        scrolled ? "py-2 px-3 sm:px-4" : "py-0 px-0"
+        scrolled ? "py-2 px-3 sm:px-4" : "py-0 px-0 mix-blend-difference"
       )}
     >
       <div
