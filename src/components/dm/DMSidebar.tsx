@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, X, MessageSquare, Compass, UserRoundPlus, Users } from "lucide-react";
+import { Search, MessageSquare, Compass, UserRoundPlus, Users, LogOut } from "lucide-react";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -35,6 +41,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
     fetchConversations,
     setCurrentConversation,
     closeConversation,
+    leaveGroup,
     isLoading,
   } = useDMStore();
   const { getUnreadCount, markAsRead } = useUnreadDMsContext();
@@ -73,10 +80,13 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
     markAsRead(conversation.id);
   };
 
-  const handleCloseConversation = async (e: React.MouseEvent, conversationId: string) => {
-    e.stopPropagation();
+  const handleLeaveConversation = async (conversation: DMConversation) => {
     if (!user?.id) return;
-    await closeConversation(conversationId, user.id);
+    if (conversation.is_group) {
+      await leaveGroup(conversation.id, user.id);
+    } else {
+      await closeConversation(conversation.id, user.id);
+    }
   };
 
   const getStatusClass = (status?: string) => {
@@ -215,91 +225,96 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
             };
 
             return (
-              <div
-                key={conversation.id}
-                className={cn(
-                  "group flex items-center gap-3 px-2 py-2 rounded-md cursor-pointer transition-smooth",
-                  currentConversation?.id === conversation.id && !showFriends
-                    ? "bg-secondary"
-                    : "hover:bg-secondary/50",
-                )}
-                onClick={() => handleSelectConversation(conversation)}
-              >
-                {/* Avatar with status (or stacked avatars for group) */}
-                <div className="relative flex-shrink-0">
-                  {isGroup ? (
-                    <StackedAvatars
-                      users={
-                        (conversation.participants
-                          ?.filter((p) => p.user_id !== user?.id)
-                          .slice(0, 3)
-                          .map((p) => p.user) || []) as User[]
-                      }
-                      size="sm"
-                    />
-                  ) : (
-                    <>
-                      <AvatarWithDecoration user={conversation.other_user} className="w-8 h-8" freezeGifUntilHover />
-                      {(() => {
-                        const presence = getEffectivePresence(
-                          (conversation.other_user?.status as UserStatus) || "offline",
-                          conversation.other_user?.last_seen,
-                        );
-                        return (
-                          <div
-                            className={cn(
-                              "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-layout-sidebar-secondary",
-                              getStatusClass(presence.status),
-                            )}
-                          />
-                        );
-                      })()}
-                    </>
-                  )}
-                </div>
-
-                {/* Name and last message */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span
-                      className={cn(
-                        "text-sm truncate",
-                        hasUnread ? "font-medium text-foreground" : "font-medium text-foreground",
-                      )}
-                    >
-                      {isGroup
-                        ? getGroupDisplayName()
-                        : conversation.other_user?.display_name || conversation.other_user?.username || "Unknown"}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      {conversation.last_message && (
-                        <span className="text-xs text-muted-foreground">
-                          {formatCompactTime(conversation.last_message.created_at || "")}
-                        </span>
+              <ContextMenu key={conversation.id}>
+                <ContextMenuTrigger asChild>
+                  <div
+                    className={cn(
+                      "group flex items-center gap-3 px-2 py-2 rounded-md cursor-pointer transition-smooth",
+                      currentConversation?.id === conversation.id && !showFriends
+                        ? "bg-secondary"
+                        : "hover:bg-secondary/50",
+                    )}
+                    onClick={() => handleSelectConversation(conversation)}
+                  >
+                    {/* Avatar with status (or stacked avatars for group) */}
+                    <div className="relative flex-shrink-0">
+                      {isGroup ? (
+                        <StackedAvatars
+                          users={
+                            (conversation.participants
+                              ?.filter((p) => p.user_id !== user?.id)
+                              .slice(0, 3)
+                              .map((p) => p.user) || []) as User[]
+                          }
+                          size="sm"
+                        />
+                      ) : (
+                        <>
+                          <AvatarWithDecoration user={conversation.other_user} className="w-8 h-8" freezeGifUntilHover />
+                          {(() => {
+                            const presence = getEffectivePresence(
+                              (conversation.other_user?.status as UserStatus) || "offline",
+                              conversation.other_user?.last_seen,
+                            );
+                            return (
+                              <div
+                                className={cn(
+                                  "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-layout-sidebar-secondary",
+                                  getStatusClass(presence.status),
+                                )}
+                              />
+                            );
+                          })()}
+                        </>
                       )}
                     </div>
-                  </div>
-                  {conversation.last_message && (
-                    <p className={cn("text-xs truncate", hasUnread ? "text-foreground" : "text-muted-foreground")}>
-                      {conversation.last_message.content}
-                    </p>
-                  )}
-                </div>
 
-                {/* Unread badge or close button */}
-                {hasUnread ? (
-                  <span className="min-w-[20px] h-5 bg-destructive rounded-full text-xs text-destructive-foreground flex items-center justify-center px-1.5 font-medium">
-                    {unreadCount > 99 ? "99+" : unreadCount}
-                  </span>
-                ) : (
-                  <button
-                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-secondary rounded transition-opacity"
-                    onClick={(e) => handleCloseConversation(e, conversation.id)}
+                    {/* Name and last message */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span
+                          className={cn(
+                            "text-sm truncate",
+                            hasUnread ? "font-medium text-foreground" : "font-medium text-foreground",
+                          )}
+                        >
+                          {isGroup
+                            ? getGroupDisplayName()
+                            : conversation.other_user?.display_name || conversation.other_user?.username || "Unknown"}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          {conversation.last_message && (
+                            <span className="text-xs text-muted-foreground">
+                              {formatCompactTime(conversation.last_message.created_at || "")}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {conversation.last_message && (
+                        <p className={cn("text-xs truncate", hasUnread ? "text-foreground" : "text-muted-foreground")}>
+                          {conversation.last_message.content}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Unread badge */}
+                    {hasUnread && (
+                      <span className="min-w-[20px] h-5 bg-destructive rounded-full text-xs text-destructive-foreground flex items-center justify-center px-1.5 font-medium">
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </span>
+                    )}
+                  </div>
+                </ContextMenuTrigger>
+                <ContextMenuContent>
+                  <ContextMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => handleLeaveConversation(conversation)}
                   >
-                    <X className="w-4 h-4 text-muted-foreground" />
-                  </button>
-                )}
-              </div>
+                    <LogOut className="w-4 h-4" />
+                    {isGroup ? "Leave Group" : "Leave Conversation"}
+                  </ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
             );
           })}
         </div>
