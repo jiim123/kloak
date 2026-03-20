@@ -903,12 +903,21 @@ export const MessageItem = memo(function MessageItem({
     }
   }, []);
 
+  // Unified reply handler — delegates to dmActions in DM mode
+  const handleReply = useCallback(() => {
+    if (isDM) {
+      dmActions!.onReply(message);
+    } else {
+      setReplyingTo(message);
+    }
+  }, [isDM, dmActions, message, setReplyingTo]);
+
   const handleStartEditing = useCallback(() => {
-    // Convert UUID mentions to readable format for editing
-    const readableContent = convertMentionsToReadable(message.content, usersMap, channelsMap);
+    // Convert UUID mentions to readable format for editing (no-op in DM mode since no mentions)
+    const readableContent = isDM ? message.content : convertMentionsToReadable(message.content, usersMap, channelsMap);
     setEditContent(readableContent);
     setIsEditing(true);
-  }, [message.content, usersMap, channelsMap]);
+  }, [isDM, message.content, usersMap, channelsMap]);
 
   const handleEditContentChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
