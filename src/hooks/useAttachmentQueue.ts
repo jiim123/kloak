@@ -153,7 +153,7 @@ export function useAttachmentQueue(
           upsert: false,
         });
 
-        urls.push(result.publicUrl);
+        urls.push(`kloak-attachment://${result.path}`);
       }
       return urls;
     },

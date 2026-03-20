@@ -555,7 +555,7 @@ export const MessageInput = ({
           const ext = fileToUpload.name.split(".").pop() || "bin";
           const fileName = `${user.id}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
           const res = await secureUpload("attachments", fileName, fileToUpload, { contentType: fileToUpload.type });
-          uploadedUrls.push(res.publicUrl);
+          uploadedUrls.push(`kloak-attachment://${res.path}`);
         }
       }
 
