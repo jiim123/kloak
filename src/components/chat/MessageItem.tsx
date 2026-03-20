@@ -364,8 +364,9 @@ export const MessageItem = memo(function MessageItem({
         cleaned = cleaned.replace(att.file_url, '').trim();
       }
     }
-    // Also strip any Supabase signed attachment URLs
+    // Also strip any Supabase signed attachment URLs and kloak-attachment:// references
     cleaned = cleaned.replace(/https?:\/\/[^\s]*supabase\.co\/storage\/v1\/object\/sign\/attachments\/[^\s]*/g, '').trim();
+    cleaned = cleaned.replace(/kloak-attachment:\/\/[^\s]*/g, '').trim();
     return cleaned;
   }, [message.content, message.attachments]);
 
