@@ -663,6 +663,36 @@ export const MessageContent = ({
       });
     };
 
+    // Resolve kloak-attachment:// references (new format)
+    const attachmentEls = el.querySelectorAll<HTMLElement>("[data-attachment-path]");
+    attachmentEls.forEach((element) => {
+      const path = element.dataset.attachmentPath;
+      if (!path) return;
+
+      getSignedAttachmentUrl(path).then((signedUrl) => {
+        if (cancelled || !signedUrl) return;
+
+        if (element instanceof HTMLImageElement) {
+          const preloadImg = new Image();
+          preloadImg.onload = () => {
+            if (cancelled) return;
+            element.src = signedUrl;
+            element.dataset.imageUrl = signedUrl;
+            element.style.visibility = "visible";
+            void attachGifHoverBehavior(element, signedUrl);
+          };
+          preloadImg.src = signedUrl;
+        } else if (element instanceof HTMLVideoElement || element instanceof HTMLAudioElement) {
+          element.src = signedUrl;
+        } else if (element instanceof HTMLAnchorElement) {
+          element.href = signedUrl;
+          element.target = "_blank";
+          element.rel = "noopener noreferrer";
+        }
+      });
+    });
+
+    // Resolve legacy signed URLs for images
     const imgs = el.querySelectorAll<HTMLImageElement>("img[data-image-url]");
     imgs.forEach((img) => {
       const originalUrl = img.dataset.imageUrl;
@@ -689,6 +719,18 @@ export const MessageContent = ({
       const originalUrl = img.dataset.imageUrl;
       if (!originalUrl || isSupabaseAttachmentUrl(originalUrl)) return;
       void attachGifHoverBehavior(img, originalUrl);
+    });
+
+    // Resolve legacy signed URLs for video/audio elements
+    const mediaEls = el.querySelectorAll<HTMLElement>("video[src], audio[src]");
+    mediaEls.forEach((element) => {
+      const url = (element as HTMLVideoElement | HTMLAudioElement).src || "";
+      if (!isSupabaseAttachmentUrl(url)) return;
+
+      resolveSignedUrl(url).then((freshUrl) => {
+        if (cancelled || !freshUrl) return;
+        (element as HTMLVideoElement | HTMLAudioElement).src = freshUrl;
+      });
     });
 
     return () => {
