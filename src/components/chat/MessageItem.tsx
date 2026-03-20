@@ -291,14 +291,15 @@ export const MessageItem = memo(function MessageItem({
   globalEmojiMap: sharedGlobalEmojiMap,
   authorStyleFallback,
 }: MessageItemProps) {
+  const isDM = !!dmActions;
   // Selectors - granular to prevent unnecessary re-renders
   const user = useAuthStore((state) => state.user);
   // Extract each message store function separately to avoid re-renders on unrelated changes
   const setReplyingTo = useMessageStore((state) => state.setReplyingTo);
-  const editMessage = useMessageStore((state) => state.editMessage);
+  const channelEditMessage = useMessageStore((state) => state.editMessage);
   const pinMessage = useMessageStore((state) => state.pinMessage);
-  const addReaction = useMessageStore((state) => state.addReaction);
-  const removeReaction = useMessageStore((state) => state.removeReaction);
+  const channelAddReaction = useMessageStore((state) => state.addReaction);
+  const channelRemoveReaction = useMessageStore((state) => state.removeReaction);
   const setEmbedHidden = useMessageStore((state) => state.setEmbedHidden);
   const members = useServerStore((state) => state.members);
   const roles = useServerStore((state) => state.roles);
