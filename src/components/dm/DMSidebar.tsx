@@ -89,6 +89,13 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
     }
   };
 
+  const { blockUser } = useFriendStore();
+
+  const handleBlockUser = async (userId: string) => {
+    if (!user?.id) return;
+    await blockUser(user.id, userId);
+  };
+
   const getStatusClass = (status?: string) => {
     switch (status) {
       case "online":
