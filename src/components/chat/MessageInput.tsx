@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuthStore } from "@/stores/authStore";
 import { useMessageStore } from "@/stores/messageStore";
+import { useDMStore } from "@/stores/dmStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useChannelSettingsStore } from "@/stores/channelSettingsStore";
 import { useOfflineQueueStore } from "@/stores/offlineQueueStore";
@@ -48,17 +49,25 @@ import { encodeCustomEmojisForTransport } from "@/lib/globalEmojiResolver";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
+export interface DMInputConfig {
+  conversationId: string;
+  otherUsername: string;
+  replyingTo?: { id: string; sender?: { username?: string; display_name?: string | null }; content: string } | null;
+  onCancelReply?: () => void;
+}
+
 interface MessageInputProps {
-  channelId: string;
-  channelName: string;
-  onTyping: () => void;
-  onStopTyping: () => void;
+  channelId?: string;
+  channelName?: string;
+  onTyping?: () => void;
+  onStopTyping?: () => void;
   onSlowmodeStatusChange?: (status: {
     enabled: boolean;
     blocked: boolean;
     immune: boolean;
     remainingSeconds: number;
   }) => void;
+  dmConfig?: DMInputConfig;
 }
 
 interface MentionMapping {
@@ -151,9 +160,11 @@ const ActionBar = memo(
                 <DropdownMenuItem onClick={onAttachClick} disabled={!canSendMessage}>
                   <Paperclip className="w-4 h-4 mr-2" /> Attach file
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setShowCreatePoll(true)} disabled={!canSendMessage}>
-                  <SquareChartGantt className="w-4 h-4 mr-2" /> Create poll
-                </DropdownMenuItem>
+                {setShowCreatePoll && (
+                  <DropdownMenuItem onClick={() => setShowCreatePoll(true)} disabled={!canSendMessage}>
+                    <SquareChartGantt className="w-4 h-4 mr-2" /> Create poll
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
@@ -161,15 +172,19 @@ const ActionBar = memo(
               <button onClick={onAttachClick} disabled={!canSendMessage} className={iconBtnClass}>
                 <Paperclip className="w-5 h-5" />
               </button>
-              <div className="w-px h-5 bg-white/8 mx-0.5" />
-              <button
-                type="button"
-                onClick={() => setShowCreatePoll(true)}
-                disabled={!canSendMessage}
-                className={iconBtnClass}
-              >
-                <SquareChartGantt className="w-5 h-5" />
-              </button>
+              {setShowCreatePoll && (
+                <>
+                  <div className="w-px h-5 bg-white/8 mx-0.5" />
+                  <button
+                    type="button"
+                    onClick={() => setShowCreatePoll(true)}
+                    disabled={!canSendMessage}
+                    className={iconBtnClass}
+                  >
+                    <SquareChartGantt className="w-5 h-5" />
+                  </button>
+                </>
+              )}
             </>
           )}
 
@@ -186,11 +201,13 @@ const ActionBar = memo(
             </button>
           </EmojiPicker>
 
-          <GifPicker open={showGifPicker} onOpenChange={setShowGifPicker} onSelect={onGifSelect}>
-            <button type="button" className={iconBtnClass} onMouseDown={(e) => e.preventDefault()}>
-              <ImagePlay className="w-5 h-5" />
-            </button>
-          </GifPicker>
+          {setShowGifPicker && (
+            <GifPicker open={showGifPicker} onOpenChange={setShowGifPicker} onSelect={onGifSelect}>
+              <button type="button" className={iconBtnClass} onMouseDown={(e) => e.preventDefault()}>
+                <ImagePlay className="w-5 h-5" />
+              </button>
+            </GifPicker>
+          )}
         </div>
 
         {/* Right side */}
@@ -256,12 +273,21 @@ export const MessageInput = ({
   onTyping,
   onStopTyping,
   onSlowmodeStatusChange,
+  dmConfig,
 }: MessageInputProps) => {
+  const isDM = !!dmConfig;
+  const targetId = isDM ? dmConfig!.conversationId : channelId!;
   const { user } = useAuthStore();
-  const { replyingTo, setReplyingTo, sendMessage } = useMessageStore();
+  const { replyingTo: channelReplyingTo, setReplyingTo: channelSetReplyingTo, sendMessage: channelSendMessage } = useMessageStore();
+  const { sendMessage: dmSendMessage } = useDMStore();
   const { members, currentServer, currentChannel, channels, fetchRolePermissions } = useServerStore();
   const { getQueuedForChannel } = useOfflineQueueStore();
   const isMobile = useIsMobile();
+
+  // Unified reply state — in DM mode use dmConfig, in channel mode use store
+  const replyingTo = isDM ? dmConfig?.replyingTo : channelReplyingTo;
+  const setReplyingTo = isDM ? ((_: any) => {}) : channelSetReplyingTo;
+  const sendMessage = isDM ? dmSendMessage : channelSendMessage;
 
   const [content, setContent] = useState("");
   const [isFocused, setIsFocused] = useState(false);
@@ -291,8 +317,9 @@ export const MessageInput = ({
   const draftSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (channelId) {
-      setContent(getDraft(channelId));
+    const draftKey = isDM ? `dm-${targetId}` : targetId;
+    if (draftKey) {
+      setContent(getDraft(draftKey));
     }
     return () => {
       setPendingAttachments((prev) => {
@@ -302,21 +329,20 @@ export const MessageInput = ({
         return [];
       });
     };
-  }, [channelId]);
+  }, [targetId, isDM]);
 
-  // Auto-focus text input when switching channels so user can type immediately
+  // Auto-focus text input when switching channels/conversations
   useEffect(() => {
-    if (channelId) {
+    if (targetId) {
       const t = textareaRef.current;
       if (t) {
-        // Small delay so the channel content has rendered
         const id = requestAnimationFrame(() => {
           t.focus();
         });
         return () => cancelAnimationFrame(id);
       }
     }
-  }, [channelId]);
+  }, [targetId]);
 
   // Focus composer when user starts replying from a message action.
   useEffect(() => {
@@ -329,30 +355,37 @@ export const MessageInput = ({
     return () => cancelAnimationFrame(id);
   }, [replyingTo]);
 
-  const { hasPermission } = useMemberPermissions(channelId);
+  // DM-specific: focus when reply changes via dmConfig
+  useEffect(() => {
+    if (isDM && dmConfig?.replyingTo && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [isDM, dmConfig?.replyingTo]);
+
+  const { hasPermission } = useMemberPermissions(isDM ? undefined : channelId);
   const markChatNoticeSeen = useChannelSettingsStore((state) => state.markChatNoticeSeen);
-  const chatNoticeSeenAt = useChannelSettingsStore((state) => state.settings[channelId]?.chat_notice_seen_at ?? null);
+  const chatNoticeSeenAt = useChannelSettingsStore((state) => (channelId ? state.settings[channelId]?.chat_notice_seen_at ?? null : null));
   const currentMember = useMemo(() => members.find((m) => m.user_id === user?.id), [members, user?.id]);
-  const isMuted = currentMember?.is_muted || false;
+  const isMuted = isDM ? false : (currentMember?.is_muted || false);
   const activeChannel = useMemo(
-    () => channels.find((c) => c.id === channelId) || currentChannel || null,
-    [channels, channelId, currentChannel],
+    () => isDM ? null : (channels.find((c) => c.id === channelId) || currentChannel || null),
+    [channels, channelId, currentChannel, isDM],
   );
-  const isReadOnlyChannel = activeChannel?.is_read_only || false;
-  const isGhostMode = activeChannel?.ghost_mode || false;
-  const slowmodeSeconds = Math.max(0, Number(activeChannel?.slowmode_seconds) || 0);
-  const canSendMessagesPermission = hasPermission("send_messages");
-  const canSendInReadOnly = isReadOnlyChannel ? hasPermission("manage_messages") : true;
-  const canSendMessage = !isMuted && canSendMessagesPermission && canSendInReadOnly;
-  const canManageMessages = hasPermission("manage_messages");
+  const isReadOnlyChannel = isDM ? false : (activeChannel?.is_read_only || false);
+  const isGhostMode = isDM ? false : (activeChannel?.ghost_mode || false);
+  const slowmodeSeconds = isDM ? 0 : Math.max(0, Number(activeChannel?.slowmode_seconds) || 0);
+  const canSendMessagesPermission = isDM ? true : hasPermission("send_messages");
+  const canSendInReadOnly = isDM ? true : (isReadOnlyChannel ? hasPermission("manage_messages") : true);
+  const canSendMessage = isDM ? true : (!isMuted && canSendMessagesPermission && canSendInReadOnly);
+  const canManageMessages = isDM ? false : hasPermission("manage_messages");
   const isSlowmodeEnabled = slowmodeSeconds > 0;
   const isSlowmodeExempt = canManageMessages;
-  const slowmodeCooldownUntil = slowmodeCooldownByChannel[channelId] || 0;
+  const slowmodeCooldownUntil = isDM ? 0 : (slowmodeCooldownByChannel[targetId] || 0);
   const slowmodeRemainingSeconds = Math.max(0, Math.ceil((slowmodeCooldownUntil - slowmodeNowMs) / 1000));
   const isSlowmodeBlocked = isSlowmodeEnabled && !isSlowmodeExempt && slowmodeRemainingSeconds > 0;
   const canSubmitMessage = canSendMessage && !isSlowmodeBlocked;
-  const activeChatNotice = (activeChannel?.chat_notice ?? "").trim();
-  const requiresChatNoticeAck = activeChatNotice.length > 0 && !chatNoticeSeenAt;
+  const activeChatNotice = isDM ? "" : (activeChannel?.chat_notice ?? "").trim();
+  const requiresChatNoticeAck = !isDM && activeChatNotice.length > 0 && !chatNoticeSeenAt;
   const isComposerLockedByNotice = requiresChatNoticeAck;
   const replyingToUser = useMessageUser(replyingTo?.user_id);
   const showReplyAuthorIdentity = useMemo(
@@ -446,16 +479,21 @@ export const MessageInput = ({
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    if (openChatNoticePopup()) return;
+    if (!isDM && openChatNoticePopup()) return;
     const val = e.target.value;
     if (val.length > MAX_LENGTH) return;
     setContent(val);
     resizeTextarea();
-    onTyping();
-    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-    typingTimeoutRef.current = setTimeout(onStopTyping, TYPING_STOP_DELAY);
-    detectAutocomplete(val, e.target.selectionStart);
-    saveDraft(channelId, val);
+    if (!isDM && onTyping) {
+      onTyping();
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(onStopTyping!, TYPING_STOP_DELAY);
+    }
+    if (!isDM) {
+      detectAutocomplete(val, e.target.selectionStart);
+    }
+    const draftKey = isDM ? `dm-${targetId}` : targetId;
+    saveDraft(draftKey, val);
   };
 
   const convertMentionsForSend = useCallback((text: string): string => {
@@ -472,45 +510,42 @@ export const MessageInput = ({
   }, []);
 
   const handleSubmit = useCallback(async () => {
-    if (openChatNoticePopup()) return;
-    const hasGifOrAttachments = pendingAttachments.length > 0;
-    if ((!content.trim() && !hasGifOrAttachments) || !user || isSending || !canSendMessage) return;
-
-    if (isSlowmodeBlocked) return;
-
-    if (!messageRateLimiter.isAllowed(user.id)) {
-      showWarning("Slow down!", `Try again in ${messageRateLimiter.getRemainingTime(user.id)}s`);
-      return;
+    // Channel-only checks
+    if (!isDM) {
+      if (openChatNoticePopup()) return;
+      if (!canSendMessage) return;
+      if (isSlowmodeBlocked) return;
+      if (user && !messageRateLimiter.isAllowed(user.id)) {
+        showWarning("Slow down!", `Try again in ${messageRateLimiter.getRemainingTime(user.id)}s`);
+        return;
+      }
     }
 
+    const hasGifOrAttachments = pendingAttachments.length > 0;
+    if ((!content.trim() && !hasGifOrAttachments) || !user || isSending) return;
+
     setIsSending(true);
-    const contentToSend = convertMentionsForSend(content.trim());
+    const contentToSend = isDM ? content.trim() : convertMentionsForSend(content.trim());
     const transportReadyContent = await encodeCustomEmojisForTransport(contentToSend);
 
     try {
       let finalContent = transportReadyContent;
       const uploadedUrls: string[] = [];
 
-      // Separate GIF URLs from file attachments
       const gifAttachments = pendingAttachments.filter((a) => a.gifUrl);
       const fileAttachments = pendingAttachments.filter((a) => !a.gifUrl);
-
-      // Save metadata before any state changes
       const savedAttachmentMeta = fileAttachments.map((a) => ({
         name: a.file.name,
         type: a.file.type,
         size: a.file.size,
       }));
 
-      // Upload file attachments to storage (compress images first)
+      // Upload file attachments (same for both modes)
       if (fileAttachments.length > 0) {
-        // Mark all file attachments as uploading
         setPendingAttachments((prev) =>
           prev.map((a) => (a.gifUrl ? a : { ...a, uploading: true }))
         );
-
-        for (let i = 0; i < fileAttachments.length; i++) {
-          const att = fileAttachments[i];
+        for (const att of fileAttachments) {
           let fileToUpload = att.file;
           if (fileToUpload.type.startsWith("image/")) {
             fileToUpload = await compressAttachmentImage(fileToUpload);
@@ -522,23 +557,21 @@ export const MessageInput = ({
         }
       }
 
-      // Append GIF URLs directly (no upload needed)
       for (const gif of gifAttachments) {
         uploadedUrls.push(gif.gifUrl!);
       }
 
       if (uploadedUrls.length > 0) {
-        // Always append attachment URLs to content so images render via content parsing
-        // even if the message_attachments insert fails
         const urlBlock = uploadedUrls.join("\n");
         finalContent = finalContent ? `${finalContent}\n${urlBlock}` : urlBlock;
       }
 
-      // 🚀 Optimization: The DB Trigger now handles all mention processing automatically.
-      const sentMessage = await sendMessage(channelId, user.id, finalContent, replyingTo?.id);
+      // Send the message
+      const replyToId = isDM ? dmConfig?.replyingTo?.id : channelReplyingTo?.id;
+      const sentMessage = await sendMessage(targetId, user.id, finalContent, replyToId);
 
-      // Show toast if mentions were suppressed due to missing permissions
-      if (sentMessage && (sentMessage as any)?._mentions_suppressed) {
+      // Channel-only: mention suppression toast
+      if (!isDM && sentMessage && (sentMessage as any)?._mentions_suppressed) {
         const suppressedTypes: string[] = (sentMessage as any)?._suppressed_types || [];
         if (suppressedTypes.includes("everyone")) {
           toast.info("You don't have permission to mention @everyone in this channel");
@@ -548,7 +581,7 @@ export const MessageInput = ({
         }
       }
 
-      // Insert attachment records into message_attachments table (file uploads only, not GIF URLs)
+      // Insert attachment records
       const fileUploadedUrls = uploadedUrls.slice(0, fileAttachments.length);
       if (sentMessage && fileUploadedUrls.length > 0) {
         const attachmentRows = fileUploadedUrls.map((url, i) => ({
@@ -558,48 +591,75 @@ export const MessageInput = ({
           file_type: savedAttachmentMeta[i]?.type || null,
           file_size: savedAttachmentMeta[i]?.size || null,
         }));
+
+        const tableName = isDM ? "dm_attachments" : "message_attachments";
         const { data: insertedAttachments, error: attachError } = await supabase
-          .from("message_attachments")
+          .from(tableName)
           .insert(attachmentRows)
           .select();
+
         if (attachError) {
           console.error("[MessageInput] Attachment insert error:", attachError);
         }
+
         if (insertedAttachments && insertedAttachments.length > 0) {
-          const { updateMessage } = useMessageStore.getState();
-          updateMessage(sentMessage.id, {
-            channel_id: channelId,
-            attachments: insertedAttachments.map((a: any) => ({
-              id: a.id,
-              message_id: a.message_id,
-              file_url: a.file_url,
-              file_name: a.file_name,
-              file_type: a.file_type,
-              file_size: a.file_size,
-              width: a.width,
-              height: a.height,
-            })),
-          } as any);
+          const formattedAttachments = insertedAttachments.map((a: any) => ({
+            id: a.id,
+            message_id: a.message_id,
+            file_url: a.file_url,
+            file_name: a.file_name,
+            file_type: a.file_type,
+            file_size: a.file_size,
+            width: a.width,
+            height: a.height,
+          }));
+
+          if (isDM) {
+            useDMStore.getState().updateMessage(targetId, sentMessage.id, {
+              attachments: formattedAttachments,
+            });
+          } else {
+            useMessageStore.getState().updateMessage(sentMessage.id, {
+              channel_id: targetId,
+              attachments: formattedAttachments,
+            } as any);
+          }
         }
       }
 
+      // DM: update presence after send
+      if (isDM && sentMessage) {
+        const auth = useAuthStore.getState();
+        if (auth.manualStatus !== "offline") auth.updateLastSeen();
+        if (auth.manualStatus !== "offline" && auth.manualStatus !== "dnd") {
+          auth.updateStatus("online", { source: "auto" });
+        }
+      }
+
+      // Common cleanup
       setContent("");
       setPendingAttachments([]);
-      setReplyingTo(null);
-      clearDraft(channelId);
-      mentionMappingsRef.current = [];
-      channelMappingsRef.current = [];
+      const draftKey = isDM ? `dm-${targetId}` : targetId;
+      clearDraft(draftKey);
       if (textareaRef.current) textareaRef.current.style.height = `${MIN_TEXTAREA_HEIGHT}px`;
-      window.dispatchEvent(
-        new CustomEvent("channelMessageSent", {
-          detail: { channelId },
-        }),
-      );
 
-      if (isSlowmodeEnabled && !isSlowmodeExempt) {
-        const cooldownUntil = Date.now() + slowmodeSeconds * 1000;
-        setSlowmodeCooldownByChannel((prev) => ({ ...prev, [channelId]: cooldownUntil }));
-        setSlowmodeNowMs(Date.now());
+      if (isDM) {
+        dmConfig?.onCancelReply?.();
+      } else {
+        channelSetReplyingTo(null);
+        mentionMappingsRef.current = [];
+        channelMappingsRef.current = [];
+        window.dispatchEvent(
+          new CustomEvent("channelMessageSent", {
+            detail: { channelId: targetId },
+          }),
+        );
+
+        if (isSlowmodeEnabled && !isSlowmodeExempt) {
+          const cooldownUntil = Date.now() + slowmodeSeconds * 1000;
+          setSlowmodeCooldownByChannel((prev) => ({ ...prev, [targetId]: cooldownUntil }));
+          setSlowmodeNowMs(Date.now());
+        }
       }
     } catch (error) {
       handleError(error, "Failed to send");
@@ -607,18 +667,20 @@ export const MessageInput = ({
       setIsSending(false);
     }
   }, [
+    isDM,
+    dmConfig,
     openChatNoticePopup,
     content,
     pendingAttachments,
     user,
-    channelId,
-    replyingTo,
+    targetId,
+    channelReplyingTo,
     canSendMessage,
     isSlowmodeBlocked,
-    slowmodeRemainingSeconds,
     isSending,
     convertMentionsForSend,
     sendMessage,
+    channelSetReplyingTo,
     isSlowmodeEnabled,
     isSlowmodeExempt,
     slowmodeSeconds,
@@ -660,7 +722,7 @@ export const MessageInput = ({
 
   const handleComposerKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (requiresChatNoticeAck) {
+      if (!isDM && requiresChatNoticeAck) {
         const isTypingAction = e.key.length === 1 || e.key === "Enter" || e.key === "Backspace" || e.key === "Delete";
         if (isTypingAction && !e.metaKey && !e.ctrlKey && !e.altKey) {
           e.preventDefault();
@@ -669,24 +731,35 @@ export const MessageInput = ({
         }
       }
 
-      const isAutocompleteOpen = (showMentions && hasMentionOptions) || (showChannels && hasChannelOptions);
-      const autocompleteKeys = ["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"];
-
-      // Let autocomplete handle navigation/selection without submitting.
-      if (isAutocompleteOpen && autocompleteKeys.includes(e.key)) {
-        e.preventDefault();
-        return;
+      if (!isDM) {
+        const isAutocompleteOpen = (showMentions && hasMentionOptions) || (showChannels && hasChannelOptions);
+        const autocompleteKeys = ["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"];
+        if (isAutocompleteOpen && autocompleteKeys.includes(e.key)) {
+          e.preventDefault();
+          return;
+        }
       }
 
-      // Restore Discord-like "edit your last message" shortcut.
-      if (e.key === "ArrowUp" && !isMobile && !content.trim() && pendingAttachments.length === 0 && user?.id) {
+      // Restore Discord-like "edit your last message" shortcut (channel only).
+      if (!isDM && e.key === "ArrowUp" && !isMobile && !content.trim() && pendingAttachments.length === 0 && user?.id) {
         e.preventDefault();
         window.dispatchEvent(
           new CustomEvent("editLastMessage", {
-            detail: { userId: user.id, channelId },
+            detail: { userId: user.id, channelId: targetId },
           }),
         );
         return;
+      }
+
+      // DM: format shortcuts
+      if (isDM && (e.ctrlKey || e.metaKey)) {
+        const formatMap: Record<string, string> = { b: "bold", i: "italic", e: "code", p: "spoiler" };
+        const fmt = formatMap[e.key.toLowerCase()];
+        if (fmt) {
+          e.preventDefault();
+          handleFormat(fmt);
+          return;
+        }
       }
 
       if (e.key === "Enter" && !e.shiftKey && !isMobile) {
@@ -695,6 +768,7 @@ export const MessageInput = ({
       }
     },
     [
+      isDM,
       showMentions,
       requiresChatNoticeAck,
       openChatNoticePopup,
@@ -705,12 +779,12 @@ export const MessageInput = ({
       content,
       pendingAttachments.length,
       user?.id,
-      channelId,
+      targetId,
       handleSubmit,
     ],
   );
 
-  if (isMuted || (!canSendInReadOnly && isReadOnlyChannel)) {
+  if (!isDM && (isMuted || (!canSendInReadOnly && isReadOnlyChannel))) {
     return (
       <div className="px-4 pb-6">
         <div className="flex items-center justify-center py-4 bg-muted/30 rounded-2xl border border-border/50">
@@ -797,7 +871,11 @@ export const MessageInput = ({
             <div className="flex items-center gap-2 px-3.5 py-1.5 bg-white/5 border-b border-white/6 rounded-t-[14px]">
               <span className="text-xs text-muted-foreground">
                 Replying to{" "}
-                {showReplyAuthorIdentity ? (
+                {isDM ? (
+                  <span className="text-primary">
+                    @{dmConfig?.replyingTo?.sender?.display_name || dmConfig?.replyingTo?.sender?.username || "unknown"}
+                  </span>
+                ) : showReplyAuthorIdentity ? (
                   <span className="text-primary">
                     @{replyingToUser?.display_name || replyingToUser?.username || "unknown"}
                   </span>
@@ -805,7 +883,7 @@ export const MessageInput = ({
                   <span className="text-primary italic">Anonymous</span>
                 )}
               </span>
-              <button onClick={() => setReplyingTo(null)} className="ml-auto p-1">
+              <button onClick={() => isDM ? dmConfig?.onCancelReply?.() : channelSetReplyingTo(null)} className="ml-auto p-1">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -820,28 +898,29 @@ export const MessageInput = ({
         canSendMessage={canSendMessage}
         canSubmitMessage={canSubmitMessage}
         isLockedByNotice={isComposerLockedByNotice}
-        channelName={channelName}
+        channelName={isDM ? undefined : channelName}
+        dmPlaceholder={isDM ? dmConfig?.otherUsername : undefined}
         textareaRef={textareaRef}
         handleChange={handleChange}
         setIsFocused={setIsFocused}
         handleKeyDown={handleComposerKeyDown}
         handlePaste={handlePaste}
-        onInputMouseDown={(e: React.MouseEvent<HTMLTextAreaElement>) => {
+        onInputMouseDown={isDM ? undefined : (e: React.MouseEvent<HTMLTextAreaElement>) => {
           if (openChatNoticePopup()) {
             e.preventDefault();
           }
         }}
-        onInputFocus={(e: React.FocusEvent<HTMLTextAreaElement>) => {
+        onInputFocus={isDM ? undefined : (e: React.FocusEvent<HTMLTextAreaElement>) => {
           if (openChatNoticePopup()) {
             e.target.blur();
           }
         }}
-        showCreatePoll={showCreatePoll}
-        setShowCreatePoll={setShowCreatePoll}
+        showCreatePoll={isDM ? undefined : showCreatePoll}
+        setShowCreatePoll={isDM ? undefined : setShowCreatePoll}
         showEmojiPicker={showEmojiPicker}
         setShowEmojiPicker={setShowEmojiPicker}
-        showGifPicker={showGifPicker}
-        setShowGifPicker={setShowGifPicker}
+        showGifPicker={isDM ? undefined : showGifPicker}
+        setShowGifPicker={isDM ? undefined : setShowGifPicker}
         isSending={isSending}
         handleSubmit={handleSubmit}
         handleEmojiSelect={(emoji: string) => {
@@ -850,7 +929,6 @@ export const MessageInput = ({
             const start = textarea.selectionStart;
             const end = textarea.selectionEnd;
             setContent((prev) => prev.slice(0, start) + emoji + prev.slice(end));
-            // Restore cursor position after the inserted emoji
             requestAnimationFrame(() => {
               const newPos = start + emoji.length;
               textarea.setSelectionRange(newPos, newPos);
@@ -860,10 +938,10 @@ export const MessageInput = ({
             setContent((prev) => prev + emoji);
           }
         }}
-        handleGifSelect={(url: string) => {
+        handleGifSelect={isDM ? undefined : (url: string) => {
           setPendingAttachments((prev) => [...prev, { file: new File([], "gif"), preview: url, gifUrl: url }]);
         }}
-        currentServer={currentServer}
+        currentServer={isDM ? undefined : currentServer}
         onAttachClick={() => fileInputRef.current?.click()}
         pendingAttachments={pendingAttachments}
         onRemoveAttachment={(i: number) => setPendingAttachments((p) => p.filter((_, idx) => idx !== i))}
@@ -899,7 +977,7 @@ export const MessageInput = ({
           </motion.div>
         )}
       </AnimatePresence>
-      <CreatePollModal open={showCreatePoll} onOpenChange={setShowCreatePoll} channelId={channelId} />
+      {!isDM && <CreatePollModal open={showCreatePoll} onOpenChange={setShowCreatePoll} channelId={targetId} />}
     </div>
   );
 };
@@ -980,7 +1058,7 @@ const MobileOptimizedInput = memo(
             onMouseDown={onInputMouseDown}
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
-            placeholder={isLockedByNotice ? "Write a message..." : canSendMessage ? "Write a message..." : "Locked"}
+            placeholder={dmPlaceholder ? (hasAttachments ? "Add a comment..." : `Message @${dmPlaceholder.length > (isMobile ? 12 : 17) ? dmPlaceholder.slice(0, isMobile ? 12 : 17) + "…" : dmPlaceholder}`) : (isLockedByNotice ? "Write a message..." : canSendMessage ? "Write a message..." : "Locked")}
             disabled={!canSendMessage}
             rows={1}
             className="message-input-textarea w-full bg-transparent resize-none outline-none py-1 min-h-[36px] max-h-[160px] overflow-y-auto text-foreground placeholder:text-muted-foreground/60 font-[General_Sans,system-ui,sans-serif]"
