@@ -43,6 +43,11 @@ export function useSignedUrl(
 ): string | null | UseSignedUrlResult {
   const [signedUrl, setSignedUrl] = useState<string | null>(() => {
     if (!fileUrl) return null;
+    const ATTACHMENT_PREFIX = "kloak-attachment://";
+    if (fileUrl.startsWith(ATTACHMENT_PREFIX)) {
+      const path = fileUrl.slice(ATTACHMENT_PREFIX.length);
+      return _peekCache(path) ?? null;
+    }
     if (!isSupabaseAttachmentUrl(fileUrl)) return fileUrl;
     const path = extractStoragePath(fileUrl);
     if (!path) return fileUrl;
