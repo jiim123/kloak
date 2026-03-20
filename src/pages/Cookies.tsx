@@ -81,49 +81,49 @@
        />
        <div className="w-full">
          <NavigationMenu />
-         <main className="pt-10">
-           {/* Hero Section - Light Silver Theme */}
-           <section className="relative py-32 md:py-40 px-8 lg:px-16 overflow-hidden bg-neutral-200 dark:bg-neutral-800">
-             <div className="max-w-7xl mx-auto">
-               <motion.div
-                 className="flex items-center gap-4 mb-8"
-                 initial={{ opacity: 0 }}
-                 animate={{ opacity: 1 }}
-                 transition={{ duration: 0.6 }}
-               >
-                 <span className="text-xs font-mono text-neutral-600 dark:text-neutral-400 tracking-widest uppercase">Legal</span>
-               </motion.div>
- 
-               <motion.h1
-                 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light text-neutral-900 dark:text-neutral-100 leading-tight tracking-tight mb-8"
-                 initial={{ opacity: 0, y: 20 }}
-                 animate={{ opacity: 1, y: 0 }}
-                 transition={{ duration: 0.8, delay: 0.1 }}
-               >
-                 Cookie
-                 <br />
-                 <span className="text-neutral-500 dark:text-neutral-400">policy.</span>
-               </motion.h1>
- 
-               <motion.p
-                 className="text-lg md:text-xl text-neutral-700 dark:text-neutral-300 max-w-2xl leading-relaxed"
-                 initial={{ opacity: 0, y: 20 }}
-                 animate={{ opacity: 1, y: 0 }}
-                 transition={{ duration: 0.8, delay: 0.2 }}
-               >
-                 Good news: we keep it simple. Kloak uses only essential cookies required for the application to function. No tracking, no advertising, no third-party analytics.
-               </motion.p>
- 
-               <motion.p
-                 className="text-sm text-neutral-500 dark:text-neutral-500 mt-6"
-                 initial={{ opacity: 0 }}
-                 animate={{ opacity: 1 }}
-                 transition={{ duration: 0.6, delay: 0.3 }}
-               >
-                 Last updated: January 2025
-               </motion.p>
-             </div>
-           </section>
+          <main>
+            {/* Hero Section */}
+            <section className="relative min-h-[85vh] flex items-end px-8 lg:px-16 pb-20 overflow-hidden bg-foreground">
+              <div className="max-w-7xl mx-auto w-full">
+                <motion.div
+                  className="flex items-center gap-4 mb-8"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.6 }}
+                >
+                  <span className="text-xs font-mono text-background tracking-widest uppercase">Legal</span>
+                </motion.div>
+  
+                <motion.h1
+                  className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light text-background leading-tight tracking-tight mb-8"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, delay: 0.1 }}
+                >
+                  Cookie
+                  <br />
+                  <span className="text-background/60">policy.</span>
+                </motion.h1>
+  
+                <motion.p
+                  className="text-lg md:text-xl text-background/70 max-w-2xl leading-relaxed"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, delay: 0.2 }}
+                >
+                  Good news: we keep it simple. Kloak uses only essential cookies required for the application to function. No tracking, no advertising, no third-party analytics.
+                </motion.p>
+  
+                <motion.p
+                  className="text-sm text-background/50 mt-6"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.6, delay: 0.3 }}
+                >
+                  Last updated: January 2025
+                </motion.p>
+              </div>
+            </section>
  
            {/* Cookie Categories */}
            {cookieCategories.map((category, categoryIndex) => (
