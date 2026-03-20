@@ -149,17 +149,17 @@ const FAQ = () => {
       />
       <div className="w-full">
         <NavigationMenu />
-        <main className="pt-10">
+        <main>
           {/* Hero Section */}
-          <section className="relative py-32 md:py-40 px-8 lg:px-16 overflow-hidden bg-foreground">
-            <div className="max-w-7xl mx-auto">
+          <section className="relative min-h-[85vh] flex items-end px-8 lg:px-16 pb-20 overflow-hidden bg-foreground">
+            <div className="max-w-7xl mx-auto w-full">
               <motion.div
                 className="flex items-center gap-4 mb-8"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.6 }}
               >
-                <span className="text-xs font-mono text-background tracking-widest ">Help Center</span>
+                <span className="text-xs font-mono text-background tracking-widest">Help Center</span>
               </motion.div>
 
               <motion.h1
