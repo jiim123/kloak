@@ -647,17 +647,17 @@ export const MessageItem = memo(function MessageItem({
 
   // RoleIconWrapper moved outside component body (FIX 5)
 
-  // Permissions
-  const { hasPermission, isOwner: currentUserIsOwner } = useMemberPermissions(message.channel_id);
-  const canPinMessages = hasPermission("pin_messages");
-  const canManageMessages = hasPermission("manage_messages");
-  const canAddReactions = hasPermission("add_reactions");
-  const canUseExternalEmojis = hasPermission("use_external_emojis");
+  // Permissions — in DM mode, grant basic permissions and skip server-only features
+  const { hasPermission, isOwner: currentUserIsOwner } = useMemberPermissions(isDM ? undefined : message.channel_id);
+  const canPinMessages = isDM ? false : hasPermission("pin_messages");
+  const canManageMessages = isDM ? false : hasPermission("manage_messages");
+  const canAddReactions = isDM ? true : hasPermission("add_reactions");
+  const canUseExternalEmojis = isDM ? true : hasPermission("use_external_emojis");
   const isAdmin = canManageMessages;
 
-  // Kick/Ban permissions for avatar context menu
-  const isMessageAuthorOwner = currentServer?.owner_id === message.user_id;
-  const canModTarget = canModerateByRoles(currentUserIsOwner, currentMember?.roles, isMessageAuthorOwner, messageRoles);
+  // Kick/Ban permissions for avatar context menu — disabled in DM mode
+  const isMessageAuthorOwner = isDM ? false : currentServer?.owner_id === message.user_id;
+  const canModTarget = isDM ? false : canModerateByRoles(currentUserIsOwner, currentMember?.roles, isMessageAuthorOwner, messageRoles);
   const canKickUser = hasPermission("kick_members") && canModTarget && !isOwnMessage;
   const canBanUser = hasPermission("ban_members") && canModTarget && !isOwnMessage;
   const hasModActions = canKickUser || canBanUser;
