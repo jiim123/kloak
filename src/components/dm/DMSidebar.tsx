@@ -80,10 +80,13 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
     markAsRead(conversation.id);
   };
 
-  const handleCloseConversation = async (e: React.MouseEvent, conversationId: string) => {
-    e.stopPropagation();
+  const handleLeaveConversation = async (conversation: DMConversation) => {
     if (!user?.id) return;
-    await closeConversation(conversationId, user.id);
+    if (conversation.is_group) {
+      await leaveGroup(conversation.id, user.id);
+    } else {
+      await closeConversation(conversation.id, user.id);
+    }
   };
 
   const getStatusClass = (status?: string) => {
