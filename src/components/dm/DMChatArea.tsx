@@ -10,11 +10,12 @@ import { useUnreadDMsContext } from "@/hooks/useUnreadDMsContext";
 import { useSwipeGestureRef } from "@/hooks/useSwipeGesture";
 import { useScrollToMessage } from "@/hooks/useScrollToMessage";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { DMMessageInput } from "./DMMessageInput";
-import { DMMessageItem } from "./DMMessageItem";
+import { MessageInput } from "@/components/chat/MessageInput";
+import { MessageItem, type DMActions } from "@/components/chat/MessageItem";
+import { normalizeDirectMessage } from "@/lib/dmNormalizer";
 import { DMHeader } from "./DMHeader";
 import { GroupChatHeader } from "./GroupChatHeader";
-import type { DirectMessage, User } from "@/types";
+import type { DirectMessage, Message, User } from "@/types";
 
 export const DMChatArea = () => {
   const { user } = useAuthStore();
@@ -25,14 +26,21 @@ export const DMChatArea = () => {
   const isMobile = useIsMobile();
 
   // Get messages for current conversation from cache
-  const messages = currentConversation ? getMessages(currentConversation.id) : [];
+  const rawMessages = currentConversation ? getMessages(currentConversation.id) : [];
+
+  // Normalize DM messages to Message shape for unified MessageItem
+  const messages: Message[] = useMemo(
+    () => rawMessages.map(normalizeDirectMessage),
+    [rawMessages],
+  );
+
+  // Keep raw messages for reply lookups
+  const rawMessagesRef = useRef(rawMessages);
+  rawMessagesRef.current = rawMessages;
 
   // Check if either user has blocked the other
-  // blockedUsers = users that I have blocked
-  // visibilityBlockedUserIds = all users in a "blocked" relationship with me (both directions)
   const otherUserId = currentConversation?.other_user?.id;
   const isBlockedByMe = blockedUsers.some((b) => b.id === otherUserId);
-  // If other user is in visibility blocked but NOT in my blocked list, they blocked me
   const isBlockedByThem = otherUserId ? visibilityBlockedUserIds.includes(otherUserId) && !isBlockedByMe : false;
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -53,7 +61,7 @@ export const DMChatArea = () => {
     needsScrollRef.current = true;
   }
 
-  // Swipe gesture for mobile - swipe right to open sidebar
+  // Swipe gesture for mobile
   const swipeRef = useSwipeGestureRef({
     onSwipeRight: () => setMobileSidebarOpen(true),
     threshold: 50,
@@ -71,7 +79,6 @@ export const DMChatArea = () => {
   }, [currentConversation?.id, user?.id, fetchMessages, markAsRead]);
 
   // Scroll to bottom AFTER messages render on conversation switch
-  // useLayoutEffect fires synchronously after DOM mutations but before paint
   useLayoutEffect(() => {
     if (needsScrollRef.current && messages.length > 0) {
       messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
@@ -80,56 +87,33 @@ export const DMChatArea = () => {
     }
   }, [messages.length, currentConversation?.id]);
 
-  // Removed: visibility-change handler was redundant — realtime handles incoming messages
-
   // Auto-scroll to bottom on new messages
   useEffect(() => {
     if (isAtBottom) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     } else if (messages.length > 0) {
-      // Count new messages when not at bottom
       setNewMessageCount((prev) => prev + 1);
     }
   }, [messages.length, isAtBottom]);
 
-  // Reset new message count when scrolling to bottom
   useEffect(() => {
-    if (isAtBottom) {
-      setNewMessageCount(0);
-    }
+    if (isAtBottom) setNewMessageCount(0);
   }, [isAtBottom]);
 
-  // Cleanup RAF on unmount
   useEffect(() => {
     return () => {
-      if (scrollRAFRef.current !== null) {
-        cancelAnimationFrame(scrollRAFRef.current);
-      }
+      if (scrollRAFRef.current !== null) cancelAnimationFrame(scrollRAFRef.current);
     };
   }, []);
 
-  // Check scroll position with RAF debouncing for better performance
   const handleScroll = useCallback(() => {
-    // Cancel any pending RAF to debounce scroll updates
-    if (scrollRAFRef.current !== null) {
-      cancelAnimationFrame(scrollRAFRef.current);
-    }
-
+    if (scrollRAFRef.current !== null) cancelAnimationFrame(scrollRAFRef.current);
     scrollRAFRef.current = requestAnimationFrame(() => {
       const container = messagesContainerRef.current;
       if (!container) return;
-
       const { scrollTop, scrollHeight, clientHeight } = container;
       const atBottom = scrollHeight - scrollTop - clientHeight < 100;
-
-      // Only update state if value changed to prevent unnecessary re-renders
-      setIsAtBottom((prev) => {
-        if (prev !== atBottom) {
-          return atBottom;
-        }
-        return prev;
-      });
-
+      setIsAtBottom((prev) => (prev !== atBottom ? atBottom : prev));
       scrollRAFRef.current = null;
     });
   }, []);
@@ -140,27 +124,46 @@ export const DMChatArea = () => {
     setIsAtBottom(true);
   }, []);
 
-  // Group messages by sender within 5 minutes - memoized to prevent recalculation
+  // Group messages by sender within 5 minutes
   const groupedMessages = useMemo(() => {
-    const groups: { message: DirectMessage; isFirst: boolean }[] = [];
-
+    const groups: { message: Message; isFirst: boolean }[] = [];
     messages.forEach((msg, index) => {
       const prevMsg = messages[index - 1];
       const isFirst =
         !prevMsg ||
-        prevMsg.sender_id !== msg.sender_id ||
+        prevMsg.user_id !== msg.user_id ||
         new Date(msg.created_at || "").getTime() - new Date(prevMsg.created_at || "").getTime() > 5 * 60 * 1000;
-
       groups.push({ message: msg, isFirst });
     });
-
     return groups;
   }, [messages]);
+
+  // DM actions for unified MessageItem
+  const dmStore = useDMStore;
+  const dmActionsConfig: DMActions = useMemo(() => ({
+    editMessage: async (messageId: string, userId: string, content: string) => {
+      await dmStore.getState().editMessage(messageId, userId, content);
+    },
+    deleteMessage: async (messageId: string, userId: string) => {
+      await dmStore.getState().deleteMessage(messageId, userId);
+    },
+    addReaction: async (messageId: string, userId: string, emoji: string) => {
+      await dmStore.getState().addReaction(messageId, userId, emoji);
+    },
+    removeReaction: async (messageId: string, userId: string, emoji: string) => {
+      await dmStore.getState().removeReaction(messageId, userId, emoji);
+    },
+    onReply: (message: Message) => {
+      // Find the raw DM message to set as reply
+      const raw = rawMessagesRef.current.find((m) => m.id === message.id);
+      if (raw) setReplyingTo(raw);
+    },
+  }), []);
 
   // Determine if this is a group conversation
   const isGroup = currentConversation?.is_group || false;
 
-  // Get other participants for group chats (excluding current user)
+  // Get other participants for group chats
   const otherParticipants = useMemo(() => {
     if (!isGroup || !currentConversation?.participants) return [];
     return currentConversation.participants
@@ -169,21 +172,26 @@ export const DMChatArea = () => {
       .filter((u): u is User => u != null);
   }, [isGroup, currentConversation?.participants, user?.id]);
 
-  // Get display name for group intro
   const getGroupDisplayName = useCallback(() => {
     if (!currentConversation) return "";
     if (currentConversation.name) return currentConversation.name;
-
     const names = otherParticipants.slice(0, 3).map((p) => p.display_name || p.username || "Unknown");
-
-    if (otherParticipants.length > 3) {
-      return `${names.join(", ")} and ${otherParticipants.length - 3} others`;
-    }
+    if (otherParticipants.length > 3) return `${names.join(", ")} and ${otherParticipants.length - 3} others`;
     if (names.length === 1) return names[0];
     if (names.length === 2) return `${names[0]} and ${names[1]}`;
     if (names.length === 0) return "Group";
     return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
   }, [currentConversation, otherParticipants]);
+
+  // Build the dmConfig for the unified MessageInput reply state
+  const dmInputReplyingTo = useMemo(() => {
+    if (!replyingTo) return null;
+    return {
+      id: replyingTo.id,
+      sender: replyingTo.sender,
+      content: replyingTo.content,
+    };
+  }, [replyingTo]);
 
   if (!currentConversation) {
     return (
@@ -200,7 +208,7 @@ export const DMChatArea = () => {
 
   return (
     <div ref={swipeRef} className="h-full flex flex-col bg-layout-chat">
-      {/* Header - different for group vs 1:1 */}
+      {/* Header */}
       {isGroup ? (
         <GroupChatHeader conversation={currentConversation} participants={otherParticipants} />
       ) : (
@@ -209,7 +217,7 @@ export const DMChatArea = () => {
 
       {/* Messages container */}
       <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4" onScroll={handleScroll}>
-        {/* Start of conversation - different for group vs 1:1 */}
+        {/* Start of conversation */}
         {isGroup ? (
           <div className="py-8 mb-4">
             <div className="flex items-center gap-4 mb-4">
@@ -248,19 +256,19 @@ export const DMChatArea = () => {
         )}
 
         {/* Messages */}
-        {isLoading && messages.length === 0 ? (
+        {isLoading && rawMessages.length === 0 ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-pulse-subtle text-muted-foreground">Loading messages...</div>
           </div>
         ) : (
           <div className="space-y-0.5">
             {groupedMessages.map(({ message, isFirst }) => (
-              <DMMessageItem
+              <MessageItem
                 key={message.id}
                 message={message}
-                isFirst={isFirst}
+                isGrouped={!isFirst}
                 isHighlighted={message.id === highlightedMessageId}
-                onReply={isBlocked ? undefined : setReplyingTo}
+                dmActions={isBlocked ? undefined : dmActionsConfig}
               />
             ))}
           </div>
@@ -290,12 +298,13 @@ export const DMChatArea = () => {
           </div>
         </div>
       ) : (
-        /* Message input - matches channel input style */
-        <DMMessageInput
-          conversationId={currentConversation.id}
-          otherUsername={isGroup ? getGroupDisplayName() : otherUser?.username || "user"}
-          replyingTo={replyingTo}
-          onCancelReply={() => setReplyingTo(null)}
+        <MessageInput
+          dmConfig={{
+            conversationId: currentConversation.id,
+            otherUsername: isGroup ? getGroupDisplayName() : otherUser?.username || "user",
+            replyingTo: dmInputReplyingTo,
+            onCancelReply: () => setReplyingTo(null),
+          }}
         />
       )}
     </div>

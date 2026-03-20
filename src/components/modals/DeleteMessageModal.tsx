@@ -21,6 +21,8 @@ interface DeleteMessageModalProps {
   onConfirm?: () => void;
   onClose?: () => void;
   messageContent?: string;
+  /** Custom delete handler (used for DM messages) */
+  customDeleteHandler?: (messageId: string, userId: string) => Promise<void>;
 }
 
 // Helper to check if a line is an image URL
@@ -55,6 +57,7 @@ export const DeleteMessageModal = ({
   onConfirm,
   onClose,
   messageContent,
+  customDeleteHandler,
 }: DeleteMessageModalProps) => {
   const { deleteMessage } = useMessageStore();
   const { user } = useAuthStore();
@@ -68,7 +71,8 @@ export const DeleteMessageModal = ({
       if (onOpenChange) onOpenChange(false);
       if (onClose) onClose();
     } else if (message && user) {
-      await deleteMessage(message.id, user.id);
+      const deleteFn = customDeleteHandler || deleteMessage;
+      await deleteFn(message.id, user.id);
       if (onOpenChange) onOpenChange(false);
       if (onClose) onClose();
     }

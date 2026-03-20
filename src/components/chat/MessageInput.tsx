@@ -387,16 +387,18 @@ export const MessageInput = ({
   const activeChatNotice = isDM ? "" : (activeChannel?.chat_notice ?? "").trim();
   const requiresChatNoticeAck = !isDM && activeChatNotice.length > 0 && !chatNoticeSeenAt;
   const isComposerLockedByNotice = requiresChatNoticeAck;
-  const replyingToUser = useMessageUser(replyingTo?.user_id);
+  // In DM mode the reply shape has no user_id — extract it safely
+  const replyUserId = isDM ? undefined : (replyingTo as any)?.user_id;
+  const replyingToUser = useMessageUser(replyUserId);
   const showReplyAuthorIdentity = useMemo(
     () =>
       canRevealGhostIdentityForUser({
         isGhostMode,
-        authorUserId: replyingTo?.user_id,
+        authorUserId: replyUserId,
         members,
         ownerId: currentServer?.owner_id,
       }),
-    [isGhostMode, replyingTo?.user_id, members, currentServer?.owner_id],
+    [isGhostMode, replyUserId, members, currentServer?.owner_id],
   );
 
   const resizeTextarea = useCallback(() => {
@@ -991,6 +993,7 @@ const MobileOptimizedInput = memo(
     canSubmitMessage,
     isLockedByNotice,
     channelName,
+    dmPlaceholder,
     textareaRef,
     handleChange,
     setIsFocused,

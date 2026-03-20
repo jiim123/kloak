@@ -101,6 +101,16 @@ const getGradientTextStyle = (gradient: string): React.CSSProperties =>
     display: "inline-block",
   }) as React.CSSProperties;
 
+export interface DMActions {
+  editMessage: (messageId: string, userId: string, content: string) => Promise<void>;
+  deleteMessage: (messageId: string, userId: string) => Promise<void>;
+  addReaction: (messageId: string, userId: string, emoji: string) => Promise<void>;
+  removeReaction: (messageId: string, userId: string, emoji: string) => Promise<void>;
+  onReply: (message: Message) => void;
+  /** Resolve display name for a user ID (for reaction tooltips) */
+  nameForUserId?: (userId: string) => string;
+}
+
 interface MessageItemProps {
   message: Message;
   isGrouped: boolean;
@@ -116,6 +126,8 @@ interface MessageItemProps {
     nickname?: string | null;
     roles?: CustomServerRole[];
   };
+  /** When provided, component operates in DM mode (skips server features) */
+  dmActions?: DMActions;
 }
 
 const EMPTY_CUSTOM_EMOJI_MAP = new Map<string, string>();
@@ -278,15 +290,17 @@ export const MessageItem = memo(function MessageItem({
   customEmojiMap: sharedCustomEmojiMap,
   globalEmojiMap: sharedGlobalEmojiMap,
   authorStyleFallback,
+  dmActions,
 }: MessageItemProps) {
+  const isDM = !!dmActions;
   // Selectors - granular to prevent unnecessary re-renders
   const user = useAuthStore((state) => state.user);
   // Extract each message store function separately to avoid re-renders on unrelated changes
   const setReplyingTo = useMessageStore((state) => state.setReplyingTo);
-  const editMessage = useMessageStore((state) => state.editMessage);
+  const channelEditMessage = useMessageStore((state) => state.editMessage);
   const pinMessage = useMessageStore((state) => state.pinMessage);
-  const addReaction = useMessageStore((state) => state.addReaction);
-  const removeReaction = useMessageStore((state) => state.removeReaction);
+  const channelAddReaction = useMessageStore((state) => state.addReaction);
+  const channelRemoveReaction = useMessageStore((state) => state.removeReaction);
   const setEmbedHidden = useMessageStore((state) => state.setEmbedHidden);
   const members = useServerStore((state) => state.members);
   const roles = useServerStore((state) => state.roles);
@@ -298,6 +312,17 @@ export const MessageItem = memo(function MessageItem({
   const getOptimisticStatus = useSyncStore((state) => state.getOptimisticStatus);
   const isMobile = useIsMobile();
   const topEmojis = useMemo(() => getTopEmojis(3), []);
+
+  // Unified action wrappers — in DM mode, delegate to dmActions; in channel mode, use stores
+  const editMessage = isDM
+    ? (id: string, content: string, userId: string) => dmActions!.editMessage(id, userId, content)
+    : channelEditMessage;
+  const addReaction = isDM
+    ? (id: string, userId: string, emoji: string) => dmActions!.addReaction(id, userId, emoji)
+    : channelAddReaction;
+  const removeReaction = isDM
+    ? (id: string, userId: string, emoji: string) => dmActions!.removeReaction(id, userId, emoji)
+    : channelRemoveReaction;
 
   // State - SEPARATE states for desktop and mobile emoji pickers
   const [isEditing, setIsEditing] = useState(false);
@@ -622,17 +647,17 @@ export const MessageItem = memo(function MessageItem({
 
   // RoleIconWrapper moved outside component body (FIX 5)
 
-  // Permissions
-  const { hasPermission, isOwner: currentUserIsOwner } = useMemberPermissions(message.channel_id);
-  const canPinMessages = hasPermission("pin_messages");
-  const canManageMessages = hasPermission("manage_messages");
-  const canAddReactions = hasPermission("add_reactions");
-  const canUseExternalEmojis = hasPermission("use_external_emojis");
+  // Permissions — in DM mode, grant basic permissions and skip server-only features
+  const { hasPermission, isOwner: currentUserIsOwner } = useMemberPermissions(isDM ? undefined : message.channel_id);
+  const canPinMessages = isDM ? false : hasPermission("pin_messages");
+  const canManageMessages = isDM ? false : hasPermission("manage_messages");
+  const canAddReactions = isDM ? true : hasPermission("add_reactions");
+  const canUseExternalEmojis = isDM ? true : hasPermission("use_external_emojis");
   const isAdmin = canManageMessages;
 
-  // Kick/Ban permissions for avatar context menu
-  const isMessageAuthorOwner = currentServer?.owner_id === message.user_id;
-  const canModTarget = canModerateByRoles(currentUserIsOwner, currentMember?.roles, isMessageAuthorOwner, messageRoles);
+  // Kick/Ban permissions for avatar context menu — disabled in DM mode
+  const isMessageAuthorOwner = isDM ? false : currentServer?.owner_id === message.user_id;
+  const canModTarget = isDM ? false : canModerateByRoles(currentUserIsOwner, currentMember?.roles, isMessageAuthorOwner, messageRoles);
   const canKickUser = hasPermission("kick_members") && canModTarget && !isOwnMessage;
   const canBanUser = hasPermission("ban_members") && canModTarget && !isOwnMessage;
   const hasModActions = canKickUser || canBanUser;
@@ -668,11 +693,11 @@ export const MessageItem = memo(function MessageItem({
     toast.success("Embed removed");
   }, [setEmbedHidden, message.id, user]);
 
-  // Ghost mode - hide avatar/username for non-admin message authors
-  const isGhostMode = currentChannel?.ghost_mode || false;
+  // Ghost mode - hide avatar/username for non-admin message authors (disabled in DM mode)
+  const isGhostMode = isDM ? false : (currentChannel?.ghost_mode || false);
   const showMessageAuthorIdentity = useMemo(
     () =>
-      canRevealGhostIdentityForUser({
+      isDM ? true : canRevealGhostIdentityForUser({
         isGhostMode,
         authorUserId: message.user_id,
         members,
@@ -878,12 +903,21 @@ export const MessageItem = memo(function MessageItem({
     }
   }, []);
 
+  // Unified reply handler — delegates to dmActions in DM mode
+  const handleReply = useCallback(() => {
+    if (isDM) {
+      dmActions!.onReply(message);
+    } else {
+      setReplyingTo(message);
+    }
+  }, [isDM, dmActions, message, setReplyingTo]);
+
   const handleStartEditing = useCallback(() => {
-    // Convert UUID mentions to readable format for editing
-    const readableContent = convertMentionsToReadable(message.content, usersMap, channelsMap);
+    // Convert UUID mentions to readable format for editing (no-op in DM mode since no mentions)
+    const readableContent = isDM ? message.content : convertMentionsToReadable(message.content, usersMap, channelsMap);
     setEditContent(readableContent);
     setIsEditing(true);
-  }, [message.content, usersMap, channelsMap]);
+  }, [isDM, message.content, usersMap, channelsMap]);
 
   const handleEditContentChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -1551,7 +1585,7 @@ export const MessageItem = memo(function MessageItem({
                   {!isBlockedUser && (
                     <button
                       className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                      onClick={() => setReplyingTo(message)}
+                      onClick={handleReply}
                       aria-label="Reply"
                       title="Reply"
                     >
@@ -1638,7 +1672,7 @@ export const MessageItem = memo(function MessageItem({
 
           <ContextMenuContent>
             {!isBlockedUser && (
-              <ContextMenuItem onClick={() => setReplyingTo(message)}>
+              <ContextMenuItem onClick={handleReply}>
                 <Reply className="w-4 h-4" />
                 Reply
               </ContextMenuItem>
@@ -1737,7 +1771,7 @@ export const MessageItem = memo(function MessageItem({
                 <button
                   className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-accent active:bg-accent text-left transition-colors"
                   onClick={() => {
-                    setReplyingTo(message);
+                    handleReply();
                     setShowMobileActions(false);
                   }}
                 >
@@ -1866,7 +1900,7 @@ export const MessageItem = memo(function MessageItem({
       </Drawer>
 
       {/* Delete confirmation modal */}
-      <DeleteMessageModal message={showDeleteModal ? message : null} onClose={() => setShowDeleteModal(false)} />
+      <DeleteMessageModal message={showDeleteModal ? message : null} onClose={() => setShowDeleteModal(false)} customDeleteHandler={isDM ? dmActions?.deleteMessage : undefined} />
 
       {/* Attachment image lightbox */}
       <ImageLightbox imageUrl={attachmentLightboxUrl} onClose={() => setAttachmentLightboxUrl(null)} />
