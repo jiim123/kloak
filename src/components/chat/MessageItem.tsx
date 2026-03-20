@@ -1900,7 +1900,7 @@ export const MessageItem = memo(function MessageItem({
       </Drawer>
 
       {/* Delete confirmation modal */}
-      <DeleteMessageModal message={showDeleteModal ? message : null} onClose={() => setShowDeleteModal(false)} />
+      <DeleteMessageModal message={showDeleteModal ? message : null} onClose={() => setShowDeleteModal(false)} customDeleteHandler={isDM ? dmActions?.deleteMessage : undefined} />
 
       {/* Attachment image lightbox */}
       <ImageLightbox imageUrl={attachmentLightboxUrl} onClose={() => setAttachmentLightboxUrl(null)} />
