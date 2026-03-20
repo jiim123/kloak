@@ -693,11 +693,11 @@ export const MessageItem = memo(function MessageItem({
     toast.success("Embed removed");
   }, [setEmbedHidden, message.id, user]);
 
-  // Ghost mode - hide avatar/username for non-admin message authors
-  const isGhostMode = currentChannel?.ghost_mode || false;
+  // Ghost mode - hide avatar/username for non-admin message authors (disabled in DM mode)
+  const isGhostMode = isDM ? false : (currentChannel?.ghost_mode || false);
   const showMessageAuthorIdentity = useMemo(
     () =>
-      canRevealGhostIdentityForUser({
+      isDM ? true : canRevealGhostIdentityForUser({
         isGhostMode,
         authorUserId: message.user_id,
         members,
