@@ -41,6 +41,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
     fetchConversations,
     setCurrentConversation,
     closeConversation,
+    leaveGroup,
     isLoading,
   } = useDMStore();
   const { getUnreadCount, markAsRead } = useUnreadDMsContext();
