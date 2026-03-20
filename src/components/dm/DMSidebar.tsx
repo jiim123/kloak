@@ -313,6 +313,15 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
                   </div>
                 </ContextMenuTrigger>
                 <ContextMenuContent>
+                  {!isGroup && conversation.other_user?.id && (
+                    <ContextMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={() => handleBlockUser(conversation.other_user!.id)}
+                    >
+                      <Ban className="w-4 h-4" />
+                      Block User
+                    </ContextMenuItem>
+                  )}
                   <ContextMenuItem
                     className="text-destructive focus:text-destructive"
                     onClick={() => handleLeaveConversation(conversation)}
