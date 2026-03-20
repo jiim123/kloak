@@ -57,6 +57,7 @@ export const DeleteMessageModal = ({
   onConfirm,
   onClose,
   messageContent,
+  customDeleteHandler,
 }: DeleteMessageModalProps) => {
   const { deleteMessage } = useMessageStore();
   const { user } = useAuthStore();
