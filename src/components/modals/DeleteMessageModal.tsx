@@ -71,7 +71,8 @@ export const DeleteMessageModal = ({
       if (onOpenChange) onOpenChange(false);
       if (onClose) onClose();
     } else if (message && user) {
-      await deleteMessage(message.id, user.id);
+      const deleteFn = customDeleteHandler || deleteMessage;
+      await deleteFn(message.id, user.id);
       if (onOpenChange) onOpenChange(false);
       if (onClose) onClose();
     }
