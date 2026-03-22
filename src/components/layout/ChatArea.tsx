@@ -156,7 +156,11 @@ const PinnedMessageBar = React.memo(function PinnedMessageBar({
 
 // ── Main component ──
 
-export const ChatArea = () => {
+interface ChatAreaProps {
+  showHeader?: boolean;
+}
+
+export const ChatArea = ({ showHeader = true }: ChatAreaProps) => {
   // Granular selectors — component only re‑renders when these specific values change
   const currentChannel = useServerStore(selectCurrentChannel);
   const currentServer = useServerStore(selectCurrentServer);
@@ -253,21 +257,21 @@ export const ChatArea = () => {
   }
 
   if (channelType === "forum") {
-    return <ForumChannelArea />;
+    return <ForumChannelArea showHeader={showHeader} />;
   }
 
   if (channelType === "media") {
-    return <MediaChannelArea />;
+    return <MediaChannelArea showHeader={showHeader} />;
   }
 
   if (channelType === "tasks") {
-    return <TasksChannelArea />;
+    return <TasksChannelArea showHeader={showHeader} />;
   }
 
   return (
     <div ref={swipeRef} className="h-full flex flex-col min-w-0 max-w-full overflow-x-hidden bg-transparent relative">
       {/* Channel header */}
-      <ChannelHeader channel={currentChannel} />
+      {showHeader && <ChannelHeader channel={currentChannel} />}
 
       {/* Pinned message bar — memoised, only re‑renders when its props change */}
       <PinnedMessageBar

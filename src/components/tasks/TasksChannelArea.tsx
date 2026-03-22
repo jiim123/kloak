@@ -355,7 +355,11 @@ const TaskRow = ({
   );
 };
 
-export const TasksChannelArea = () => {
+interface TasksChannelAreaProps {
+  showHeader?: boolean;
+}
+
+export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) => {
   const currentChannel = useServerStore((s) => s.currentChannel);
   const currentServer = useServerStore((s) => s.currentServer);
   const members = useServerStore((s) => s.members);
@@ -929,7 +933,7 @@ export const TasksChannelArea = () => {
   if (!canViewTasks) {
     return (
       <div className="h-full flex flex-col">
-        <ChannelHeader channel={currentChannel} showMessageActions={false} />
+        {showHeader && <ChannelHeader channel={currentChannel} showMessageActions={false} />}
         <div className="flex-1 flex items-center justify-center px-6">
           <div className="max-w-md text-center space-y-3">
             <div className="mx-auto w-14 h-14 rounded-2xl bg-secondary/60 border border-border flex items-center justify-center">
@@ -947,21 +951,24 @@ export const TasksChannelArea = () => {
 
   return (
     <div className="h-full flex flex-col bg-transparent">
-      <ChannelHeader
-        channel={currentChannel}
-        showMessageActions={false}
-        extraActions={
-          canCreateTasks ? (
-            <Button size="sm" variant="outline" className="h-8 rounded-lg" onClick={() => startInlineCreate(null)}>
-              <Plus className="mr-1.5 h-4 w-4" />
-              New Task
-            </Button>
-          ) : null
-        }
-      />
+      {showHeader && (
+        <ChannelHeader
+          channel={currentChannel}
+          showMessageActions={false}
+          extraActions={
+            canCreateTasks ? (
+              <Button size="sm" variant="outline" className="h-8 rounded-lg" onClick={() => startInlineCreate(null)}>
+                <Plus className="mr-1.5 h-4 w-4" />
+                New Task
+              </Button>
+            ) : null
+          }
+        />
+      )}
 
       <div className="px-4 py-3 border-b border-border/60 bg-background/40 backdrop-blur-sm">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
           {FILTER_OPTIONS.map((option) => (
             <button
               key={option.id}
@@ -977,6 +984,13 @@ export const TasksChannelArea = () => {
               {option.label}
             </button>
           ))}
+          </div>
+          {!showHeader && canCreateTasks && (
+            <Button size="sm" variant="outline" className="h-8 rounded-lg" onClick={() => startInlineCreate(null)}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              New Task
+            </Button>
+          )}
         </div>
       </div>
 

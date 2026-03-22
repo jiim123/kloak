@@ -40,7 +40,8 @@ export const ChannelHeader = ({
               : Hash;
 
   return (
-    <div className="px-4 py-3 hidden md:flex items-center justify-between border-b border-white/5 flex-shrink-0 bg-[#1c1c1c]">
+    <div className="hidden w-full bg-[#1c1c1c] md:block">
+      <div className="flex items-center justify-between px-4 py-3">
       {/* Left side - Channel info */}
       <div className="flex items-center gap-2 min-w-0 flex-1">
         <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
@@ -135,6 +136,7 @@ export const ChannelHeader = ({
 
         <NotificationBell />
         <SupportUsButton tooltipsEnabled />
+      </div>
       </div>
     </div>
   );

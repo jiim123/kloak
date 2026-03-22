@@ -162,7 +162,11 @@ const ForumThreadsSkeleton = () => (
   </div>
 );
 
-export const ForumChannelArea = () => {
+interface ForumChannelAreaProps {
+  showHeader?: boolean;
+}
+
+export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) => {
   const { currentChannel, currentServer, members, roles } = useServerStore();
   const { user } = useAuthStore();
   const { sendMessage } = useMessageStore();
@@ -1895,9 +1899,9 @@ export const ForumChannelArea = () => {
 
   return (
     <div ref={swipeRef} className="h-full min-w-0 bg-background">
-      <ChannelHeader channel={currentChannel} />
+      {showHeader && <ChannelHeader channel={currentChannel} />}
 
-      <div className="relative flex h-[calc(100%-57px)] overflow-hidden">
+      <div className={cn("relative flex overflow-hidden", showHeader ? "h-[calc(100%-57px)]" : "h-full")}>
         {/* Threads List */}
         <div
           className={`${selectedThreadId ? "w-full md:w-[42%] border-r border-border" : "w-full"} ${selectedThreadId && isMobile ? "hidden" : ""} overflow-y-auto transition-all`}

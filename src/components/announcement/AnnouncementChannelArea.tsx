@@ -58,7 +58,11 @@ const getGradientTextStyle = (gradient: string): React.CSSProperties =>
     display: "inline-block",
   }) as React.CSSProperties;
 
-export const AnnouncementChannelArea = () => {
+interface AnnouncementChannelAreaProps {
+  showHeader?: boolean;
+}
+
+export const AnnouncementChannelArea = ({ showHeader = true }: AnnouncementChannelAreaProps) => {
   const { currentChannel, currentServer, members, roles } = useServerStore();
   const { user } = useAuthStore();
   const { sendMessage, editMessage, deleteMessage, addReaction, removeReaction } = useMessageStore();
@@ -634,7 +638,7 @@ export const AnnouncementChannelArea = () => {
 
   return (
     <div ref={swipeRef} className="h-full flex flex-col min-w-0 bg-background">
-      <ChannelHeader channel={currentChannel} />
+      {showHeader && <ChannelHeader channel={currentChannel} />}
 
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Create/Edit Announcement Editor - Only visible to admins */}

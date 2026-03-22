@@ -242,7 +242,11 @@ const extractYouTubeId = (url: string): string | null => {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export const MediaChannelArea = () => {
+interface MediaChannelAreaProps {
+  showHeader?: boolean;
+}
+
+export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) => {
   const { currentChannel } = useServerStore();
   const { user } = useAuthStore();
   const { hasPermission } = useMemberPermissions(currentChannel?.id);
@@ -542,7 +546,7 @@ export const MediaChannelArea = () => {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <ChannelHeader channel={currentChannel} />
+      {showHeader && <ChannelHeader channel={currentChannel} />}
 
       <ScrollArea className="flex-1">
         <div className="p-4">

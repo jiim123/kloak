@@ -192,7 +192,6 @@ export const UserProfilePopup = () => {
   const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
   const [isBioExpanded, setIsBioExpanded] = useState(false);
   const cardRef = useRef<HTMLDivElement | null>(null);
-  const profileEffectPlayedRef = useRef(false);
   const profileEffectImgRef = useRef<HTMLImageElement | null>(null);
   const profileEffectAnimationEndedRef = useRef(false);
   const [profileEffectStillFrame, setProfileEffectStillFrame] = useState<string | null>(null);
@@ -246,7 +245,6 @@ export const UserProfilePopup = () => {
 
   useEffect(() => {
     if (!isOpen) return;
-    profileEffectPlayedRef.current = false;
     profileEffectAnimationEndedRef.current = false;
     setProfileEffectStillFrame(null);
     setIsBioExpanded(false);
@@ -257,12 +255,15 @@ export const UserProfilePopup = () => {
 
     const effectSrc = getProfileEffectSrc(profileUser.profile_effect);
     if (!effectSrc || profileEffectStillFrame) return;
+    let captureTimeout: number | null = null;
+    let cancelled = false;
 
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.src = effectSrc;
 
     const captureStillFrame = () => {
+      if (cancelled) return;
       try {
         const canvas = document.createElement("canvas");
         canvas.width = img.naturalWidth || 800;
@@ -279,11 +280,13 @@ export const UserProfilePopup = () => {
     };
 
     img.onload = () => {
-      window.setTimeout(captureStillFrame, 3000);
+      captureTimeout = window.setTimeout(captureStillFrame, 3000);
     };
 
     return () => {
+      cancelled = true;
       img.onload = null;
+      if (captureTimeout !== null) window.clearTimeout(captureTimeout);
     };
   }, [isOpen, profileEffectStillFrame, profileUser?.profile_effect]);
 
@@ -618,19 +621,13 @@ export const UserProfilePopup = () => {
         )}
 
         {displayEffectSrc && (
-          <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden">
             <img
               ref={profileEffectImgRef}
-              key={profileEffectPlayedRef.current ? `played-${userId}` : `effect-${profileUser.profile_effect}-${userId}`}
+              key={`effect-${profileUser.profile_effect}-${userId}-${profileEffectStillFrame ? "still" : "anim"}`}
               src={displayEffectSrc}
               alt=""
               className="h-full w-full object-cover object-top opacity-85"
-              onLoad={() => {
-                if (!profileEffectPlayedRef.current) profileEffectPlayedRef.current = true;
-              }}
-              onError={() => {
-                profileEffectPlayedRef.current = true;
-              }}
             />
           </div>
         )}

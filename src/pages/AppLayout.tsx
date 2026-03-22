@@ -77,6 +77,7 @@ import { SEO } from "@/components/seo";
 import { getAuthEntryPath, resizeWindowForApp } from "@/lib/tauriRuntime";
 import { MAINTENANCE_MODE } from "@/lib/maintenance";
 import { AlphaNoticeBanner } from "@/components/layout/AlphaNoticeBanner";
+import { ChannelHeader } from "@/components/chat/ChannelHeader";
 
 const AppLayout = () => {
   const navigate = useNavigate();
@@ -123,6 +124,11 @@ const AppLayout = () => {
   
 
   const isServerSpecialView = isServerOverviewView;
+  const currentChannelType = currentChannel?.type;
+  const canUseUnifiedHeader =
+    currentChannelType !== "voice";
+  const showDesktopUnifiedChannelHeader =
+    !isMobile && currentServer !== null && !isServerSpecialView && canUseUnifiedHeader && Boolean(currentChannel);
 
   // Extract serverId and channelId from URL params
   const urlServerId = params.serverId;
@@ -598,42 +604,55 @@ const AppLayout = () => {
                         )}
                       </div>
 
-                      <div className="min-w-0 flex-1 rounded-[10px] border border-white/5 bg-transparent relative overflow-hidden">
-                        <VoicePersistentHost />
-                        {/* Keep all views mounted, toggle visibility with CSS to prevent remount sluggishness */}
-                        {currentConversation && (
-                          <div className={isDMView && currentConversation ? "block h-full" : "hidden"}>
-                            <DMChatArea />
+                      <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
+                        {showDesktopUnifiedChannelHeader && currentChannel && (
+                          <div className="flex-shrink-0 rounded-[10px] bg-[#1c1c1c] overflow-hidden">
+                            <ChannelHeader
+                              channel={currentChannel}
+                              showMessageActions={currentChannel.type !== "tasks"}
+                            />
                           </div>
                         )}
-                        {isDMView && !currentConversation && (
-                          <>
-                            <div className={showFriends ? "block h-full" : "hidden"}>
-                              <FriendsList onOpenDM={() => navigate("/app")} />
-                            </div>
-                            <div className={showExplore ? "block h-full" : "hidden"}>
-                              <ExploreServers />
-                            </div>
-                            <div className={!showFriends && !showExplore ? "block h-full" : "hidden"}>
-                              <HomeLanding />
-                            </div>
-                          </>
-                        )}
-                        {currentServer && (
-                          <>
-                            {isServerOverviewView && <ServerOverviewView />}
-                            <div className={!isServerOverviewView && !isDMView ? "block h-full" : "hidden"}>
-                              <ChatArea />
-                            </div>
-                          </>
-                        )}
-                      </div>
 
-                      {!isDMView && !isServerSpecialView && isMemberSidebarOpen && (
-                        <div className="w-[260px] shrink-0 rounded-[10px] overflow-hidden">
-                          <MembersSidebar />
+                        <div className={cn("min-h-0 flex flex-1 gap-2", showDesktopUnifiedChannelHeader && "pt-2")}>
+                          <div className="min-w-0 flex-1 rounded-[10px] border border-white/5 bg-transparent relative overflow-hidden">
+                            <VoicePersistentHost />
+                            {/* Keep all views mounted, toggle visibility with CSS to prevent remount sluggishness */}
+                            {currentConversation && (
+                              <div className={isDMView && currentConversation ? "block h-full" : "hidden"}>
+                                <DMChatArea />
+                              </div>
+                            )}
+                            {isDMView && !currentConversation && (
+                              <>
+                                <div className={showFriends ? "block h-full" : "hidden"}>
+                                  <FriendsList onOpenDM={() => navigate("/app")} />
+                                </div>
+                                <div className={showExplore ? "block h-full" : "hidden"}>
+                                  <ExploreServers />
+                                </div>
+                                <div className={!showFriends && !showExplore ? "block h-full" : "hidden"}>
+                                  <HomeLanding />
+                                </div>
+                              </>
+                            )}
+                            {currentServer && (
+                              <>
+                                {isServerOverviewView && <ServerOverviewView />}
+                                <div className={!isServerOverviewView && !isDMView ? "block h-full" : "hidden"}>
+                                  <ChatArea showHeader={!showDesktopUnifiedChannelHeader} />
+                                </div>
+                              </>
+                            )}
+                          </div>
+
+                          {!isDMView && !isServerSpecialView && isMemberSidebarOpen && (
+                            <div className="w-[260px] shrink-0 rounded-[10px] overflow-hidden">
+                              <MembersSidebar />
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </div>
                   </div>
                 </div>
