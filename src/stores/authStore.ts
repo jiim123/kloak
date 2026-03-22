@@ -646,19 +646,10 @@ export const useAuthStore = create<AuthState>()(
     {
       name: "kloak-auth",
       partialize: (state) => ({
-        keyHash: state.keyHash,
         manualStatus: state.manualStatus,
-        // Do NOT include secretKey — it must never be persisted
+        // keyHash is now stored encrypted in IndexedDB, not in localStorage
+        // secretKey is never persisted
       }),
-      onRehydrateStorage: () => (state) => {
-        // Ensure x-key-hash header is applied ASAP after hydration.
-        // This prevents secured RPCs from failing with identity mismatch after refresh/HMR.
-        try {
-          setKeyHashHeader(state?.keyHash ?? null);
-        } catch {
-          // ignore
-        }
-      },
     },
   ),
 );
