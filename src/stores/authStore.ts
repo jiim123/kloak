@@ -656,6 +656,17 @@ export const useAuthStore = create<AuthState>()(
 
 // Initialize auth on app load
 export const initializeAuth = async () => {
+  // Run migration first (moves plaintext keyHash to encrypted IndexedDB)
+  await migrateToEncryptedStorage();
+
+  // Decrypt keyHash from IndexedDB into memory
+  const decryptedKeyHash = await decryptKeyHash();
+
+  if (decryptedKeyHash) {
+    setKeyHashHeader(decryptedKeyHash);
+    useAuthStore.setState({ keyHash: decryptedKeyHash });
+  }
+
   const { checkAuth, isAuthenticated, isLoading, keyHash } = useAuthStore.getState();
   if (!keyHash) return;
   if (isAuthenticated && !isLoading) return;
