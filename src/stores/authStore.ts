@@ -390,6 +390,7 @@ export const useAuthStore = create<AuthState>()(
           useUserCacheStore.getState().invalidate(user.id);
         }
         setKeyHashHeader(null);
+        clearDeviceCredentials();
         set({ user: null, secretKey: null, keyHash: null, isAuthenticated: false, error: null });
       },
 
