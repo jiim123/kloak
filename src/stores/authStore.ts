@@ -1,8 +1,9 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { getKeyHash, supabase, setKeyHashHeader } from "@/integrations/supabase/client";
+import { supabase, setKeyHashHeader } from "@/integrations/supabase/client";
 import { generateSecretKey, hashSecretKey, isValidSecretKey } from "@/lib/crypto";
 import { authRateLimiter, accountCreationRateLimiter, validateUsername } from "@/lib/security";
+import { encryptAndStoreKeyHash, decryptKeyHash, clearDeviceCredentials } from "@/lib/deviceKey";
 import { useUserCacheStore } from "@/stores/userCacheStore";
 import type { User, UserStatus } from "@/types";
 let lastSeenTimestamp = 0;
@@ -17,21 +18,34 @@ const LAST_SEEN_INTERVAL = 60_000; // 60 seconds minimum between calls
 const LAST_SEEN_STORAGE_PREFIX = "kloak:last-seen:";
 let initializeAuthInFlight: Promise<void> | null = null;
 
-// One-time migration: remove raw secretKey from localStorage if present
-const clearLegacySecretKey = () => {
+// One-time migration: move plaintext keyHash from localStorage to encrypted IndexedDB
+const migrateToEncryptedStorage = async () => {
   try {
-    const raw = localStorage.getItem('kloak-auth');
+    const raw = localStorage.getItem("kloak-auth");
     if (!raw) return;
     const parsed = JSON.parse(raw);
+
+    // Remove legacy secretKey if present
+    let changed = false;
     if (parsed?.state?.secretKey) {
       delete parsed.state.secretKey;
-      localStorage.setItem('kloak-auth', JSON.stringify(parsed));
+      changed = true;
+    }
+
+    // Migrate keyHash to encrypted IndexedDB
+    if (parsed?.state?.keyHash) {
+      await encryptAndStoreKeyHash(parsed.state.keyHash);
+      delete parsed.state.keyHash;
+      changed = true;
+    }
+
+    if (changed) {
+      localStorage.setItem("kloak-auth", JSON.stringify(parsed));
     }
   } catch {
-    // ignore
+    // ignore migration errors
   }
 };
-clearLegacySecretKey();
 
 interface AuthState {
   user: User | null;
@@ -263,6 +277,7 @@ export const useAuthStore = create<AuthState>()(
           // New account starts with no manual status override.
           const newKeyHash = await hashSecretKey(secretKey);
           setKeyHashHeader(newKeyHash);
+          await encryptAndStoreKeyHash(newKeyHash);
           set({
             user,
             secretKey,
@@ -304,6 +319,7 @@ export const useAuthStore = create<AuthState>()(
 
           // Set the key_hash header for identity verification on all subsequent requests
           setKeyHashHeader(keyHash);
+          await encryptAndStoreKeyHash(keyHash);
           set({ keyHash });
 
           // Use RPC function to login (bypasses RLS)
@@ -374,6 +390,7 @@ export const useAuthStore = create<AuthState>()(
           useUserCacheStore.getState().invalidate(user.id);
         }
         setKeyHashHeader(null);
+        clearDeviceCredentials();
         set({ user: null, secretKey: null, keyHash: null, isAuthenticated: false, error: null });
       },
 
@@ -615,6 +632,7 @@ export const useAuthStore = create<AuthState>()(
 
           // Update local state with the new key (secretKey held in memory temporarily for display)
           setKeyHashHeader(newKeyHash);
+          await encryptAndStoreKeyHash(newKeyHash);
           set({ secretKey: newSecretKey, keyHash: newKeyHash });
           // Note: secretKey is excluded from persistence — it only lives in memory for the reset modal display
 
@@ -628,25 +646,27 @@ export const useAuthStore = create<AuthState>()(
     {
       name: "kloak-auth",
       partialize: (state) => ({
-        keyHash: state.keyHash,
         manualStatus: state.manualStatus,
-        // Do NOT include secretKey — it must never be persisted
+        // keyHash is now stored encrypted in IndexedDB, not in localStorage
+        // secretKey is never persisted
       }),
-      onRehydrateStorage: () => (state) => {
-        // Ensure x-key-hash header is applied ASAP after hydration.
-        // This prevents secured RPCs from failing with identity mismatch after refresh/HMR.
-        try {
-          setKeyHashHeader(state?.keyHash ?? null);
-        } catch {
-          // ignore
-        }
-      },
     },
   ),
 );
 
 // Initialize auth on app load
 export const initializeAuth = async () => {
+  // Run migration first (moves plaintext keyHash to encrypted IndexedDB)
+  await migrateToEncryptedStorage();
+
+  // Decrypt keyHash from IndexedDB into memory
+  const decryptedKeyHash = await decryptKeyHash();
+
+  if (decryptedKeyHash) {
+    setKeyHashHeader(decryptedKeyHash);
+    useAuthStore.setState({ keyHash: decryptedKeyHash });
+  }
+
   const { checkAuth, isAuthenticated, isLoading, keyHash } = useAuthStore.getState();
   if (!keyHash) return;
   if (isAuthenticated && !isLoading) return;

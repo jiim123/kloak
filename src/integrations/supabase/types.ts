@@ -592,6 +592,7 @@ export type Database = {
           slowmode_seconds: number | null
           topic: string | null
           type: Database["public"]["Enums"]["channel_type"] | null
+          voice_user_limit: number
         }
         Insert: {
           allowed_link_domains?: string[] | null
@@ -612,6 +613,7 @@ export type Database = {
           slowmode_seconds?: number | null
           topic?: string | null
           type?: Database["public"]["Enums"]["channel_type"] | null
+          voice_user_limit?: number
         }
         Update: {
           allowed_link_domains?: string[] | null
@@ -632,6 +634,7 @@ export type Database = {
           slowmode_seconds?: number | null
           topic?: string | null
           type?: Database["public"]["Enums"]["channel_type"] | null
+          voice_user_limit?: number
         }
         Relationships: [
           {
@@ -3864,6 +3867,14 @@ export type Database = {
       }
       get_users_presence_secure: {
         Args: { _target_user_ids: string[]; _user_id: string }
+        Returns: Json
+      }
+      get_voice_channel_meta_for_token: {
+        Args: { _channel_id: string; _user_id: string }
+        Returns: Json
+      }
+      get_voice_channel_meta_secure: {
+        Args: { _channel_id: string; _user_id: string }
         Returns: Json
       }
       has_channel_access: {
