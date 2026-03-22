@@ -127,15 +127,21 @@ export const AudioPlayer = memo(function AudioPlayer({ src, fileName, fileSize, 
     if (ratio > 0) prevVolumeRef.current = ratio;
   }, []);
 
-  const handleDownload = useCallback(() => {
-    const a = document.createElement("a");
-    a.href = src;
-    a.download = fileName || "audio";
-    a.target = "_blank";
-    a.rel = "noopener noreferrer";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+  const handleDownload = useCallback(async () => {
+    try {
+      const res = await fetch(src);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName || "audio";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      window.open(src, "_blank");
+    }
   }, [src, fileName]);
 
   const seekSlider = useDraggableSlider(applySeek);
