@@ -277,6 +277,7 @@ export const useAuthStore = create<AuthState>()(
           // New account starts with no manual status override.
           const newKeyHash = await hashSecretKey(secretKey);
           setKeyHashHeader(newKeyHash);
+          await encryptAndStoreKeyHash(newKeyHash);
           set({
             user,
             secretKey,
