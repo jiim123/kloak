@@ -632,6 +632,7 @@ export const useAuthStore = create<AuthState>()(
 
           // Update local state with the new key (secretKey held in memory temporarily for display)
           setKeyHashHeader(newKeyHash);
+          await encryptAndStoreKeyHash(newKeyHash);
           set({ secretKey: newSecretKey, keyHash: newKeyHash });
           // Note: secretKey is excluded from persistence — it only lives in memory for the reset modal display
 
