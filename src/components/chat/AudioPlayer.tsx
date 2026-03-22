@@ -158,25 +158,18 @@ export const AudioPlayer = memo(function AudioPlayer({ src, fileName, fileSize, 
   const accentColor = isPlaying ? "hsl(var(--kloak-dnd))" : "hsl(var(--kloak-online))";
 
   return (
-    <div className="rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm w-full max-w-[480px] min-w-0 p-3 sm:p-4 space-y-2.5 sm:space-y-3">
+    <div className="rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm w-full max-w-[480px] min-w-0 overflow-hidden p-3 sm:p-4 space-y-2.5 sm:space-y-3">
       <audio ref={audioRef} src={src} preload="metadata" onError={onError} />
 
-      {/* Header: icon + file info + download */}
-      <div className="flex items-center gap-2 min-w-0">
+      {/* Header: icon + file info */}
+      <div className="flex items-center gap-2 min-w-0 overflow-hidden">
         <Music className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-        <span className="text-xs text-foreground/80 truncate flex-1 min-w-0">{fileName}</span>
+        <span className="text-xs text-foreground/80 truncate min-w-0 flex-1">{fileName}</span>
         {sizeLabel && (
-          <span className="text-[10px] sm:text-[11px] text-muted-foreground/60 flex-shrink-0 hidden xs:inline">
+          <span className="text-[10px] sm:text-[11px] text-muted-foreground/60 flex-shrink-0 hidden sm:inline">
             {sizeLabel}
           </span>
         )}
-        <button
-          onClick={handleDownload}
-          className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-          title="Download"
-        >
-          <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-        </button>
       </div>
 
       {/* Progress bar */}
@@ -192,11 +185,11 @@ export const AudioPlayer = memo(function AudioPlayer({ src, fileName, fileSize, 
       </div>
 
       {/* Controls row */}
-      <div className="flex items-center gap-0.5 sm:gap-1">
+      <div className="flex items-center gap-0.5 min-w-0 overflow-hidden">
         {/* Play/Stop */}
         <button
           onClick={togglePlay}
-          className="flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center transition-colors hover:bg-muted/50"
+          className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center transition-colors hover:bg-muted/50"
           style={{ color: accentColor }}
         >
           {isPlaying ? (
@@ -207,23 +200,22 @@ export const AudioPlayer = memo(function AudioPlayer({ src, fileName, fileSize, 
         </button>
 
         {/* Volume — icon always visible, slider toggles on mobile */}
-        <div className="flex items-center">
+        <div className="flex items-center min-w-0">
           <button
             onClick={toggleMute}
             onPointerEnter={() => setShowVolume(true)}
-            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+            className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
           >
             <VolumeIcon volume={volume} muted={isMuted} className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
 
-          {/* Volume slider — hidden on small screens unless tapped, always on desktop */}
           <div
             className={`items-center transition-all duration-150 overflow-hidden ${showVolume ? "flex" : "hidden sm:flex"}`}
             onPointerLeave={() => setShowVolume(false)}
           >
             <div
               ref={volumeSlider.ref}
-              className="h-2 sm:h-1.5 w-[56px] sm:w-[72px] ml-1 rounded-full bg-muted/40 cursor-pointer flex-shrink-0 select-none touch-none"
+              className="h-2 sm:h-1.5 w-[48px] sm:w-[72px] ml-1 rounded-full bg-muted/40 cursor-pointer flex-shrink-0 select-none touch-none"
               onPointerDown={volumeSlider.onPointerDown}
             >
               <div
@@ -237,12 +229,21 @@ export const AudioPlayer = memo(function AudioPlayer({ src, fileName, fileSize, 
           </div>
         </div>
 
-        <div className="flex-1" />
+        <div className="flex-1 min-w-0" />
 
         {/* Time display */}
-        <span className="text-[10px] sm:text-[11px] text-muted-foreground tabular-nums pr-0.5 sm:pr-1 flex-shrink-0">
+        <span className="text-[10px] sm:text-[11px] text-muted-foreground tabular-nums flex-shrink-0">
           {formatTime(currentTime)}/{formatTime(duration)}
         </span>
+
+        {/* Download */}
+        <button
+          onClick={handleDownload}
+          className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+          title="Download"
+        >
+          <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+        </button>
       </div>
     </div>
   );
