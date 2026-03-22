@@ -1,8 +1,9 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { getKeyHash, supabase, setKeyHashHeader } from "@/integrations/supabase/client";
+import { supabase, setKeyHashHeader } from "@/integrations/supabase/client";
 import { generateSecretKey, hashSecretKey, isValidSecretKey } from "@/lib/crypto";
 import { authRateLimiter, accountCreationRateLimiter, validateUsername } from "@/lib/security";
+import { encryptAndStoreKeyHash, decryptKeyHash, clearDeviceCredentials } from "@/lib/deviceKey";
 import { useUserCacheStore } from "@/stores/userCacheStore";
 import type { User, UserStatus } from "@/types";
 let lastSeenTimestamp = 0;
