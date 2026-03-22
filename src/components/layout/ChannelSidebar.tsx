@@ -79,6 +79,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { ChannelContextMenu } from "@/components/layout/ChannelContextMenu";
+import { fetchAndCacheUser, getUserFromCache, useUserCacheStore } from "@/stores/userCacheStore";
 import type { Channel, ChannelCategory, ServerRole } from "@/types";
 
 // Ghost Icon Component
@@ -671,6 +672,7 @@ export const ChannelSidebar = () => {
   const joinedVoiceChannelId = useVoiceStore((s) => s.joinedChannelId);
   const { openModal, openServerSettings, openServerSettingsPage, closeMobileSidebars } = useUIStore();
   const isMobile = useIsMobile();
+  const userCacheVersion = useUserCacheStore((s) => s._version);
 
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -708,20 +710,38 @@ export const ChannelSidebar = () => {
   }, [servers, currentServer]);
 
   const memberUserById = useMemo(() => {
+    void userCacheVersion;
     const map = new Map<string, any>();
     for (const m of members) {
-      map.set(m.user_id, m.user);
+      map.set(m.user_id, m.user ?? getUserFromCache(m.user_id));
     }
     return map;
-  }, [members]);
+  }, [members, userCacheVersion]);
+
+  useEffect(() => {
+    const voiceUserIds = Array.from(
+      new Set(
+        Object.values(voicePresenceByChannel)
+          .flat()
+          .filter((id): id is string => typeof id === "string" && id.length > 0),
+      ),
+    );
+
+    for (const userId of voiceUserIds) {
+      if (memberUserById.get(userId)) continue;
+      if (getUserFromCache(userId)) continue;
+      fetchAndCacheUser(userId).catch(() => {});
+    }
+  }, [voicePresenceByChannel, memberUserById, userCacheVersion]);
 
   const resolveUser = useCallback(
     (userId: string) => {
-      const u = memberUserById.get(userId);
+      void userCacheVersion;
+      const u = memberUserById.get(userId) ?? getUserFromCache(userId);
       const label = u?.display_name || u?.username || userId.slice(0, 8);
       return { avatarUser: u, label };
     },
-    [memberUserById],
+    [memberUserById, userCacheVersion],
   );
 
   // Use permission system instead of hardcoded role checks

@@ -20,21 +20,19 @@ export function ParticipantAudioPlayer({
 }: ParticipantAudioPlayerProps) {
   const userVolume = useVoiceSettingsStore((s) => s.getUserVolume(participantId));
   const outputVolume = useVoiceSettingsStore((s) => s.settings.outputVolume);
-  const outputDeviceId = useVoiceSettingsStore((s) => s.settings.outputDeviceId);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Own audio playback lifecycle
   useEffect(() => {
     if (!track) return;
+    const el = audioRef.current;
     try {
-      const el = audioRef.current;
       if (el) track.attach(el);
     } catch (e) {
       console.warn('[AudioPlayer] Failed to play track:', e);
     }
     return () => {
       try {
-        const el = audioRef.current;
         if (el) track.detach(el);
         else track.detach();
       } catch { /* track may already be cleaned up */ }
@@ -54,12 +52,8 @@ export function ParticipantAudioPlayer({
     }
   }, [track, userVolume, outputVolume, muted]);
 
-  // Route audio to the chosen output device when supported
-  useEffect(() => {
-    if (!track) return;
-    if (!outputDeviceId) return;
-    track.setSinkId(outputDeviceId).catch(() => {});
-  }, [track, outputDeviceId]);
+  // Output device routing is handled centrally via room.switchActiveDevice("audiooutput", ...).
+  // Avoid per-track setSinkId to prevent races when tracks are replaced during participant joins.
 
   return <audio ref={audioRef} autoPlay playsInline style={{ display: 'none' }} />;
 }

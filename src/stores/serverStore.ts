@@ -1133,6 +1133,10 @@ export const useServerStore = create<ServerState>((set, get) => ({
           ? (channelData.allowed_link_domains as string[])
           : [],
         ghost_mode: Boolean(channelData.ghost_mode),
+        voice_user_limit:
+          channelData.voice_user_limit !== undefined && channelData.voice_user_limit !== null
+            ? Number(channelData.voice_user_limit)
+            : 0,
       };
 
       // For announcement channels, set is_read_only to true
@@ -1278,6 +1282,10 @@ export const useServerStore = create<ServerState>((set, get) => ({
           ? (channelData.allowed_link_domains as string[])
           : undefined,
         ghost_mode: channelData.ghost_mode !== undefined ? Boolean(channelData.ghost_mode) : undefined,
+        voice_user_limit:
+          channelData.voice_user_limit !== undefined && channelData.voice_user_limit !== null
+            ? Number(channelData.voice_user_limit)
+            : undefined,
       };
 
       // Remove undefined values

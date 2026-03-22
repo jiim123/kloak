@@ -37,8 +37,10 @@ export type AgoraParticipant = {
   isSpeaking: boolean;
   isMuted: boolean;
   isScreenSharing: boolean;
+  isCameraSharing: boolean;
   audioTrack: RemoteAudioTrack | null;
   screenTrack: VideoTrack | null;
+  cameraTrack: VideoTrack | null;
   joinedAt: number;
   hideVoiceActivity: boolean;
 };
@@ -85,6 +87,7 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
   const presenceChannelRef = useRef<RealtimeChannel | null>(null);
   const broadcastChannelRef = useRef<RealtimeChannel | null>(null);
   const readyForSoundsRef = useRef(false);
+  const cameraOpInFlightRef = useRef<Promise<void> | null>(null);
 
   // Map uid → hideVoiceActivity
   const hideActivityRef = useRef<Map<string, boolean>>(new Map());
@@ -103,6 +106,7 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
   const [isMuted, setIsMuted] = useState(false);
   const [isDeafened, setIsDeafened] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [isCameraSharing, setIsCameraSharing] = useState(false);
   const [screenShareQuality, setScreenShareQuality] = useState<ScreenShareQuality | null>(null);
 
   // ------ participant rebuild ------
@@ -121,21 +125,39 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
       const joinedAt = lp.joinedAt?.getTime?.() ?? Date.now();
       const screenPub = lp.getTrackPublication(Track.Source.ScreenShare);
       const screenTrackCandidate = screenPub?.videoTrack ?? null;
+      const localScreenActive =
+        (isScreenSharing || !!lp.isScreenShareEnabled) &&
+        !!screenTrackCandidate &&
+        screenTrackCandidate.mediaStreamTrack.readyState === "live" &&
+        !screenPub?.isMuted &&
+        !screenTrackCandidate.isMuted;
       const screenTrack =
-        isScreenSharing &&
-        screenTrackCandidate &&
-        screenTrackCandidate.mediaStreamTrack.readyState === "live"
+        localScreenActive
           ? screenTrackCandidate
+          : null;
+      const cameraPub = lp.getTrackPublication(Track.Source.Camera);
+      const cameraTrackCandidate = cameraPub?.videoTrack ?? null;
+      const localCameraActive =
+        (isCameraSharing || !!lp.isCameraEnabled) &&
+        !!cameraTrackCandidate &&
+        cameraTrackCandidate.mediaStreamTrack.readyState === "live" &&
+        !cameraPub?.isMuted &&
+        !cameraTrackCandidate.isMuted;
+      const cameraTrack =
+        localCameraActive
+          ? cameraTrackCandidate
           : null;
       all.push({
         identity: userId,
         name: displayName || userId.slice(0, 8),
         isSpeaking: !!lp.isSpeaking,
         isMuted: !lp.isMicrophoneEnabled,
-        // Use our local state as source of truth; LiveKit can lag briefly after disable.
-        isScreenSharing,
-        audioTrack: null, // local – no remote track
+        // Blend local intent with participant flags to survive transient republish/unpublish churn.
+        isScreenSharing: localScreenActive,
+        isCameraSharing: localCameraActive,
+        audioTrack: null, // local - no remote track
         screenTrack,
+        cameraTrack,
         joinedAt,
         hideVoiceActivity: hideActivityRef.current.get(userId) ?? false,
       });
@@ -159,6 +181,18 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
         isTrackUsable
           ? screenTrackCandidate
           : null;
+      const cameraPub = rp.getTrackPublication(Track.Source.Camera);
+      const cameraTrackCandidate = cameraPub?.videoTrack ?? null;
+      const isCameraTrackLive = !!cameraTrackCandidate && cameraTrackCandidate.mediaStreamTrack.readyState === "live";
+      const isCameraTrackUsable =
+        isCameraTrackLive &&
+        !cameraPub?.isMuted &&
+        !!cameraPub?.isSubscribed &&
+        !cameraTrackCandidate.isMuted;
+      const cameraTrack =
+        isCameraTrackUsable
+          ? cameraTrackCandidate
+          : null;
 
       all.push({
         identity,
@@ -166,8 +200,10 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
         isSpeaking: !!rp.isSpeaking,
         isMuted: !rp.isMicrophoneEnabled,
         isScreenSharing: !!rp.isScreenShareEnabled && isTrackUsable,
+        isCameraSharing: !!rp.isCameraEnabled && isCameraTrackUsable,
         audioTrack,
         screenTrack,
+        cameraTrack,
         joinedAt,
         hideVoiceActivity: hideActivityRef.current.get(identity) ?? false,
       });
@@ -179,7 +215,7 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
     if (channelId) {
       setPresence(channelId, all.map((p) => p.identity));
     }
-  }, [channelId, userId, displayName, isScreenSharing, setPresence]);
+  }, [channelId, userId, displayName, isScreenSharing, isCameraSharing, setPresence]);
 
   // ------ JOIN ------
   const join = useCallback(async () => {
@@ -261,6 +297,9 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
           if (pub?.source === Track.Source.ScreenShare || pub?.source === Track.Source.ScreenShareAudio) {
             setIsScreenSharing(false);
             setScreenShareQuality(null);
+          }
+          if (pub?.source === Track.Source.Camera) {
+            setIsCameraSharing(false);
           }
           updateParticipants();
         })
@@ -433,6 +472,7 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
     setIsMuted(false);
     setIsDeafened(false);
     setIsScreenSharing(false);
+    setIsCameraSharing(false);
     setScreenShareQuality(null);
 
     // Only the instance that actually had an active Agora client should
@@ -539,6 +579,124 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
     updateParticipants();
   }, [updateParticipants]);
 
+  // ------ CAMERA SHARE ------
+  const toCameraWarningMessage = (cameraErr: unknown) => {
+    if (cameraErr instanceof DOMException) {
+      if (cameraErr.name === "NotAllowedError") {
+        return "Camera permission is blocked. Enable camera access in your browser/OS settings.";
+      }
+      if (cameraErr.name === "NotFoundError") {
+        return "No camera was found. Connect one and try again.";
+      }
+      if (cameraErr.name === "NotReadableError") {
+        return "Camera is busy or unavailable. Close other apps using it and try again.";
+      }
+      if (cameraErr.name === "OverconstrainedError") {
+        return "Camera constraints are not supported on this device. Try another camera.";
+      }
+    }
+    return "Failed to start camera. Please try again.";
+  };
+
+  const isCameraPublishTimeoutError = (cameraErr: unknown): boolean => {
+    if (!(cameraErr instanceof Error)) return false;
+    return /pending publication promise timed out/i.test(cameraErr.message);
+  };
+
+  const startCameraShare = useCallback(async () => {
+    const room = roomRef.current;
+    if (!room) return;
+    if (cameraOpInFlightRef.current) {
+      await cameraOpInFlightRef.current;
+      return;
+    }
+
+    const op = (async () => {
+      try {
+        await room.localParticipant.setCameraEnabled(true);
+        setError(null);
+        setIsCameraSharing(true);
+        updateParticipants();
+        return;
+      } catch (initialErr) {
+        try {
+          // Retry with an explicit default videoinput to recover from stale browser device state.
+          await room.switchActiveDevice("videoinput", "default");
+        } catch {
+          // Best effort only.
+        }
+
+        try {
+          await room.localParticipant.setCameraEnabled(true, { deviceId: "default" });
+          setError(null);
+          setIsCameraSharing(true);
+          updateParticipants();
+          return;
+        } catch (fallbackErr) {
+          const finalErr = fallbackErr ?? initialErr;
+
+          // LiveKit may keep a stale pending camera publication; clear and retry once.
+          if (isCameraPublishTimeoutError(finalErr)) {
+            try { await room.localParticipant.setCameraEnabled(false); } catch { /* ignore */ }
+            await new Promise((resolve) => setTimeout(resolve, 150));
+            try {
+              await room.localParticipant.setCameraEnabled(true, { deviceId: "default" });
+              setError(null);
+              setIsCameraSharing(true);
+              updateParticipants();
+              return;
+            } catch (retryErr) {
+              setIsCameraSharing(false);
+              setError(toCameraWarningMessage(retryErr));
+              console.error("Failed to recover camera publish after timeout:", retryErr);
+              return;
+            }
+          }
+
+          setIsCameraSharing(false);
+          setError(toCameraWarningMessage(finalErr));
+          console.error("Failed to start camera share:", finalErr);
+        }
+      }
+    })();
+
+    cameraOpInFlightRef.current = op;
+    try {
+      await op;
+    } finally {
+      if (cameraOpInFlightRef.current === op) {
+        cameraOpInFlightRef.current = null;
+      }
+    }
+  }, [updateParticipants]);
+
+  const stopCameraShare = useCallback(async () => {
+    const room = roomRef.current;
+    if (!room) return;
+    if (cameraOpInFlightRef.current) {
+      await cameraOpInFlightRef.current;
+    }
+
+    const op = (async () => {
+      try {
+        await room.localParticipant.setCameraEnabled(false);
+      } catch {
+        // ignore
+      }
+      setIsCameraSharing(false);
+      updateParticipants();
+    })();
+
+    cameraOpInFlightRef.current = op;
+    try {
+      await op;
+    } finally {
+      if (cameraOpInFlightRef.current === op) {
+        cameraOpInFlightRef.current = null;
+      }
+    }
+  }, [updateParticipants]);
+
   // ------ Cleanup on unmount ------
   useEffect(() => {
     return () => {
@@ -606,6 +764,7 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
       muted: isMuted,
       deafened: isDeafened,
       sharing: isScreenSharing,
+      cameraSharing: isCameraSharing,
       shareQuality: screenShareQuality,
     },
     join,
@@ -614,6 +773,9 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
     toggleDeafen,
     startScreenShare,
     stopScreenShare,
+    startCameraShare,
+    stopCameraShare,
     room: roomHandle(),
   };
 }
+

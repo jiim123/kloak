@@ -73,6 +73,7 @@ export const ChannelSettingsPage = () => {
   const [name, setName] = useState("");
   const [topic, setTopic] = useState("");
   const [chatNotice, setChatNotice] = useState("");
+  const [voiceUserLimit, setVoiceUserLimit] = useState("0");
   const [isNsfw, setIsNsfw] = useState(false);
   const [slowmodeSeconds, setSlowmodeSeconds] = useState("0");
   const [isReadOnly, setIsReadOnly] = useState(false);
@@ -113,6 +114,7 @@ export const ChannelSettingsPage = () => {
       setName(category.name);
       setTopic("");
       setChatNotice("");
+      setVoiceUserLimit("0");
       setIsNsfw(false);
       setSlowmodeSeconds("0");
       setIsReadOnly(false);
@@ -129,6 +131,7 @@ export const ChannelSettingsPage = () => {
       setName(channel.name);
       setTopic(channel.topic || "");
       setChatNotice(channel.chat_notice || "");
+      setVoiceUserLimit(String(channel.voice_user_limit ?? 0));
       setIsNsfw(channel.is_nsfw);
       setSlowmodeSeconds(String(channel.slowmode_seconds));
       setIsReadOnly(channel.is_read_only || false);
@@ -188,11 +191,18 @@ export const ChannelSettingsPage = () => {
 
         const trimmedTopic = topic.trim();
         updates.topic = trimmedTopic || null;
-        const trimmedChatNotice = chatNotice.trim();
-        if (trimmedChatNotice.length > 300) {
-          throw new Error("Before you chat notice must be 300 characters or fewer");
+        if (channel?.type !== "voice") {
+          const trimmedChatNotice = chatNotice.trim();
+          if (trimmedChatNotice.length > 300) {
+            throw new Error("Before you chat notice must be 300 characters or fewer");
+          }
+          updates.chat_notice = trimmedChatNotice || null;
         }
-        updates.chat_notice = trimmedChatNotice || null;
+
+        if (channel?.type === "voice") {
+          const parsedLimit = Math.max(0, Number.parseInt(voiceUserLimit, 10) || 0);
+          updates.voice_user_limit = parsedLimit;
+        }
 
         await updateChannel(channelId, updates, user.id);
         toast.success("Channel updated");
@@ -292,7 +302,8 @@ export const ChannelSettingsPage = () => {
         <p className="text-xs text-muted-foreground text-right">{topic.length}/1024</p>
       </div>
 
-      <div className="space-y-3">
+      {channel?.type !== "voice" && (
+        <div className="space-y-3">
         <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
           Before You Chat Notice
           <span className="text-muted-foreground/70 font-normal normal-case ml-1">(optional)</span>
@@ -314,6 +325,38 @@ export const ChannelSettingsPage = () => {
         />
         <p className="text-xs text-muted-foreground text-right">{chatNotice.length}/300</p>
       </div>
+      )}
+
+      {channel?.type === "voice" && (
+        <div className="space-y-3">
+          <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Voice User Limit
+          </Label>
+          <div className="p-3 rounded-xl border border-border/50 bg-secondary/20 flex items-start gap-2.5">
+            <Users className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Set the maximum number of users who can join this voice channel at once. Use{" "}
+              <span className="font-medium text-foreground">0</span> for unlimited.
+            </p>
+          </div>
+          <Input
+            id="voice-user-limit"
+            type="number"
+            min={0}
+            value={voiceUserLimit}
+            onChange={(e) => {
+              const next = e.target.value;
+              if (next === "") {
+                setVoiceUserLimit("0");
+                return;
+              }
+              const parsed = Number.parseInt(next, 10);
+              setVoiceUserLimit(String(Number.isNaN(parsed) ? 0 : Math.max(0, parsed)));
+            }}
+            className="h-11 rounded-xl border-border/50 bg-secondary/30"
+          />
+        </div>
+      )}
 
       {error && (
         <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20">

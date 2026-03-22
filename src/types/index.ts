@@ -210,6 +210,8 @@ export interface Channel {
   allowed_link_domains: string[];
   /** When true, hides user avatars and usernames (except for admins/owners) */
   ghost_mode: boolean;
+  /** Max users allowed in a voice channel (0 = unlimited) */
+  voice_user_limit?: number;
 }
 
 export interface ChannelMember {
@@ -567,6 +569,7 @@ export interface CreateChannelForm {
   topic?: string;
   chat_notice?: string;
   is_nsfw?: boolean;
+  voice_user_limit?: number;
 }
 
 export interface UpdateProfileForm {

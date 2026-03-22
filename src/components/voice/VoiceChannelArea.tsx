@@ -13,6 +13,8 @@ import {
   PhoneOff,
   Volume2,
   VolumeX,
+  Video,
+  VideoOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -37,6 +39,7 @@ import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { ChannelHeader } from "@/components/chat/ChannelHeader";
 import { useTyping } from "@/hooks/useTyping";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { fetchAndCacheUser, getUserFromCache, useUserCacheStore } from "@/stores/userCacheStore";
 import type { Channel, ServerMember } from "@/types";
 import type { VideoTrack } from "livekit-client";
 
@@ -74,10 +77,12 @@ function VideoPlayer({ track, className }: { track: VideoTrack; className?: stri
 }
 
 function getMemberDisplayName(member: ServerMember | undefined, participant: AgoraParticipant): string {
+  const cachedUser = getUserFromCache(participant.identity);
+  const resolvedUser = member?.user ?? cachedUser;
   if (member) {
-    return member.nickname || member.user?.display_name || member.user?.username || participant.name;
+    return member.nickname || resolvedUser?.display_name || resolvedUser?.username || participant.name;
   }
-  return participant.name || participant.identity.slice(0, 8);
+  return resolvedUser?.display_name || resolvedUser?.username || participant.name || participant.identity.slice(0, 8);
 }
 
 const PARTICIPANT_TILE_COLORS = [
@@ -109,9 +114,20 @@ function hasActiveScreenShare(participant: Pick<AgoraParticipant, "isScreenShari
   );
 }
 
+function hasActiveCameraShare(participant: Pick<AgoraParticipant, "isCameraSharing" | "cameraTrack">): boolean {
+  const track = participant.cameraTrack;
+  return (
+    !!participant.isCameraSharing &&
+    !!track &&
+    track.mediaStreamTrack.readyState === "live" &&
+    !track.isMuted
+  );
+}
+
 type TileProps = {
   participant: AgoraParticipant;
   member: ServerMember | undefined;
+  avatarUser?: ServerMember["user"];
   isYou: boolean;
   isDeafened: boolean;
   backgroundColor: string;
@@ -122,6 +138,7 @@ type TileProps = {
 function ParticipantTile({
   participant,
   member,
+  avatarUser,
   isYou,
   isDeafened,
   backgroundColor,
@@ -132,7 +149,9 @@ function ParticipantTile({
   const visualVoiceIndicators = useVoiceSettingsStore((s) => s.settings.visualVoiceIndicators);
   const speaking = participant.isSpeaking && !participant.hideVoiceActivity && visualVoiceIndicators;
   const [volumeOpen, setVolumeOpen] = useState(false);
-  const isSharing = hasActiveScreenShare(participant);
+  const isScreenSharing = hasActiveScreenShare(participant);
+  const isCameraSharing = hasActiveCameraShare(participant);
+  const isSharing = isScreenSharing || isCameraSharing;
 
   const tileContent = (
     <div
@@ -147,7 +166,7 @@ function ParticipantTile({
 
       <div className="absolute inset-0 flex items-center justify-center">
         <div className={cn("rounded-full bg-black/10 p-1.5 backdrop-blur-[1px]", isSharing && "ring-2 ring-white/25")}>
-          <AvatarWithDecoration user={member?.user} size={78} freezeGifUntilHover />
+          <AvatarWithDecoration user={avatarUser} size={78} freezeGifUntilHover />
         </div>
       </div>
 
@@ -179,7 +198,8 @@ function ParticipantTile({
           {!isYou && <VolumeIndicator userId={participant.identity} />}
           {isDeafened && isYou ? <VolumeX className="w-3.5 h-3.5" /> : null}
           {participant.isMuted ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
-          {isSharing ? <MonitorUp className="w-3.5 h-3.5" /> : null}
+          {isScreenSharing ? <MonitorUp className="w-3.5 h-3.5" /> : null}
+          {!isScreenSharing && isCameraSharing ? <Video className="w-3.5 h-3.5" /> : null}
         </div>
       </div>
 
@@ -219,7 +239,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
   const setJoinedChannel = useVoiceStore((s) => s.setJoinedChannel);
   const connectionStatus = useVoiceStore((s) => s.connection.status);
   const [showQualityModal, setShowQualityModal] = useState(false);
-  const [watchingShareIdentity, setWatchingShareIdentity] = useState<string | null>(null);
+  const [watchingStreamKey, setWatchingStreamKey] = useState<string | null>(null);
   const [isTextPanelOpen, setIsTextPanelOpen] = useState(false);
   const [isStageFullscreen, setIsStageFullscreen] = useState(false);
   const [slowmodeStatus, setSlowmodeStatus] = useState<{ enabled: boolean; blocked: boolean; immune: boolean; remainingSeconds: number }>({
@@ -229,6 +249,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
     remainingSeconds: 0,
   });
   const stageContainerRef = useRef<HTMLDivElement | null>(null);
+  const userCacheVersion = useUserCacheStore((s) => s._version);
 
   const voice = useAgoraRoom({
     channelId: channel.id,
@@ -320,6 +341,16 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
     return map;
   }, [members]);
 
+  useEffect(() => {
+    void userCacheVersion;
+    const uniqueIds = Array.from(new Set(voice.participants.map((p) => p.identity)));
+    for (const userId of uniqueIds) {
+      if (memberByUserId.get(userId)?.user) continue;
+      if (getUserFromCache(userId)) continue;
+      fetchAndCacheUser(userId).catch(() => {});
+    }
+  }, [voice.participants, memberByUserId, userCacheVersion]);
+
   const linkedTextChannel = useMemo(() => {
     return (
       channels.find(
@@ -340,54 +371,85 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
     return voice.participants.filter((p) => !blocked.has(p.identity));
   }, [voice.participants]);
 
-  // Find screen sharers (not the local user)
-  const remoteScreenSharers = useMemo(() => {
-    return filteredParticipants
-      .filter(
-        (p) =>
-          hasActiveScreenShare(p) &&
-          p.identity !== user?.id &&
-          p.screenTrack
-      )
-      .map((p) => ({
-        identity: p.identity,
-        track: p.screenTrack!,
-        name: getMemberDisplayName(memberByUserId.get(p.identity), p),
-      }));
+  const remoteStreams = useMemo(() => {
+    const streams: Array<{
+      streamKey: string;
+      identity: string;
+      kind: "screen" | "camera";
+      track: VideoTrack;
+      name: string;
+    }> = [];
+
+    for (const p of filteredParticipants) {
+      if (p.identity === user?.id) continue;
+      const name = getMemberDisplayName(memberByUserId.get(p.identity), p);
+      if (hasActiveScreenShare(p) && p.screenTrack) {
+        streams.push({
+          streamKey: `${p.identity}:screen`,
+          identity: p.identity,
+          kind: "screen",
+          track: p.screenTrack,
+          name,
+        });
+      }
+      if (hasActiveCameraShare(p) && p.cameraTrack) {
+        streams.push({
+          streamKey: `${p.identity}:camera`,
+          identity: p.identity,
+          kind: "camera",
+          track: p.cameraTrack,
+          name,
+        });
+      }
+    }
+
+    return streams;
   }, [filteredParticipants, user?.id, memberByUserId]);
 
-  // Local screen share
-  const localScreenShare = useMemo(() => {
+  const localStream = useMemo(() => {
     const localP = filteredParticipants.find((p) => p.identity === user?.id);
-    // Use local state as the source of truth so the stage disappears immediately
-    // when the user stops sharing (avoids a stale black stage).
-    if (voice.localState.sharing && localP && hasActiveScreenShare(localP)) {
+    if (!localP) return null;
+
+    // Use local state as source of truth so stage disappears immediately on stop.
+    if (voice.localState.sharing && hasActiveScreenShare(localP)) {
       return {
+        streamKey: `${localP.identity}:screen`,
         identity: localP.identity,
+        kind: "screen" as const,
         track: localP.screenTrack!,
         name: getMemberDisplayName(memberByUserId.get(localP.identity), localP),
         isLocal: true as const,
       };
     }
+    if (voice.localState.cameraSharing && hasActiveCameraShare(localP)) {
+      return {
+        streamKey: `${localP.identity}:camera`,
+        identity: localP.identity,
+        kind: "camera" as const,
+        track: localP.cameraTrack!,
+        name: getMemberDisplayName(memberByUserId.get(localP.identity), localP),
+        isLocal: true as const,
+      };
+    }
     return null;
-  }, [filteredParticipants, memberByUserId, user?.id, voice.localState.sharing]);
+  }, [filteredParticipants, memberByUserId, user?.id, voice.localState.sharing, voice.localState.cameraSharing]);
 
-  const watchedRemoteShare = useMemo(() => {
-    if (!watchingShareIdentity) return null;
-    const selected = remoteScreenSharers.find((p) => p.identity === watchingShareIdentity);
+  const watchedRemoteStream = useMemo(() => {
+    if (!watchingStreamKey) return null;
+    const selected = remoteStreams.find((p) => p.streamKey === watchingStreamKey);
     return selected ? { ...selected, isLocal: false as const } : null;
-  }, [remoteScreenSharers, watchingShareIdentity]);
+  }, [remoteStreams, watchingStreamKey]);
 
-  const stage = watchedRemoteShare || localScreenShare;
-  const hasRemoteShares = remoteScreenSharers.length > 0;
+  const stage = watchedRemoteStream || localStream;
+  const hasRemoteShares = remoteStreams.length > 0;
   const isReady = !!user;
 
   useEffect(() => {
-    if (!watchingShareIdentity) return;
-    if (!remoteScreenSharers.some((p) => p.identity === watchingShareIdentity)) {
-      setWatchingShareIdentity(null);
+    if (!watchingStreamKey) return;
+    if (!remoteStreams.some((p) => p.streamKey === watchingStreamKey)) {
+      setWatchingStreamKey(null);
     }
-  }, [remoteScreenSharers, watchingShareIdentity]);
+  }, [remoteStreams, watchingStreamKey]);
 
   useEffect(() => {
     const onFullScreenChange = () => {
@@ -558,7 +620,9 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
                     )}
                   >
                     <div className="text-sm font-medium truncate text-white">
-                      {stage.isLocal ? "Your Live Screen" : `${stage.name} - Live Screen`}
+                      {stage.isLocal
+                        ? `Your Live ${stage.kind === "screen" ? "Screen" : "Camera"}`
+                        : `${stage.name} - Live ${stage.kind === "screen" ? "Screen" : "Camera"}`}
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
@@ -581,7 +645,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
                           variant="ghost"
                           size="sm"
                           className="h-8 px-2.5 text-xs rounded-full text-white/90 bg-white/10 hover:bg-white/20"
-                          onClick={() => setWatchingShareIdentity(null)}
+                          onClick={() => setWatchingStreamKey(null)}
                         >
                           Stop watching
                         </Button>
@@ -608,8 +672,8 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
 
               {!stage && hasRemoteShares ? (
                 <div className="mb-3 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs text-white/75">
-                  A participant is sharing screen. Click <span className="font-medium text-white">Watch Stream</span>{" "}
-                  on their tile.
+                  A participant is sharing video. Click <span className="font-medium text-white">Watch Stream</span> on
+                  their tile.
                 </div>
               ) : null}
 
@@ -656,16 +720,26 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
                       key={p.identity}
                       participant={p}
                       member={memberByUserId.get(p.identity)}
+                      avatarUser={memberByUserId.get(p.identity)?.user ?? getUserFromCache(p.identity) ?? undefined}
                       isYou={p.identity === user?.id}
                       isDeafened={p.identity === user?.id ? voice.localState.deafened : false}
                       backgroundColor={getParticipantTileColor(p.identity)}
-                      isWatchingShare={watchingShareIdentity === p.identity}
+                      isWatchingShare={
+                        watchingStreamKey === `${p.identity}:screen` ||
+                        watchingStreamKey === `${p.identity}:camera`
+                      }
                       onWatchShare={
-                        p.identity !== user?.id && hasActiveScreenShare(p)
+                        p.identity !== user?.id && (hasActiveScreenShare(p) || hasActiveCameraShare(p))
                           ? () =>
-                              setWatchingShareIdentity((current) =>
-                                current === p.identity ? null : p.identity
-                              )
+                              setWatchingStreamKey((current) => {
+                                const next =
+                                  hasActiveScreenShare(p) && p.screenTrack
+                                    ? `${p.identity}:screen`
+                                    : hasActiveCameraShare(p) && p.cameraTrack
+                                      ? `${p.identity}:camera`
+                                      : null;
+                                return current === next ? null : next;
+                              })
                           : null
                       }
                     />
@@ -715,6 +789,22 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
               title={voice.localState.sharing ? "Stop sharing" : "Share screen"}
             >
               {voice.localState.sharing ? <MonitorOff className="w-5 h-5" /> : <MonitorUp className="w-5 h-5" />}
+            </button>
+
+            <button
+              type="button"
+              className={cn(
+                "h-12 w-12 rounded-full border border-white/15 flex items-center justify-center transition-colors",
+                voice.localState.cameraSharing
+                  ? "bg-red-500 text-white border-red-400 hover:bg-red-500/90"
+                  : "bg-white/10 text-white hover:bg-white/20"
+              )}
+              onClick={() =>
+                voice.localState.cameraSharing ? voice.stopCameraShare() : voice.startCameraShare()
+              }
+              title={voice.localState.cameraSharing ? "Stop camera" : "Share camera"}
+            >
+              {voice.localState.cameraSharing ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
             </button>
 
             <button

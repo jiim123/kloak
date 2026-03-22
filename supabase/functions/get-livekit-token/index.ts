@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { AccessToken } from "https://esm.sh/livekit-server-sdk@2.13.0";
+import { AccessToken, RoomServiceClient } from "https://esm.sh/livekit-server-sdk@2.13.0";
 import { createServiceClient, enforceRateLimit, getAuthContext } from "../_shared/edgeSecurity.ts";
 
 const corsHeaders = {
@@ -30,6 +30,16 @@ function normalizeLiveKitUrl(url: string): string {
   return u;
 }
 
+function normalizeLiveKitApiUrl(url: string): string {
+  const u = url.trim();
+  if (!u) return u;
+  if (u.startsWith("https://") || u.startsWith("http://")) return u;
+  if (u.startsWith("wss://")) return "https://" + u.slice("wss://".length);
+  if (u.startsWith("ws://")) return "http://" + u.slice("ws://".length);
+  if (!u.includes("://")) return `https://${u}`;
+  return u;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -37,6 +47,7 @@ serve(async (req) => {
 
   try {
     const LIVEKIT_URL = normalizeLiveKitUrl(Deno.env.get("LIVEKIT_URL") || "");
+    const LIVEKIT_API_URL = normalizeLiveKitApiUrl(Deno.env.get("LIVEKIT_URL") || "");
     const LIVEKIT_API_KEY = (Deno.env.get("LIVEKIT_API_KEY") || "").trim();
     const LIVEKIT_API_SECRET = (Deno.env.get("LIVEKIT_API_SECRET") || "").trim();
 
@@ -87,6 +98,65 @@ serve(async (req) => {
     });
     if (accessError || !canAccess) {
       return jsonResponse({ error: "Not allowed to join this voice channel" }, 403);
+    }
+
+    let channelRow: { id: string; type: string; voice_user_limit?: number | null } | null = null;
+    let channelMetaLoaded = true;
+
+    const metaResult = await supabase.rpc("get_voice_channel_meta_for_token", {
+      _channel_id: room,
+      _user_id: requestUserId,
+    });
+
+    if (metaResult.error) {
+      // Rolling-deploy fallback: if RPC isn't deployed yet, keep service available
+      // (no limit enforcement for this request).
+      if (metaResult.error.code === "PGRST202") {
+        channelMetaLoaded = false;
+        channelRow = { id: room, type: "voice", voice_user_limit: 0 };
+      } else {
+        console.error("[get-livekit-token] voice channel meta RPC failed", {
+          code: metaResult.error.code,
+          message: metaResult.error.message,
+          details: metaResult.error.details,
+          hint: metaResult.error.hint,
+        });
+        // Do not hard-fail token issuance on metadata read issues.
+        // This prevents join outages while still logging the root cause.
+        channelMetaLoaded = false;
+        channelRow = { id: room, type: "voice", voice_user_limit: 0 };
+      }
+    } else {
+      channelRow = (metaResult.data as { id: string; type: string; voice_user_limit?: number | null } | null) ?? null;
+    }
+
+    if (!channelRow) {
+      return jsonResponse({ error: "Voice channel not found" }, 404);
+    }
+
+    if (channelMetaLoaded && channelRow.type !== "voice") {
+      return jsonResponse({ error: "Not a voice channel" }, 400);
+    }
+
+    const voiceUserLimit = Number(channelRow.voice_user_limit ?? 0);
+    if (Number.isFinite(voiceUserLimit) && voiceUserLimit > 0) {
+      try {
+        const roomService = new RoomServiceClient(LIVEKIT_API_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET);
+        const participants = await roomService.listParticipants(room);
+        const identities = new Set(
+          (participants || [])
+            .map((p) => (typeof p.identity === "string" ? p.identity : ""))
+            .filter((id) => id.length > 0),
+        );
+
+        // Allow reconnects for users already present in the room.
+        if (!identities.has(identity) && identities.size >= voiceUserLimit) {
+          return jsonResponse({ error: "Voice channel is full" }, 403);
+        }
+      } catch (lkError) {
+        console.error("[get-livekit-token] Failed to check room capacity", lkError);
+        return jsonResponse({ error: "Unable to verify voice channel capacity" }, 503);
+      }
     }
 
     const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, { identity, name });
