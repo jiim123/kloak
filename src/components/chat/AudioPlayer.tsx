@@ -158,24 +158,19 @@ export const AudioPlayer = memo(function AudioPlayer({ src, fileName, fileSize, 
   const accentColor = isPlaying ? "hsl(var(--kloak-dnd))" : "hsl(var(--kloak-online))";
 
   return (
-    <div className="rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm w-full max-w-[480px] min-w-0 overflow-hidden p-3 sm:p-4 space-y-2.5 sm:space-y-3">
+    <div className="rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm w-full max-w-[480px] min-w-0 overflow-hidden box-border p-3 sm:p-4 space-y-2.5 sm:space-y-3">
       <audio ref={audioRef} src={src} preload="metadata" onError={onError} />
 
       {/* Header: icon + file info */}
-      <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+      <div className="flex items-center gap-2 min-w-0">
         <Music className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-        <span className="text-xs text-foreground/80 truncate min-w-0 flex-1">{fileName}</span>
-        {sizeLabel && (
-          <span className="text-[10px] sm:text-[11px] text-muted-foreground/60 flex-shrink-0 hidden sm:inline">
-            {sizeLabel}
-          </span>
-        )}
+        <span className="text-xs text-foreground/80 block truncate min-w-0" style={{ maxWidth: "calc(100% - 24px)" }}>{fileName}</span>
       </div>
 
       {/* Progress bar */}
       <div
         ref={seekSlider.ref}
-        className="h-2 sm:h-1.5 rounded-full bg-muted/50 cursor-pointer select-none touch-none"
+        className="h-2 sm:h-1.5 rounded-full bg-muted/50 cursor-pointer select-none touch-none w-full"
         onPointerDown={seekSlider.onPointerDown}
       >
         <div
@@ -185,7 +180,7 @@ export const AudioPlayer = memo(function AudioPlayer({ src, fileName, fileSize, 
       </div>
 
       {/* Controls row */}
-      <div className="flex items-center gap-0.5 min-w-0 overflow-hidden">
+      <div className="flex items-center gap-0.5 min-w-0">
         {/* Play/Stop */}
         <button
           onClick={togglePlay}
@@ -232,7 +227,7 @@ export const AudioPlayer = memo(function AudioPlayer({ src, fileName, fileSize, 
         <div className="flex-1 min-w-0" />
 
         {/* Time display */}
-        <span className="text-[10px] sm:text-[11px] text-muted-foreground tabular-nums flex-shrink-0">
+        <span className="text-[10px] sm:text-[11px] text-muted-foreground tabular-nums flex-shrink-0 whitespace-nowrap">
           {formatTime(currentTime)}/{formatTime(duration)}
         </span>
 
