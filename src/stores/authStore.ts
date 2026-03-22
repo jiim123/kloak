@@ -319,6 +319,7 @@ export const useAuthStore = create<AuthState>()(
 
           // Set the key_hash header for identity verification on all subsequent requests
           setKeyHashHeader(keyHash);
+          await encryptAndStoreKeyHash(keyHash);
           set({ keyHash });
 
           // Use RPC function to login (bypasses RLS)
