@@ -161,7 +161,41 @@ const ForumThreadThumbnail = ({ attachmentPath }: { attachmentPath: string }) =>
   );
 };
 
-const ForumThreadsSkeleton = () => (
+const ThreadAttachmentGalleryItem = ({ path }: { path: string }) => {
+  const signedUrl = useSignedUrl(`kloak-attachment://${path}`);
+  if (!signedUrl) return <div className="w-20 h-20 rounded-md bg-muted animate-pulse" />;
+  return (
+    <a href={signedUrl} target="_blank" rel="noopener noreferrer" className="block">
+      <img
+        src={signedUrl}
+        alt=""
+        className="w-20 h-20 rounded-md object-cover border border-border/60 hover:opacity-80 transition-opacity cursor-pointer"
+        loading="lazy"
+      />
+    </a>
+  );
+};
+
+const ThreadAttachmentGallery = ({ content }: { content: string }) => {
+  const matches = content.match(/kloak-attachment:\/\/([^\s]+)/g);
+  if (!matches || matches.length === 0) return null;
+  const paths = matches.map((m) => m.replace("kloak-attachment://", ""));
+  return (
+    <div className="rounded-lg border border-border bg-muted/20 p-3">
+      <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground font-medium">
+        <Paperclip className="h-3.5 w-3.5" />
+        <span>Attachments ({paths.length})</span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {paths.map((path, i) => (
+          <ThreadAttachmentGalleryItem key={i} path={path} />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+
   <div className="divide-y divide-border">
     {Array.from({ length: 6 }).map((_, index) => (
       <div key={index} className="p-3 md:p-4">
