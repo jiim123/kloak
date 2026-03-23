@@ -161,37 +161,70 @@ const ForumThreadThumbnail = ({ attachmentPath }: { attachmentPath: string }) =>
   );
 };
 
-const ThreadAttachmentGalleryItem = ({ path }: { path: string }) => {
+const ThreadAttachmentGalleryItem = ({ path, onClick }: { path: string; onClick: () => void }) => {
   const signedUrl = useSignedUrl(`kloak-attachment://${path}`);
   if (!signedUrl) return <div className="w-20 h-20 rounded-md bg-muted animate-pulse" />;
   return (
-    <a href={signedUrl} target="_blank" rel="noopener noreferrer" className="block">
+    <button type="button" onClick={onClick} className="block">
       <img
         src={signedUrl}
         alt=""
         className="w-20 h-20 rounded-md object-cover border border-border/60 hover:opacity-80 transition-opacity cursor-pointer"
         loading="lazy"
       />
-    </a>
+    </button>
+  );
+};
+
+const ThreadAttachmentLightbox = ({ path, onClose }: { path: string; onClose: () => void }) => {
+  const signedUrl = useSignedUrl(`kloak-attachment://${path}`);
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute top-4 right-4 z-10 p-2 rounded-full bg-background/80 hover:bg-background text-foreground transition-colors"
+        aria-label="Close"
+      >
+        <X className="w-5 h-5" />
+      </button>
+      {signedUrl && (
+        <img
+          src={signedUrl}
+          alt=""
+          className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg"
+          onClick={(e) => e.stopPropagation()}
+        />
+      )}
+    </div>
   );
 };
 
 const ThreadAttachmentGallery = ({ content }: { content: string }) => {
+  const [lightboxPath, setLightboxPath] = React.useState<string | null>(null);
   const matches = content.match(/kloak-attachment:\/\/([^\s]+)/g);
   if (!matches || matches.length === 0) return null;
   const paths = matches.map((m) => m.replace("kloak-attachment://", ""));
   return (
-    <div className="rounded-lg border border-border bg-muted/20 p-3">
-      <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground font-medium">
-        <Paperclip className="h-3.5 w-3.5" />
-        <span>Attachments ({paths.length})</span>
+    <>
+      <div className="rounded-lg border border-border bg-muted/20 p-3">
+        <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground font-medium">
+          <Paperclip className="h-3.5 w-3.5" />
+          <span>Attachments ({paths.length})</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {paths.map((path, i) => (
+            <ThreadAttachmentGalleryItem key={i} path={path} onClick={() => setLightboxPath(path)} />
+          ))}
+        </div>
       </div>
-      <div className="flex flex-wrap gap-2">
-        {paths.map((path, i) => (
-          <ThreadAttachmentGalleryItem key={i} path={path} />
-        ))}
-      </div>
-    </div>
+      {lightboxPath && (
+        <ThreadAttachmentLightbox path={lightboxPath} onClose={() => setLightboxPath(null)} />
+      )}
+    </>
   );
 };
 const ForumThreadsSkeleton = () => (
