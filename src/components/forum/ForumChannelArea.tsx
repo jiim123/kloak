@@ -177,26 +177,28 @@ const ThreadAttachmentGalleryItem = ({ path, onClick }: { path: string; onClick:
   );
 };
 
-const ThreadAttachmentGallery = ({ content }: { content: string }) => {
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+const ThreadAttachmentGallery = ({
+  content,
+  onImageOpen,
+}: {
+  content: string;
+  onImageOpen: (url: string) => void;
+}) => {
   const matches = content.match(/kloak-attachment:\/\/([^\s]+)/g);
   if (!matches || matches.length === 0) return null;
   const paths = matches.map((m) => m.replace("kloak-attachment://", ""));
   return (
-    <>
-      <div className="rounded-lg border border-border bg-muted/20 p-3">
-        <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground font-medium">
-          <Paperclip className="h-3.5 w-3.5" />
-          <span>Attachments ({paths.length})</span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {paths.map((path, i) => (
-            <ThreadAttachmentGalleryItem key={i} path={path} onClick={setLightboxUrl} />
-          ))}
-        </div>
+    <div className="rounded-lg border border-border bg-muted/20 p-3">
+      <div className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+        <Paperclip className="h-3.5 w-3.5" />
+        <span>Attachments ({paths.length})</span>
       </div>
-      <ImageLightbox imageUrl={lightboxUrl} onClose={() => setLightboxUrl(null)} />
-    </>
+      <div className="flex flex-wrap gap-2">
+        {paths.map((path, i) => (
+          <ThreadAttachmentGalleryItem key={i} path={path} onClick={onImageOpen} />
+        ))}
+      </div>
+    </div>
   );
 };
 const ForumThreadsSkeleton = () => (
@@ -260,6 +262,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
   const [showDeleteThreadModal, setShowDeleteThreadModal] = useState(false);
   const [threadToDelete, setThreadToDelete] = useState<Thread | null>(null);
+  const [threadAttachmentLightboxUrl, setThreadAttachmentLightboxUrl] = useState<string | null>(null);
   const [reactionUserNameOverrides, setReactionUserNameOverrides] = useState<Map<string, string>>(new Map());
   const createTopicTitleRef = useRef<HTMLInputElement>(null);
   const createTopicTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -284,6 +287,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
     setIsEditingThreadPost(false);
     setThreadPostEditTitle("");
     setThreadPostEditBody("");
+    setThreadAttachmentLightboxUrl(null);
     setCreatePendingAttachments((prev) => {
       revokeAttachmentPreviews(prev);
       return [];
@@ -2338,18 +2342,29 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
           const canEditThreadPost = !!selectedThread?.message?.id && user?.id === selectedThread?.created_by;
 
           return (
-            <Drawer
-              direction="right"
-              open={!!selectedThreadId}
-              onOpenChange={(open) => {
-                if (!open) {
-                  setSelectedThreadId(null);
-                  setReplyContent("");
-                  setReplyingToThread(null);
-                }
-              }}
-            >
-              <DrawerContent className="w-[90vw] max-w-2xl">
+            <>
+              <Drawer
+                direction="right"
+                open={!!selectedThreadId}
+                onOpenChange={(open) => {
+                  if (!open && threadAttachmentLightboxUrl) return;
+
+                  if (!open) {
+                    setSelectedThreadId(null);
+                    setReplyContent("");
+                    setReplyingToThread(null);
+                  }
+                }}
+              >
+                <DrawerContent
+                  className="w-[90vw] max-w-2xl"
+                  onEscapeKeyDown={(event) => {
+                    if (threadAttachmentLightboxUrl) event.preventDefault();
+                  }}
+                  onPointerDownOutside={(event) => {
+                    if (threadAttachmentLightboxUrl) event.preventDefault();
+                  }}
+                >
                 {selectedThread && (
                   <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
                     {/* Header */}
@@ -2572,7 +2587,10 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
 
                           {/* Attachment gallery */}
                           <div className="mt-3">
-                            <ThreadAttachmentGallery content={messageContent} />
+                            <ThreadAttachmentGallery
+                              content={messageContent}
+                              onImageOpen={setThreadAttachmentLightboxUrl}
+                            />
                           </div>
                         </div>
                       )}
@@ -2892,8 +2910,13 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                     {selectedThreadId && renderThreadReplyComposer(selectedThreadId)}
                   </div>
                 )}
-              </DrawerContent>
-            </Drawer>
+                </DrawerContent>
+              </Drawer>
+              <ImageLightbox
+                imageUrl={threadAttachmentLightboxUrl}
+                onClose={() => setThreadAttachmentLightboxUrl(null)}
+              />
+            </>
           );
         })()}
       </div>
