@@ -2071,10 +2071,15 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                 const parts = messageContent.split("\n\n");
                 const threadTitle =
                   parts.length > 1 ? parts[0].trim() : messageContent.split("\n")[0].trim() || "No content";
-                const threadPreview =
+                const rawPreview =
                   parts.length > 1
                     ? parts.slice(1).join("\n\n").trim()
                     : messageContent.split("\n").slice(1).join("\n").trim();
+                // Strip kloak-attachment:// URLs from preview
+                const threadPreview = rawPreview.replace(/kloak-attachment:\/\/[^\s]*/g, '').trim();
+                // Extract first attachment image URL for thumbnail
+                const attachmentMatch = messageContent.match(/kloak-attachment:\/\/([^\s]+)/);
+                const firstAttachmentPath = attachmentMatch ? attachmentMatch[1] : null;
                 const replyCount = Math.max(0, Number(thread.message_count ?? 0));
                 const opUser = thread.message?.user;
                 const lastAuthor = thread.last_message_author || opUser;
