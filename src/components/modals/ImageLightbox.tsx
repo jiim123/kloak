@@ -137,6 +137,8 @@ export const ImageLightbox = ({ imageUrl, imageUrls = [], onClose }: ImageLightb
       
       switch (e.key) {
         case 'Escape':
+          e.stopPropagation();
+          e.preventDefault();
           onClose();
           break;
         case 'ArrowLeft':
@@ -168,12 +170,12 @@ export const ImageLightbox = ({ imageUrl, imageUrls = [], onClose }: ImageLightb
     };
 
     if (imageUrl) {
-      document.addEventListener('keydown', handleKeyDown);
+      document.addEventListener('keydown', handleKeyDown, true);
       document.body.style.overflow = 'hidden';
     }
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keydown', handleKeyDown, true);
       document.body.style.overflow = '';
     };
   }, [imageUrl, onClose, hasMultipleImages, allImages.length]);
