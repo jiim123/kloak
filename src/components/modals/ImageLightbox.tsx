@@ -137,6 +137,8 @@ export const ImageLightbox = ({ imageUrl, imageUrls = [], onClose }: ImageLightb
       
       switch (e.key) {
         case 'Escape':
+          e.stopPropagation();
+          e.preventDefault();
           onClose();
           break;
         case 'ArrowLeft':
