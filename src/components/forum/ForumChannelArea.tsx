@@ -161,11 +161,11 @@ const ForumThreadThumbnail = ({ attachmentPath }: { attachmentPath: string }) =>
   );
 };
 
-const ThreadAttachmentGalleryItem = ({ path, onClick }: { path: string; onClick: () => void }) => {
+const ThreadAttachmentGalleryItem = ({ path, onClick }: { path: string; onClick: (url: string) => void }) => {
   const signedUrl = useSignedUrl(`kloak-attachment://${path}`);
   if (!signedUrl) return <div className="w-20 h-20 rounded-md bg-muted animate-pulse" />;
   return (
-    <button type="button" onClick={onClick} className="block">
+    <button type="button" onClick={() => onClick(signedUrl)} className="block">
       <img
         src={signedUrl}
         alt=""
@@ -176,35 +176,8 @@ const ThreadAttachmentGalleryItem = ({ path, onClick }: { path: string; onClick:
   );
 };
 
-const ThreadAttachmentLightbox = ({ path, onClose }: { path: string; onClose: () => void }) => {
-  const signedUrl = useSignedUrl(`kloak-attachment://${path}`);
-  return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute top-4 right-4 z-10 p-2 rounded-full bg-background/80 hover:bg-background text-foreground transition-colors"
-        aria-label="Close"
-      >
-        <X className="w-5 h-5" />
-      </button>
-      {signedUrl && (
-        <img
-          src={signedUrl}
-          alt=""
-          className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg"
-          onClick={(e) => e.stopPropagation()}
-        />
-      )}
-    </div>
-  );
-};
-
 const ThreadAttachmentGallery = ({ content }: { content: string }) => {
-  const [lightboxPath, setLightboxPath] = useState<string | null>(null);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const matches = content.match(/kloak-attachment:\/\/([^\s]+)/g);
   if (!matches || matches.length === 0) return null;
   const paths = matches.map((m) => m.replace("kloak-attachment://", ""));
@@ -217,13 +190,11 @@ const ThreadAttachmentGallery = ({ content }: { content: string }) => {
         </div>
         <div className="flex flex-wrap gap-2">
           {paths.map((path, i) => (
-            <ThreadAttachmentGalleryItem key={i} path={path} onClick={() => setLightboxPath(path)} />
+            <ThreadAttachmentGalleryItem key={i} path={path} onClick={setLightboxUrl} />
           ))}
         </div>
       </div>
-      {lightboxPath && (
-        <ThreadAttachmentLightbox path={lightboxPath} onClose={() => setLightboxPath(null)} />
-      )}
+      <ImageLightbox imageUrl={lightboxUrl} onClose={() => setLightboxUrl(null)} />
     </>
   );
 };
