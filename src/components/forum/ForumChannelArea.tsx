@@ -30,6 +30,7 @@ import {
   ArrowLeft,
   Users,
   Layers,
+  Plus,
   Pin,
   Lock,
   LockOpen,
@@ -2038,9 +2039,9 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
               </div>
             </div>
           ) : (
-            <div className="border-b border-border p-3 md:p-4">
+            <div className="p-3 md:p-4">
               <div
-                className="flex cursor-text items-center gap-3 border border-dashed border-border bg-background px-3 py-3 transition-colors hover:bg-muted/20"
+                className="flex cursor-pointer items-center gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3.5 transition-colors hover:bg-muted/50"
                 onClick={() => {
                   setIsCreateTopicFocused(true);
                   setTimeout(() => {
@@ -2048,11 +2049,10 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                   }, 100);
                 }}
               >
-                <Avatar className="w-8 h-8 flex-shrink-0">
-                  <AvatarImage src={user?.avatar_url} />
-                  <AvatarFallback>{user?.username?.[0]?.toUpperCase() || "?"}</AvatarFallback>
-                </Avatar>
-                <span className="text-sm text-muted-foreground flex-1">Create a topic</span>
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                  <Plus className="h-4.5 w-4.5" />
+                </div>
+                <span className="text-sm font-medium text-foreground flex-1">Create a Post</span>
               </div>
             </div>
           )}
@@ -2073,7 +2073,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-border">
+            <div className="flex flex-col gap-2 p-3 md:p-4">
               {threads.map((thread) => {
                 const isSelected = selectedThreadId === thread.id;
                 // Extract title from message content: first line before double newline, or first line if no double newline
@@ -2101,12 +2101,12 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                   <div
                     key={thread.id}
                     onClick={() => handleThreadClick(thread.id, thread.message_id)}
-                    className={`group/thread relative w-full cursor-pointer text-left transition-colors ${
+                    className={`group/thread relative w-full cursor-pointer text-left transition-colors rounded-lg border ${
                       isSelected
-                        ? "bg-muted/35"
+                        ? "bg-muted/35 border-border"
                         : thread.is_pinned
-                          ? "bg-amber-500/10 hover:bg-amber-500/14"
-                          : "bg-background hover:bg-muted/20"
+                          ? "bg-amber-500/10 hover:bg-amber-500/14 border-amber-500/20"
+                          : "bg-muted/15 hover:bg-muted/30 border-border/60"
                     }`}
                   >
                     {(isSelected || thread.is_pinned) && (
