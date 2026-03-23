@@ -122,7 +122,7 @@ const getGradientTextStyle = (gradient: string): CSSProperties =>
     display: "inline-block",
   }) as CSSProperties;
 const forumMetaChipClass =
-  "inline-flex items-center gap-1.5 border border-border bg-background px-2 py-0.5 text-[11px] text-muted-foreground";
+  "inline-flex items-center gap-1.5 text-[13px] text-muted-foreground";
 
 const sortThreads = (threadList: Thread[]) =>
   [...threadList].sort((a, b) => {
