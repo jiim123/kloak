@@ -16,6 +16,8 @@ import {
   Loader2,
   UserX,
   Ban,
+  Check,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getFileIcon } from "@/lib/fileIcons";
@@ -1365,28 +1367,42 @@ export const MessageItem = memo(function MessageItem({
 
                     {/* Message content */}
                     {isEditing ? (
-                      <div className="flex flex-col gap-2">
+                      <div className="relative">
                         <textarea
                           ref={textareaRef}
                           value={editContent}
                           onChange={handleEditContentChange}
-                          className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm resize-none outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 min-h-[60px] max-h-[300px] overflow-y-auto"
+                          className="w-full bg-background border border-border rounded-lg px-3 py-2 pb-10 text-sm resize-none outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 min-h-[60px] max-h-[300px] overflow-y-auto"
                           onKeyDown={handleKeyDown}
                           style={{
                             lineHeight: "1.5",
                           }}
                         />
-                        <div className="flex gap-2 text-[11px]">
-                          <span className="text-muted-foreground">
-                            escape to{" "}
-                            <button className="text-primary hover:underline" onClick={handleCancelEdit}>
-                              cancel
-                            </button>
-                            {" • "}enter to{" "}
-                            <button className="text-primary hover:underline" onClick={handleEdit}>
-                              save
-                            </button>
-                          </span>
+                        <div className="absolute bottom-2 right-2 flex items-center gap-1.5">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={handleCancelEdit}
+                                className="p-1.5 rounded-md bg-muted/80 hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+                                aria-label="Cancel editing (Esc)"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="text-xs">Esc to cancel</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={handleEdit}
+                                className="p-1.5 rounded-md bg-primary/20 hover:bg-primary/30 text-primary transition-colors"
+                                aria-label="Save edit (Enter)"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="text-xs">Enter to save</TooltipContent>
+                          </Tooltip>
                         </div>
                       </div>
                     ) : pollId ? (
