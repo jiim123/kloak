@@ -345,5 +345,8 @@ export const convertMentionsToRaw = (
     );
   }
 
+  // Restore protected references
+  result = result.replace(/\x00PLACEHOLDER_(\d+)\x00/g, (_, idx) => placeholders[parseInt(idx)]);
+
   return result;
 };
