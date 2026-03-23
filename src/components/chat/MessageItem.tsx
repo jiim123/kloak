@@ -16,6 +16,8 @@ import {
   Loader2,
   UserX,
   Ban,
+  Check,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getFileIcon } from "@/lib/fileIcons";
