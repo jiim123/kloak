@@ -923,9 +923,14 @@ export const MessageItem = memo(function MessageItem({
     setIsEditing(true);
   }, [isDM, message.content, usersMap, channelsMap]);
 
+  const MESSAGE_CHAR_LIMIT = 2000;
+
   const handleEditContentChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      setEditContent(e.target.value);
+      const value = e.target.value;
+      if (value.length <= MESSAGE_CHAR_LIMIT) {
+        setEditContent(value);
+      }
       resizeEditTextarea();
     },
     [resizeEditTextarea],
