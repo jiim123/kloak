@@ -2118,11 +2118,14 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                       />
                     )}
 
-                    <div className="p-3 md:p-4">
-                      {/* Desktop: Single line layout */}
-                      <div className="hidden md:flex md:flex-col md:gap-2">
-                        <div className="flex items-start gap-3">
-                          <div className="min-w-0 flex-1">
+                    <div className="p-4 md:py-5 md:px-5">
+                      {/* Desktop layout */}
+                      <div className="hidden md:flex md:gap-4">
+                        {firstAttachmentPath && (
+                          <ForumThreadThumbnail attachmentPath={firstAttachmentPath} />
+                        )}
+                        <div className="min-w-0 flex-1 flex flex-col gap-2">
+                          <div>
                             <span className="block truncate text-base font-medium text-foreground">{threadTitle}</span>
                             {threadPreview && (
                               <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
@@ -2130,126 +2133,129 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                               </p>
                             )}
                           </div>
-                        </div>
 
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                          <div className={forumMetaChipClass}>
-                            <Avatar className="h-4 w-4">
-                              <AvatarImage src={opUser?.avatar_url} />
-                              <AvatarFallback className="text-[8px]">
-                                {opUser?.username?.[0]?.toUpperCase() || "?"}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span>Started by</span>
-                            <span className={opUsernameColor.className} style={opUsernameColor.style}>
-                              {getDisplayName(opUser?.id || thread.message?.user_id, opUser)}
-                            </span>
-                          </div>
-                          <div className={forumMetaChipClass}>
-                            <MessageSquare
-                              className={`h-3.5 w-3.5 ${replyCount > 0 ? "text-primary" : ""}`}
-                            />
-                            <span>{replyCount > 0 ? `${replyCount} replies` : "No replies"}</span>
-                          </div>
-                          {thread.is_pinned && (
-                            <div className={forumMetaChipClass}>
-                              <Pin className="h-3.5 w-3.5" />
-                              <span>Pinned</span>
-                            </div>
-                          )}
-                          {thread.is_closed && (
-                            <div className={forumMetaChipClass}>
-                              <Lock className="h-3.5 w-3.5" />
-                              <span>Closed</span>
-                            </div>
-                          )}
-                          <div className={forumMetaChipClass}>
-                            <Clock className="h-3.5 w-3.5" />
-                            <span>
-                              Posted {formatDistanceToNow(new Date(thread.created_at), { addSuffix: true })}
-                            </span>
-                          </div>
-                          {lastAuthor && replyCount > 0 && (
+                          <div className="flex flex-wrap items-center gap-3 pt-1">
                             <div className={forumMetaChipClass}>
                               <Avatar className="h-4 w-4">
-                                <AvatarImage src={lastAuthor.avatar_url} />
+                                <AvatarImage src={opUser?.avatar_url} />
                                 <AvatarFallback className="text-[8px]">
-                                  {lastAuthor.username?.[0]?.toUpperCase() || "?"}
+                                  {opUser?.username?.[0]?.toUpperCase() || "?"}
                                 </AvatarFallback>
                               </Avatar>
-                              <span>Latest by</span>
-                              <span className={lastAuthorUsernameColor.className} style={lastAuthorUsernameColor.style}>
-                                {getDisplayName(lastAuthor.id, lastAuthor)}
+                              <span>Created by</span>
+                              <span className={opUsernameColor.className} style={opUsernameColor.style}>
+                                {getDisplayName(opUser?.id || thread.message?.user_id, opUser)}
                               </span>
                             </div>
-                          )}
+                            {replyCount > 0 && (
+                              <div className={forumMetaChipClass}>
+                                <MessageSquare className="h-3.5 w-3.5 text-primary" />
+                                <span>+{replyCount}</span>
+                              </div>
+                            )}
+                            {thread.is_pinned && (
+                              <div className={forumMetaChipClass}>
+                                <Pin className="h-3.5 w-3.5" />
+                                <span>Pinned</span>
+                              </div>
+                            )}
+                            {thread.is_closed && (
+                              <div className={forumMetaChipClass}>
+                                <Lock className="h-3.5 w-3.5" />
+                                <span>Closed</span>
+                              </div>
+                            )}
+                            <div className={forumMetaChipClass}>
+                              <Clock className="h-3.5 w-3.5" />
+                              <span>
+                                {formatDistanceToNow(new Date(thread.created_at), { addSuffix: true })}
+                              </span>
+                            </div>
+                            {lastAuthor && replyCount > 0 && (
+                              <div className={forumMetaChipClass}>
+                                <Avatar className="h-4 w-4">
+                                  <AvatarImage src={lastAuthor.avatar_url} />
+                                  <AvatarFallback className="text-[8px]">
+                                    {lastAuthor.username?.[0]?.toUpperCase() || "?"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span>Latest by</span>
+                                <span className={lastAuthorUsernameColor.className} style={lastAuthorUsernameColor.style}>
+                                  {getDisplayName(lastAuthor.id, lastAuthor)}
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
 
-                      {/* Mobile: Stacked layout */}
-                      <div className="space-y-2 md:hidden">
-                        {/* Title */}
-                        <div>
-                          <div className="text-sm font-medium text-foreground">{threadTitle}</div>
-                          {threadPreview && (
-                            <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                              {threadPreview}
-                            </p>
-                          )}
-                        </div>
+                      {/* Mobile layout */}
+                      <div className="flex gap-3 md:hidden">
+                        {firstAttachmentPath && (
+                          <ForumThreadThumbnail attachmentPath={firstAttachmentPath} />
+                        )}
+                        <div className="min-w-0 flex-1 flex flex-col gap-2">
+                          <div>
+                            <div className="text-sm font-medium text-foreground">{threadTitle}</div>
+                            {threadPreview && (
+                              <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                                {threadPreview}
+                              </p>
+                            )}
+                          </div>
 
-                        {/* Metadata row */}
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                          <div className={forumMetaChipClass}>
-                            <Avatar className="w-4 h-4">
-                              <AvatarImage src={opUser?.avatar_url} />
-                              <AvatarFallback className="text-[8px]">
-                                {opUser?.username?.[0]?.toUpperCase() || "?"}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span>Started by</span>
-                            <span className={opUsernameColor.className} style={opUsernameColor.style}>
-                              {getDisplayName(opUser?.id || thread.message?.user_id, opUser)}
-                            </span>
-                          </div>
-                          <div className={forumMetaChipClass}>
-                            <MessageSquare
-                              className={`w-3.5 h-3.5 ${replyCount > 0 ? "text-primary" : ""}`}
-                            />
-                            <span>{replyCount > 0 ? `${replyCount} replies` : "No replies"}</span>
-                          </div>
-                          {thread.is_pinned && (
-                            <div className={forumMetaChipClass}>
-                              <Pin className="w-3.5 h-3.5" />
-                              <span>Pinned</span>
-                            </div>
-                          )}
-                          {thread.is_closed && (
-                            <div className={forumMetaChipClass}>
-                              <Lock className="w-3.5 h-3.5" />
-                              <span>Closed</span>
-                            </div>
-                          )}
-                          <div className={forumMetaChipClass}>
-                            <Clock className="w-3.5 h-3.5" />
-                            <span>
-                              Posted {formatDistanceToNow(new Date(thread.created_at), { addSuffix: true })}
-                            </span>
-                          </div>
-                          {lastAuthor && replyCount > 0 && (
+                          <div className="flex flex-wrap items-center gap-3 pt-1">
                             <div className={forumMetaChipClass}>
                               <Avatar className="w-4 h-4">
-                                <AvatarImage src={lastAuthor.avatar_url} />
+                                <AvatarImage src={opUser?.avatar_url} />
                                 <AvatarFallback className="text-[8px]">
-                                  {lastAuthor.username?.[0]?.toUpperCase() || "?"}
+                                  {opUser?.username?.[0]?.toUpperCase() || "?"}
                                 </AvatarFallback>
                               </Avatar>
-                              <span>Last reply by</span>
-                              <span className={lastAuthorUsernameColor.className} style={lastAuthorUsernameColor.style}>
-                                {getDisplayName(lastAuthor.id, lastAuthor)}
+                              <span>Created by</span>
+                              <span className={opUsernameColor.className} style={opUsernameColor.style}>
+                                {getDisplayName(opUser?.id || thread.message?.user_id, opUser)}
                               </span>
                             </div>
-                          )}
+                            {replyCount > 0 && (
+                              <div className={forumMetaChipClass}>
+                                <MessageSquare className="w-3.5 h-3.5 text-primary" />
+                                <span>+{replyCount}</span>
+                              </div>
+                            )}
+                            {thread.is_pinned && (
+                              <div className={forumMetaChipClass}>
+                                <Pin className="w-3.5 h-3.5" />
+                                <span>Pinned</span>
+                              </div>
+                            )}
+                            {thread.is_closed && (
+                              <div className={forumMetaChipClass}>
+                                <Lock className="w-3.5 h-3.5" />
+                                <span>Closed</span>
+                              </div>
+                            )}
+                            <div className={forumMetaChipClass}>
+                              <Clock className="w-3.5 h-3.5" />
+                              <span>
+                                {formatDistanceToNow(new Date(thread.created_at), { addSuffix: true })}
+                              </span>
+                            </div>
+                            {lastAuthor && replyCount > 0 && (
+                              <div className={forumMetaChipClass}>
+                                <Avatar className="w-4 h-4">
+                                  <AvatarImage src={lastAuthor.avatar_url} />
+                                  <AvatarFallback className="text-[8px]">
+                                    {lastAuthor.username?.[0]?.toUpperCase() || "?"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span>Latest by</span>
+                                <span className={lastAuthorUsernameColor.className} style={lastAuthorUsernameColor.style}>
+                                  {getDisplayName(lastAuthor.id, lastAuthor)}
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
