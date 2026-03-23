@@ -1406,6 +1406,7 @@ export const MessageItem = memo(function MessageItem({
                             variant="primary"
                             size="sm"
                             onClick={handleEdit}
+                            disabled={!editContent.trim() || editContent.length > MESSAGE_CHAR_LIMIT}
                             iconLeft={<Check className="w-3.5 h-3.5" />}
                           >
                             Save
