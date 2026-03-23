@@ -2073,7 +2073,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-border">
+            <div className="flex flex-col gap-2 p-3 md:p-4">
               {threads.map((thread) => {
                 const isSelected = selectedThreadId === thread.id;
                 // Extract title from message content: first line before double newline, or first line if no double newline
