@@ -29,17 +29,11 @@ export const MobileSidebar = ({ isDMView, showFriends, onShowFriendsChange, show
     
     // Only close if pathname actually changed AND sidebar was open
     if (currentPathname !== prevPathname && wasOpenRef.current) {
-      // Don't close when just switching servers (e.g. /app/servers/X -> /app/servers/Y)
-      // Only close for non-server-root navigation (channel selection, DM, friends, etc.)
-      const isServerRoot = /^\/app\/servers\/[^/]+\/?$/.test(currentPathname);
-      const wasServerRoot = /^\/app\/servers\/[^/]+\/?$/.test(prevPathname);
-      const isHome = currentPathname === '/app' || currentPathname === '/app/';
-      const wasHome = prevPathname === '/app' || prevPathname === '/app/';
+      // Keep open when navigating to a server root or home (server list navigation)
+      const isNavigatingToServerRoot = /^\/app\/servers\/[^/]+\/?$/.test(currentPathname);
+      const isNavigatingToHome = currentPathname === '/app' || currentPathname === '/app/';
       
-      // Keep open when switching between servers or going to home (server list navigation)
-      const isServerSwitch = (isServerRoot || isHome) && (wasServerRoot || wasHome);
-      
-      if (!isServerSwitch) {
+      if (!isNavigatingToServerRoot && !isNavigatingToHome) {
         closeMobileSidebars();
       }
     }
