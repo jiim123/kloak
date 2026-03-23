@@ -219,7 +219,7 @@ export const CodeBlock = ({ code, language }: CodeBlockProps) => {
 
 // Inline code component
 export const InlineCode = ({ children }: { children: string }) => (
-  <code className="px-1.5 py-0.5 mx-0.5 rounded bg-secondary font-mono text-sm text-primary">
+  <code className="px-1.5 py-0.5 mx-0.5 rounded bg-secondary font-mono text-primary" style={{ fontSize: '0.9em' }}>
     {children}
   </code>
 );
