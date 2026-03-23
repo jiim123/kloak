@@ -262,6 +262,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
   const [showDeleteThreadModal, setShowDeleteThreadModal] = useState(false);
   const [threadToDelete, setThreadToDelete] = useState<Thread | null>(null);
+  const [threadAttachmentLightboxUrl, setThreadAttachmentLightboxUrl] = useState<string | null>(null);
   const [reactionUserNameOverrides, setReactionUserNameOverrides] = useState<Map<string, string>>(new Map());
   const createTopicTitleRef = useRef<HTMLInputElement>(null);
   const createTopicTextareaRef = useRef<HTMLTextAreaElement>(null);
