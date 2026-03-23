@@ -204,7 +204,7 @@ const ThreadAttachmentLightbox = ({ path, onClose }: { path: string; onClose: ()
 };
 
 const ThreadAttachmentGallery = ({ content }: { content: string }) => {
-  const [lightboxPath, setLightboxPath] = React.useState<string | null>(null);
+  const [lightboxPath, setLightboxPath] = useState<string | null>(null);
   const matches = content.match(/kloak-attachment:\/\/([^\s]+)/g);
   if (!matches || matches.length === 0) return null;
   const paths = matches.map((m) => m.replace("kloak-attachment://", ""));
