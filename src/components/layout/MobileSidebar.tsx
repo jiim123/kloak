@@ -22,14 +22,26 @@ export const MobileSidebar = ({ isDMView, showFriends, onShowFriendsChange, show
   const prevPathnameRef = useRef(location.pathname);
   const wasOpenRef = useRef(false);
 
-  // Close sidebar when route changes (for Friends/Explore navigation)
+  // Close sidebar when route changes to a channel/DM (not just server switches)
   useEffect(() => {
     const currentPathname = location.pathname;
     const prevPathname = prevPathnameRef.current;
     
     // Only close if pathname actually changed AND sidebar was open
     if (currentPathname !== prevPathname && wasOpenRef.current) {
-      closeMobileSidebars();
+      // Don't close when just switching servers (e.g. /app/servers/X -> /app/servers/Y)
+      // Only close for non-server-root navigation (channel selection, DM, friends, etc.)
+      const isServerRoot = /^\/app\/servers\/[^/]+\/?$/.test(currentPathname);
+      const wasServerRoot = /^\/app\/servers\/[^/]+\/?$/.test(prevPathname);
+      const isHome = currentPathname === '/app' || currentPathname === '/app/';
+      const wasHome = prevPathname === '/app' || prevPathname === '/app/';
+      
+      // Keep open when switching between servers or going to home (server list navigation)
+      const isServerSwitch = (isServerRoot || isHome) && (wasServerRoot || wasHome);
+      
+      if (!isServerSwitch) {
+        closeMobileSidebars();
+      }
     }
     
     prevPathnameRef.current = currentPathname;
@@ -58,7 +70,7 @@ export const MobileSidebar = ({ isDMView, showFriends, onShowFriendsChange, show
   return (
     <Drawer direction="left" open={isMobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
       <DrawerContent
-        className="p-0 gap-0 bg-layout-sidebar shadow-lg border-r border-border/30 w-[calc(72px+240px)] max-w-[85vw] flex flex-row h-full"
+        className="p-0 gap-0 bg-layout-sidebar shadow-lg border-r border-border/30 w-[85vw] max-w-[400px] flex flex-row h-full"
       >
         <DrawerHeader className="sr-only">
           <DrawerTitle>Navigation</DrawerTitle>
