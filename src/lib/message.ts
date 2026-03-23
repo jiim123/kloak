@@ -312,11 +312,20 @@ export const convertMentionsToRaw = (
     });
   }
   
-  // Match @mentions that are not already in <@uuid> format
+  // Protect kloak-attachment:// references and existing <@uuid>/<#uuid> from being mangled
+  const placeholders: string[] = [];
   let result = content.replace(
+    /kloak-attachment:\/\/[^\s]+|<@[\w-]+>|<#[\w-]+>/g,
+    (match) => {
+      placeholders.push(match);
+      return `\x00PLACEHOLDER_${placeholders.length - 1}\x00`;
+    }
+  );
+
+  // Match @mentions
+  result = result.replace(
     /@(\w+)/g,
     (match, name) => {
-      // Skip if it's @everyone or @here
       if (name.toLowerCase() === 'everyone' || name.toLowerCase() === 'here') {
         return match;
       }
@@ -335,6 +344,9 @@ export const convertMentionsToRaw = (
       }
     );
   }
+
+  // Restore protected references
+  result = result.replace(/\x00PLACEHOLDER_(\d+)\x00/g, (_, idx) => placeholders[parseInt(idx)]);
 
   return result;
 };
