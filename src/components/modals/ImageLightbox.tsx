@@ -170,7 +170,7 @@ export const ImageLightbox = ({ imageUrl, imageUrls = [], onClose }: ImageLightb
     };
 
     if (imageUrl) {
-      document.addEventListener('keydown', handleKeyDown);
+      document.addEventListener('keydown', handleKeyDown, true);
       document.body.style.overflow = 'hidden';
     }
 
