@@ -287,6 +287,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
     setIsEditingThreadPost(false);
     setThreadPostEditTitle("");
     setThreadPostEditBody("");
+    setThreadAttachmentLightboxUrl(null);
     setCreatePendingAttachments((prev) => {
       revokeAttachmentPreviews(prev);
       return [];
