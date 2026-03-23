@@ -48,8 +48,7 @@ function CtaSection() {
     return () => io.disconnect();
   }, []);
 
-  return (
-  );
+  return null;
 }
 
 const Index = () => {
