@@ -1378,31 +1378,23 @@ export const MessageItem = memo(function MessageItem({
                             lineHeight: "1.5",
                           }}
                         />
-                        <div className="absolute bottom-2 right-2 flex items-center gap-1.5">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                onClick={handleCancelEdit}
-                                className="p-1.5 rounded-md bg-muted/80 hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
-                                aria-label="Cancel editing (Esc)"
-                              >
-                                <X className="w-3.5 h-3.5" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="text-xs">Esc to cancel</TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                onClick={handleEdit}
-                                className="p-1.5 rounded-md bg-primary/20 hover:bg-primary/30 text-primary transition-colors"
-                                aria-label="Save edit (Enter)"
-                              >
-                                <Check className="w-3.5 h-3.5" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="text-xs">Enter to save</TooltipContent>
-                          </Tooltip>
+                        <div className="absolute bottom-2 right-2 flex items-center gap-2">
+                          <button
+                            onClick={handleCancelEdit}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-muted/80 hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors text-xs font-medium"
+                            aria-label="Cancel editing (Esc)"
+                          >
+                            <X className="w-4 h-4" />
+                            <span>Cancel</span>
+                          </button>
+                          <button
+                            onClick={handleEdit}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/20 hover:bg-primary/30 text-primary transition-colors text-xs font-medium"
+                            aria-label="Save edit (Enter)"
+                          >
+                            <Check className="w-4 h-4" />
+                            <span>Save</span>
+                          </button>
                         </div>
                       </div>
                     ) : pollId ? (
