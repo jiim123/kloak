@@ -1131,6 +1131,7 @@ export const ReplyPreview = ({
       .replace(/~~([^~]+)~~/g, "$1")
       .replace(/__([^_]+)__/g, "$1")
       .replace(/\|\|([^|]+)\|\|/g, "[spoiler]")
+      .replace(/kloak-attachment:\/\/[^\s]*/g, "")
       .replace(/\n/g, " ");
 
     // Convert <@userId> mentions to display_name or username

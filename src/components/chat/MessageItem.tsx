@@ -1339,12 +1339,13 @@ export const MessageItem = memo(function MessageItem({
                               </span>
                             );
                           }
-                          // Strip attachment/image URLs from content for preview
+                          // Strip attachment/image URLs and kloak-attachment:// references from content for preview
                           const attachmentUrlPattern =
                             /https?:\/\/[^\s]*(?:supabase\.co\/storage\/v1\/|\.(?:jpg|jpeg|png|gif|webp|mp4|mov|pdf|zip|rar|doc|docx|xls|xlsx))(?:[^\s]*)/gi;
+                          const kloakAttachmentPattern = /kloak-attachment:\/\/[^\s]*/g;
                           const textOnly = replyContent
                             .split("\n")
-                            .map((line) => line.replace(attachmentUrlPattern, "").trim())
+                            .map((line) => line.replace(attachmentUrlPattern, "").replace(kloakAttachmentPattern, "").trim())
                             .filter((line) => line.length > 0)
                             .join(" ");
                           if (!textOnly) {
