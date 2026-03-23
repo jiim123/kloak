@@ -923,9 +923,14 @@ export const MessageItem = memo(function MessageItem({
     setIsEditing(true);
   }, [isDM, message.content, usersMap, channelsMap]);
 
+  const MESSAGE_CHAR_LIMIT = 2000;
+
   const handleEditContentChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      setEditContent(e.target.value);
+      const value = e.target.value;
+      if (value.length <= MESSAGE_CHAR_LIMIT) {
+        setEditContent(value);
+      }
       resizeEditTextarea();
     },
     [resizeEditTextarea],
@@ -1380,6 +1385,15 @@ export const MessageItem = memo(function MessageItem({
                           }}
                         />
                         <div className="absolute bottom-3 right-3 flex items-center gap-2">
+                          <span className={`text-[11px] tabular-nums select-none transition-colors ${
+                            editContent.length > MESSAGE_CHAR_LIMIT * 0.95
+                              ? 'text-destructive font-medium'
+                              : editContent.length > MESSAGE_CHAR_LIMIT * 0.8
+                                ? 'text-warning'
+                                : 'text-muted-foreground/60'
+                          }`}>
+                            {editContent.length}/{MESSAGE_CHAR_LIMIT}
+                          </span>
                           <Button
                             variant="secondary"
                             size="sm"
@@ -1392,6 +1406,7 @@ export const MessageItem = memo(function MessageItem({
                             variant="primary"
                             size="sm"
                             onClick={handleEdit}
+                            disabled={!editContent.trim() || editContent.length > MESSAGE_CHAR_LIMIT}
                             iconLeft={<Check className="w-3.5 h-3.5" />}
                           >
                             Save
