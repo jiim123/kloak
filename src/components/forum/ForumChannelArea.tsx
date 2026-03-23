@@ -2321,639 +2321,125 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
           </div>
         </div>
 
-        {/* Thread View - Only shown when a thread is selected */}
-        {selectedThreadId &&
-          (() => {
-            const selectedThread = threads.find((t) => t.id === selectedThreadId);
-            const messageContent = selectedThread?.message?.content || "";
-            const parsedThread = parseThreadMessageContent(messageContent);
-            const threadTitle = parsedThread.title || "No content";
-            const threadDescription = parsedThread.description;
-            const opUser = selectedThread?.message?.user;
-            const opUsernameColor = getUsernameColor(selectedThread?.created_by || opUser?.id);
-            const canEditThreadPost = !!selectedThread?.message?.id && user?.id === selectedThread?.created_by;
+        {/* Thread View - Drawer overlay */}
+        {(() => {
+          const selectedThread = selectedThreadId ? threads.find((t) => t.id === selectedThreadId) : null;
+          const messageContent = selectedThread?.message?.content || "";
+          const parsedThread = parseThreadMessageContent(messageContent);
+          const threadTitle = parsedThread.title || "No content";
+          const threadDescription = parsedThread.description;
+          const opUser = selectedThread?.message?.user;
+          const opUsernameColor = getUsernameColor(selectedThread?.created_by || opUser?.id);
+          const canEditThreadPost = !!selectedThread?.message?.id && user?.id === selectedThread?.created_by;
 
-            return (
-              <>
-                {/* Desktop: Side-by-side view */}
-                {!isMobile && <div className="hidden md:flex md:w-[58%] md:min-w-0 md:flex-col">
+          return (
+            <Drawer
+              direction="right"
+              open={!!selectedThreadId}
+              onOpenChange={(open) => {
+                if (!open) {
+                  setSelectedThreadId(null);
+                  setReplyContent("");
+                  setReplyingToThread(null);
+                }
+              }}
+            >
+              <DrawerContent className="w-[90vw] max-w-2xl">
+                {selectedThread && (
                   <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
-                  <div className="z-30 flex items-center justify-between border-b border-border bg-background px-4 py-3">
-                    <div className="min-w-0">
-                      <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                        Open thread
-                      </p>
-                      <h3 className="truncate text-lg font-semibold">{threadTitle}</h3>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {canManageMessages && selectedThread && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              void handleUpdateThreadModeration(selectedThread.id, { is_pinned: !selectedThread.is_pinned })
-                            }
-                            className={cn(
-                              "h-8 w-8 p-0 text-muted-foreground",
-                              selectedThread.is_pinned && "text-amber-600 hover:text-amber-600",
-                            )}
-                            title={selectedThread.is_pinned ? "Unpin topic" : "Pin topic"}
-                          >
-                            <Pin className="w-4 h-4 translate-y-px" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              void handleUpdateThreadModeration(selectedThread.id, { is_closed: !selectedThread.is_closed })
-                            }
-                            className={cn(
-                              "h-8 w-8 p-0 text-muted-foreground",
-                              selectedThread.is_closed && "text-amber-600 hover:text-amber-600",
-                            )}
-                            title={selectedThread.is_closed ? "Reopen topic" : "Close topic"}
-                          >
-                            {selectedThread.is_closed ? <LockOpen className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                          </Button>
-                        </>
-                      )}
-                      {canEditThreadPost && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setThreadPostEditTitle(threadTitle);
-                            setThreadPostEditBody(threadDescription);
-                            setIsEditingThreadPost(true);
-                            setTimeout(() => threadPostTitleInputRef.current?.focus(), 0);
-                          }}
-                          className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                          title="Edit topic"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                      )}
-                      {(user?.id === selectedThread?.created_by || canManageMessages) && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            if (selectedThread) {
-                              setThreadToDelete(selectedThread);
-                              setShowDeleteThreadModal(true);
-                            }
-                          }}
-                          className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                          title="Delete thread"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedThreadId(null);
-                          setReplyContent("");
-                        }}
-                        className="h-8 w-8 p-0"
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="flex-1 overflow-y-auto p-4">
-
-                    {/* Thread Description */}
-                    {threadDescription && (
-                      <div key={selectedThreadId} className="mb-4 border-b border-border pb-4">
-                        <div className="flex gap-3">
-                          <Avatar
-                            className="w-8 h-8 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
-                            onClick={(event) =>
-                              openUserProfileModal(
-                                openModal,
-                                selectedThread?.created_by,
-                                event.currentTarget,
-                                SIDE_ALIGNED_USER_PROFILE_POPOVER,
-                              )
-                            }
-                          >
-                            <AvatarImage src={opUser?.avatar_url} />
-                            <AvatarFallback>{opUser?.username?.[0]?.toUpperCase() || "?"}</AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <button
-                                type="button"
-                                className={cn(
-                                  "font-medium text-sm cursor-pointer text-left",
-                                  opUsernameColor.isGradient ? "transition-none" : "hover:opacity-80 transition-opacity",
-                                )}
-                                onClick={(event) =>
-                                  openUserProfileModal(
-                                    openModal,
-                                    selectedThread?.created_by,
-                                    event.currentTarget,
-                                    SIDE_ALIGNED_USER_PROFILE_POPOVER,
-                                  )
-                                }
-                              >
-                                <span className={opUsernameColor.className} style={opUsernameColor.style}>
-                                  {getDisplayName(selectedThread?.created_by || opUser?.id, opUser)}
-                                </span>
-                              </button>
-                              <span className="text-xs text-muted-foreground">
-                                {selectedThread?.created_at &&
-                                  formatDistanceToNow(new Date(selectedThread.created_at), { addSuffix: true })}
-                              </span>
-                              {selectedThread?.message?.edited_at && (
-                                <span className="text-[10px] text-muted-foreground">(edited)</span>
-                              )}
-                              {selectedThread?.is_pinned && (
-                                <span className={forumMetaChipClass}>
-                                  <Pin className="h-3 w-3" />
-                                  <span>Pinned</span>
-                                </span>
-                              )}
-                              {selectedThread?.is_closed && (
-                                <span className={forumMetaChipClass}>
-                                  <Lock className="h-3 w-3" />
-                                  <span>Closed</span>
-                                </span>
-                              )}
-                            </div>
-                            {isEditingThreadPost ? (
-                              <div className="space-y-2">
-                                <Input
-                                  ref={threadPostTitleInputRef}
-                                  value={threadPostEditTitle}
-                                  onChange={(e) => setThreadPostEditTitle(e.target.value)}
-                                  placeholder="Topic title"
-                                  maxLength={200}
-                                />
-                                <Textarea
-                                  value={threadPostEditBody}
-                                  onChange={(e) => setThreadPostEditBody(e.target.value)}
-                                  className="min-h-[100px] resize-y"
-                                  placeholder="Topic content"
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Escape") {
-                                      setIsEditingThreadPost(false);
-                                      setThreadPostEditTitle(threadTitle);
-                                      setThreadPostEditBody(threadDescription);
-                                    } else if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && selectedThread?.id) {
-                                      void handleSaveThreadPostEdit(selectedThread.id);
-                                    }
-                                  }}
-                                />
-                                <div className="flex gap-2 text-xs">
-                                  <button
-                                    className="text-primary hover:underline disabled:opacity-50"
-                                    disabled={isSavingThreadPostEdit}
-                                    onClick={() => {
-                                      if (selectedThread?.id) {
-                                        void handleSaveThreadPostEdit(selectedThread.id);
-                                      }
-                                    }}
-                                  >
-                                    {isSavingThreadPostEdit ? "Saving..." : "Save"}
-                                  </button>
-                                  <button
-                                    className="text-muted-foreground hover:underline"
-                                    onClick={() => {
-                                      setIsEditingThreadPost(false);
-                                      setThreadPostEditTitle(threadTitle);
-                                      setThreadPostEditBody(threadDescription);
-                                    }}
-                                  >
-                                    Cancel
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="text-sm text-foreground">
-                                <MessageContent
-                                  content={threadDescription}
-                                  currentUserId={user?.id}
-                                  messageId={selectedThread?.message?.id}
-                                  messageUser={
-                                    opUser
-                                      ? {
-                                          id: opUser.id,
-                                          username: opUser.username,
-                                          display_name: opUser.display_name,
-                                        }
-                                      : null
-                                  }
-                                />
-                              </div>
-                            )}
-                          </div>
-                        </div>
+                    {/* Header */}
+                    <div className="z-30 flex items-center justify-between border-b border-border bg-background px-4 py-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                          Open thread
+                        </p>
+                        <h3 className="truncate text-lg font-medium">{threadTitle}</h3>
                       </div>
-                    )}
-
-                    {/* Thread Replies */}
-                    <div className="mb-4">
-                      <h4 className="mb-3 text-sm font-medium text-muted-foreground">
-                        Replies ({threadMessages[selectedThreadId]?.length || 0})
-                      </h4>
-                    </div>
-
-                    {threadMessages[selectedThreadId] ? (
-                      <div className="space-y-3">
-                        {threadMessages[selectedThreadId].map((msg) => {
-                          const isOwnMessage = user?.id === msg.user_id;
-                          const isHovered = hoveredMessageId === msg.id;
-                          const isEditing = editingMessageId === msg.id;
-                          const canDeleteMessage = isOwnMessage || canManageMessages;
-                          const msgUsernameColor = getUsernameColor(msg.user_id);
-                          const msgCachedUser = getUserFromCache(msg.user_id);
-
-                          return (
-                            <div
-                              key={msg.id}
-                              className="group relative flex gap-3 border-b border-border pb-3"
-                              onMouseEnter={() => setHoveredMessageId(msg.id)}
-                              onMouseLeave={() => setHoveredMessageId(null)}
+                      <div className="flex items-center gap-1">
+                        {canManageMessages && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                void handleUpdateThreadModeration(selectedThread.id, { is_pinned: !selectedThread.is_pinned })
+                              }
+                              className={cn(
+                                "h-8 w-8 p-0 text-muted-foreground",
+                                selectedThread.is_pinned && "text-amber-600 hover:text-amber-600",
+                              )}
+                              title={selectedThread.is_pinned ? "Unpin topic" : "Pin topic"}
                             >
-                              <Avatar className="w-8 h-8 flex-shrink-0">
-                                <AvatarImage src={msgCachedUser?.avatar_url} />
-                                <AvatarFallback>{msgCachedUser?.username?.[0]?.toUpperCase() || "?"}</AvatarFallback>
-                                <AvatarFallback>{msg.user?.username?.[0]?.toUpperCase() || "?"}</AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span
-                                    className={cn(
-                                      "font-medium text-sm cursor-pointer",
-                                      msgUsernameColor.isGradient ? "transition-none" : "hover:opacity-80 transition-opacity",
-                                      msgUsernameColor.className,
-                                    )}
-                                    style={msgUsernameColor.style}
-                                    onClick={(event) =>
-                                      openUserProfileModal(
-                                        openModal,
-                                        msg.user_id,
-                                        event.currentTarget,
-                                        SIDE_ALIGNED_USER_PROFILE_POPOVER,
-                                      )
-                                    }
-                                  >
-                                    {getDisplayName(msg.user_id)}
-                                  </span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {formatMessageTimestamp(msg.created_at)}
-                                  </span>
-                                  {msg.edited_at && <span className="text-[10px] text-muted-foreground">(edited)</span>}
-                                </div>
-
-                                {/* Reply reference */}
-                                {msg.reply_to && (
-                                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-                                    <CornerUpLeft className="w-3 h-3 flex-shrink-0" />
-                                    <span>Replying to</span>
-                                    <span className="font-medium text-primary">
-                                      @{getUserFromCache(msg.reply_to.user_id)?.username || "unknown"}
-                                    </span>
-                                    {isPollMessageContent(msg.reply_to.content) ? (
-                                      <span className="italic">poll</span>
-                                    ) : isImageOnlyMessage(msg.reply_to.content) ? (
-                                      <img
-                                        src={msg.reply_to.content.trim()}
-                                        alt="Image"
-                                        className="w-6 h-6 rounded object-cover flex-shrink-0"
-                                      />
-                                    ) : (
-                                      <span className="truncate max-w-[200px]">
-                                        <ReplyPreview content={msg.reply_to.content} maxLength={50} />
-                                      </span>
-                                    )}
-                                  </div>
-                                )}
-
-                                {isEditing ? (
-                                  <div className="space-y-2">
-                                    <Textarea
-                                      ref={editTextareaRef}
-                                      value={editContent}
-                                      onChange={(e) => setEditContent(e.target.value)}
-                                      className="min-h-[60px] resize-none text-sm"
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Escape") {
-                                          setEditingMessageId(null);
-                                          setEditContent("");
-                                        } else if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                                          handleEditMessage(msg.id);
-                                        }
-                                      }}
-                                    />
-                                    <div className="flex gap-2 text-xs">
-                                      <button
-                                        className="text-primary hover:underline"
-                                        onClick={() => handleEditMessage(msg.id)}
-                                      >
-                                        Save
-                                      </button>
-                                      <button
-                                        className="text-muted-foreground hover:underline"
-                                        onClick={() => {
-                                          setEditingMessageId(null);
-                                          setEditContent("");
-                                        }}
-                                      >
-                                        Cancel
-                                      </button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <>
-                                    <div className="text-sm">
-                                      <MessageContent
-                                        content={msg.content}
-                                        currentUserId={user?.id}
-                                        messageId={msg.id}
-                                        messageUser={
-                                          msgCachedUser
-                                            ? {
-                                                id: msgCachedUser.id,
-                                                username: msgCachedUser.username,
-                                                display_name: msgCachedUser.display_name,
-                                              }
-                                            : null
-                                        }
-                                      />
-                                    </div>
-
-                                    {/* Reactions */}
-                                    {msg.reactions && msg.reactions.length > 0 && (
-                                      <div className="flex flex-wrap gap-1 mt-2">
-                                        {msg.reactions.map((reaction) => {
-                                          // Get user names for hover card
-                                          const reactionUserNames = reaction.users
-                                            .slice(0, 5)
-                                            .map((reactorId) => getReactionDisplayName(reactorId));
-                                          const remainingCount = Math.max(0, reaction.users.length - 5);
-
-                                          return (
-                                            <HoverCard key={reaction.emoji} openDelay={200}>
-                                              <HoverCardTrigger asChild>
-                                                <button
-                                                  onClick={() => handleAddReaction(msg.id, reaction.emoji)}
-                                                  className={`flex items-center gap-1.5 px-2.5 py-1 text-sm rounded-md border transition-colors duration-200 ${
-                                                    reaction.hasReacted
-                                                      ? "bg-primary/20 border-primary text-primary"
-                                                      : "bg-secondary border-transparent hover:border-border"
-                                                  }`}
-                                                >
-                                                  {reactionEmojiNode(reaction.emoji)}
-                                                  <span className="text-xs">{reaction.count}</span>
-                                                </button>
-                                              </HoverCardTrigger>
-                                              <HoverCardContent className="w-auto p-2" align="start" side="top">
-                                                <div className="flex items-center gap-2">
-                                                  <div className="shrink-0 text-2xl">
-                                                    {reactionEmojiNode(reaction.emoji)}
-                                                  </div>
-                                                  <div className="min-w-0 text-sm">
-                                                    <span className="text-muted-foreground">reacted by </span>
-                                                    {reactionUserNames.map((name, idx) => (
-                                                      <span key={`${reaction.emoji}-${idx}`}>
-                                                        <span className="font-medium">{name}</span>
-                                                        {idx < reactionUserNames.length - 1 ? ", " : ""}
-                                                      </span>
-                                                    ))}
-                                                    {remainingCount > 0 && (
-                                                      <span className="text-muted-foreground">
-                                                        {" "}
-                                                        and {remainingCount} others
-                                                      </span>
-                                                    )}
-                                                  </div>
-                                                </div>
-                                              </HoverCardContent>
-                                            </HoverCard>
-                                          );
-                                        })}
-                                      </div>
-                                    )}
-                                  </>
-                                )}
-                              </div>
-
-                              {/* Hover actions menu */}
-                              {(isHovered || showEmojiPicker === msg.id) && !isEditing && (
-                                <div
-                                  className="hover-actions-menu absolute right-2 -top-4 z-50 flex items-center gap-1 bg-background/95 backdrop-blur-sm border border-border rounded-xl shadow-xl p-1 transition-opacity duration-200"
-                                  onMouseEnter={() => setHoveredMessageId(msg.id)}
-                                  onMouseLeave={(e) => {
-                                    // Don't hide if moving to emoji picker popover
-                                    const relatedTarget = e.relatedTarget as HTMLElement;
-                                    if (!relatedTarget || !relatedTarget.closest('[role="dialog"]')) {
-                                      setHoveredMessageId(null);
-                                    }
-                                  }}
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  {/* Add Reaction */}
-                                  <EmojiGifPicker
-                                    open={showEmojiPicker === msg.id}
-                                    onOpenChange={(open) => {
-                                      setShowEmojiPicker(open ? msg.id : null);
-                                      if (open) {
-                                        setHoveredMessageId(msg.id);
-                                      }
-                                    }}
-                                    onEmojiSelect={(emoji) => {
-                                      handleAddReaction(msg.id, emoji);
-                                    }}
-                                    disableGif
-                                    serverId={currentServer?.id}
-                                    serverName={currentServer?.name}
-                                  >
-                                    <button
-                                      type="button"
-                                      className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                                      aria-label="Add reaction"
-                                      title="Add reaction"
-                                      onMouseDown={(e) => e.preventDefault()}
-                                    >
-                                      <Smile className="w-4 h-4" />
-                                    </button>
-                                  </EmojiGifPicker>
-
-                                  {/* Reply */}
-                                  {canReplyToSelectedThread && (
-                                    <button
-                                      type="button"
-                                      className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        setReplyingToThread(msg.id);
-                                      }}
-                                      onMouseDown={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                      }}
-                                      aria-label="Reply"
-                                      title="Reply"
-                                    >
-                                      <Reply className="w-4 h-4" />
-                                    </button>
-                                  )}
-
-                                  {/* Edit (own messages) */}
-                                  {isOwnMessage && (
-                                    <button
-                                      type="button"
-                                      className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        setEditingMessageId(msg.id);
-                                        setEditContent(msg.content);
-                                        setTimeout(() => editTextareaRef.current?.focus(), 0);
-                                      }}
-                                      onMouseDown={(e) => e.preventDefault()}
-                                      aria-label="Edit"
-                                      title="Edit"
-                                    >
-                                      <Pencil className="w-4 h-4" />
-                                    </button>
-                                  )}
-
-                                  <div className="w-px h-5 bg-border mx-0.5" />
-
-                                  {/* Delete (own messages or admins) */}
-                                  {canDeleteMessage && (
-                                    <button
-                                      type="button"
-                                      className="p-2 rounded-lg bg-transparent hover:bg-destructive/10 transition-colors text-destructive"
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        setMessageToDelete(msg);
-                                        setShowDeleteModal(true);
-                                      }}
-                                      onMouseDown={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                      }}
-                                      aria-label="Delete"
-                                      title="Delete"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
-                                  )}
-                                </div>
+                              <Pin className="w-4 h-4 translate-y-px" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                void handleUpdateThreadModeration(selectedThread.id, { is_closed: !selectedThread.is_closed })
+                              }
+                              className={cn(
+                                "h-8 w-8 p-0 text-muted-foreground",
+                                selectedThread.is_closed && "text-amber-600 hover:text-amber-600",
                               )}
-                            </div>
-                          );
-                        })}
+                              title={selectedThread.is_closed ? "Reopen topic" : "Close topic"}
+                            >
+                              {selectedThread.is_closed ? <LockOpen className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                            </Button>
+                          </>
+                        )}
+                        {canEditThreadPost && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setThreadPostEditTitle(threadTitle);
+                              setThreadPostEditBody(threadDescription);
+                              setIsEditingThreadPost(true);
+                              setTimeout(() => threadPostTitleInputRef.current?.focus(), 0);
+                            }}
+                            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                            title="Edit topic"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {(user?.id === selectedThread?.created_by || canManageMessages) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              if (selectedThread) {
+                                setThreadToDelete(selectedThread);
+                                setShowDeleteThreadModal(true);
+                              }
+                            }}
+                            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            title="Delete thread"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedThreadId(null);
+                            setReplyContent("");
+                            setReplyingToThread(null);
+                          }}
+                          className="h-8 w-8 p-0"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
                       </div>
-                    ) : (
-                      <div className="text-center text-muted-foreground py-8">Loading messages...</div>
-                    )}
-                  </div>
-
-                  {/* Reply Input */}
-                  {renderThreadReplyComposer(selectedThreadId)}
-                </div>
-                </div>}
-
-                {/* Mobile: Full-screen overlay */}
-                {isMobile && (
-                  <div className="md:hidden fixed inset-0 z-50 bg-background flex flex-col">
-                    {/* Header with back button */}
-                    <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedThreadId(null);
-                          setReplyContent("");
-                          setReplyingToThread(null);
-                        }}
-                        className="h-9 w-9 p-0"
-                      >
-                        <ArrowLeft className="w-5 h-5" />
-                      </Button>
-                      <h3 className="text-lg font-medium flex-1 truncate">{threadTitle}</h3>
-                      {canManageMessages && selectedThread && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              void handleUpdateThreadModeration(selectedThread.id, { is_pinned: !selectedThread.is_pinned })
-                            }
-                            className={cn(
-                              "h-9 w-9 p-0 text-muted-foreground",
-                              selectedThread.is_pinned && "text-amber-600 hover:text-amber-600",
-                            )}
-                            title={selectedThread.is_pinned ? "Unpin topic" : "Pin topic"}
-                          >
-                            <Pin className="w-4 h-4 translate-y-px" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              void handleUpdateThreadModeration(selectedThread.id, { is_closed: !selectedThread.is_closed })
-                            }
-                            className={cn(
-                              "h-9 w-9 p-0 text-muted-foreground",
-                              selectedThread.is_closed && "text-amber-600 hover:text-amber-600",
-                            )}
-                            title={selectedThread.is_closed ? "Reopen topic" : "Close topic"}
-                          >
-                            {selectedThread.is_closed ? <LockOpen className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                          </Button>
-                        </>
-                      )}
-                      {canEditThreadPost && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setThreadPostEditTitle(threadTitle);
-                            setThreadPostEditBody(threadDescription);
-                            setIsEditingThreadPost(true);
-                            setTimeout(() => threadPostTitleInputRef.current?.focus(), 0);
-                          }}
-                          className="h-9 w-9 p-0 text-muted-foreground hover:text-foreground"
-                          title="Edit topic"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                      )}
-                      {(user?.id === selectedThread?.created_by || canManageMessages) && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            if (selectedThread) {
-                              setThreadToDelete(selectedThread);
-                              setShowDeleteThreadModal(true);
-                            }
-                          }}
-                          className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                          title="Delete thread"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
                     </div>
 
-                    {/* Thread content */}
+                    {/* Scrollable content */}
                     <div className="flex-1 overflow-y-auto p-4">
                       {/* Thread Description */}
                       {threadDescription && (
-                        <div key={selectedThreadId} className="mb-6 pb-6 border-b border-border">
+                        <div key={selectedThreadId} className="mb-4 border-b border-border pb-4">
                           <div className="flex gap-3">
                             <Avatar
                               className="w-8 h-8 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
@@ -3078,30 +2564,37 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                               )}
                             </div>
                           </div>
+
+                          {/* Attachment gallery */}
+                          <div className="mt-3">
+                            <ThreadAttachmentGallery content={messageContent} />
+                          </div>
                         </div>
                       )}
 
                       {/* Thread Replies */}
                       <div className="mb-4">
-                        <h4 className="text-sm font-medium text-muted-foreground mb-3">
-                          Replies ({threadMessages[selectedThreadId]?.length || 0})
+                        <h4 className="mb-3 text-sm font-medium text-muted-foreground">
+                          Replies ({threadMessages[selectedThreadId!]?.length || 0})
                         </h4>
                       </div>
 
-                      {threadMessages[selectedThreadId] ? (
-                        <div className="space-y-4">
-                          {threadMessages[selectedThreadId].map((msg) => {
+                      {threadMessages[selectedThreadId!] ? (
+                        <div className="space-y-3">
+                          {threadMessages[selectedThreadId!].map((msg) => {
                             const isOwnMessage = user?.id === msg.user_id;
                             const isHovered = hoveredMessageId === msg.id;
                             const isEditing = editingMessageId === msg.id;
                             const canDeleteMessage = isOwnMessage || canManageMessages;
-                            const msgUsernameColor = getUsernameColor(msg.user_id || msg.user?.id);
+                            const msgUsernameColor = getUsernameColor(msg.user_id);
                             const msgCachedUser = getUserFromCache(msg.user_id);
 
                             return (
                               <div
                                 key={msg.id}
-                                className="group relative flex gap-3"
+                                className="group relative flex gap-3 border-b border-border pb-3"
+                                onMouseEnter={() => setHoveredMessageId(msg.id)}
+                                onMouseLeave={() => setHoveredMessageId(null)}
                                 onTouchStart={() => setHoveredMessageId(msg.id)}
                                 onTouchEnd={() => setTimeout(() => setHoveredMessageId(null), 2000)}
                               >
@@ -3134,9 +2627,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                                     <span className="text-xs text-muted-foreground">
                                       {formatMessageTimestamp(msg.created_at)}
                                     </span>
-                                    {msg.edited_at && (
-                                      <span className="text-[10px] text-muted-foreground">(edited)</span>
-                                    )}
+                                    {msg.edited_at && <span className="text-[10px] text-muted-foreground">(edited)</span>}
                                   </div>
 
                                   {/* Reply reference */}
@@ -3145,7 +2636,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                                       <CornerUpLeft className="w-3 h-3 flex-shrink-0" />
                                       <span>Replying to</span>
                                       <span className="font-medium text-primary">
-                                        @{msg.reply_to.user?.username || "unknown"}
+                                        @{getUserFromCache(msg.reply_to.user_id)?.username || msg.reply_to.user?.username || "unknown"}
                                       </span>
                                       {isPollMessageContent(msg.reply_to.content) ? (
                                         <span className="italic">poll</span>
@@ -3201,23 +2692,23 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                                     <>
                                       <div className="text-sm">
                                         <MessageContent
-                                        content={msg.content}
-                                        currentUserId={user?.id}
-                                        messageId={msg.id}
-                                        messageUser={
-                                          msgCachedUser
-                                            ? {
-                                                id: msgCachedUser.id,
-                                                username: msgCachedUser.username,
-                                                display_name: msgCachedUser.display_name,
-                                              }
-                                            : msg.user
+                                          content={msg.content}
+                                          currentUserId={user?.id}
+                                          messageId={msg.id}
+                                          messageUser={
+                                            msgCachedUser
                                               ? {
-                                                  id: msg.user.id,
-                                                  username: msg.user.username,
-                                                  display_name: msg.user.display_name,
+                                                  id: msgCachedUser.id,
+                                                  username: msgCachedUser.username,
+                                                  display_name: msgCachedUser.display_name,
                                                 }
-                                              : null
+                                              : msg.user
+                                                ? {
+                                                    id: msg.user.id,
+                                                    username: msg.user.username,
+                                                    display_name: msg.user.display_name,
+                                                  }
+                                                : null
                                           }
                                         />
                                       </div>
@@ -3226,7 +2717,6 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                                       {msg.reactions && msg.reactions.length > 0 && (
                                         <div className="flex flex-wrap gap-1 mt-2">
                                           {msg.reactions.map((reaction) => {
-                                            // Get user names for hover card
                                             const reactionUserNames = reaction.users
                                               .slice(0, 5)
                                               .map((reactorId) => getReactionDisplayName(reactorId));
@@ -3278,10 +2768,17 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                                   )}
                                 </div>
 
-                                {/* Mobile actions menu */}
+                                {/* Hover actions menu */}
                                 {(isHovered || showEmojiPicker === msg.id) && !isEditing && (
                                   <div
                                     className="hover-actions-menu absolute right-2 -top-4 z-50 flex items-center gap-1 bg-background/95 backdrop-blur-sm border border-border rounded-xl shadow-xl p-1 transition-opacity duration-200"
+                                    onMouseEnter={() => setHoveredMessageId(msg.id)}
+                                    onMouseLeave={(e) => {
+                                      const relatedTarget = e.relatedTarget as HTMLElement;
+                                      if (!relatedTarget || !relatedTarget.closest('[role="dialog"]')) {
+                                        setHoveredMessageId(null);
+                                      }
+                                    }}
                                     onClick={(e) => e.stopPropagation()}
                                   >
                                     {/* Add Reaction */}
@@ -3305,6 +2802,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                                         className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
                                         aria-label="Add reaction"
                                         title="Add reaction"
+                                        onMouseDown={(e) => e.preventDefault()}
                                       >
                                         <Smile className="w-4 h-4" />
                                       </button>
@@ -3319,6 +2817,10 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                                           e.preventDefault();
                                           e.stopPropagation();
                                           setReplyingToThread(msg.id);
+                                        }}
+                                        onMouseDown={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
                                         }}
                                         aria-label="Reply"
                                         title="Reply"
@@ -3339,6 +2841,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                                           setEditContent(msg.content);
                                           setTimeout(() => editTextareaRef.current?.focus(), 0);
                                         }}
+                                        onMouseDown={(e) => e.preventDefault()}
                                         aria-label="Edit"
                                         title="Edit"
                                       >
@@ -3359,6 +2862,10 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                                           setMessageToDelete(msg);
                                           setShowDeleteModal(true);
                                         }}
+                                        onMouseDown={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                        }}
                                         aria-label="Delete"
                                         title="Delete"
                                       >
@@ -3377,12 +2884,13 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                     </div>
 
                     {/* Reply Input */}
-                    {renderThreadReplyComposer(selectedThreadId)}
+                    {selectedThreadId && renderThreadReplyComposer(selectedThreadId)}
                   </div>
                 )}
-              </>
-            );
-          })()}
+              </DrawerContent>
+            </Drawer>
+          );
+        })()}
       </div>
 
       <input
