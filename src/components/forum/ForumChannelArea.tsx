@@ -2038,9 +2038,9 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
               </div>
             </div>
           ) : (
-            <div className="border-b border-border p-3 md:p-4">
+            <div className="p-3 md:p-4">
               <div
-                className="flex cursor-text items-center gap-3 border border-dashed border-border bg-background px-3 py-3 transition-colors hover:bg-muted/20"
+                className="flex cursor-pointer items-center gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3.5 transition-colors hover:bg-muted/50"
                 onClick={() => {
                   setIsCreateTopicFocused(true);
                   setTimeout(() => {
@@ -2048,11 +2048,10 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                   }, 100);
                 }}
               >
-                <Avatar className="w-8 h-8 flex-shrink-0">
-                  <AvatarImage src={user?.avatar_url} />
-                  <AvatarFallback>{user?.username?.[0]?.toUpperCase() || "?"}</AvatarFallback>
-                </Avatar>
-                <span className="text-sm text-muted-foreground flex-1">Create a topic</span>
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                  <Plus className="h-4.5 w-4.5" />
+                </div>
+                <span className="text-sm font-medium text-foreground flex-1">Create a Post</span>
               </div>
             </div>
           )}
