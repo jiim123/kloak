@@ -2125,14 +2125,8 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                           <ForumThreadThumbnail attachmentPath={firstAttachmentPath} />
                         )}
                         <div className="min-w-0 flex-1 flex flex-col gap-2">
-                          <div>
-                            <span className="block truncate text-base font-medium text-foreground">{threadTitle}</span>
-                            {threadPreview && (
-                              <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                                {threadPreview}
-                              </p>
-                            )}
-                          </div>
+                          {/* Title */}
+                          <span className="block truncate text-base font-medium text-foreground">{threadTitle}</span>
 
                           {/* Created by + Posted at */}
                           <div className="flex flex-wrap items-center gap-3">
@@ -2155,6 +2149,13 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                               </span>
                             </div>
                           </div>
+
+                          {/* Content preview */}
+                          {threadPreview && (
+                            <p className="line-clamp-2 text-sm text-muted-foreground">
+                              {threadPreview}
+                            </p>
+                          )}
 
                           {/* Replies + Pinned/Closed + Latest reply by */}
                           {(replyCount > 0 || thread.is_pinned || thread.is_closed) && (
@@ -2202,14 +2203,8 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                           <ForumThreadThumbnail attachmentPath={firstAttachmentPath} />
                         )}
                         <div className="min-w-0 flex-1 flex flex-col gap-2">
-                          <div>
-                            <div className="text-sm font-medium text-foreground">{threadTitle}</div>
-                            {threadPreview && (
-                              <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                                {threadPreview}
-                              </p>
-                            )}
-                          </div>
+                          {/* Title */}
+                          <div className="text-sm font-medium text-foreground">{threadTitle}</div>
 
                           {/* Created by + Posted at */}
                           <div className="flex flex-wrap items-center gap-3">
@@ -2232,6 +2227,13 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                               </span>
                             </div>
                           </div>
+
+                          {/* Content preview */}
+                          {threadPreview && (
+                            <p className="line-clamp-2 text-xs text-muted-foreground">
+                              {threadPreview}
+                            </p>
+                          )}
 
                           {/* Replies + Pinned/Closed + Latest reply by */}
                           {(replyCount > 0 || thread.is_pinned || thread.is_closed) && (
