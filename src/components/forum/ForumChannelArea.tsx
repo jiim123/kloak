@@ -67,6 +67,7 @@ import { formatDistanceToNow } from "date-fns";
 import { isImageOnlyMessage } from "@/lib/message";
 import { isPollMessageContent } from "@/lib/poll";
 import { MessageContent, ReplyPreview } from "@/components/chat/MessageContent";
+import { ImageLightbox } from "@/components/modals/ImageLightbox";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
 import { encodeCustomEmojisForTransport } from "@/lib/globalEmojiResolver";
 import { getUserFromCache, getOrFetchUser, useMessageUser, bulkSetUsersInCache } from "@/stores/userCacheStore";
