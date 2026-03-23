@@ -194,8 +194,7 @@ const ThreadAttachmentGallery = ({ content }: { content: string }) => {
     </div>
   );
 };
-
-
+const ForumThreadsSkeleton = () => (
   <div className="divide-y divide-border">
     {Array.from({ length: 6 }).map((_, index) => (
       <div key={index} className="p-3 md:p-4">
