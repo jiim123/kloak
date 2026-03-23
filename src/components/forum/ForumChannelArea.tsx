@@ -2100,12 +2100,12 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                   <div
                     key={thread.id}
                     onClick={() => handleThreadClick(thread.id, thread.message_id)}
-                    className={`group/thread relative w-full cursor-pointer text-left transition-colors ${
+                    className={`group/thread relative w-full cursor-pointer text-left transition-colors rounded-lg border ${
                       isSelected
-                        ? "bg-muted/35"
+                        ? "bg-muted/35 border-border"
                         : thread.is_pinned
-                          ? "bg-amber-500/10 hover:bg-amber-500/14"
-                          : "bg-background hover:bg-muted/20"
+                          ? "bg-amber-500/10 hover:bg-amber-500/14 border-amber-500/20"
+                          : "bg-muted/15 hover:bg-muted/30 border-border/60"
                     }`}
                   >
                     {(isSelected || thread.is_pinned) && (
