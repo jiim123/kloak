@@ -1385,6 +1385,15 @@ export const MessageItem = memo(function MessageItem({
                           }}
                         />
                         <div className="absolute bottom-3 right-3 flex items-center gap-2">
+                          <span className={`text-[11px] tabular-nums select-none transition-colors ${
+                            editContent.length > MESSAGE_CHAR_LIMIT * 0.95
+                              ? 'text-destructive font-medium'
+                              : editContent.length > MESSAGE_CHAR_LIMIT * 0.8
+                                ? 'text-warning'
+                                : 'text-muted-foreground/60'
+                          }`}>
+                            {editContent.length}/{MESSAGE_CHAR_LIMIT}
+                          </span>
                           <Button
                             variant="secondary"
                             size="sm"
