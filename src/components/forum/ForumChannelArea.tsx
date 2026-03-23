@@ -146,6 +146,16 @@ const revokeAttachmentPreviews = (attachments: PendingAttachment[]) => {
   attachments.forEach((attachment) => URL.revokeObjectURL(attachment.preview));
 };
 
+const ForumThreadThumbnail = ({ attachmentPath }: { attachmentPath: string }) => {
+  const signedUrl = useSignedUrl(`kloak-attachment://${attachmentPath}`);
+  if (!signedUrl) return null;
+  return (
+    <div className="flex-shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-md overflow-hidden bg-muted">
+      <img src={signedUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
+    </div>
+  );
+};
+
 const ForumThreadsSkeleton = () => (
   <div className="divide-y divide-border">
     {Array.from({ length: 6 }).map((_, index) => (
