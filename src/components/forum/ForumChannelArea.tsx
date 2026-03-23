@@ -1784,8 +1784,12 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
               @{getUserFromCache(replyToMsg.user_id)?.username || "unknown"}
             </span>
             <span className="truncate text-muted-foreground opacity-75 max-w-[120px]">
-              {replyToMsg.content?.slice(0, 30)}
-              {(replyToMsg.content?.length || 0) > 30 ? "..." : ""}
+              {(() => {
+                const cleaned = replyToMsg.content?.replace(/kloak-attachment:\/\/[^\s]*/g, '').trim() || '';
+                if (!cleaned) return <span className="italic flex items-center gap-1"><Paperclip className="w-3 h-3" />attachment</span>;
+                const preview = cleaned.slice(0, 30);
+                return preview + (cleaned.length > 30 ? "..." : "");
+              })()}
             </span>
             <button
               type="button"
