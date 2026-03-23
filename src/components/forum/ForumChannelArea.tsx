@@ -177,26 +177,28 @@ const ThreadAttachmentGalleryItem = ({ path, onClick }: { path: string; onClick:
   );
 };
 
-const ThreadAttachmentGallery = ({ content }: { content: string }) => {
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+const ThreadAttachmentGallery = ({
+  content,
+  onImageOpen,
+}: {
+  content: string;
+  onImageOpen: (url: string) => void;
+}) => {
   const matches = content.match(/kloak-attachment:\/\/([^\s]+)/g);
   if (!matches || matches.length === 0) return null;
   const paths = matches.map((m) => m.replace("kloak-attachment://", ""));
   return (
-    <>
-      <div className="rounded-lg border border-border bg-muted/20 p-3">
-        <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground font-medium">
-          <Paperclip className="h-3.5 w-3.5" />
-          <span>Attachments ({paths.length})</span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {paths.map((path, i) => (
-            <ThreadAttachmentGalleryItem key={i} path={path} onClick={setLightboxUrl} />
-          ))}
-        </div>
+    <div className="rounded-lg border border-border bg-muted/20 p-3">
+      <div className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+        <Paperclip className="h-3.5 w-3.5" />
+        <span>Attachments ({paths.length})</span>
       </div>
-      <ImageLightbox imageUrl={lightboxUrl} onClose={() => setLightboxUrl(null)} />
-    </>
+      <div className="flex flex-wrap gap-2">
+        {paths.map((path, i) => (
+          <ThreadAttachmentGalleryItem key={i} path={path} onClick={onImageOpen} />
+        ))}
+      </div>
+    </div>
   );
 };
 const ForumThreadsSkeleton = () => (
