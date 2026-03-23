@@ -2152,7 +2152,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
 
                           {/* Content preview */}
                           {threadPreview && (
-                            <p className="line-clamp-2 text-sm text-muted-foreground">
+                            <p className="line-clamp-2 text-[0.9375rem] text-foreground">
                               {threadPreview}
                             </p>
                           )}
@@ -2230,7 +2230,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
 
                           {/* Content preview */}
                           {threadPreview && (
-                            <p className="line-clamp-2 text-xs text-muted-foreground">
+                            <p className="line-clamp-2 text-sm text-foreground">
                               {threadPreview}
                             </p>
                           )}
