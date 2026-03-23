@@ -30,6 +30,7 @@ import {
   ArrowLeft,
   Users,
   Layers,
+  Plus,
   Pin,
   Lock,
   LockOpen,
