@@ -1382,13 +1382,13 @@ export const MessageItem = memo(function MessageItem({
                             lineHeight: "1.5",
                           }}
                         />
-                        <div className="absolute bottom-3 right-3 flex items-center gap-2">
-                          <span className={`text-[11px] tabular-nums select-none transition-colors ${
+                        <div className="absolute bottom-3 right-3 flex items-center gap-1.5">
+                          <span className={`inline-flex items-center h-7 sm:h-8 px-2.5 sm:px-3 rounded-full text-[12px] sm:text-[13px] tabular-nums select-none transition-colors border ${
                             editContent.length > MESSAGE_CHAR_LIMIT * 0.95
-                              ? 'text-destructive font-medium'
+                              ? 'border-[#b23b4a]/40 bg-[#b23b4a]/10 text-[#b23b4a] font-medium'
                               : editContent.length > MESSAGE_CHAR_LIMIT * 0.8
-                                ? 'text-warning'
-                                : 'text-muted-foreground/60'
+                                ? 'border-warning/30 bg-warning/10 text-warning'
+                                : 'border-border bg-muted/50 text-muted-foreground'
                           }`}>
                             {editContent.length}/{MESSAGE_CHAR_LIMIT}
                           </span>
@@ -1397,15 +1397,17 @@ export const MessageItem = memo(function MessageItem({
                             size="sm"
                             onClick={handleCancelEdit}
                             iconLeft={<X className="w-3.5 h-3.5" />}
+                            className="bg-[#b23b4a]/15 text-[#b23b4a] hover:bg-[#b23b4a]/25 hover:text-[#b23b4a] border-0"
                           >
                             Cancel
                           </Button>
                           <Button
-                            variant="primary"
+                            variant="secondary"
                             size="sm"
                             onClick={handleEdit}
                             disabled={!editContent.trim() || editContent.length > MESSAGE_CHAR_LIMIT}
                             iconLeft={<Check className="w-3.5 h-3.5" />}
+                            className="bg-[#09bc8a]/15 text-[#09bc8a] hover:bg-[#09bc8a]/25 hover:text-[#09bc8a] border-0"
                           >
                             Save
                           </Button>
