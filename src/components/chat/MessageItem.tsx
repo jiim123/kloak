@@ -1385,10 +1385,10 @@ export const MessageItem = memo(function MessageItem({
                         <div className="absolute bottom-3 right-3 flex items-center gap-1.5">
                           <span className={`inline-flex items-center h-7 sm:h-8 px-2.5 sm:px-3 rounded-full text-[12px] sm:text-[13px] tabular-nums select-none transition-colors border ${
                             editContent.length > MESSAGE_CHAR_LIMIT * 0.95
-                              ? 'border-[#b23b4a]/40 bg-[#b23b4a]/10 text-[#b23b4a] font-medium'
+                              ? 'border-[#b23b4a] bg-[#2a1015] text-[#e8616f] font-medium'
                               : editContent.length > MESSAGE_CHAR_LIMIT * 0.8
-                                ? 'border-warning/30 bg-warning/10 text-warning'
-                                : 'border-border bg-muted/50 text-muted-foreground'
+                                ? 'border-warning/50 bg-[#2a1e0a] text-warning'
+                                : 'border-border bg-muted text-muted-foreground'
                           }`}>
                             {editContent.length}/{MESSAGE_CHAR_LIMIT}
                           </span>
@@ -1397,7 +1397,7 @@ export const MessageItem = memo(function MessageItem({
                             size="sm"
                             onClick={handleCancelEdit}
                             iconLeft={<X className="w-3.5 h-3.5" />}
-                            className="bg-[#b23b4a]/15 text-[#b23b4a] hover:bg-[#b23b4a]/25 hover:text-[#b23b4a] border-0"
+                            className="bg-[#2a1015] text-[#e8616f] hover:bg-[#3a1520] hover:text-[#f0717f] border border-[#b23b4a]/50"
                           >
                             Cancel
                           </Button>
@@ -1407,7 +1407,7 @@ export const MessageItem = memo(function MessageItem({
                             onClick={handleEdit}
                             disabled={!editContent.trim() || editContent.length > MESSAGE_CHAR_LIMIT}
                             iconLeft={<Check className="w-3.5 h-3.5" />}
-                            className="bg-[#09bc8a]/15 text-[#09bc8a] hover:bg-[#09bc8a]/25 hover:text-[#09bc8a] border-0"
+                            className="bg-[#0a2a1f] text-[#09bc8a] hover:bg-[#0f3a2a] hover:text-[#1fd9a0] border border-[#09bc8a]/50"
                           >
                             Save
                           </Button>
