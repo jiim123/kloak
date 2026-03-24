@@ -2359,6 +2359,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                   side="right"
                   hideCloseButton
                   className="w-[90vw] max-w-2xl p-0 sm:max-w-2xl"
+                  style={threadAttachmentLightboxUrl ? { pointerEvents: 'none' } : undefined}
                   onEscapeKeyDown={(event) => {
                     if (threadAttachmentLightboxUrl) event.preventDefault();
                   }}
