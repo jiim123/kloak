@@ -2911,8 +2911,8 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                     {selectedThreadId && renderThreadReplyComposer(selectedThreadId)}
                   </div>
                 )}
-                </DrawerContent>
-              </Drawer>
+                </SheetContent>
+              </Sheet>
               <ImageLightbox
                 imageUrl={threadAttachmentLightboxUrl}
                 onClose={() => setThreadAttachmentLightboxUrl(null)}
