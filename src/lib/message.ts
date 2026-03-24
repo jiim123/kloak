@@ -181,6 +181,12 @@ export const parseMessageContent = (
         return `<span class="mention${isSelf ? ' mention-self' : ''}" data-user-id="${userId}">@${escapeHtml(displayName)}</span>`;
       }
     );
+
+    // Role mentions <@&roleId> (ampersand is escaped to &amp;)
+    parsed = parsed.replace(
+      /&lt;@&amp;(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})&gt;/g,
+      () => `<span class="mention mention-role">@role</span>`
+    );
   }
   
   // Convert newlines to <br>

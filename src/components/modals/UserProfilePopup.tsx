@@ -7,6 +7,7 @@ import {
   Clock,
   Loader2,
   MessageCircle,
+  Plus,
   UserMinus,
   UserPlus,
   X,
@@ -29,6 +30,9 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { getProfileEffectSrc } from "@/lib/profileEffects";
 import { getEffectivePresence } from "@/lib/presence";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Badge } from "@/types/badge";
 import type { User, UserStatus } from "@/types";
 import type { UserProfileAnchorRect } from "@/lib/userProfilePopover";
@@ -75,6 +79,40 @@ const relLuminance = (hex: string) => {
   const srgb = [rgb.r, rgb.g, rgb.b].map((v) => v / 255);
   const lin = srgb.map((c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)));
   return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
+};
+
+const getReadableRoleTextColor = (color: string) => {
+  const pick = (lum: number | null) => (lum !== null && lum > 0.62 ? "#0b0b0f" : "#f8fafc");
+  if (color.startsWith("linear-gradient")) {
+    const hexes = color.match(/#[0-9a-fA-F]{6}/g) || [];
+    if (hexes.length === 0) return "#f8fafc";
+    const lums = hexes.map((hex) => relLuminance(hex)).filter((v): v is number => v !== null);
+    if (lums.length === 0) return "#f8fafc";
+    const avg = lums.reduce((a, b) => a + b, 0) / lums.length;
+    return pick(avg);
+  }
+  return pick(relLuminance(color));
+};
+
+const withRoleBackgroundOpacity = (color: string, alpha = 0.34) => {
+  const toRgba = (hex: string) => {
+    const clean = hex.replace("#", "");
+    if (clean.length !== 6) return hex;
+    const r = parseInt(clean.slice(0, 2), 16);
+    const g = parseInt(clean.slice(2, 4), 16);
+    const b = parseInt(clean.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+
+  if (color.startsWith("linear-gradient")) {
+    return color.replace(/#[0-9a-fA-F]{6}/g, (hex) => toRgba(hex));
+  }
+
+  if (/^#[0-9a-fA-F]{6}$/.test(color)) {
+    return toRgba(color);
+  }
+
+  return color;
 };
 
 const isLightTheme = (primary?: string | null, accent?: string | null, fallback?: string | null) => {
@@ -165,7 +203,7 @@ export const UserProfilePopup = () => {
   const { activeModal, modalData, closeModal, openModal } = useUIStore();
   const { user: currentUser } = useAuthStore();
   const navigate = useNavigate();
-  const { servers, setCurrentServer, currentServer, members } = useServerStore();
+  const { servers, setCurrentServer, currentServer, members, roles, fetchRoles, assignSelfRole, removeSelfRole } = useServerStore();
   const isMobile = useIsMobile();
 
   const serverIds = useMemo(() => servers.map((s) => s.id), [servers]);
@@ -189,6 +227,9 @@ export const UserProfilePopup = () => {
   const [sharedServers, setSharedServers] = useState<typeof servers>([]);
   const [cooldownSeconds, setCooldownSeconds] = useState<number>(0);
   const [isSendingRequest, setIsSendingRequest] = useState(false);
+  const [updatingRoleId, setUpdatingRoleId] = useState<string | null>(null);
+  const [selfRolePickerOpen, setSelfRolePickerOpen] = useState(false);
+  const [selfRoleQuery, setSelfRoleQuery] = useState("");
   const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
   const [isBioExpanded, setIsBioExpanded] = useState(false);
   const cardRef = useRef<HTMLDivElement | null>(null);
@@ -397,6 +438,44 @@ export const UserProfilePopup = () => {
     if (memberRoles && memberRoles.length > 0) return memberRoles;
     return authorStyles[userId]?.roles || [];
   }, [authorStyles, currentServer, members, userId]);
+  const selfMember = useMemo(() => {
+    if (!isSelf || !currentServer || !currentUser?.id) return null;
+    return members.find((m) => m.server_id === currentServer.id && m.user_id === currentUser.id) ?? null;
+  }, [isSelf, currentServer, currentUser?.id, members]);
+  const selfAssignableRoles = useMemo(
+    () => roles.filter((role) => role.name !== "@everyone" && Boolean(role.is_self_assignable)).sort((a, b) => a.position - b.position),
+    [roles],
+  );
+  const filteredSelfAssignableRoles = useMemo(() => {
+    const q = selfRoleQuery.trim().toLowerCase();
+    if (!q) return selfAssignableRoles;
+    return selfAssignableRoles.filter((role) => role.name.toLowerCase().includes(q));
+  }, [selfAssignableRoles, selfRoleQuery]);
+  const selfAssignedRoleIds = useMemo(() => new Set((selfMember?.roles || []).map((role) => role.id)), [selfMember?.roles]);
+
+  useEffect(() => {
+    if (!isOpen || !isSelf || !currentServer?.id) return;
+    void fetchRoles(currentServer.id);
+  }, [isOpen, isSelf, currentServer?.id, fetchRoles]);
+
+  const handleSelfRoleToggle = useCallback(
+    async (roleId: string) => {
+      if (!currentServer?.id || !currentUser?.id) return;
+      setUpdatingRoleId(roleId);
+      try {
+        if (selfAssignedRoleIds.has(roleId)) {
+          await removeSelfRole(currentServer.id, roleId, currentUser.id);
+        } else {
+          await assignSelfRole(currentServer.id, roleId, currentUser.id);
+        }
+      } catch (error: any) {
+        toast.error(error?.message || "Failed to update role");
+      } finally {
+        setUpdatingRoleId(null);
+      }
+    },
+    [assignSelfRole, currentServer?.id, currentUser?.id, removeSelfRole, selfAssignedRoleIds],
+  );
 
   const handleMessage = async () => {
     if (!currentUser || !profileUser) return;
@@ -746,32 +825,102 @@ export const UserProfilePopup = () => {
                 </div>
               )}
 
-              {(rolePreview.length > 0 || (!isSelf && sharedServers.length > 0)) && (
+              {(rolePreview.length > 0 || (isSelf && selfAssignableRoles.length > 0) || (!isSelf && sharedServers.length > 0)) && (
                 <>
                   <div className="mt-3 h-px" style={{ backgroundColor: divider }} />
                   <div className="mt-3 space-y-2">
-                    {rolePreview.length > 0 && (
+                    {(rolePreview.length > 0 || (isSelf && selfAssignableRoles.length > 0)) && (
                       <div className="flex flex-wrap gap-1.5">
                         {rolePreview.map((role) => {
                           const isGradient = role.color.startsWith("linear-gradient");
+                          const background = withRoleBackgroundOpacity(role.color, 0.34);
                           return (
                             <span
                               key={role.id}
-                              className="rounded-md px-2 py-1 text-[10px] font-medium"
+                              className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium"
                               style={
                                 isGradient
-                                  ? { background: role.color, color: "#fff" }
-                                  : { backgroundColor: `${role.color}26`, color: role.color }
+                                  ? { background: background, color: fg }
+                                  : { backgroundColor: background, color: fg }
                               }
                             >
+                              <span
+                                className="h-2 w-2 rounded-full"
+                                style={isGradient ? { background: role.color } : { backgroundColor: role.color }}
+                              />
                               {role.name}
                             </span>
                           );
                         })}
                         {userRoles.length > rolePreview.length && (
-                          <span className="rounded-md px-2 py-1 text-[10px] font-medium" style={{ backgroundColor: divider }}>
+                          <span
+                            className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium"
+                            style={{ borderColor: divider, color: muted }}
+                          >
                             +{userRoles.length - rolePreview.length}
                           </span>
+                        )}
+                        {isSelf && selfAssignableRoles.length > 0 && (
+                          <Popover open={selfRolePickerOpen} onOpenChange={(next) => {
+                            setSelfRolePickerOpen(next);
+                            if (!next) setSelfRoleQuery("");
+                          }}>
+                            <PopoverTrigger asChild>
+                              <button
+                                type="button"
+                                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium transition-opacity hover:opacity-80"
+                                style={{ backgroundColor: divider }}
+                                title="Manage self-assignable roles"
+                              >
+                                <Plus className="h-3 w-3" />
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                              align="start"
+                              className="w-[260px] border-border bg-popover p-2 text-popover-foreground shadow-xl"
+                            >
+                              <Input
+                                autoFocus
+                                value={selfRoleQuery}
+                                onChange={(e) => setSelfRoleQuery(e.target.value)}
+                                placeholder="Search roles"
+                                className="h-8 border-border bg-background text-xs text-foreground placeholder:text-muted-foreground"
+                              />
+                              <ScrollArea className="mt-2 max-h-44">
+                                <div className="space-y-0.5">
+                                  {filteredSelfAssignableRoles.map((role) => {
+                                    const checked = selfAssignedRoleIds.has(role.id);
+                                    const busy = updatingRoleId === role.id;
+                                    const isGradient = role.color.startsWith("linear-gradient");
+                                    return (
+                                      <button
+                                        key={role.id}
+                                        type="button"
+                                        disabled={busy}
+                                        onClick={() => void handleSelfRoleToggle(role.id)}
+                                        className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-secondary hover:text-foreground disabled:opacity-60"
+                                      >
+                                        <span
+                                          className={cn("flex-1 truncate font-medium", isGradient && "text-transparent")}
+                                          style={
+                                            isGradient
+                                              ? ({ background: role.color, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" } as CSSProperties)
+                                              : ({ color: role.color } as CSSProperties)
+                                          }
+                                        >
+                                          @{role.name}
+                                        </span>
+                                        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" /> : checked ? <Check className="h-3.5 w-3.5 text-primary" /> : null}
+                                      </button>
+                                    );
+                                  })}
+                                  {filteredSelfAssignableRoles.length === 0 && (
+                                    <div className="px-2 py-2 text-xs text-muted-foreground">No roles found</div>
+                                  )}
+                                </div>
+                              </ScrollArea>
+                            </PopoverContent>
+                          </Popover>
                         )}
                       </div>
                     )}

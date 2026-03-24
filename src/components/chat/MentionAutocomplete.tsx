@@ -5,13 +5,14 @@ import { useAuthStore } from "@/stores/authStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import type { User } from "@/types";
+import type { CustomServerRole, User } from "@/types";
 
 interface MentionOption {
-  type: "user" | "everyone" | "here";
+  type: "user" | "everyone" | "here" | "role";
   id?: string;
   label: string;
   user?: User;
+  role?: CustomServerRole;
 }
 
 interface MentionAutocompleteProps {
@@ -31,7 +32,7 @@ export const MentionAutocomplete = ({
   isAdmin = false,
   onOptionsChange,
 }: MentionAutocompleteProps) => {
-  const { members, currentServer } = useServerStore();
+  const { members, currentServer, roles } = useServerStore();
   const userId = useAuthStore((s) => s.user?.id);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [candidateUsers, setCandidateUsers] = useState<User[]>([]);
@@ -105,6 +106,19 @@ export const MentionAutocomplete = ({
     }
 
     const searchQuery = query.toLowerCase();
+    roles
+      .filter((role) => role.name !== "@everyone" && role.name.toLowerCase().includes(searchQuery))
+      .forEach((role) => {
+        if (!role.id || seen.has(role.id)) return;
+        seen.add(role.id);
+        result.push({
+          type: "role",
+          id: role.id,
+          label: role.name,
+          role,
+        });
+      });
+
     candidateUsers
       .filter(
         (u) =>
@@ -124,7 +138,7 @@ export const MentionAutocomplete = ({
       });
 
     return result;
-  }, [candidateUsers, isAdmin, query, blockedUserIds]);
+  }, [candidateUsers, isAdmin, query, blockedUserIds, roles]);
 
   // Keep selected option visible while navigating with keyboard.
   useEffect(() => {
@@ -217,7 +231,7 @@ export const MentionAutocomplete = ({
       <div className="max-h-64 overflow-y-auto overscroll-contain p-1">
         {options.map((option, index) => (
           <div
-            key={option.id || option.type}
+            key={`${option.type}:${option.id || option.label}`}
             data-mention-index={index}
             className={cn(
               "flex items-center gap-2.5 px-2.5 py-2 cursor-pointer rounded-lg transition-colors duration-150",
@@ -244,6 +258,21 @@ export const MentionAutocomplete = ({
                   {option.user.username !== option.label && (
                     <span className="text-[11px] text-muted-foreground truncate">@{option.user.username}</span>
                   )}
+                </div>
+              </>
+            ) : option.type === "role" && option.role ? (
+              <>
+                <div
+                  className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-white"
+                  style={option.role.color.startsWith("linear-gradient") ? { background: option.role.color } : { backgroundColor: option.role.color }}
+                >
+                  @
+                </div>
+                <div className="flex items-center justify-between flex-1 min-w-0">
+                  <span className="font-medium text-[13px] truncate">@{option.label}</span>
+                  <span className="text-[11px] text-muted-foreground ml-2">
+                    {option.role.is_self_assignable ? "Self-assignable" : "Role"}
+                  </span>
                 </div>
               </>
             ) : (

@@ -8,8 +8,10 @@ import { LinkPreview } from "./LinkPreview";
 import { InviteLinkPreview } from "./InviteLinkPreview";
 import { ImageLightbox } from "@/components/modals/ImageLightbox";
 import { CustomEmojiPopover } from "./CustomEmojiPopover";
+import { RoleMentionPopover } from "./RoleMentionPopover";
 import { useUIStore } from "@/stores/uiStore";
 import { useServerStore } from "@/stores/serverStore";
+import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
 import { getUserFromCache, getOrFetchUser } from "@/stores/userCacheStore";
 import { getGifStillPreview, isGifUrl } from "@/lib/gifPreview";
@@ -22,6 +24,7 @@ import {
   type ResolvedEmoji,
 } from "@/lib/globalEmojiResolver";
 import { openUserProfileModal, SIDE_ALIGNED_USER_PROFILE_POPOVER } from "@/lib/userProfilePopover";
+import { toast } from "sonner";
 
 interface UserInfo {
   id: string;
@@ -35,6 +38,27 @@ interface ChannelInfo {
   name: string;
   type?: string;
 }
+
+interface RoleInfo {
+  id: string;
+  name: string;
+  color?: string;
+  is_self_assignable?: boolean;
+}
+
+const firstHexFromGradient = (gradient: string): string | null => {
+  const m = gradient.match(/#[0-9a-fA-F]{6}/);
+  return m?.[0] ?? null;
+};
+
+const roleMentionStyle = (role?: RoleInfo): string => {
+  if (!role?.color) return "";
+  if (role.color.startsWith("linear-gradient")) {
+    const fallback = firstHexFromGradient(role.color) || "#7dd3fc";
+    return ` style="background-color:${fallback}22;color:${fallback}"`;
+  }
+  return ` style="background-color:${role.color}22;color:${role.color}"`;
+};
 
 interface MessageContentProps {
   content: string;
@@ -248,6 +272,7 @@ export const parseTextContent = (
   customEmojiMap?: Map<string, string>,
   channelsMap?: Map<string, ChannelInfo>,
   globalEmojiMap?: Map<string, ResolvedEmoji>,
+  rolesMap?: Map<string, RoleInfo>,
 ): string => {
   // Process separator - use a unique placeholder that won't be escaped
   const SEPARATOR_PLACEHOLDER = "___SEPARATOR_DOTS_PLACEHOLDER___";
@@ -359,6 +384,14 @@ export const parseTextContent = (
     return `<span class="channel-tag channel-tag-clickable" data-channel-id="${channelId}" role="button" tabindex="0">#${escapeHtml(channelName)}</span>`;
   });
 
+  // Role mentions <@&roleId> - ampersand is escaped as &amp; after HTML escaping
+  parsed = parsed.replace(/&lt;@&amp;(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})&gt;/g, (match, roleId) => {
+    const roleInfo = rolesMap?.get(roleId);
+    const roleName = roleInfo?.name || "role";
+    const style = roleMentionStyle(roleInfo);
+    return `<span class="mention mention-role mention-role-clickable" data-role-id="${roleId}" role="button" tabindex="0"${style}>@${escapeHtml(roleName)}</span>`;
+  });
+
   // Custom emojis :name: or :name~ServerName: — check current server first, then global (cross-server)
   parsed = parsed.replace(CUSTOM_EMOJI_TEXT_REGEX, (full, name: string, qualifier?: string) => {
     // 1. Current server emoji (no popup needed) — only for unqualified names
@@ -418,12 +451,15 @@ export const MessageContent = ({
   globalEmojiMap: providedGlobalEmojiMap,
 }: MessageContentProps) => {
   const navigate = useNavigate();
-  const { linkPreviewsEnabled, openModal } = useUIStore();
-  const { members, currentServer, channels, setCurrentChannel } = useServerStore();
+  const { linkPreviewsEnabled, openModal, openServerSettings } = useUIStore();
+  const { members, currentServer, channels, roles, setCurrentChannel, assignSelfRole, removeSelfRole } = useServerStore();
+  const { hasPermission } = useMemberPermissions();
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [localCustomEmojiMap, setLocalCustomEmojiMap] = useState<Map<string, string>>(new Map());
   const [localGlobalEmojiMap, setLocalGlobalEmojiMap] = useState<Map<string, ResolvedEmoji>>(new Map());
   const [emojiPopover, setEmojiPopover] = useState<{ emoji: ResolvedEmoji; rect: DOMRect } | null>(null);
+  const [rolePopover, setRolePopover] = useState<{ roleId: string; rect: DOMRect } | null>(null);
+  const [isUpdatingRoleId, setIsUpdatingRoleId] = useState<string | null>(null);
   const [mentionedUsersMap, setMentionedUsersMap] = useState<Map<string, UserInfo>>(new Map());
   const contentRef = useRef<HTMLDivElement>(null);
   const segments = useMemo(() => parseMessageSegments(content), [content]);
@@ -830,6 +866,19 @@ export const MessageContent = ({
     return map;
   }, [channels]);
 
+  const rolesMap = useMemo(() => {
+    const map = new Map<string, RoleInfo>();
+    roles.forEach((role) => {
+      map.set(role.id, {
+        id: role.id,
+        name: role.name,
+        color: role.color,
+        is_self_assignable: Boolean(role.is_self_assignable),
+      });
+    });
+    return map;
+  }, [roles]);
+
   // Extract URLs for link previews (only from text segments, not code blocks)
   const allUrls = useMemo(() => {
     const textContent = segments
@@ -858,6 +907,36 @@ export const MessageContent = ({
       return true;
     });
   }, [allUrls]);
+
+  const canManageRoles = hasPermission("manage_roles");
+
+  const handleToggleSelfRole = useCallback(
+    async (roleId: string) => {
+      if (!currentServer?.id || !currentUserId) return;
+      const role = rolesMap.get(roleId);
+      if (!role?.is_self_assignable) return;
+
+      const selfMember = members.find((m) => m.server_id === currentServer.id && m.user_id === currentUserId);
+      if (!selfMember) return;
+      const hasRole = (selfMember.roles || []).some((r) => r.id === roleId);
+
+      try {
+        setIsUpdatingRoleId(roleId);
+        if (hasRole) {
+          await removeSelfRole(currentServer.id, roleId, currentUserId);
+          toast.success(`Removed @${role.name}`);
+        } else {
+          await assignSelfRole(currentServer.id, roleId, currentUserId);
+          toast.success(`Assigned @${role.name}`);
+        }
+      } catch (error: any) {
+        toast.error(error?.message || "Failed to assign role");
+      } finally {
+        setIsUpdatingRoleId(null);
+      }
+    },
+    [assignSelfRole, removeSelfRole, currentServer?.id, currentUserId, members, rolesMap],
+  );
 
   // Handle click on mentions and channel tags using event delegation
   const handleClick = useCallback(
@@ -923,6 +1002,12 @@ export const MessageContent = ({
         e.stopPropagation();
         openUserProfileModal(openModal, target.dataset.userId, target, SIDE_ALIGNED_USER_PROFILE_POPOVER);
       }
+      if (target.classList.contains("mention-role-clickable") && target.dataset.roleId) {
+        e.preventDefault();
+        e.stopPropagation();
+        setRolePopover({ roleId: target.dataset.roleId, rect: target.getBoundingClientRect() });
+        return;
+      }
       if (target.classList.contains("channel-tag-clickable") && target.dataset.channelId) {
         e.preventDefault();
         e.stopPropagation();
@@ -934,7 +1019,16 @@ export const MessageContent = ({
         }
       }
     },
-    [openModal, channels, currentServer, setCurrentChannel, navigate, setLightboxImage, effectiveGlobalEmojiMap],
+    [
+      openModal,
+      channels,
+      currentServer,
+      setCurrentChannel,
+      navigate,
+      setLightboxImage,
+      effectiveGlobalEmojiMap,
+      setRolePopover,
+    ],
   );
 
   // Handle keyboard activation for accessibility
@@ -952,6 +1046,11 @@ export const MessageContent = ({
           e.preventDefault();
           openUserProfileModal(openModal, target.dataset.userId, target, SIDE_ALIGNED_USER_PROFILE_POPOVER);
         }
+        if (target.classList.contains("mention-role-clickable") && target.dataset.roleId) {
+          e.preventDefault();
+          setRolePopover({ roleId: target.dataset.roleId, rect: target.getBoundingClientRect() });
+          return;
+        }
         if (target.classList.contains("channel-tag-clickable") && target.dataset.channelId) {
           e.preventDefault();
           const channelId = target.dataset.channelId;
@@ -963,7 +1062,7 @@ export const MessageContent = ({
         }
       }
     },
-    [openModal, channels, currentServer, setCurrentChannel, navigate],
+    [openModal, channels, currentServer, setCurrentChannel, navigate, setRolePopover],
   );
 
   return (
@@ -994,6 +1093,7 @@ export const MessageContent = ({
                       effectiveCustomEmojiMap,
                       channelsMap,
                       effectiveGlobalEmojiMap,
+                      rolesMap,
                     ),
                   }}
                 />
@@ -1033,6 +1133,33 @@ export const MessageContent = ({
           onClose={() => setEmojiPopover(null)}
         />
       )}
+
+      {rolePopover && (() => {
+        const role = rolesMap.get(rolePopover.roleId);
+        if (!role) return null;
+        const memberCount = members.filter((m) => (m.roles || []).some((r) => r.id === role.id)).length;
+        const selfHasRole = members.some((m) => m.user_id === currentUserId && (m.roles || []).some((r) => r.id === role.id));
+        return (
+          <RoleMentionPopover
+            roleId={role.id}
+            roleName={role.name}
+            roleColor={role.color}
+            memberCount={memberCount}
+            isSelfAssignable={Boolean(role.is_self_assignable)}
+            hasRole={selfHasRole}
+            canManageRoles={canManageRoles}
+            isUpdating={isUpdatingRoleId === role.id}
+            anchorRect={rolePopover.rect}
+            onClose={() => setRolePopover(null)}
+            onToggleSelfRole={(id) => void handleToggleSelfRole(id)}
+            onEditRole={() => {
+              localStorage.setItem("kloak:server-settings-tab", "roles");
+              openServerSettings();
+              setRolePopover(null);
+            }}
+          />
+        );
+      })()}
     </div>
   );
 };
@@ -1052,7 +1179,7 @@ export const ReplyPreview = ({
   customEmojiMap: providedCustomEmojiMap,
   globalEmojiMap: providedGlobalEmojiMap,
 }: ReplyPreviewProps) => {
-  const { currentServer, members } = useServerStore();
+  const { currentServer, members, roles } = useServerStore();
   const [localCustomEmojiMap, setLocalCustomEmojiMap] = useState<Map<string, string>>(new Map());
   const [localGlobalEmojis, setLocalGlobalEmojis] = useState<Map<string, ResolvedEmoji>>(new Map());
   const customEmojiMap = providedCustomEmojiMap ?? localCustomEmojiMap;
@@ -1149,6 +1276,12 @@ export const ReplyPreview = ({
       return match; // keep raw so re-render after cache populates can resolve it
     });
 
+    // Convert <@&roleId> mentions to role names
+    result = result.replace(/<@&(\w{8}-\w{4}-\w{4}-\w{4}-\w{12})>/g, (match, roleId) => {
+      const role = roles.find((r) => r.id === roleId);
+      return role ? `@${role.name}` : match;
+    });
+
     // Convert <#channelId> to #channel
     result = result.replace(/<#\w{8}-\w{4}-\w{4}-\w{4}-\w{12}>/g, "#channel");
 
@@ -1159,7 +1292,7 @@ export const ReplyPreview = ({
     }
 
     return result;
-  }, [content, maxLength, resolvedUsersMap]);
+  }, [content, maxLength, resolvedUsersMap, roles]);
 
   // Replace custom emojis
   const rendered = useMemo(() => {

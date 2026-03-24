@@ -662,6 +662,7 @@ export const ServerSettingsPage = () => {
   const [roleName, setRoleName] = useState("");
   const [roleColor, setRoleColor] = useState("#5865F2");
   const [roleIcon, setRoleIcon] = useState<string>("");
+  const [roleIsSelfAssignable, setRoleIsSelfAssignable] = useState(false);
   const [activeRoleId, setActiveRoleId] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<CustomServerRole | null>(null);
 
@@ -807,6 +808,7 @@ export const ServerSettingsPage = () => {
             setRoleColor(parsed.color || "#5865F2");
           }
           setRoleIcon(role.icon || "");
+          setRoleIsSelfAssignable(Boolean(role.is_self_assignable));
         }}
         className={cn(
           "flex items-center gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer",
@@ -957,6 +959,11 @@ export const ServerSettingsPage = () => {
   useEffect(() => {
     if (server) {
       fetchRoles(server.id);
+      const pendingTab = localStorage.getItem("kloak:server-settings-tab");
+      if (pendingTab) {
+        setActiveTab(pendingTab);
+        localStorage.removeItem("kloak:server-settings-tab");
+      }
       reset({ name: server.name, about: server.about || "" });
 
       // Initialize system message channel settings
@@ -984,6 +991,7 @@ export const ServerSettingsPage = () => {
       setRoleName("");
       setRoleColor("#5865F2");
       setRoleIcon("");
+      setRoleIsSelfAssignable(false);
       setSelectedRole(null);
       setColorType("solid");
       setGradientColors(["#5865F2", "#7289DA"]);
@@ -1688,13 +1696,21 @@ export const ServerSettingsPage = () => {
     const finalColor = colorType === "gradient" ? createGradientString(gradientColors, gradientAngle) : roleColor;
 
     try {
-      await createRole(server.id, user.id, roleName.trim(), finalColor, roleIcon.trim() ? roleIcon.trim() : null);
+      await createRole(
+        server.id,
+        user.id,
+        roleName.trim(),
+        finalColor,
+        roleIcon.trim() ? roleIcon.trim() : null,
+        roleIsSelfAssignable,
+      );
       // Refetch roles to ensure UI is up to date
       await fetchRoles(server.id);
       toast.success("Role created");
       setRoleName("");
       setRoleColor("#5865F2");
       setRoleIcon("");
+      setRoleIsSelfAssignable(false);
       setColorType("solid");
       setGradientColors(["#5865F2", "#7289DA"]);
       setGradientAngle(135);
@@ -1716,13 +1732,22 @@ export const ServerSettingsPage = () => {
     if (!server || !user || !selectedRole || !roleName.trim()) return;
 
     const finalColor = colorType === "gradient" ? createGradientString(gradientColors, gradientAngle) : roleColor;
+    const nextSelfAssignable = Boolean(roleIsSelfAssignable);
+    const currentSelfAssignable = Boolean(selectedRole.is_self_assignable);
+    const selfAssignableChanged = nextSelfAssignable !== currentSelfAssignable;
 
     try {
-      await updateRole(selectedRole.id, user.id, {
+      const updates: { name?: string; color?: string; icon?: string | null; is_self_assignable?: boolean } = {
         name: roleName.trim(),
         color: finalColor,
         icon: roleIcon.trim() ? roleIcon.trim() : null,
-      });
+      };
+
+      if (selfAssignableChanged) {
+        updates.is_self_assignable = nextSelfAssignable;
+      }
+
+      await updateRole(selectedRole.id, user.id, updates);
       // Refetch roles to ensure UI is up to date
       await fetchRoles(server.id);
       toast.success("Role updated");
@@ -1742,10 +1767,11 @@ export const ServerSettingsPage = () => {
           setRoleColor(parsed.color || "#5865F2");
         }
         setRoleIcon(updatedRole.icon || "");
+        setRoleIsSelfAssignable(Boolean(updatedRole.is_self_assignable));
       }
     } catch (error) {
       console.error("Failed to update role:", error);
-      toast.error("Failed to update role");
+      toast.error((error as any)?.message || "Failed to update role");
     }
   };
 
@@ -1765,6 +1791,7 @@ export const ServerSettingsPage = () => {
       setRoleName("");
       setRoleColor("#5865F2");
       setRoleIcon("");
+      setRoleIsSelfAssignable(false);
       setColorType("solid");
       setGradientColors(["#5865F2", "#7289DA"]);
       setGradientAngle(135);
@@ -2372,6 +2399,7 @@ export const ServerSettingsPage = () => {
                             setRoleName("");
                             setRoleColor("#5865F2");
                             setRoleIcon("");
+                            setRoleIsSelfAssignable(false);
                             setColorType("solid");
                             setGradientColors(["#5865F2", "#7289DA"]);
                             setGradientAngle(135);
@@ -2493,6 +2521,22 @@ export const ServerSettingsPage = () => {
                             </div>
                           </div>
 
+                          {selectedRole.name !== "@everyone" && (
+                            <div className="space-y-2">
+                              <Label className="text-sm">Self Assignable</Label>
+                              <div className="flex items-center gap-2 rounded-md border border-border/60 bg-background/50 px-3 py-2">
+                                <Checkbox
+                                  id="editRoleSelfAssignable"
+                                  checked={roleIsSelfAssignable}
+                                  onCheckedChange={(checked) => setRoleIsSelfAssignable(checked === true)}
+                                />
+                                <label htmlFor="editRoleSelfAssignable" className="text-sm text-muted-foreground cursor-pointer">
+                                  Members can assign this role to themselves
+                                </label>
+                              </div>
+                            </div>
+                          )}
+
                           <div className="flex items-center gap-2 pt-2">
                             <Button onClick={handleUpdateRole} disabled={!roleName.trim()} size="sm">
                               <Edit2 className="w-4 h-4 mr-2" />
@@ -2506,6 +2550,7 @@ export const ServerSettingsPage = () => {
                                 setRoleName("");
                                 setRoleColor("#5865F2");
                                 setRoleIcon("");
+                                setRoleIsSelfAssignable(false);
                                 setColorType("solid");
                                 setGradientColors(["#5865F2", "#7289DA"]);
                                 setGradientAngle(135);
@@ -2618,6 +2663,20 @@ export const ServerSettingsPage = () => {
                                     </p>
                                   )}
                                 </div>
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label className="text-sm">Self Assignable</Label>
+                              <div className="flex items-center gap-2 rounded-md border border-border/60 bg-background/50 px-3 py-2">
+                                <Checkbox
+                                  id="createRoleSelfAssignable"
+                                  checked={roleIsSelfAssignable}
+                                  onCheckedChange={(checked) => setRoleIsSelfAssignable(checked === true)}
+                                />
+                                <label htmlFor="createRoleSelfAssignable" className="text-sm text-muted-foreground cursor-pointer">
+                                  Members can assign this role to themselves
+                                </label>
                               </div>
                             </div>
 

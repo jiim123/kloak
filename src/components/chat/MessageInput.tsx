@@ -71,8 +71,9 @@ interface MessageInputProps {
 }
 
 interface MentionMapping {
-  username: string;
-  userId: string;
+  label: string;
+  mentionId: string;
+  mentionType: "user" | "role";
 }
 
 interface ChannelMapping {
@@ -501,8 +502,9 @@ export const MessageInput = ({
   const convertMentionsForSend = useCallback((text: string): string => {
     let result = text;
     mentionMappingsRef.current.forEach((m) => {
-      const regex = new RegExp(`@${m.username.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=\\s|$|[.,!?;:])`, "g");
-      result = result.replace(regex, `<@${m.userId}>`);
+      const regex = new RegExp(`@${m.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=\\s|$|[.,!?;:])`, "g");
+      const token = m.mentionType === "role" ? `<@&${m.mentionId}>` : `<@${m.mentionId}>`;
+      result = result.replace(regex, token);
     });
     channelMappingsRef.current.forEach((c) => {
       const regex = new RegExp(`#${c.channelName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=\\s|$|[.,!?;:])`, "g");
@@ -832,7 +834,13 @@ export const MessageInput = ({
           onSelect={(opt) => {
             const before = content.slice(0, mentionStartIndex);
             const after = content.slice(mentionStartIndex + mentionQuery.length + 1);
-            if (opt.id) mentionMappingsRef.current.push({ username: opt.label, userId: opt.id });
+            if (opt.id && (opt.type === "user" || opt.type === "role")) {
+              mentionMappingsRef.current.push({
+                label: opt.label,
+                mentionId: opt.id,
+                mentionType: opt.type,
+              });
+            }
             setContent(`${before}@${opt.label} ${after}`);
             setShowMentions(false);
             setHasMentionOptions(false);

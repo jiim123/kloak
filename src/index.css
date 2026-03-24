@@ -832,6 +832,14 @@
     @apply bg-[hsl(var(--kloak-warning))]/20 text-[hsl(var(--kloak-warning))] cursor-default;
   }
 
+  .mention-role {
+    @apply bg-primary/20 text-primary;
+  }
+
+  .mention-role-clickable {
+    @apply cursor-pointer hover:bg-primary/30 hover:underline transition-colors;
+  }
+
   /* Channel tag styling */
   .channel-tag {
     @apply bg-primary/20 text-primary px-1 rounded;

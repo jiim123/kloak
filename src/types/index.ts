@@ -48,6 +48,7 @@ export interface CustomServerRole {
   name: string;
   color: string;
   icon?: string | null;
+  is_self_assignable?: boolean;
   position: number;
   created_at: string;
 }

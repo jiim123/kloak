@@ -329,16 +329,19 @@ interface ServerState {
     name: string,
     color: string,
     icon?: string | null,
+    isSelfAssignable?: boolean,
   ) => Promise<CustomServerRole | null>;
   updateRole: (
     roleId: string,
     userId: string,
-    updates: { name?: string; color?: string; icon?: string | null },
+    updates: { name?: string; color?: string; icon?: string | null; is_self_assignable?: boolean },
   ) => Promise<void>;
   deleteRole: (roleId: string, userId: string) => Promise<void>;
   reorderRoles: (serverId: string, userId: string, orderedRoleIds: string[]) => Promise<void>;
   assignRoleToMember: (memberId: string, roleId: string, userId: string) => Promise<void>;
   removeRoleFromMember: (memberId: string, roleId: string, userId: string) => Promise<void>;
+  assignSelfRole: (serverId: string, roleId: string, userId: string) => Promise<void>;
+  removeSelfRole: (serverId: string, roleId: string, userId: string) => Promise<void>;
 
   // Permission actions
   rolePermissions: RolePermission[];
@@ -1781,7 +1784,14 @@ export const useServerStore = create<ServerState>((set, get) => ({
     });
   },
 
-  createRole: async (serverId: string, userId: string, name: string, color: string, icon?: string | null) => {
+  createRole: async (
+    serverId: string,
+    userId: string,
+    name: string,
+    color: string,
+    icon?: string | null,
+    isSelfAssignable?: boolean,
+  ) => {
     try {
       const { data, error } = await supabase.rpc("create_server_role", {
         _server_id: serverId,
@@ -1796,7 +1806,18 @@ export const useServerStore = create<ServerState>((set, get) => ({
         throw error;
       }
 
-      const role = data as unknown as CustomServerRole;
+      let role = data as unknown as CustomServerRole;
+      if (role?.id && isSelfAssignable) {
+        const { data: updatedRoleData, error: selfAssignableError } = await (supabase.rpc as any)("set_role_self_assignable", {
+          _role_id: role.id,
+          _user_id: userId,
+          _is_self_assignable: true,
+        });
+        if (selfAssignableError) throw selfAssignableError;
+        if (updatedRoleData) {
+          role = updatedRoleData as CustomServerRole;
+        }
+      }
       set((state) => ({
         roles: [...state.roles, role].sort((a, b) => a.position - b.position),
       }));
@@ -1811,7 +1832,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
   updateRole: async (
     roleId: string,
     userId: string,
-    updates: { name?: string; color?: string; icon?: string | null },
+    updates: { name?: string; color?: string; icon?: string | null; is_self_assignable?: boolean },
   ) => {
     try {
       const { data, error } = await supabase.rpc("update_server_role", {
@@ -1825,6 +1846,22 @@ export const useServerStore = create<ServerState>((set, get) => ({
       if (error) throw error;
 
       const role = data as unknown as CustomServerRole;
+      if (updates.is_self_assignable !== undefined) {
+        const { data: updatedRoleData, error: selfAssignableError } = await (supabase.rpc as any)("set_role_self_assignable", {
+          _role_id: roleId,
+          _user_id: userId,
+          _is_self_assignable: updates.is_self_assignable,
+        });
+
+        if (selfAssignableError) throw selfAssignableError;
+        if (updatedRoleData) {
+          set((state) => ({
+            roles: state.roles.map((r) => (r.id === roleId ? (updatedRoleData as CustomServerRole) : r)),
+          }));
+          return;
+        }
+      }
+
       set((state) => ({
         roles: state.roles.map((r) => (r.id === roleId ? role : r)),
       }));
@@ -1961,6 +1998,82 @@ export const useServerStore = create<ServerState>((set, get) => ({
       // Rollback on failure
       set({ members: prevMembers });
       console.error("Failed to remove role:", error);
+      throw error;
+    }
+  },
+
+  assignSelfRole: async (serverId: string, roleId: string, userId: string) => {
+    const { currentServer, members, roles: allRoles } = get();
+    const effectiveServerId = currentServer?.id ?? serverId;
+    if (!effectiveServerId) throw new Error("No server selected");
+
+    const selfMember = members.find((m) => m.server_id === effectiveServerId && m.user_id === userId);
+    if (!selfMember) throw new Error("You are not a member of this server");
+
+    const role = allRoles.find((r) => r.id === roleId);
+    const everyoneRole = allRoles.find((r) => r.name === "@everyone");
+    const prevMembers = members;
+    if (role) {
+      set({
+        members: members.map((m) =>
+          m.id === selfMember.id
+            ? {
+                ...m,
+                roles: [
+                  ...(m.roles || []).filter((r) => everyoneRole && r.id === everyoneRole.id),
+                  ...(everyoneRole && roleId === everyoneRole.id ? [] : [{ ...role, position: role.position ?? 0 } as CustomServerRole]),
+                ],
+              }
+            : m,
+        ),
+      });
+    }
+
+    try {
+      const { error } = await (supabase.rpc as any)("assign_self_role", {
+        _user_id: userId,
+        _server_id: effectiveServerId,
+        _role_id: roleId,
+      });
+      if (error) throw error;
+
+      const shouldUseFull = get().membersServerId === effectiveServerId && get().membersFetchMode === "full";
+      await get().fetchMembers(effectiveServerId, { force: true, full: shouldUseFull });
+    } catch (error) {
+      set({ members: prevMembers });
+      console.error("Failed to assign self role:", error);
+      throw error;
+    }
+  },
+
+  removeSelfRole: async (serverId: string, roleId: string, userId: string) => {
+    const { currentServer, members } = get();
+    const effectiveServerId = currentServer?.id ?? serverId;
+    if (!effectiveServerId) throw new Error("No server selected");
+
+    const selfMember = members.find((m) => m.server_id === effectiveServerId && m.user_id === userId);
+    if (!selfMember) throw new Error("You are not a member of this server");
+
+    const prevMembers = members;
+    set({
+      members: members.map((m) =>
+        m.id === selfMember.id ? { ...m, roles: (m.roles || []).filter((r) => r.id !== roleId) } : m,
+      ),
+    });
+
+    try {
+      const { error } = await (supabase.rpc as any)("remove_self_role", {
+        _user_id: userId,
+        _server_id: effectiveServerId,
+        _role_id: roleId,
+      });
+      if (error) throw error;
+
+      const shouldUseFull = get().membersServerId === effectiveServerId && get().membersFetchMode === "full";
+      await get().fetchMembers(effectiveServerId, { force: true, full: shouldUseFull });
+    } catch (error) {
+      set({ members: prevMembers });
+      console.error("Failed to remove self role:", error);
       throw error;
     }
   },
