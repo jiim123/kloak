@@ -61,6 +61,7 @@ import { invalidateGlobalEmojiCache } from "@/lib/globalEmojiResolver";
 import type { ServerRole, ServerMember, CustomServerRole, Permission } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { RolePermissionsEditor } from "../modals/RolePermissionsEditor";
 import { BannerCropModal } from "../modals/BannerCropModal";
 import { RoleColorPicker } from "../modals/RoleColorPicker";
@@ -2522,18 +2523,20 @@ export const ServerSettingsPage = () => {
                           </div>
 
                           {selectedRole.name !== "@everyone" && (
-                            <div className="space-y-2">
-                              <Label className="text-sm">Self Assignable</Label>
-                              <div className="flex items-center gap-2 rounded-md border border-border/60 bg-background/50 px-3 py-2">
-                                <Checkbox
-                                  id="editRoleSelfAssignable"
-                                  checked={roleIsSelfAssignable}
-                                  onCheckedChange={(checked) => setRoleIsSelfAssignable(checked === true)}
-                                />
-                                <label htmlFor="editRoleSelfAssignable" className="text-sm text-muted-foreground cursor-pointer">
-                                  Members can assign this role to themselves
+                            <div className="flex items-start justify-between gap-4 py-1">
+                              <div className="flex-1 min-w-0">
+                                <label htmlFor="editRoleSelfAssignable" className="text-sm font-medium cursor-pointer">
+                                  Self Assignable
                                 </label>
+                                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                                  Members can assign this role to themselves
+                                </p>
                               </div>
+                              <Switch
+                                id="editRoleSelfAssignable"
+                                checked={roleIsSelfAssignable}
+                                onCheckedChange={setRoleIsSelfAssignable}
+                              />
                             </div>
                           )}
 
@@ -2556,6 +2559,7 @@ export const ServerSettingsPage = () => {
                                 setGradientAngle(135);
                               }}
                               size="sm"
+                              rounded="full"
                             >
                               Cancel
                             </Button>
@@ -2666,18 +2670,20 @@ export const ServerSettingsPage = () => {
                               </div>
                             </div>
 
-                            <div className="space-y-2">
-                              <Label className="text-sm">Self Assignable</Label>
-                              <div className="flex items-center gap-2 rounded-md border border-border/60 bg-background/50 px-3 py-2">
-                                <Checkbox
-                                  id="createRoleSelfAssignable"
-                                  checked={roleIsSelfAssignable}
-                                  onCheckedChange={(checked) => setRoleIsSelfAssignable(checked === true)}
-                                />
-                                <label htmlFor="createRoleSelfAssignable" className="text-sm text-muted-foreground cursor-pointer">
-                                  Members can assign this role to themselves
+                            <div className="flex items-start justify-between gap-4 py-1">
+                              <div className="flex-1 min-w-0">
+                                <label htmlFor="createRoleSelfAssignable" className="text-sm font-medium cursor-pointer">
+                                  Self Assignable
                                 </label>
+                                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                                  Members can assign this role to themselves
+                                </p>
                               </div>
+                              <Switch
+                                id="createRoleSelfAssignable"
+                                checked={roleIsSelfAssignable}
+                                onCheckedChange={setRoleIsSelfAssignable}
+                              />
                             </div>
 
                             <div className="flex items-center gap-2 pt-2">
