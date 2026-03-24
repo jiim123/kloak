@@ -2359,7 +2359,6 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                   side="right"
                   hideCloseButton
                   className="w-[90vw] max-w-2xl p-0 sm:max-w-2xl"
-                  style={threadAttachmentLightboxUrl ? { pointerEvents: 'none' } : undefined}
                   onEscapeKeyDown={(event) => {
                     if (threadAttachmentLightboxUrl) event.preventDefault();
                   }}
@@ -2369,79 +2368,9 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                 >
                 {selectedThread && (
                   <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
-                    {/* Header */}
-                    <div className="z-30 flex items-center justify-between border-b border-border bg-background px-4 py-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                          Open thread
-                        </p>
-                        <h3 className="truncate text-lg font-medium">{threadTitle}</h3>
-                      </div>
-                      <div className={cn("flex items-center gap-1", threadAttachmentLightboxUrl && "invisible")}>
-                        {canManageMessages && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                void handleUpdateThreadModeration(selectedThread.id, { is_pinned: !selectedThread.is_pinned })
-                              }
-                              className={cn(
-                                "h-8 w-8 p-0 text-muted-foreground",
-                                selectedThread.is_pinned && "text-amber-600 hover:text-amber-600",
-                              )}
-                              title={selectedThread.is_pinned ? "Unpin topic" : "Pin topic"}
-                            >
-                              <Pin className="w-4 h-4 translate-y-px" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                void handleUpdateThreadModeration(selectedThread.id, { is_closed: !selectedThread.is_closed })
-                              }
-                              className={cn(
-                                "h-8 w-8 p-0 text-muted-foreground",
-                                selectedThread.is_closed && "text-amber-600 hover:text-amber-600",
-                              )}
-                              title={selectedThread.is_closed ? "Reopen topic" : "Close topic"}
-                            >
-                              {selectedThread.is_closed ? <LockOpen className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                            </Button>
-                          </>
-                        )}
-                        {canEditThreadPost && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setThreadPostEditTitle(threadTitle);
-                              setThreadPostEditBody(threadDescription);
-                              setIsEditingThreadPost(true);
-                              setTimeout(() => threadPostTitleInputRef.current?.focus(), 0);
-                            }}
-                            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                            title="Edit topic"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                        )}
-                        {(user?.id === selectedThread?.created_by || canManageMessages) && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              if (selectedThread) {
-                                setThreadToDelete(selectedThread);
-                                setShowDeleteThreadModal(true);
-                              }
-                            }}
-                            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                            title="Delete thread"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        )}
+                    {/* Header with back arrow and title */}
+                    <div className="z-30 border-b border-border bg-background">
+                      <div className="flex items-center gap-2 px-4 py-3">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -2450,11 +2379,87 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                             setReplyContent("");
                             setReplyingToThread(null);
                           }}
-                          className="h-8 w-8 p-0"
+                          className="h-8 w-8 flex-shrink-0 p-0 text-muted-foreground hover:text-foreground"
+                          title="Back"
                         >
-                          <X className="w-4 h-4" />
+                          <ArrowLeft className="w-4 h-4" />
                         </Button>
+                        <div className="min-w-0 flex-1">
+                          <p className="mb-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                            Open thread
+                          </p>
+                          <h3 className="truncate text-lg font-medium">{threadTitle}</h3>
+                        </div>
                       </div>
+                      {/* Action buttons row */}
+                      {(canManageMessages || canEditThreadPost || user?.id === selectedThread?.created_by) && (
+                        <div className="flex items-center gap-1 border-t border-border/50 px-4 py-1.5">
+                          {canManageMessages && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  void handleUpdateThreadModeration(selectedThread.id, { is_pinned: !selectedThread.is_pinned })
+                                }
+                                className={cn(
+                                  "h-7 w-7 p-0 text-muted-foreground",
+                                  selectedThread.is_pinned && "text-amber-600 hover:text-amber-600",
+                                )}
+                                title={selectedThread.is_pinned ? "Unpin topic" : "Pin topic"}
+                              >
+                                <Pin className="w-3.5 h-3.5 translate-y-px" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  void handleUpdateThreadModeration(selectedThread.id, { is_closed: !selectedThread.is_closed })
+                                }
+                                className={cn(
+                                  "h-7 w-7 p-0 text-muted-foreground",
+                                  selectedThread.is_closed && "text-amber-600 hover:text-amber-600",
+                                )}
+                                title={selectedThread.is_closed ? "Reopen topic" : "Close topic"}
+                              >
+                                {selectedThread.is_closed ? <LockOpen className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+                              </Button>
+                            </>
+                          )}
+                          {canEditThreadPost && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setThreadPostEditTitle(threadTitle);
+                                setThreadPostEditBody(threadDescription);
+                                setIsEditingThreadPost(true);
+                                setTimeout(() => threadPostTitleInputRef.current?.focus(), 0);
+                              }}
+                              className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                              title="Edit topic"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                          {(user?.id === selectedThread?.created_by || canManageMessages) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                if (selectedThread) {
+                                  setThreadToDelete(selectedThread);
+                                  setShowDeleteThreadModal(true);
+                                }
+                              }}
+                              className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                              title="Delete thread"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Scrollable content */}
