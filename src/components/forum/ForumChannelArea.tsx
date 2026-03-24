@@ -2343,8 +2343,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
 
           return (
             <>
-              <Drawer
-                direction="right"
+              <Sheet
                 open={!!selectedThreadId}
                 onOpenChange={(open) => {
                   if (!open && threadAttachmentLightboxUrl) return;
@@ -2356,8 +2355,10 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                   }
                 }}
               >
-                <DrawerContent
-                  className="w-[90vw] max-w-2xl"
+                <SheetContent
+                  side="right"
+                  hideCloseButton
+                  className="w-[90vw] max-w-2xl p-0 sm:max-w-2xl"
                   onEscapeKeyDown={(event) => {
                     if (threadAttachmentLightboxUrl) event.preventDefault();
                   }}
