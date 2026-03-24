@@ -2376,7 +2376,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                         </p>
                         <h3 className="truncate text-lg font-medium">{threadTitle}</h3>
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className={cn("flex items-center gap-1", threadAttachmentLightboxUrl && "invisible")}>
                         {canManageMessages && (
                           <>
                             <Button
