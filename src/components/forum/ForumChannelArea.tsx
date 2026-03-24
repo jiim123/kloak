@@ -56,9 +56,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Drawer,
-  DrawerContent,
-} from "@/components/ui/drawer";
+  Sheet,
+  SheetContent,
+} from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { secureUpload } from "@/lib/storageUpload";
 import { handleError, showSuccess, showWarning } from "@/lib/errorHandler";
@@ -2343,8 +2343,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
 
           return (
             <>
-              <Drawer
-                direction="right"
+              <Sheet
                 open={!!selectedThreadId}
                 onOpenChange={(open) => {
                   if (!open && threadAttachmentLightboxUrl) return;
@@ -2356,8 +2355,10 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                   }
                 }}
               >
-                <DrawerContent
-                  className="w-[90vw] max-w-2xl"
+                <SheetContent
+                  side="right"
+                  hideCloseButton
+                  className="w-[90vw] max-w-2xl p-0 sm:max-w-2xl"
                   onEscapeKeyDown={(event) => {
                     if (threadAttachmentLightboxUrl) event.preventDefault();
                   }}
@@ -2910,8 +2911,8 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                     {selectedThreadId && renderThreadReplyComposer(selectedThreadId)}
                   </div>
                 )}
-                </DrawerContent>
-              </Drawer>
+                </SheetContent>
+              </Sheet>
               <ImageLightbox
                 imageUrl={threadAttachmentLightboxUrl}
                 onClose={() => setThreadAttachmentLightboxUrl(null)}
