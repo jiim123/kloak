@@ -56,9 +56,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Drawer,
-  DrawerContent,
-} from "@/components/ui/drawer";
+  Sheet,
+  SheetContent,
+} from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { secureUpload } from "@/lib/storageUpload";
 import { handleError, showSuccess, showWarning } from "@/lib/errorHandler";
