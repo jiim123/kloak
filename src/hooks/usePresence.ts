@@ -107,21 +107,14 @@ export const usePresence = () => {
     };
   }, [isAuthenticated, manualStatus]);
 
-  // Visibility-based presence (best-effort; offline is derived from last_seen elsewhere)
+  // Visibility-based presence: only reset idle timer on tab return.
+  // Do NOT force status changes on tab hide — the 5-minute idle timeout handles that naturally.
   useEffect(() => {
     if (!isAuthenticated) return;
 
     const handleVisibilityChange = () => {
-      const ms = useAuthStore.getState().manualStatus;
-      if (document.visibilityState === 'hidden') {
-        if (ms !== 'dnd' && ms !== 'offline') {
-          useAuthStore.getState().updateStatus('idle', { source: 'auto' });
-        }
-      } else if (document.visibilityState === 'visible') {
-        if (ms !== 'dnd' && ms !== 'offline') {
-          isIdleRef.current = false;
-          useAuthStore.getState().updateStatus('online', { source: 'auto' });
-        }
+      if (document.visibilityState === 'visible') {
+        resetIdleTimer();
       }
     };
 
@@ -130,5 +123,5 @@ export const usePresence = () => {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, resetIdleTimer]);
 };
