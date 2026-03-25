@@ -52,48 +52,36 @@ function CtaSection() {
 }
 
 const Index = () => {
-  const capabilities = [
+  const features = [
     {
       icon: MessageCircle,
-      label: "Messaging",
       title: "Real-Time Messaging",
-      description:
-        "Your messages arrive instantly. Edits, replies, and reactions update live for everyone in the conversation, no refreshing needed.",
+      description: "Instant delivery with live edits, replies, and reactions.",
     },
     {
       icon: Headphones,
-      label: "Voice",
       title: "Voice Channels",
-      description:
-        "Jump into a voice channel and talk with your group while browsing the rest of the app. Low latency, always ready when you are.",
+      description: "Low-latency voice chat, always ready when you are.",
     },
     {
       icon: Users,
-      label: "Structure",
-      title: "Servers, Roles & Permissions",
-      description:
-        "Organize your community with servers, categories, and channels. Assign roles and control exactly who can do what, down to the channel level.",
+      title: "Servers & Roles",
+      description: "Organize communities with granular role-based permissions.",
     },
     {
       icon: Lock,
-      label: "Identity",
-      title: "Secret Key Authentication",
-      description:
-        "No email. No phone number. No password. You get one cryptographic key that is your identity. Nobody can recover it, reset it, or take it from you.",
+      title: "Secret Key Auth",
+      description: "One cryptographic key. No email, phone, or password.",
     },
     {
       icon: Shield,
-      label: "Private",
-      title: "Direct Messages & Friends",
-      description:
-        "Add friends by username, start private conversations, and block anyone you don't want to hear from. Simple and straightforward.",
+      title: "Direct Messages",
+      description: "Private conversations with friends. Block anyone instantly.",
     },
     {
       icon: Palette,
-      label: "Personal",
-      title: "Themes & Customization",
-      description:
-        "Switch between multiple themes instantly. Personalize your profile with avatars, banners, bios, and custom statuses to make it yours.",
+      title: "Themes",
+      description: "Multiple themes and full profile customization.",
     },
   ];
 
@@ -143,17 +131,18 @@ const Index = () => {
             </div>
           </section>
 
-          {/* Capabilities Header */}
-          <section className="relative pt-32 pb-16 px-8 lg:px-16 overflow-hidden">
+          {/* Features Section */}
+          <section className="relative py-32 md:py-48 px-8 lg:px-16 overflow-hidden">
             <div className="max-w-7xl mx-auto">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6 }}
+                className="mb-16 md:mb-24"
               >
                 <div className="flex items-center gap-4 mb-4">
-                  <span className="font-mono text-primary tracking-widest uppercase">Capabilities</span>
+                  <span className="font-mono text-primary tracking-widest uppercase">Features</span>
                 </div>
                 <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
                   Everything you need.
@@ -161,49 +150,33 @@ const Index = () => {
                   <span>Nothing you don't.</span>
                 </h2>
               </motion.div>
-            </div>
-          </section>
 
-          {/* Individual Capability Sections */}
-          {capabilities.map((capability, index) => {
-            const isEven = index % 2 === 0;
-            return (
-              <section
-                key={capability.title}
-                className={`relative py-24 px-8 lg:px-16 overflow-hidden ${
-                  isEven ? "" : "bg-card/30"
-                } ${index === capabilities.length - 1 ? "border-b border-border/20" : ""}`}
-              >
-                <div className="max-w-7xl mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                {features.map((feature, index) => (
                   <motion.div
-                    className="grid md:grid-cols-[1fr_1.5fr] gap-12 md:gap-20 items-start"
-                    initial={{ opacity: 0, y: 30 }}
+                    key={feature.title}
+                    initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.6 }}
+                    transition={{ duration: 0.5, delay: index * 0.08 }}
+                    className="group relative rounded-2xl border border-border/40 bg-card/30 p-8 md:p-10 flex flex-col justify-between min-h-[280px] md:min-h-[320px] hover:border-border/80 hover:bg-card/50 transition-all duration-300"
                   >
-                    {/* Left: Label + Icon */}
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 border border-primary/30 flex items-center justify-center shrink-0">
-                        <capability.icon className="w-6 h-6 text-primary" />
-                      </div>
-                      <div>
-                        <span className="font-mono text-primary/60 tracking-widest uppercase text-xs">
-                          {capability.label}
-                        </span>
-                        <h3 className="text-2xl sm:text-3xl font-light text-foreground leading-tight tracking-tight mt-1">
-                          {capability.title}
-                        </h3>
-                      </div>
+                    <div className="w-10 h-10 flex items-center justify-center">
+                      <feature.icon className="w-7 h-7 text-foreground" strokeWidth={1.5} />
                     </div>
-
-                    {/* Right: Description */}
-                    <p className="text-[17px] text-muted-foreground leading-[1.7] md:pt-2">{capability.description}</p>
+                    <div className="mt-auto">
+                      <h3 className="text-2xl sm:text-3xl font-light text-foreground tracking-tight mb-2">
+                        {feature.title}
+                      </h3>
+                      <p className="text-[15px] text-muted-foreground leading-relaxed">
+                        {feature.description}
+                      </p>
+                    </div>
                   </motion.div>
-                </div>
-              </section>
-            );
-          })}
+                ))}
+              </div>
+            </div>
+          </section>
 
           {/* CTA Section with Dithering Background */}
           <CtaSection />
