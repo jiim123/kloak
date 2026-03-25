@@ -158,9 +158,11 @@ const ActionBar = memo(
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="min-w-[160px]">
-                <DropdownMenuItem onClick={onAttachClick} disabled={!canSendMessage}>
-                  <Paperclip className="w-4 h-4 mr-2" /> Attach file
-                </DropdownMenuItem>
+                {onAttachClick && (
+                  <DropdownMenuItem onClick={onAttachClick} disabled={!canSendMessage}>
+                    <Paperclip className="w-4 h-4 mr-2" /> Attach file
+                  </DropdownMenuItem>
+                )}
                 {setShowCreatePoll && (
                   <DropdownMenuItem onClick={() => setShowCreatePoll(true)} disabled={!canSendMessage}>
                     <SquareChartGantt className="w-4 h-4 mr-2" /> Create poll
@@ -170,9 +172,11 @@ const ActionBar = memo(
             </DropdownMenu>
           ) : (
             <>
-              <button onClick={onAttachClick} disabled={!canSendMessage} className={iconBtnClass}>
-                <Paperclip className="w-5 h-5" />
-              </button>
+              {onAttachClick && (
+                <button onClick={onAttachClick} disabled={!canSendMessage} className={iconBtnClass}>
+                  <Paperclip className="w-5 h-5" />
+                </button>
+              )}
               {setShowCreatePoll && (
                 <>
                   <div className="w-px h-5 bg-white/8 mx-0.5" />
@@ -379,6 +383,7 @@ export const MessageInput = ({
   const canSendInReadOnly = isDM ? true : (isReadOnlyChannel ? hasPermission("manage_messages") : true);
   const canSendMessage = isDM ? true : (!isMuted && canSendMessagesPermission && canSendInReadOnly);
   const canManageMessages = isDM ? false : hasPermission("manage_messages");
+  const canAttachFiles = isDM ? true : hasPermission("attach_files");
   const isSlowmodeEnabled = slowmodeSeconds > 0;
   const isSlowmodeExempt = canManageMessages;
   const slowmodeCooldownUntil = isDM ? 0 : (slowmodeCooldownByChannel[targetId] || 0);
@@ -698,6 +703,11 @@ export const MessageInput = ({
       if (!files || files.length === 0) return;
       const pasteFile = Array.from(files).find((f) => ALLOWED_FILE_TYPES.includes(f.type));
       if (!pasteFile) return;
+      if (!canAttachFiles) {
+        e.preventDefault();
+        toast.error("You don't have permission to attach files in this channel");
+        return;
+      }
       e.preventDefault();
       e.stopPropagation();
       const attachment = {
@@ -706,7 +716,7 @@ export const MessageInput = ({
       };
       setPendingAttachments((prev) => [...prev, attachment].slice(0, MAX_ATTACHMENTS));
     },
-    [user, isSending],
+    [user, isSending, canAttachFiles],
   );
 
   const handleFormat = (type: string, val?: string) => {
@@ -807,6 +817,11 @@ export const MessageInput = ({
         multiple
         hidden
         onChange={(e) => {
+          if (!canAttachFiles) {
+            toast.error("You don't have permission to attach files in this channel");
+            e.target.value = "";
+            return;
+          }
           if (e.target.files) {
             const files = Array.from(e.target.files).filter((f) => {
               if (!ALLOWED_FILE_TYPES.includes(f.type)) {
@@ -952,10 +967,10 @@ export const MessageInput = ({
           setPendingAttachments((prev) => [...prev, { file: new File([], "gif"), preview: url, gifUrl: url }]);
         }}
         currentServer={isDM ? undefined : currentServer}
-        onAttachClick={() => fileInputRef.current?.click()}
+        onAttachClick={canAttachFiles ? () => fileInputRef.current?.click() : undefined}
         pendingAttachments={pendingAttachments}
         onRemoveAttachment={(i: number) => setPendingAttachments((p) => p.filter((_, idx) => idx !== i))}
-        onAddMore={() => fileInputRef.current?.click()}
+        onAddMore={canAttachFiles ? () => fileInputRef.current?.click() : undefined}
       />
       <AnimatePresence>
         {showChatNoticePopup && requiresChatNoticeAck && (
