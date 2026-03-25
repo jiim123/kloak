@@ -384,6 +384,14 @@ export const MessageInput = ({
   const canSendMessage = isDM ? true : (!isMuted && canSendMessagesPermission && canSendInReadOnly);
   const canManageMessages = isDM ? false : hasPermission("manage_messages");
   const canAttachFiles = isDM ? true : hasPermission("attach_files");
+  console.log('[DEBUG attach_files]', {
+    canAttachFiles,
+    rolePermissions: useServerStore.getState().rolePermissions.filter(rp => rp.permission === 'attach_files'),
+    rolePermissionsTotal: useServerStore.getState().rolePermissions.length,
+    memberRoles: permsMember?.roles?.map(r => ({ id: r.id, name: r.name })),
+    isOwner,
+    baseRole: permsMember?.role,
+  });
   const isSlowmodeEnabled = slowmodeSeconds > 0;
   const isSlowmodeExempt = canManageMessages;
   const slowmodeCooldownUntil = isDM ? 0 : (slowmodeCooldownByChannel[targetId] || 0);
