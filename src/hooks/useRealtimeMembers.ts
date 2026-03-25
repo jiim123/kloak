@@ -1,7 +1,6 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef } from 'react';
 import { useServerStore } from '@/stores/serverStore';
 import { toast } from '@/hooks/use-toast';
-import { useRealtimeUserUpdates } from './useRealtimeUserUpdates';
 import { acquireChannel, subscribeChannel, releaseChannel } from '@/lib/sharedChannel';
 
 export const useRealtimeMembers = (serverId: string | null, opts?: { full?: boolean }) => {
@@ -17,18 +16,6 @@ export const useRealtimeMembers = (serverId: string | null, opts?: { full?: bool
       fetchRolesRef.current = state.fetchRoles;
     });
   }, []);
-
-  // Get member user IDs for targeted user updates subscription
-  // FIX: Memoize to prevent unstable array references from causing
-  // useRealtimeUserUpdates to continuously re-run its polling effect
-  const members = useServerStore((state) => state.members);
-  const memberUserIds = useMemo(() => members.map((m) => m.user_id), [members]);
-
-  // Subscribe to user updates (status, avatar, etc.) for current server members
-  useRealtimeUserUpdates(
-    memberUserIds,
-    `server-member-users:${serverId || 'none'}`,
-  );
 
   // Re-fetch members when tab becomes visible (presence data goes stale in background)
   useEffect(() => {

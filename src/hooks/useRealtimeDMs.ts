@@ -1,10 +1,9 @@
-import { useEffect, useCallback, useRef, useMemo } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useDMStore } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
 import { resolveSignedUrls, isSupabaseAttachmentUrl } from '@/lib/signedUrl';
 import type { DirectMessage, ReactionGroup } from '@/types';
-import { useRealtimeUserUpdates } from './useRealtimeUserUpdates';
 import { getOrFetchUser, useUserCacheStore } from '@/stores/userCacheStore';
 import { acquireChannel, subscribeChannel, releaseChannel } from '@/lib/sharedChannel';
 
@@ -429,36 +428,4 @@ export const useRealtimeDMs = ({
     };
   }, [userId, debouncedFetchConversations]);
 
-  // Subscribe to user updates for all DM conversation participants
-  const currentConversation = useDMStore((state) => state.currentConversation);
-
-  // FIX: Memoize to prevent unstable array references from causing
-  // useRealtimeUserUpdates to continuously re-run its polling effect
-  const participantUserIds = useMemo(() => {
-    const ids = new Set<string>();
-    conversations.forEach((conv) => {
-      if (conv.other_user?.id) {
-        ids.add(conv.other_user.id);
-      }
-      if (conv.participants) {
-        conv.participants.forEach((p) => {
-          if (p.user_id && p.user_id !== userId) {
-            ids.add(p.user_id);
-          }
-        });
-      }
-    });
-
-    if (currentConversation?.participants) {
-      currentConversation.participants.forEach((p) => {
-        if (p.user_id && p.user_id !== userId) {
-          ids.add(p.user_id);
-        }
-      });
-    }
-
-    return Array.from(ids);
-  }, [conversations, currentConversation, userId]);
-
-  useRealtimeUserUpdates(participantUserIds, `dm-participant-users:${userId || 'none'}`);
 };

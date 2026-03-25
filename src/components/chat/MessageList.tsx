@@ -14,7 +14,7 @@ import { useUnreadChannelsContext } from "@/hooks/useUnreadChannelsContext";
 import { useScrollToMessage } from "@/hooks/useScrollToMessage";
 import { useRealtimePolls } from "@/hooks/useRealtimePolls";
 import { useConnectionStatus } from "@/hooks/useConnectionStatus";
-import { useRealtimeUserUpdates } from "@/hooks/useRealtimeUserUpdates";
+
 import { useAuthorStyles } from "@/hooks/useAuthorStyles";
 import type { Message } from "@/types";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
@@ -123,7 +123,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   }, [deduplicatedMessages]);
   const msgCount = deduplicatedMessages.length;
 
-  useRealtimeUserUpdates(visibleAuthorUserIds, `channel-authors:${channelId}`);
+  
   const authorStyleMap = useAuthorStyles(currentServerId, visibleAuthorUserIds);
 
   useEffect(() => {

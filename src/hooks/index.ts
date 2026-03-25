@@ -5,7 +5,7 @@ export { useRealtimeReactions } from './useRealtimeReactions';
 export { useRealtimeMembers } from './useRealtimeMembers';
 export { useRealtimeFriendships } from './useRealtimeFriendships';
 export { useRealtimeUsers, useRealtimeSingleUser, patchUserAcrossStores } from './useRealtimeUsers';
-export { useRealtimeUserUpdates } from './useRealtimeUserUpdates';
+
 export { useRealtimePinnedMessages } from './useRealtimePinnedMessages';
 export { useRealtimeServer } from './useRealtimeServer';
 export { useRealtimeServerEmojis } from './useRealtimeServerEmojis';
