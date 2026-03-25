@@ -179,15 +179,14 @@ export const SupportUsButton = ({
 
   const close = useCallback(() => setOpen(false), []);
 
-  const handleMouseEnter = () => {
-    if (isMobile) return;
-    clearTimeout(timeoutRef.current);
-    setOpen(true);
-  };
-
   const handleMouseLeave = () => {
     if (isMobile) return;
     timeoutRef.current = setTimeout(() => setOpen(false), 250);
+  };
+
+  const handleMouseEnter = () => {
+    if (isMobile) return;
+    clearTimeout(timeoutRef.current);
   };
 
   // Outside click / touch
