@@ -95,39 +95,35 @@ const Index = () => {
           <HeroAscii />
 
           {/* What is Kloak Section */}
-          <section className="relative py-32 md:py-48 px-8 lg:px-16 bg-light text-light-foreground overflow-hidden">
-            <div className="max-w-3xl mx-auto text-center">
-              <motion.div
-                className="flex items-center justify-center gap-4 mb-12"
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
-              >
-                <span className="font-mono text-light-foreground tracking-widest uppercase">What is Kloak</span>
-              </motion.div>
-
+          <section className="relative py-32 md:py-48 px-8 lg:px-16 bg-light text-light-foreground">
+            <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-12 md:gap-16 items-start">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-100px" }}
-                transition={{ duration: 0.8 }}
-                className="space-y-8"
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+                className="md:sticky md:top-24"
               >
                 <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-light-foreground leading-tight tracking-tight">
                   A place to talk
                   <br />
                   without being watched.
                 </h2>
-
-                <p className="text-[17px] text-light-foreground leading-[1.7] max-w-2xl mx-auto">
-                  Kloak is a real-time communication platform built for communities, friend groups, gaming squads, and
-                  creative teams. It gives you servers, voice channels, direct messages, roles, and permissions, all
-                  without requiring an email, phone number, or password. Your identity is a single cryptographic key
-                  that only you hold. No ads, no data harvesting, no algorithm deciding what you see. Just a space to
-                  talk, collaborate, and build communities on your own terms.
-                </p>
               </motion.div>
+
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-100px" }}
+                transition={{ duration: 0.8 }}
+                className="text-[17px] text-light-foreground/80 leading-[1.8]"
+              >
+                Kloak is a real-time communication platform built for communities, friend groups, gaming squads, and
+                creative teams. It gives you servers, voice channels, direct messages, roles, and permissions, all
+                without requiring an email, phone number, or password. Your identity is a single cryptographic key
+                that only you hold. No ads, no data harvesting, no algorithm deciding what you see. Just a space to
+                talk, collaborate, and build communities on your own terms.
+              </motion.p>
             </div>
           </section>
 
