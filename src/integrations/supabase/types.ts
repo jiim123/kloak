@@ -2059,6 +2059,7 @@ export type Database = {
           created_at: string | null
           icon: string | null
           id: string
+          is_self_assignable: boolean
           name: string
           position: number | null
           server_id: string
@@ -2068,6 +2069,7 @@ export type Database = {
           created_at?: string | null
           icon?: string | null
           id?: string
+          is_self_assignable?: boolean
           name: string
           position?: number | null
           server_id: string
@@ -2077,6 +2079,7 @@ export type Database = {
           created_at?: string | null
           icon?: string | null
           id?: string
+          is_self_assignable?: boolean
           name?: string
           position?: number | null
           server_id?: string
@@ -3166,6 +3169,10 @@ export type Database = {
         Args: { _member_id: string; _role_id: string; _user_id: string }
         Returns: undefined
       }
+      assign_self_role: {
+        Args: { _role_id: string; _server_id: string; _user_id: string }
+        Returns: undefined
+      }
       assign_task_users: {
         Args: { _assignee_ids: string[]; _task_id: string; _user_id: string }
         Returns: Json
@@ -4145,6 +4152,10 @@ export type Database = {
         Args: { _member_id: string; _role_id: string; _user_id: string }
         Returns: undefined
       }
+      remove_self_role: {
+        Args: { _role_id: string; _server_id: string; _user_id: string }
+        Returns: undefined
+      }
       rename_server_emoji: {
         Args: { _emoji_id: string; _new_name: string; _user_id: string }
         Returns: undefined
@@ -4325,6 +4336,14 @@ export type Database = {
           _user_id: string
         }
         Returns: undefined
+      }
+      set_role_self_assignable: {
+        Args: {
+          _is_self_assignable: boolean
+          _role_id: string
+          _user_id: string
+        }
+        Returns: Json
       }
       set_streaming_session_owner: {
         Args: { _user_id: string; _voice_channel_id: string }
