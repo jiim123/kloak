@@ -2,13 +2,10 @@ import { useEffect, useRef } from 'react';
 import { useServerStore } from '@/stores/serverStore';
 import { toast } from '@/hooks/use-toast';
 import { acquireChannel, subscribeChannel, releaseChannel } from '@/lib/sharedChannel';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { useUIStore } from '@/stores/uiStore';
 
 export const useRealtimeMembers = (serverId: string | null, opts?: { full?: boolean }) => {
   const useFull = opts?.full === true;
-  const isMobile = useIsMobile();
-  const isMemberSidebarOpen = useUIStore((s) => s.isMemberSidebarOpen);
+  const members = useServerStore((s) => s.members);
 
   // Use refs to avoid recreating subscription when store functions change
   const fetchMembersRef = useRef(useServerStore.getState().fetchMembers);
@@ -66,22 +63,40 @@ export const useRealtimeMembers = (serverId: string | null, opts?: { full?: bool
     };
   }, [serverId, useFull]);
 
-  // Poll members at moderate frequency to catch status-driven changes
-  // (users coming online/offline update the `users` table, not `server_members`,
-  // so the broadcast trigger doesn't fire for those)
+  // Re-fetch members when presence system detects a user came online
+  // who isn't in the current members list, or a member went offline
   useEffect(() => {
     if (!serverId) return;
-    if (!isMemberSidebarOpen && isMobile) return;
 
-    const MEMBER_POLL_INTERVAL_MS = 30_000;
+    let lastMemberIds = new Set(members.map((m) => m.user_id));
+    let refetchTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const pollMembers = () => {
-      if (document.visibilityState !== 'visible') return;
-      fetchMembersRef.current(serverId, { full: useFull });
+    const handlePresenceChange = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (!detail?.serverId || detail.serverId !== serverId) return;
+
+      const userId = detail.userId;
+      const newStatus = detail.status;
+
+      if (!userId) return;
+
+      const isInList = lastMemberIds.has(userId);
+      const isComingOnline = newStatus !== 'offline' && !isInList;
+      const isGoingOffline = newStatus === 'offline' && isInList;
+
+      if (isComingOnline || isGoingOffline) {
+        if (refetchTimer) clearTimeout(refetchTimer);
+        refetchTimer = setTimeout(() => {
+          fetchMembersRef.current(serverId, { full: useFull });
+        }, 2000);
+      }
     };
 
-    const intervalId = setInterval(pollMembers, MEMBER_POLL_INTERVAL_MS);
+    window.addEventListener('kloak-presence-change', handlePresenceChange);
 
-    return () => clearInterval(intervalId);
-  }, [serverId, useFull, isMobile, isMemberSidebarOpen]);
+    return () => {
+      window.removeEventListener('kloak-presence-change', handlePresenceChange);
+      if (refetchTimer) clearTimeout(refetchTimer);
+    };
+  }, [serverId, members, useFull]);
 };
