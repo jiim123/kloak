@@ -132,18 +132,16 @@ const Index = () => {
           </section>
 
           {/* Features Section */}
-          <section className="relative py-32 md:py-48 px-8 lg:px-16 overflow-hidden">
-            <div className="max-w-7xl mx-auto">
+          <section className="relative py-32 md:py-48 px-8 lg:px-16">
+            <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-12 md:gap-16 items-start">
+              {/* Sticky title column */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6 }}
-                className="mb-16 md:mb-24"
+                className="md:sticky md:top-24"
               >
-                <div className="flex items-center gap-4 mb-4">
-                  <span className="font-mono text-primary tracking-widest uppercase">Features</span>
-                </div>
                 <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
                   Everything you need.
                   <br />
@@ -151,7 +149,8 @@ const Index = () => {
                 </h2>
               </motion.div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+              {/* Cards grid column */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
                 {features.map((feature, index) => (
                   <motion.div
                     key={feature.title}
