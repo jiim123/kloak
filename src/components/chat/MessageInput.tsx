@@ -970,7 +970,7 @@ export const MessageInput = ({
         onAttachClick={canAttachFiles ? () => fileInputRef.current?.click() : undefined}
         pendingAttachments={pendingAttachments}
         onRemoveAttachment={(i: number) => setPendingAttachments((p) => p.filter((_, idx) => idx !== i))}
-        onAddMore={() => fileInputRef.current?.click()}
+        onAddMore={canAttachFiles ? () => fileInputRef.current?.click() : undefined}
       />
       <AnimatePresence>
         {showChatNoticePopup && requiresChatNoticeAck && (
