@@ -1,4 +1,3 @@
-import { Circle, Eye, MinusCircle, Moon } from "lucide-react";
 import { useState } from "react";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -6,10 +5,22 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
 import type { UserStatus } from "@/types";
 
+const StatusDot = ({ status, className }: { status: UserStatus; className?: string }) => (
+  <span
+    className={cn(
+      "inline-block h-3 w-3 shrink-0 rounded-full",
+      status === "online" && "bg-kloak-online",
+      status === "idle" && "bg-kloak-idle",
+      status === "dnd" && "bg-kloak-dnd",
+      status === "offline" && "border-2 border-muted-foreground bg-transparent",
+      className,
+    )}
+  />
+);
+
 interface StatusOption {
   value: UserStatus;
   label: string;
-  icon: React.ReactNode;
   color: string;
   description: string;
 }
@@ -18,29 +29,25 @@ const statusOptions: StatusOption[] = [
   {
     value: "online",
     label: "Online",
-    icon: <Circle className="h-3 w-3 fill-current" />,
-    color: "text-green-500",
+    color: "text-kloak-online",
     description: "You are available",
   },
   {
     value: "idle",
     label: "Idle",
-    icon: <Moon className="h-3 w-3 fill-current" />,
-    color: "text-yellow-500",
+    color: "text-kloak-idle",
     description: "You may be away",
   },
   {
     value: "dnd",
     label: "Do Not Disturb",
-    icon: <MinusCircle className="h-3 w-3" />,
-    color: "text-red-500",
+    color: "text-kloak-dnd",
     description: "You will not receive notifications",
   },
   {
     value: "offline",
     label: "Invisible",
-    icon: <Eye className="h-3 w-3" />,
-    color: "text-gray-500",
+    color: "text-muted-foreground",
     description: "You will appear offline",
   },
 ];
