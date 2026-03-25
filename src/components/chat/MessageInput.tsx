@@ -158,9 +158,11 @@ const ActionBar = memo(
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="min-w-[160px]">
-                <DropdownMenuItem onClick={onAttachClick} disabled={!canSendMessage}>
-                  <Paperclip className="w-4 h-4 mr-2" /> Attach file
-                </DropdownMenuItem>
+                {onAttachClick && (
+                  <DropdownMenuItem onClick={onAttachClick} disabled={!canSendMessage}>
+                    <Paperclip className="w-4 h-4 mr-2" /> Attach file
+                  </DropdownMenuItem>
+                )}
                 {setShowCreatePoll && (
                   <DropdownMenuItem onClick={() => setShowCreatePoll(true)} disabled={!canSendMessage}>
                     <SquareChartGantt className="w-4 h-4 mr-2" /> Create poll
@@ -170,9 +172,11 @@ const ActionBar = memo(
             </DropdownMenu>
           ) : (
             <>
-              <button onClick={onAttachClick} disabled={!canSendMessage} className={iconBtnClass}>
-                <Paperclip className="w-5 h-5" />
-              </button>
+              {onAttachClick && (
+                <button onClick={onAttachClick} disabled={!canSendMessage} className={iconBtnClass}>
+                  <Paperclip className="w-5 h-5" />
+                </button>
+              )}
               {setShowCreatePoll && (
                 <>
                   <div className="w-px h-5 bg-white/8 mx-0.5" />
