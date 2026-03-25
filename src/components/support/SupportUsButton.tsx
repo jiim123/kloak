@@ -2,7 +2,6 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Heart, Coffee, ExternalLink, Copy, Check, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const EthIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -179,14 +178,26 @@ export const SupportUsButton = ({
 
   const close = useCallback(() => setOpen(false), []);
 
+  const handleMouseEnter = () => {
+    if (isMobile) return;
+    clearTimeout(timeoutRef.current);
+    setOpen(true);
+  };
+
   const handleMouseLeave = () => {
     if (isMobile) return;
     timeoutRef.current = setTimeout(() => setOpen(false), 250);
   };
 
-  const handleMouseEnter = () => {
-    if (isMobile) return;
+  const handleTriggerClick = () => {
     clearTimeout(timeoutRef.current);
+
+    if (isMobile) {
+      setOpen((previous) => !previous);
+      return;
+    }
+
+    setOpen(true);
   };
 
   // Outside click / touch
@@ -223,33 +234,27 @@ export const SupportUsButton = ({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       className={cn("relative", variant === "overlay" && "w-full h-full")}
+      title={tooltipsEnabled && variant === "default" ? "Support Kloak" : undefined}
     >
       {/* Trigger button */}
       {variant === "overlay" ? (
         <button
-          onClick={() => setOpen((p) => !p)}
+          onClick={handleTriggerClick}
           aria-label="Support Us"
           className="w-full h-full absolute inset-0 cursor-pointer"
         />
       ) : (
-        <Tooltip delayDuration={300} open={tooltipsEnabled && !open ? undefined : false}>
-          <TooltipTrigger asChild>
-            <button
-              onClick={() => setOpen((p) => !p)}
-              aria-label="Support Us"
-              className={cn(
-                "w-10 h-10 inline-flex items-center justify-center rounded-[4px] transition-all duration-200 text-emerald-400",
-                "hover:bg-emerald-500/10 hover:text-emerald-300",
-                open && "bg-emerald-500/10"
-              )}
-            >
-              <Heart className="w-4 h-4" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" className="font-medium">
-            Support Kloak
-          </TooltipContent>
-        </Tooltip>
+        <button
+          onClick={handleTriggerClick}
+          aria-label="Support Us"
+          className={cn(
+            "w-10 h-10 inline-flex items-center justify-center rounded-[4px] transition-all duration-200 text-emerald-400",
+            "hover:bg-emerald-500/10 hover:text-emerald-300",
+            open && "bg-emerald-500/10"
+          )}
+        >
+          <Heart className="w-4 h-4" />
+        </button>
       )}
 
       {/* MOBILE: bottom sheet */}
