@@ -52,48 +52,36 @@ function CtaSection() {
 }
 
 const Index = () => {
-  const capabilities = [
+  const features = [
     {
       icon: MessageCircle,
-      label: "Messaging",
       title: "Real-Time Messaging",
-      description:
-        "Your messages arrive instantly. Edits, replies, and reactions update live for everyone in the conversation, no refreshing needed.",
+      description: "Instant delivery with live edits, replies, and reactions.",
     },
     {
       icon: Headphones,
-      label: "Voice",
       title: "Voice Channels",
-      description:
-        "Jump into a voice channel and talk with your group while browsing the rest of the app. Low latency, always ready when you are.",
+      description: "Low-latency voice chat, always ready when you are.",
     },
     {
       icon: Users,
-      label: "Structure",
-      title: "Servers, Roles & Permissions",
-      description:
-        "Organize your community with servers, categories, and channels. Assign roles and control exactly who can do what, down to the channel level.",
+      title: "Servers & Roles",
+      description: "Organize communities with granular role-based permissions.",
     },
     {
       icon: Lock,
-      label: "Identity",
-      title: "Secret Key Authentication",
-      description:
-        "No email. No phone number. No password. You get one cryptographic key that is your identity. Nobody can recover it, reset it, or take it from you.",
+      title: "Secret Key Auth",
+      description: "One cryptographic key. No email, phone, or password.",
     },
     {
       icon: Shield,
-      label: "Private",
-      title: "Direct Messages & Friends",
-      description:
-        "Add friends by username, start private conversations, and block anyone you don't want to hear from. Simple and straightforward.",
+      title: "Direct Messages",
+      description: "Private conversations with friends. Block anyone instantly.",
     },
     {
       icon: Palette,
-      label: "Personal",
-      title: "Themes & Customization",
-      description:
-        "Switch between multiple themes instantly. Personalize your profile with avatars, banners, bios, and custom statuses to make it yours.",
+      title: "Themes",
+      description: "Multiple themes and full profile customization.",
     },
   ];
 
