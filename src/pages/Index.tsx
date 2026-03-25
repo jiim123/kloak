@@ -116,7 +116,7 @@ const Index = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-100px" }}
                 transition={{ duration: 0.8 }}
-                className="text-[17px] text-light-foreground/80 leading-[1.8]"
+                className="text-base md:text-lg text-light-foreground/80 leading-[1.8]"
               >
                 Kloak is a real-time communication platform built for communities, friend groups, gaming squads, and
                 creative teams. It gives you servers, voice channels, direct messages, roles, and permissions, all
