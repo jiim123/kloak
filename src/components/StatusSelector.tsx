@@ -77,8 +77,8 @@ export const StatusSelector = ({ children, side = "right", align = "start" }: St
             <AvatarWithDecoration user={user} className="h-10 w-10" active={false} />
             <div className="min-w-0 flex-1">
               <p className="truncate font-medium text-foreground">{user?.display_name || user?.username}</p>
-              <span className={cn("inline-flex items-center gap-1 text-xs", currentStatus.color)}>
-                {currentStatus.icon}
+              <span className={cn("inline-flex items-center gap-1.5 text-xs", currentStatus.color)}>
+                <StatusDot status={currentStatus.value} className="h-2.5 w-2.5" />
                 {currentStatus.label}
               </span>
             </div>
@@ -92,7 +92,7 @@ export const StatusSelector = ({ children, side = "right", align = "start" }: St
               onClick={() => void handleStatusChange(option.value)}
               className={cn("cursor-pointer px-3 py-2", user?.status === option.value && "bg-secondary")}
             >
-              <span className={cn("mr-3 shrink-0", option.color)}>{option.icon}</span>
+              <StatusDot status={option.value} className="mr-3" />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium">{option.label}</p>
                 <p className="text-xs text-muted-foreground">{option.description}</p>
