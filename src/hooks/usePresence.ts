@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useAuthStore } from '@/stores/authStore';
+import { patchUserAcrossStores } from './useRealtimeUsers';
 
 const LAST_SEEN_INTERVAL_MS = 90000; // 90 seconds
 const IDLE_TIMEOUT_MS = 300000; // 5 minutes
@@ -124,4 +125,13 @@ export const usePresence = () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [isAuthenticated, resetIdleTimer]);
+
+  // Sync own status changes to members list, friend list, DM conversations
+  const userStatus = useAuthStore((s) => s.user?.status);
+  const userId = useAuthStore((s) => s.user?.id);
+
+  useEffect(() => {
+    if (!userId || !userStatus) return;
+    patchUserAcrossStores({ id: userId, status: userStatus });
+  }, [userId, userStatus]);
 };
