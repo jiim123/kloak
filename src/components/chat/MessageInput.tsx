@@ -367,7 +367,7 @@ export const MessageInput = ({
     }
   }, [isDM, dmConfig?.replyingTo]);
 
-  const { hasPermission } = useMemberPermissions(isDM ? undefined : channelId);
+  const { hasPermission, isOwner, currentMember: permsMember } = useMemberPermissions(isDM ? undefined : channelId);
   const markChatNoticeSeen = useChannelSettingsStore((state) => state.markChatNoticeSeen);
   const chatNoticeSeenAt = useChannelSettingsStore((state) => (channelId ? state.settings[channelId]?.chat_notice_seen_at ?? null : null));
   const currentMember = useMemo(() => members.find((m) => m.user_id === user?.id), [members, user?.id]);
