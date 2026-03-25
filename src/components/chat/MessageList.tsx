@@ -576,12 +576,16 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     (item: ListItem, index: number) => {
       if (item.type === "dateDivider") {
         return (
-          <div key={`date-divider-${item.date.toISOString().slice(0, 10)}`} className="flex items-center gap-3 px-6 my-4" style={{ overflowAnchor: "none" }}>
-            <div className="h-px flex-1 bg-white/8" />
+          <div
+            key={`date-divider-${item.date.toISOString().slice(0, 10)}`}
+            className="flex items-center gap-3 px-6 my-4"
+            style={{ overflowAnchor: "none" }}
+          >
+            <div className="h-px flex-1 bg-border/70" />
             <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
               {item.label}
             </span>
-            <div className="h-px flex-1 bg-white/8" />
+            <div className="h-px flex-1 bg-border/70" />
           </div>
         );
       }
