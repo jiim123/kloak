@@ -419,33 +419,42 @@ export const EmojiPicker = ({
               )
             ) : selectedServerForEmoji ? (
               // Custom server emoji view
-              <div>
-                <div className="flex items-center gap-2 mb-2 px-1">
-                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    {servers.find((s) => s.id === selectedServerForEmoji)?.name || "Server"} Emojis
-                  </span>
-                </div>
-                {loadingServers.has(selectedServerForEmoji) ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mb-3" />
-                    <p className="text-sm text-muted-foreground">Loading emojis...</p>
-                  </div>
-                ) : currentServerEmojis.length > 0 ? (
-                   <div className="grid grid-cols-4 gap-1">
-                    {currentServerEmojis.map((emoji) => (
-                      <button
-                        key={emoji.id}
-                        type="button"
-                        className="aspect-square hover:bg-muted/50 active:scale-90 rounded-lg flex items-center justify-center transition-all duration-150 p-1"
-                        onClick={() => handleCustomEmojiSelect(emoji)}
-                        onMouseDown={(e) => e.preventDefault()}
-                        title={`:${emoji.name}:`}
-                      >
-                        <img src={emoji.url} alt={emoji.name} className="w-9 h-9 object-contain" />
-                      </button>
-                    ))}
-                  </div>
-                ) : (
+              (() => {
+                const isExternalServer = selectedServerForEmoji !== serverId;
+                const isDisabledSection = isExternalServer && !allowExternalEmojis;
+                return (
+                  <div>
+                    <div className="flex items-center gap-2 mb-2 px-1">
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        {servers.find((s) => s.id === selectedServerForEmoji)?.name || "Server"} Emojis
+                      </span>
+                      {isDisabledSection && (
+                        <span className="text-[10px] text-muted-foreground/60 italic">
+                          — External emojis disabled
+                        </span>
+                      )}
+                    </div>
+                    {loadingServers.has(selectedServerForEmoji) ? (
+                      <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mb-3" />
+                        <p className="text-sm text-muted-foreground">Loading emojis...</p>
+                      </div>
+                    ) : currentServerEmojis.length > 0 ? (
+                       <div className={cn("grid grid-cols-4 gap-1", isDisabledSection && "opacity-50 pointer-events-none")}>
+                        {currentServerEmojis.map((emoji) => (
+                          <button
+                            key={emoji.id}
+                            type="button"
+                            className="aspect-square hover:bg-muted/50 active:scale-90 rounded-lg flex items-center justify-center transition-all duration-150 p-1"
+                            onClick={() => handleCustomEmojiSelect(emoji)}
+                            onMouseDown={(e) => e.preventDefault()}
+                            title={`:${emoji.name}:`}
+                          >
+                            <img src={emoji.url} alt={emoji.name} className="w-9 h-9 object-contain" />
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <div className="w-12 h-12 rounded-xl bg-muted/30 flex items-center justify-center mb-3">
                       <FluentEmoji emoji="😢" size={28} />
