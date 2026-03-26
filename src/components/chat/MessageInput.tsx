@@ -390,6 +390,7 @@ export const MessageInput = ({
   const canMentionEveryone = isDM ? true : hasPermission("mention_everyone");
   const canMentionRoles = isDM ? true : hasPermission("mention_roles");
   const canUseExternalEmojis = isDM ? true : hasPermission("use_external_emojis");
+  const { emojis: serverEmojisForCheck } = useServerEmojis(isDM ? null : currentServer?.id);
   const isSlowmodeEnabled = slowmodeSeconds > 0;
   const isSlowmodeExempt = canManageMessages;
   const slowmodeCooldownUntil = isDM ? 0 : (slowmodeCooldownByChannel[targetId] || 0);
