@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -278,10 +278,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
   return (
     <div className="h-full flex flex-col bg-layout-chat">
       {/* Header - hidden on mobile since we have MobileHeader */}
-      <div className="h-12 px-4 hidden md:flex items-center justify-between border-b border-border shadow-sm">
-        <div className="flex items-center gap-4">
-          <h2 className="font-medium text-foreground">Friends</h2>
-        </div>
+      <div className="h-12 px-4 hidden md:flex items-center justify-end border-b border-border shadow-sm">
         <Button
           size="sm"
           variant={showAddFriend ? "secondary" : "default"}
@@ -331,155 +328,187 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
           )}
 
           {/* Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-            <div className="px-4 pt-4">
-              <TabsList className="bg-secondary/50">
-                <TabsTrigger value="online">
-                  Online
-                  {onlineFriends.length > 0 && (
-                    <span className="ml-1.5 text-xs">
-                      — {searchQuery ? filteredOnlineFriends.length : onlineFriends.length}
-                    </span>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="all">
-                  All
-                  {allFriends.length > 0 && (
-                    <span className="ml-1.5 text-xs">
-                      — {searchQuery ? filteredAllFriends.length : allFriends.length}
-                    </span>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="pending">
-                  Pending
-                  {pendingRequests.length + outgoingRequests.length > 0 && (
-                    <span className="ml-1.5 text-xs bg-destructive text-destructive-foreground px-1.5 py-0.5 rounded-full">
-                      {searchQuery
-                        ? filteredPendingRequests.length + filteredOutgoingRequests.length
-                        : pendingRequests.length + outgoingRequests.length}
-                    </span>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="blocked">Blocked</TabsTrigger>
-              </TabsList>
-            </div>
+          {(() => {
+            const tabs = [
+              { id: "online", label: "Online", count: searchQuery ? filteredOnlineFriends.length : onlineFriends.length, showCount: onlineFriends.length > 0 },
+              { id: "all", label: "All", count: searchQuery ? filteredAllFriends.length : allFriends.length, showCount: allFriends.length > 0 },
+              { id: "pending", label: "Pending", count: searchQuery ? filteredPendingRequests.length + filteredOutgoingRequests.length : pendingRequests.length + outgoingRequests.length, showCount: pendingRequests.length + outgoingRequests.length > 0, badge: true },
+              { id: "blocked", label: "Blocked" },
+            ];
 
-            <div className="flex-1 overflow-y-auto p-4">
-              <TabsContent value="online" className="m-0">
-                {isLoading ? (
-                  <div className="space-y-1">
-                    <FriendItemSkeleton />
-                    <FriendItemSkeleton />
-                    <FriendItemSkeleton />
-                  </div>
-                ) : filteredOnlineFriends.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
-                      <Users className="w-8 h-8 text-muted-foreground" />
-                    </div>
-                    <h3 className="font-medium text-foreground mb-1">
-                      {searchQuery ? "No matches found" : "No one's around..."}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {searchQuery
-                        ? "Try a different search term"
-                        : friends.length > 0
-                          ? "None of your friends are online right now."
-                          : "Add some friends to see who's online!"}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    {filteredOnlineFriends.map((friend) => (
-                      <FriendItem key={friend.id} friend={friend} />
+            return (
+              <div className="flex-1 flex flex-col">
+                <div className="px-4 pt-4">
+                  <div className="inline-flex h-10 items-center gap-1 rounded-lg bg-secondary/50 p-1">
+                    {tabs.map((tab) => (
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)}
+                        className={cn(
+                          "relative inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                          activeTab === tab.id
+                            ? "text-foreground"
+                            : "text-muted-foreground hover:text-foreground/80"
+                        )}
+                      >
+                        {activeTab === tab.id && (
+                          <motion.div
+                            layoutId="friends-tab-indicator"
+                            className="absolute inset-0 rounded-md bg-background shadow-sm"
+                            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                          />
+                        )}
+                        <span className="relative z-10 flex items-center gap-1.5">
+                          {tab.label}
+                          {tab.showCount && !tab.badge && (
+                            <span className="text-xs opacity-70">— {tab.count}</span>
+                          )}
+                          {tab.badge && tab.showCount && (
+                            <span className="text-xs bg-destructive text-destructive-foreground px-1.5 py-0.5 rounded-full">
+                              {tab.count}
+                            </span>
+                          )}
+                        </span>
+                      </button>
                     ))}
                   </div>
-                )}
-              </TabsContent>
+                </div>
 
-              <TabsContent value="all" className="m-0">
-                {isLoading ? (
-                  <div className="space-y-1">
-                    <FriendItemSkeleton />
-                    <FriendItemSkeleton />
-                    <FriendItemSkeleton />
-                  </div>
-                ) : filteredAllFriends.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
-                      <UserPlus className="w-8 h-8 text-muted-foreground" />
-                    </div>
-                    <h3 className="font-medium text-foreground mb-1">
-                      {searchQuery ? "No matches found" : "No friends yet"}
-                    </h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      {searchQuery ? "Try a different search term" : "Add some friends to get started!"}
-                    </p>
-                    {!searchQuery && (
-                      <Button onClick={() => setShowAddFriend(true)} className="gap-2">
-                        <UserPlus className="w-4 h-4" />
-                        Add Friend
-                      </Button>
-                    )}
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    {filteredAllFriends.map((friend) => (
-                      <FriendItem key={friend.id} friend={friend} />
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
+                <div className="flex-1 overflow-y-auto p-4">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={activeTab}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      {activeTab === "online" && (
+                        <>
+                          {isLoading ? (
+                            <div className="space-y-1">
+                              <FriendItemSkeleton />
+                              <FriendItemSkeleton />
+                              <FriendItemSkeleton />
+                            </div>
+                          ) : filteredOnlineFriends.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-16 text-center">
+                              <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
+                                <Users className="w-8 h-8 text-muted-foreground" />
+                              </div>
+                              <h3 className="font-medium text-foreground mb-1">
+                                {searchQuery ? "No matches found" : "No one's around..."}
+                              </h3>
+                              <p className="text-sm text-muted-foreground">
+                                {searchQuery
+                                  ? "Try a different search term"
+                                  : friends.length > 0
+                                    ? "None of your friends are online right now."
+                                    : "Add some friends to see who's online!"}
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="space-y-1">
+                              {filteredOnlineFriends.map((friend) => (
+                                <FriendItem key={friend.id} friend={friend} />
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      )}
 
-              <TabsContent value="pending" className="m-0">
-                {filteredPendingRequests.length === 0 && filteredOutgoingRequests.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
-                      <Inbox className="w-8 h-8 text-muted-foreground" />
-                    </div>
-                    <h3 className="font-medium text-foreground mb-1">
-                      {searchQuery ? "No matches found" : "No pending requests"}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {searchQuery ? "Try a different search term" : "Friend requests will appear here."}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    {filteredPendingRequests.map((request) => (
-                      <PendingItem key={request.id} request={request} isOutgoing={false} />
-                    ))}
-                    {filteredOutgoingRequests.map((request) => (
-                      <PendingItem key={request.id} request={request} isOutgoing />
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
+                      {activeTab === "all" && (
+                        <>
+                          {isLoading ? (
+                            <div className="space-y-1">
+                              <FriendItemSkeleton />
+                              <FriendItemSkeleton />
+                              <FriendItemSkeleton />
+                            </div>
+                          ) : filteredAllFriends.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-16 text-center">
+                              <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
+                                <UserPlus className="w-8 h-8 text-muted-foreground" />
+                              </div>
+                              <h3 className="font-medium text-foreground mb-1">
+                                {searchQuery ? "No matches found" : "No friends yet"}
+                              </h3>
+                              <p className="text-sm text-muted-foreground mb-4">
+                                {searchQuery ? "Try a different search term" : "Add some friends to get started!"}
+                              </p>
+                              {!searchQuery && (
+                                <Button onClick={() => setShowAddFriend(true)} className="gap-2">
+                                  <UserPlus className="w-4 h-4" />
+                                  Add Friend
+                                </Button>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="space-y-1">
+                              {filteredAllFriends.map((friend) => (
+                                <FriendItem key={friend.id} friend={friend} />
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      )}
 
-              <TabsContent value="blocked" className="m-0">
-                {filteredBlockedUsers.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
-                      <Ban className="w-8 h-8 text-muted-foreground" />
-                    </div>
-                    <h3 className="font-medium text-foreground mb-1">
-                      {searchQuery ? "No matches found" : "No blocked users"}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {searchQuery ? "Try a different search term" : "You haven't blocked anyone."}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    {filteredBlockedUsers.map((blocked) => (
-                      <BlockedItem key={blocked.id} blocked={blocked} />
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
+                      {activeTab === "pending" && (
+                        <>
+                          {filteredPendingRequests.length === 0 && filteredOutgoingRequests.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-16 text-center">
+                              <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
+                                <Inbox className="w-8 h-8 text-muted-foreground" />
+                              </div>
+                              <h3 className="font-medium text-foreground mb-1">
+                                {searchQuery ? "No matches found" : "No pending requests"}
+                              </h3>
+                              <p className="text-sm text-muted-foreground">
+                                {searchQuery ? "Try a different search term" : "Friend requests will appear here."}
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="space-y-1">
+                              {filteredPendingRequests.map((request) => (
+                                <PendingItem key={request.id} request={request} isOutgoing={false} />
+                              ))}
+                              {filteredOutgoingRequests.map((request) => (
+                                <PendingItem key={request.id} request={request} isOutgoing />
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      )}
 
-            </div>
-          </Tabs>
+                      {activeTab === "blocked" && (
+                        <>
+                          {filteredBlockedUsers.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-16 text-center">
+                              <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
+                                <Ban className="w-8 h-8 text-muted-foreground" />
+                              </div>
+                              <h3 className="font-medium text-foreground mb-1">
+                                {searchQuery ? "No matches found" : "No blocked users"}
+                              </h3>
+                              <p className="text-sm text-muted-foreground">
+                                {searchQuery ? "Try a different search term" : "You haven't blocked anyone."}
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="space-y-1">
+                              {filteredBlockedUsers.map((blocked) => (
+                                <BlockedItem key={blocked.id} blocked={blocked} />
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>
