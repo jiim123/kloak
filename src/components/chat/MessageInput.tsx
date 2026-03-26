@@ -699,6 +699,8 @@ export const MessageInput = ({
     isSlowmodeEnabled,
     isSlowmodeExempt,
     slowmodeSeconds,
+    canMentionEveryone,
+    canMentionRoles,
   ]);
 
   const handlePaste = useCallback(
