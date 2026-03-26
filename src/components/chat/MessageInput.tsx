@@ -46,6 +46,8 @@ import { showWarning, handleError } from "@/lib/errorHandler";
 import { messageRateLimiter, validateMessageContent } from "@/lib/security";
 import { canRevealGhostIdentityForUser } from "@/lib/ghostIdentity";
 import { encodeCustomEmojisForTransport } from "@/lib/globalEmojiResolver";
+import { fetchServerEmojis } from "@/lib/serverEmojis";
+import { useServerEmojis } from "@/hooks/useServerEmojis";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
@@ -137,6 +139,7 @@ const ActionBar = memo(
     onGifSelect,
     currentServer,
     onAttachClick,
+    allowExternalEmojis,
   }: any) => {
     const showCharacterWarning = content.length > MAX_LENGTH - 200;
     const isMobile = useIsMobile();
@@ -200,6 +203,7 @@ const ActionBar = memo(
             onOpenChange={setShowEmojiPicker}
             onEmojiSelect={onEmojiSelect}
             serverId={currentServer?.id}
+            allowExternalEmojis={allowExternalEmojis}
           >
             <button type="button" className={iconBtnClass} onMouseDown={(e) => e.preventDefault()}>
               <Smile className="w-5 h-5" />
@@ -386,6 +390,8 @@ export const MessageInput = ({
   const canAttachFiles = isDM ? true : hasPermission("attach_files");
   const canMentionEveryone = isDM ? true : hasPermission("mention_everyone");
   const canMentionRoles = isDM ? true : hasPermission("mention_roles");
+  const canUseExternalEmojis = isDM ? true : hasPermission("use_external_emojis");
+  const { emojis: serverEmojisForCheck } = useServerEmojis(isDM ? null : currentServer?.id);
   const isSlowmodeEnabled = slowmodeSeconds > 0;
   const isSlowmodeExempt = canManageMessages;
   const slowmodeCooldownUntil = isDM ? 0 : (slowmodeCooldownByChannel[targetId] || 0);
@@ -551,6 +557,30 @@ export const MessageInput = ({
         toast.error("You don't have permission to mention roles in this channel");
         setIsSending(false);
         return;
+      }
+      // Block external custom emojis before sending
+      if (!canUseExternalEmojis) {
+        const customEmojiPattern = /:([a-z0-9_]{2,12})(?:~[^:]+)?:/gi;
+        const localEmojiNames = new Set<string>();
+        try {
+          const emojis = await fetchServerEmojis(currentServer?.id ?? '');
+          emojis.forEach(e => localEmojiNames.add(e.name));
+        } catch { /* ignore */ }
+
+        let match;
+        let hasExternal = false;
+        while ((match = customEmojiPattern.exec(contentToSend)) !== null) {
+          if (!localEmojiNames.has(match[1])) {
+            hasExternal = true;
+            break;
+          }
+        }
+
+        if (hasExternal) {
+          toast.error("You don't have permission to use external emojis in this channel");
+          setIsSending(false);
+          return;
+        }
       }
     }
     const transportReadyContent = await encodeCustomEmojisForTransport(contentToSend);
@@ -960,6 +990,18 @@ export const MessageInput = ({
         isSending={isSending}
         handleSubmit={handleSubmit}
         handleEmojiSelect={(emoji: string) => {
+          // Block external custom emojis at insert time
+          if (!canUseExternalEmojis) {
+            const customMatch = emoji.match(/^:([a-z0-9_]{2,12})(?:~.+)?:$/i);
+            if (customMatch) {
+              const emojiName = customMatch[1];
+              const localEmojis = serverEmojisForCheck;
+              if (!localEmojis.some((e: any) => e.name === emojiName)) {
+                toast.error("You don't have permission to use external emojis in this channel");
+                return;
+              }
+            }
+          }
           const textarea = textareaRef.current;
           if (textarea) {
             const start = textarea.selectionStart;
@@ -978,6 +1020,7 @@ export const MessageInput = ({
           setPendingAttachments((prev) => [...prev, { file: new File([], "gif"), preview: url, gifUrl: url }]);
         }}
         currentServer={isDM ? undefined : currentServer}
+        allowExternalEmojis={canUseExternalEmojis}
         onAttachClick={canAttachFiles ? () => fileInputRef.current?.click() : undefined}
         pendingAttachments={pendingAttachments}
         onRemoveAttachment={(i: number) => setPendingAttachments((p) => p.filter((_, idx) => idx !== i))}
@@ -1046,6 +1089,7 @@ const MobileOptimizedInput = memo(
     handleEmojiSelect,
     handleGifSelect,
     currentServer,
+    allowExternalEmojis,
     onAttachClick,
     pendingAttachments,
     onRemoveAttachment,
@@ -1124,6 +1168,7 @@ const MobileOptimizedInput = memo(
           onEmojiSelect={handleEmojiSelect}
           onGifSelect={handleGifSelect}
           currentServer={currentServer}
+          allowExternalEmojis={allowExternalEmojis}
           onAttachClick={onAttachClick}
         />
       </div>
