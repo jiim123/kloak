@@ -1928,9 +1928,8 @@ export const useServerStore = create<ServerState>((set, get) => ({
     const { currentServer, members, roles: allRoles } = get();
     if (!currentServer) throw new Error("No server selected");
 
-    // Optimistic update: REPLACE all non-@everyone roles with the new one (single role enforcement)
+    // Optimistic update: add role while preserving existing roles
     const role = allRoles.find((r) => r.id === roleId);
-    const everyoneRole = allRoles.find((r) => r.name === "@everyone");
     const prevMembers = members;
     if (role) {
       set({
@@ -1938,12 +1937,11 @@ export const useServerStore = create<ServerState>((set, get) => ({
           m.id === memberId
             ? {
                 ...m,
-                roles: [
-                  // Keep @everyone if it exists
-                  ...(m.roles || []).filter((r) => everyoneRole && r.id === everyoneRole.id),
-                  // Add new role (if not @everyone itself)
-                  ...(everyoneRole && roleId === everyoneRole.id ? [] : [{ ...role, position: role.position ?? 0 } as CustomServerRole]),
-                ],
+                roles: (m.roles || []).some((r) => r.id === roleId)
+                  ? m.roles || []
+                  : [...(m.roles || []), { ...role, position: role.position ?? 0 } as CustomServerRole].sort(
+                      (a, b) => (a.position ?? Number.MAX_SAFE_INTEGER) - (b.position ?? Number.MAX_SAFE_INTEGER),
+                    ),
               }
             : m,
         ),
@@ -2011,7 +2009,6 @@ export const useServerStore = create<ServerState>((set, get) => ({
     if (!selfMember) throw new Error("You are not a member of this server");
 
     const role = allRoles.find((r) => r.id === roleId);
-    const everyoneRole = allRoles.find((r) => r.name === "@everyone");
     const prevMembers = members;
     if (role) {
       set({
@@ -2019,10 +2016,11 @@ export const useServerStore = create<ServerState>((set, get) => ({
           m.id === selfMember.id
             ? {
                 ...m,
-                roles: [
-                  ...(m.roles || []).filter((r) => everyoneRole && r.id === everyoneRole.id),
-                  ...(everyoneRole && roleId === everyoneRole.id ? [] : [{ ...role, position: role.position ?? 0 } as CustomServerRole]),
-                ],
+                roles: (m.roles || []).some((r) => r.id === roleId)
+                  ? m.roles || []
+                  : [...(m.roles || []), { ...role, position: role.position ?? 0 } as CustomServerRole].sort(
+                      (a, b) => (a.position ?? Number.MAX_SAFE_INTEGER) - (b.position ?? Number.MAX_SAFE_INTEGER),
+                    ),
               }
             : m,
         ),
