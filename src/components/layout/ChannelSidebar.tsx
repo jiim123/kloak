@@ -126,17 +126,17 @@ const VoiceParticipantList = ({
         return (
           <button
             key={id}
-            className="flex items-center gap-2 px-2 py-1 rounded-md text-[11px] text-muted-foreground hover:bg-secondary/50 transition-smooth w-full text-left cursor-pointer"
+            className="flex items-center gap-2.5 px-2 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-secondary/50 transition-smooth w-full text-left cursor-pointer"
             onClick={(e) => {
               openUserProfileModal(openModal, id, e.currentTarget);
             }}
           >
-            <AvatarWithDecoration user={info.avatarUser} size={18} freezeGifUntilHover />
+            <AvatarWithDecoration user={info.avatarUser} size={22} freezeGifUntilHover />
             <span className="truncate flex-1">{info.label}</span>
             {meta?.isDeafened ? (
-              <VolumeX className="w-3 h-3 text-destructive/70 flex-shrink-0" />
+              <VolumeX className="w-3.5 h-3.5 text-destructive/70 flex-shrink-0" />
             ) : meta?.isMuted ? (
-              <MicOff className="w-3 h-3 text-destructive/70 flex-shrink-0" />
+              <MicOff className="w-3.5 h-3.5 text-destructive/70 flex-shrink-0" />
             ) : null}
           </button>
         );
