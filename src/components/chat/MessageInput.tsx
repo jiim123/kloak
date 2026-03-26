@@ -1050,6 +1050,7 @@ const MobileOptimizedInput = memo(
     handleEmojiSelect,
     handleGifSelect,
     currentServer,
+    allowExternalEmojis,
     onAttachClick,
     pendingAttachments,
     onRemoveAttachment,
@@ -1128,6 +1129,7 @@ const MobileOptimizedInput = memo(
           onEmojiSelect={handleEmojiSelect}
           onGifSelect={handleGifSelect}
           currentServer={currentServer}
+          allowExternalEmojis={allowExternalEmojis}
           onAttachClick={onAttachClick}
         />
       </div>
