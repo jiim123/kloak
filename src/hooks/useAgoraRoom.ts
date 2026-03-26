@@ -425,7 +425,7 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
         });
         presenceCh.subscribe(async (s) => {
           if (s === "SUBSCRIBED") {
-            await presenceCh.track({ user_id: userId });
+            await presenceCh.track({ user_id: userId, is_muted: joinedMuted, is_deafened: false });
           }
         });
         presenceChannelRef.current = presenceCh;
@@ -527,7 +527,8 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
     setIsMuted(newMuted);
     setControls({ muted: newMuted });
     updateParticipants();
-  }, [isMuted, setControls, updateParticipants]);
+    retrackPresence(newMuted, isDeafened);
+  }, [isMuted, isDeafened, setControls, updateParticipants, retrackPresence]);
 
   const toggleDeafen = useCallback(async () => {
     const room = roomRef.current;
@@ -542,13 +543,16 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
       await room.localParticipant.setMicrophoneEnabled(false);
       setIsMuted(true);
       setControls({ muted: true, deafened: true });
+      retrackPresence(true, true);
+    } else {
+      retrackPresence(isMuted, newDeafened);
     }
 
     // ParticipantAudioPlayer handles remote audio volume via the `muted` prop,
     // so we don't manipulate remote track volumes here to preserve per-user overrides.
 
     updateParticipants();
-  }, [isDeafened, isMuted, setControls, updateParticipants]);
+  }, [isDeafened, isMuted, setControls, updateParticipants, retrackPresence]);
 
   // ------ SCREEN SHARE ------
   const startScreenShare = useCallback(async (quality: ScreenShareQuality) => {
