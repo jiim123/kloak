@@ -981,6 +981,7 @@ export const MessageInput = ({
           setPendingAttachments((prev) => [...prev, { file: new File([], "gif"), preview: url, gifUrl: url }]);
         }}
         currentServer={isDM ? undefined : currentServer}
+        allowExternalEmojis={canUseExternalEmojis}
         onAttachClick={canAttachFiles ? () => fileInputRef.current?.click() : undefined}
         pendingAttachments={pendingAttachments}
         onRemoveAttachment={(i: number) => setPendingAttachments((p) => p.filter((_, idx) => idx !== i))}
