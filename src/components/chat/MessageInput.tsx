@@ -988,6 +988,18 @@ export const MessageInput = ({
         isSending={isSending}
         handleSubmit={handleSubmit}
         handleEmojiSelect={(emoji: string) => {
+          // Block external custom emojis at insert time
+          if (!canUseExternalEmojis) {
+            const customMatch = emoji.match(/^:([a-z0-9_]{2,12})(?:~.+)?:$/i);
+            if (customMatch) {
+              const emojiName = customMatch[1];
+              const localEmojis = serverEmojisForCheck;
+              if (!localEmojis.some((e: any) => e.name === emojiName)) {
+                toast.error("You don't have permission to use external emojis in this channel");
+                return;
+              }
+            }
+          }
           const textarea = textareaRef.current;
           if (textarea) {
             const start = textarea.selectionStart;
@@ -1001,7 +1013,7 @@ export const MessageInput = ({
           } else {
             setContent((prev) => prev + emoji);
           }
-        }}
+        }
         handleGifSelect={isDM ? undefined : (url: string) => {
           setPendingAttachments((prev) => [...prev, { file: new File([], "gif"), preview: url, gifUrl: url }]);
         }}
