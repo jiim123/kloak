@@ -1013,7 +1013,7 @@ export const MessageInput = ({
           } else {
             setContent((prev) => prev + emoji);
           }
-        }
+        }}
         handleGifSelect={isDM ? undefined : (url: string) => {
           setPendingAttachments((prev) => [...prev, { file: new File([], "gif"), preview: url, gifUrl: url }]);
         }}
