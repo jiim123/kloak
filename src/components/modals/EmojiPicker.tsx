@@ -389,21 +389,28 @@ export const EmojiPicker = ({
                         >
                           <FluentEmoji emoji={item.emoji} size={36} />
                         </button>
-                      ) : (
-                        <button
-                          key={`search-custom-${item.emoji.id}`}
-                          type="button"
-                          className="aspect-square hover:bg-muted/50 active:scale-90 rounded-lg flex items-center justify-center transition-all duration-150 p-1"
-                          onClick={() => handleCustomEmojiSelect(item.emoji)}
-                          onMouseDown={(e) => e.preventDefault()}
-                          title={`:${item.emoji.name}:`}
-                        >
-                          <img
-                            src={item.emoji.url}
-                            alt={item.emoji.name}
-                             className="w-9 h-9 object-contain"
-                          />
-                        </button>
+                      ) : (() => {
+                        const isExternal = !allowExternalEmojis && serverId && !serverEmojis[serverId]?.some(e => e.id === item.emoji.id);
+                        return (
+                          <button
+                            key={`search-custom-${item.emoji.id}`}
+                            type="button"
+                            className={cn(
+                              "aspect-square hover:bg-muted/50 active:scale-90 rounded-lg flex items-center justify-center transition-all duration-150 p-1",
+                              isExternal && "opacity-50 pointer-events-none",
+                            )}
+                            onClick={() => handleCustomEmojiSelect(item.emoji)}
+                            onMouseDown={(e) => e.preventDefault()}
+                            title={isExternal ? "External emojis disabled" : `:${item.emoji.name}:`}
+                          >
+                            <img
+                              src={item.emoji.url}
+                              alt={item.emoji.name}
+                               className="w-9 h-9 object-contain"
+                            />
+                          </button>
+                        );
+                      })()
                       ),
                     )}
                   </div>
