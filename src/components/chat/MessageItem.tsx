@@ -799,12 +799,25 @@ export const MessageItem = memo(function MessageItem({
     if (trimmed && user) {
       // Convert readable mentions back to UUID format before saving
       const rawContent = convertMentionsToRaw(trimmed, usersMap, channelsMap);
+
+      // Block @everyone/@here if permission denied
+      if (!isDM && !hasPermission('mention_everyone') && (rawContent.includes('@everyone') || rawContent.includes('@here'))) {
+        toast.error("You don't have permission to mention @everyone in this channel");
+        return;
+      }
+
+      // Block role mentions if permission denied
+      if (!isDM && !hasPermission('mention_roles') && /<@&[0-9a-f-]{36}>/.test(rawContent)) {
+        toast.error("You don't have permission to mention roles in this channel");
+        return;
+      }
+
       if (rawContent !== message.content) {
         await editMessage(message.id, rawContent, user.id);
       }
     }
     setIsEditing(false);
-  }, [editContent, message.content, message.id, user, editMessage, usersMap, channelsMap]);
+  }, [editContent, message.content, message.id, user, editMessage, usersMap, channelsMap, isDM, hasPermission]);
 
   const handleCancelEdit = useCallback(() => {
     setIsEditing(false);
