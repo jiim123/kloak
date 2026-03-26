@@ -384,6 +384,8 @@ export const MessageInput = ({
   const canSendMessage = isDM ? true : (!isMuted && canSendMessagesPermission && canSendInReadOnly);
   const canManageMessages = isDM ? false : hasPermission("manage_messages");
   const canAttachFiles = isDM ? true : hasPermission("attach_files");
+  const canMentionEveryone = isDM ? true : hasPermission("mention_everyone");
+  const canMentionRoles = isDM ? true : hasPermission("mention_roles");
   const isSlowmodeEnabled = slowmodeSeconds > 0;
   const isSlowmodeExempt = canManageMessages;
   const slowmodeCooldownUntil = isDM ? 0 : (slowmodeCooldownByChannel[targetId] || 0);
@@ -530,8 +532,21 @@ export const MessageInput = ({
       }
     }
 
+    const trimmedContent = content.trim();
+
+    // Block @everyone/@here mentions before sending
+    if (!canMentionEveryone && (trimmedContent.includes('@everyone') || trimmedContent.includes('@here'))) {
+      toast.error("You don't have permission to mention @everyone in this channel");
+      return;
+    }
+    // Block role mentions before sending
+    if (!canMentionRoles && /<@&[0-9a-f-]{36}>/.test(trimmedContent)) {
+      toast.error("You don't have permission to mention roles in this channel");
+      return;
+    }
+
     const hasGifOrAttachments = pendingAttachments.length > 0;
-    if ((!content.trim() && !hasGifOrAttachments) || !user || isSending) return;
+    if ((!trimmedContent && !hasGifOrAttachments) || !user || isSending) return;
 
     setIsSending(true);
     const contentToSend = isDM ? content.trim() : convertMentionsForSend(content.trim());
@@ -579,16 +594,7 @@ export const MessageInput = ({
       const replyToId = isDM ? dmConfig?.replyingTo?.id : channelReplyingTo?.id;
       const sentMessage = await sendMessage(targetId, user.id, finalContent, replyToId);
 
-      // Channel-only: mention suppression toast
-      if (!isDM && sentMessage && (sentMessage as any)?._mentions_suppressed) {
-        const suppressedTypes: string[] = (sentMessage as any)?._suppressed_types || [];
-        if (suppressedTypes.includes("everyone")) {
-          toast.info("You don't have permission to mention @everyone in this channel");
-        }
-        if (suppressedTypes.includes("roles")) {
-          toast.info("You don't have permission to mention roles in this channel");
-        }
-      }
+      // Backend mention suppression kept as silent safety net (no toast — handled pre-send)
 
       // Insert attachment records
       const fileUploadedUrls = uploadedUrls.slice(0, fileAttachments.length);
@@ -693,6 +699,8 @@ export const MessageInput = ({
     isSlowmodeEnabled,
     isSlowmodeExempt,
     slowmodeSeconds,
+    canMentionEveryone,
+    canMentionRoles,
   ]);
 
   const handlePaste = useCallback(
