@@ -1,13 +1,21 @@
 import { create } from "zustand";
 import type { Channel } from "@/types";
 
+export type VoiceParticipantMeta = {
+  isMuted: boolean;
+  isDeafened: boolean;
+};
+
 type VoicePresenceState = {
   presenceByChannel: Record<string, string[]>;
+  /** Per-user voice state (muted/deafened) keyed by `channelId:userId` */
+  participantMeta: Record<string, VoiceParticipantMeta>;
   joinedChannelId: string | null;
   joinedChannel: Channel | null;
   connection: { channelId: string | null; status: "idle" | "joining" | "joined" | "error"; error: string | null };
   controls: { muted: boolean; deafened: boolean };
   setPresence: (channelId: string, userIds: string[]) => void;
+  setParticipantMeta: (channelId: string, meta: Record<string, VoiceParticipantMeta>) => void;
   clearPresence: (channelId: string) => void;
   setJoinedChannelId: (channelId: string | null) => void;
   setJoinedChannel: (channel: Channel | null) => void;
@@ -17,6 +25,7 @@ type VoicePresenceState = {
 
 export const useVoiceStore = create<VoicePresenceState>((set) => ({
   presenceByChannel: {},
+  participantMeta: {},
   joinedChannelId: null,
   joinedChannel: null,
   connection: { channelId: null, status: "idle", error: null },
