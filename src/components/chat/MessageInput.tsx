@@ -555,6 +555,30 @@ export const MessageInput = ({
         setIsSending(false);
         return;
       }
+      // Block external custom emojis before sending
+      if (!canUseExternalEmojis) {
+        const customEmojiPattern = /:([a-z0-9_]{2,12})(?:~[^:]+)?:/gi;
+        const localEmojiNames = new Set<string>();
+        try {
+          const emojis = await fetchServerEmojis(currentServer?.id ?? '');
+          emojis.forEach(e => localEmojiNames.add(e.name));
+        } catch { /* ignore */ }
+
+        let match;
+        let hasExternal = false;
+        while ((match = customEmojiPattern.exec(contentToSend)) !== null) {
+          if (!localEmojiNames.has(match[1])) {
+            hasExternal = true;
+            break;
+          }
+        }
+
+        if (hasExternal) {
+          toast.error("You don't have permission to use external emojis in this channel");
+          setIsSending(false);
+          return;
+        }
+      }
     }
     const transportReadyContent = await encodeCustomEmojisForTransport(contentToSend);
 
