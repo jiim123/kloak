@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { FluentEmoji } from "@/components/ui/FluentEmoji";
 import { Search, X, Clock, ChevronLeft, ChevronRight } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useServerStore } from "@/stores/serverStore";
@@ -599,32 +600,46 @@ export const EmojiPicker = ({
                 }
               }}
             >
-              {servers.map((server) => (
-                <button
-                  key={server.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedServerForEmoji(server.id);
-                    setActiveCategory(""); // Deselect native category
-                  }}
-                  className={cn(
-                    "flex-shrink-0 w-9 h-9 rounded-lg transition-all duration-200",
-                    selectedServerForEmoji === server.id
-                      ? "ring-2 ring-primary ring-offset-1 ring-offset-card"
-                      : "hover:opacity-80",
-                  )}
-                  title={server.name}
-                >
-                  <Avatar className="w-full h-full rounded-lg">
-                    {server.icon_url ? (
-                      <AvatarImage src={server.icon_url} alt={server.name} className="object-cover" />
-                    ) : null}
-                    <AvatarFallback className="rounded-lg bg-muted text-xs font-medium">
-                      {server.name.slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                </button>
-              ))}
+              {servers.map((server) => {
+                const isExternal = server.id !== serverId;
+                const isDisabled = isExternal && !allowExternalEmojis;
+                return (
+                  <Tooltip key={server.id}>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isDisabled) return;
+                          setSelectedServerForEmoji(server.id);
+                          setActiveCategory(""); // Deselect native category
+                        }}
+                        className={cn(
+                          "flex-shrink-0 w-9 h-9 rounded-lg transition-all duration-200",
+                          selectedServerForEmoji === server.id
+                            ? "ring-2 ring-primary ring-offset-1 ring-offset-card"
+                            : "hover:opacity-80",
+                          isDisabled && "opacity-50 cursor-not-allowed pointer-events-auto",
+                        )}
+                        title={isDisabled ? undefined : server.name}
+                      >
+                        <Avatar className="w-full h-full rounded-lg">
+                          {server.icon_url ? (
+                            <AvatarImage src={server.icon_url} alt={server.name} className="object-cover" />
+                          ) : null}
+                          <AvatarFallback className="rounded-lg bg-muted text-xs font-medium">
+                            {server.name.slice(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      </button>
+                    </TooltipTrigger>
+                    {isDisabled && (
+                      <TooltipContent side="top" className="text-xs">
+                        External emojis are disabled in this channel
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                );
+              })}
             </div>
           </div>
         )}
