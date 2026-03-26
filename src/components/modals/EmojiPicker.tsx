@@ -410,8 +410,7 @@ export const EmojiPicker = ({
                             />
                           </button>
                         );
-                      })()
-                      ),
+                      })(),
                     )}
                   </div>
                 </>
