@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Hash,
   Volume2,
+  VolumeX,
   MessageSquare,
   Settings,
   Plus,
@@ -25,6 +26,7 @@ import {
   ClipboardList,
   EyeOff,
   Eye,
+  MicOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -80,6 +82,7 @@ import {
 } from "@/components/ui/context-menu";
 import { ChannelContextMenu } from "@/components/layout/ChannelContextMenu";
 import { fetchAndCacheUser, getUserFromCache, useUserCacheStore } from "@/stores/userCacheStore";
+import { openUserProfileModal } from "@/lib/userProfilePopover";
 import type { Channel, ChannelCategory, ServerRole } from "@/types";
 
 // Ghost Icon Component
@@ -101,6 +104,46 @@ const GhostIcon = ({ className }: { className?: string }) => (
     </g>
   </svg>
 );
+
+// Voice Participant List for sidebar
+const VoiceParticipantList = ({
+  channelId,
+  userIds,
+  resolveUser,
+}: {
+  channelId: string;
+  userIds: string[];
+  resolveUser: (userId: string) => { avatarUser?: any; label: string };
+}) => {
+  const participantMeta = useVoiceStore((s) => s.participantMeta);
+  const { openModal } = useUIStore();
+
+  return (
+    <div className="ml-7 mt-1 space-y-0.5">
+      {userIds.map((id) => {
+        const info = resolveUser(id);
+        const meta = participantMeta[`${channelId}:${id}`];
+        return (
+          <button
+            key={id}
+            className="flex items-center gap-2 px-2 py-1 rounded-md text-[11px] text-muted-foreground hover:bg-secondary/50 transition-smooth w-full text-left cursor-pointer"
+            onClick={(e) => {
+              openUserProfileModal(openModal, id, e.currentTarget);
+            }}
+          >
+            <AvatarWithDecoration user={info.avatarUser} size={18} freezeGifUntilHover />
+            <span className="truncate flex-1">{info.label}</span>
+            {meta?.isDeafened ? (
+              <VolumeX className="w-3 h-3 text-destructive/70 flex-shrink-0" />
+            ) : meta?.isMuted ? (
+              <MicOff className="w-3 h-3 text-destructive/70 flex-shrink-0" />
+            ) : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
 
 // isAdminRole is no longer needed - we use permission hooks instead
 
@@ -376,17 +419,7 @@ const SortableChannel = ({
       )}
 
       {channel.type === "voice" && voiceUserIds && voiceUserIds.length > 0 && resolveUser && (
-        <div className="ml-7 mt-1 space-y-1">
-          {voiceUserIds.map((id) => {
-            const info = resolveUser(id);
-            return (
-              <div key={id} className="flex items-center gap-2 px-2 py-1 rounded-md text-xs text-muted-foreground">
-                <AvatarWithDecoration user={info.avatarUser} size={18} freezeGifUntilHover />
-                <span className="truncate">{info.label}</span>
-              </div>
-            );
-          })}
-        </div>
+        <VoiceParticipantList channelId={channel.id} userIds={voiceUserIds} resolveUser={resolveUser} />
       )}
     </div>
   );
