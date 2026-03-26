@@ -96,6 +96,7 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
   const setConnection = useVoiceStore((s) => s.setConnection);
   const setControls = useVoiceStore((s) => s.setControls);
   const setPresence = useVoiceStore((s) => s.setPresence);
+  const setParticipantMeta = useVoiceStore((s) => s.setParticipantMeta);
   const clearPresence = useVoiceStore((s) => s.clearPresence);
 
   const voiceSettings = useVoiceSettingsStore((s) => s.settings);
@@ -214,8 +215,18 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
 
     if (channelId) {
       setPresence(channelId, all.map((p) => p.identity));
+      // Sync participant muted/deafened meta to voiceStore for sidebar display
+      const meta: Record<string, { isMuted: boolean; isDeafened: boolean }> = {};
+      for (const p of all) {
+        meta[p.identity] = { isMuted: p.isMuted, isDeafened: false };
+      }
+      // Local user deafened state
+      if (userId && meta[userId]) {
+        meta[userId].isDeafened = isDeafened;
+      }
+      setParticipantMeta(channelId, meta);
     }
-  }, [channelId, userId, displayName, isScreenSharing, isCameraSharing, setPresence]);
+  }, [channelId, userId, displayName, isScreenSharing, isCameraSharing, setPresence, setParticipantMeta, isDeafened]);
 
   // ------ JOIN ------
   const join = useCallback(async () => {
