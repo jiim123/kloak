@@ -812,6 +812,30 @@ export const MessageItem = memo(function MessageItem({
         return;
       }
 
+      // Block adding URLs if embed_links is denied
+      if (!isDM && !hasPermission('embed_links')) {
+        const urlPattern = /https?:\/\/[^\s<>`\]]+/g;
+        const newUrls = rawContent.match(urlPattern) || [];
+        const oldUrls = message.content.match(urlPattern) || [];
+        const oldUrlSet = new Set(oldUrls);
+        const addedUrls = newUrls.filter(url => !oldUrlSet.has(url));
+        if (addedUrls.length > 0) {
+          toast.error("You don't have permission to embed links in this channel");
+          return;
+        }
+      }
+
+      // Block adding attachment references if attach_files is denied
+      if (!isDM && !hasPermission('attach_files')) {
+        const attachmentPattern = /kloak-attachment:\/\/|\/storage\/v1\/object\/sign\/attachments\//;
+        const hadAttachment = attachmentPattern.test(message.content);
+        const hasAttachment = attachmentPattern.test(rawContent);
+        if (!hadAttachment && hasAttachment) {
+          toast.error("You don't have permission to attach files in this channel");
+          return;
+        }
+      }
+
       if (rawContent !== message.content) {
         await editMessage(message.id, rawContent, user.id);
       }
@@ -1394,6 +1418,16 @@ export const MessageItem = memo(function MessageItem({
                           onChange={handleEditContentChange}
                           className="w-full bg-background border border-border rounded-lg px-3 py-2 pb-10 text-sm resize-none outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 min-h-[60px] max-h-[300px] overflow-y-auto"
                           onKeyDown={handleKeyDown}
+                          onPaste={(e) => {
+                            if (!isDM && !hasPermission('attach_files')) {
+                              const items = Array.from(e.clipboardData?.items || []);
+                              const hasFile = items.some(item => item.kind === 'file');
+                              if (hasFile) {
+                                e.preventDefault();
+                                toast.error("You don't have permission to attach files in this channel");
+                              }
+                            }
+                          }}
                           style={{
                             lineHeight: "1.5",
                           }}
