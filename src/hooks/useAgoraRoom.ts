@@ -423,6 +423,40 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
         const presenceCh = supabase.channel(`voice:${channelId}`, {
           config: { presence: { key: userId } },
         });
+
+        // Listen for presence changes so the sidebar updates live for the joiner too
+        // (the watcher is paused while we're connected)
+        const refreshPresence = () => {
+          const state = presenceCh.presenceState() as Record<string, unknown[]>;
+          const userIds: string[] = [];
+          const metaMap: Record<string, { isMuted: boolean; isDeafened: boolean }> = {};
+          Object.values(state || {}).forEach((entries) => {
+            if (!Array.isArray(entries) || entries.length === 0) return;
+            const last = entries[entries.length - 1] as Record<string, unknown> | undefined;
+            if (!last || typeof last !== "object") return;
+            const uid = typeof last.user_id === "string" ? last.user_id : null;
+            if (uid) {
+              userIds.push(uid);
+              metaMap[uid] = {
+                isMuted: last.is_muted === true,
+                isDeafened: last.is_deafened === true,
+              };
+            }
+          });
+          const blocked = new Set(useFriendStore.getState().visibilityBlockedUserIds);
+          const filtered = blocked.size > 0 ? userIds.filter((id) => !blocked.has(id)) : userIds;
+          useVoiceStore.getState().setPresence(channelId, filtered);
+          const filteredMeta: Record<string, { isMuted: boolean; isDeafened: boolean }> = {};
+          for (const id of filtered) {
+            if (metaMap[id]) filteredMeta[id] = metaMap[id];
+          }
+          useVoiceStore.getState().setParticipantMeta(channelId, filteredMeta);
+        };
+
+        presenceCh.on("presence", { event: "sync" }, refreshPresence);
+        presenceCh.on("presence", { event: "join" }, refreshPresence);
+        presenceCh.on("presence", { event: "leave" }, refreshPresence);
+
         presenceCh.subscribe(async (s) => {
           if (s === "SUBSCRIBED") {
             await presenceCh.track({ user_id: userId, is_muted: joinedMuted, is_deafened: false });
