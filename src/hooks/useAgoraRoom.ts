@@ -19,6 +19,7 @@ import { getKeyHash, supabase } from "@/integrations/supabase/client";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { useVoiceSettingsStore } from "@/stores/voiceSettingsStore";
 import { pauseVoicePresenceWatch, resumeVoicePresenceWatch } from "@/hooks/useVoicePresenceWatchers";
+import { useFriendStore } from "@/stores/friendStore";
 import { playJoinSound, playLeaveSound } from "@/lib/voiceSounds";
 import type {
   ScreenShareFrameRate,
