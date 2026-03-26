@@ -137,6 +137,7 @@ const ActionBar = memo(
     onGifSelect,
     currentServer,
     onAttachClick,
+    allowExternalEmojis,
   }: any) => {
     const showCharacterWarning = content.length > MAX_LENGTH - 200;
     const isMobile = useIsMobile();
@@ -200,6 +201,7 @@ const ActionBar = memo(
             onOpenChange={setShowEmojiPicker}
             onEmojiSelect={onEmojiSelect}
             serverId={currentServer?.id}
+            allowExternalEmojis={allowExternalEmojis}
           >
             <button type="button" className={iconBtnClass} onMouseDown={(e) => e.preventDefault()}>
               <Smile className="w-5 h-5" />
