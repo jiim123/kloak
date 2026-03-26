@@ -534,22 +534,25 @@ export const MessageInput = ({
 
     const trimmedContent = content.trim();
 
-    // Block @everyone/@here mentions before sending
-    if (!canMentionEveryone && (trimmedContent.includes('@everyone') || trimmedContent.includes('@here'))) {
-      toast.error("You don't have permission to mention @everyone in this channel");
-      return;
-    }
-    // Block role mentions before sending
-    if (!canMentionRoles && /<@&[0-9a-f-]{36}>/.test(trimmedContent)) {
-      toast.error("You don't have permission to mention roles in this channel");
-      return;
-    }
-
     const hasGifOrAttachments = pendingAttachments.length > 0;
     if ((!trimmedContent && !hasGifOrAttachments) || !user || isSending) return;
 
     setIsSending(true);
     const contentToSend = isDM ? content.trim() : convertMentionsForSend(content.trim());
+
+    // Check mention permissions AFTER conversion (role mentions are now in <@&uuid> format)
+    if (!isDM) {
+      if (!canMentionEveryone && (contentToSend.includes('@everyone') || contentToSend.includes('@here'))) {
+        toast.error("You don't have permission to mention @everyone in this channel");
+        setIsSending(false);
+        return;
+      }
+      if (!canMentionRoles && /<@&[0-9a-f-]{36}>/.test(contentToSend)) {
+        toast.error("You don't have permission to mention roles in this channel");
+        setIsSending(false);
+        return;
+      }
+    }
     const transportReadyContent = await encodeCustomEmojisForTransport(contentToSend);
 
     try {
