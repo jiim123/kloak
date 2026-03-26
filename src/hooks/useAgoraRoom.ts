@@ -225,18 +225,11 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
 
     if (channelId) {
       setPresence(channelId, all.map((p) => p.identity));
-      // Sync participant muted/deafened meta to voiceStore for sidebar display
-      const meta: Record<string, { isMuted: boolean; isDeafened: boolean }> = {};
-      for (const p of all) {
-        meta[p.identity] = { isMuted: p.isMuted, isDeafened: false };
-      }
-      // Local user deafened state
-      if (userId && meta[userId]) {
-        meta[userId].isDeafened = isDeafened;
-      }
-      setParticipantMeta(channelId, meta);
+      // Note: participantMeta (muted/deafened) is synced via Supabase Presence
+      // in the presence channel's refresh handler — not here — so we don't
+      // overwrite remote users' deafened state (which LiveKit doesn't expose).
     }
-  }, [channelId, userId, displayName, isScreenSharing, isCameraSharing, setPresence, setParticipantMeta, isDeafened]);
+  }, [channelId, userId, displayName, isScreenSharing, isCameraSharing, setPresence]);
 
   // ------ JOIN ------
   const join = useCallback(async () => {
