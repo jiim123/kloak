@@ -133,12 +133,11 @@ const VoiceParticipantList = ({
           >
             <AvatarWithDecoration user={info.avatarUser} size={22} freezeGifUntilHover />
             <span className="truncate flex-1">{info.label}</span>
-            {(meta?.isMuted || meta?.isDeafened) && (
-              <div className="flex items-center gap-0.5 flex-shrink-0">
-                {meta?.isMuted && <MicOff className="w-3.5 h-3.5 text-destructive/70" />}
-                {meta?.isDeafened && <VolumeX className="w-3.5 h-3.5 text-destructive/70" />}
-              </div>
-            )}
+            {meta?.isDeafened ? (
+              <VolumeX className="w-3.5 h-3.5 text-destructive/70 flex-shrink-0" />
+            ) : meta?.isMuted ? (
+              <MicOff className="w-3.5 h-3.5 text-destructive/70 flex-shrink-0" />
+            ) : null}
           </button>
         );
       })}

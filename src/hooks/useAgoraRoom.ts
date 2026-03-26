@@ -19,7 +19,6 @@ import { getKeyHash, supabase } from "@/integrations/supabase/client";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { useVoiceSettingsStore } from "@/stores/voiceSettingsStore";
 import { pauseVoicePresenceWatch, resumeVoicePresenceWatch } from "@/hooks/useVoicePresenceWatchers";
-import { useFriendStore } from "@/stores/friendStore";
 import { playJoinSound, playLeaveSound } from "@/lib/voiceSounds";
 import type {
   ScreenShareFrameRate,
@@ -110,15 +109,6 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isCameraSharing, setIsCameraSharing] = useState(false);
   const [screenShareQuality, setScreenShareQuality] = useState<ScreenShareQuality | null>(null);
-
-  // Helper to re-track presence with current mute/deafen state
-  const retrackPresence = useCallback(async (muted: boolean, deafened: boolean) => {
-    const ch = presenceChannelRef.current;
-    if (!ch || !userId) return;
-    try {
-      await ch.track({ user_id: userId, is_muted: muted, is_deafened: deafened });
-    } catch { /* non-critical */ }
-  }, [userId]);
 
   // ------ participant rebuild ------
   const updateParticipants = useCallback(() => {
@@ -225,11 +215,18 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
 
     if (channelId) {
       setPresence(channelId, all.map((p) => p.identity));
-      // Note: participantMeta (muted/deafened) is synced via Supabase Presence
-      // in the presence channel's refresh handler — not here — so we don't
-      // overwrite remote users' deafened state (which LiveKit doesn't expose).
+      // Sync participant muted/deafened meta to voiceStore for sidebar display
+      const meta: Record<string, { isMuted: boolean; isDeafened: boolean }> = {};
+      for (const p of all) {
+        meta[p.identity] = { isMuted: p.isMuted, isDeafened: false };
+      }
+      // Local user deafened state
+      if (userId && meta[userId]) {
+        meta[userId].isDeafened = isDeafened;
+      }
+      setParticipantMeta(channelId, meta);
     }
-  }, [channelId, userId, displayName, isScreenSharing, isCameraSharing, setPresence]);
+  }, [channelId, userId, displayName, isScreenSharing, isCameraSharing, setPresence, setParticipantMeta, isDeafened]);
 
   // ------ JOIN ------
   const join = useCallback(async () => {
@@ -417,43 +414,9 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
         const presenceCh = supabase.channel(`voice:${channelId}`, {
           config: { presence: { key: userId } },
         });
-
-        // Listen for presence changes so the sidebar updates live for the joiner too
-        // (the watcher is paused while we're connected)
-        const refreshPresence = () => {
-          const state = presenceCh.presenceState() as Record<string, unknown[]>;
-          const userIds: string[] = [];
-          const metaMap: Record<string, { isMuted: boolean; isDeafened: boolean }> = {};
-          Object.values(state || {}).forEach((entries) => {
-            if (!Array.isArray(entries) || entries.length === 0) return;
-            const last = entries[entries.length - 1] as Record<string, unknown> | undefined;
-            if (!last || typeof last !== "object") return;
-            const uid = typeof last.user_id === "string" ? last.user_id : null;
-            if (uid) {
-              userIds.push(uid);
-              metaMap[uid] = {
-                isMuted: last.is_muted === true,
-                isDeafened: last.is_deafened === true,
-              };
-            }
-          });
-          const blocked = new Set(useFriendStore.getState().visibilityBlockedUserIds);
-          const filtered = blocked.size > 0 ? userIds.filter((id) => !blocked.has(id)) : userIds;
-          useVoiceStore.getState().setPresence(channelId, filtered);
-          const filteredMeta: Record<string, { isMuted: boolean; isDeafened: boolean }> = {};
-          for (const id of filtered) {
-            if (metaMap[id]) filteredMeta[id] = metaMap[id];
-          }
-          useVoiceStore.getState().setParticipantMeta(channelId, filteredMeta);
-        };
-
-        presenceCh.on("presence", { event: "sync" }, refreshPresence);
-        presenceCh.on("presence", { event: "join" }, refreshPresence);
-        presenceCh.on("presence", { event: "leave" }, refreshPresence);
-
         presenceCh.subscribe(async (s) => {
           if (s === "SUBSCRIBED") {
-            await presenceCh.track({ user_id: userId, is_muted: joinedMuted, is_deafened: false });
+            await presenceCh.track({ user_id: userId });
           }
         });
         presenceChannelRef.current = presenceCh;
@@ -555,8 +518,7 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
     setIsMuted(newMuted);
     setControls({ muted: newMuted });
     updateParticipants();
-    retrackPresence(newMuted, isDeafened);
-  }, [isMuted, isDeafened, setControls, updateParticipants, retrackPresence]);
+  }, [isMuted, setControls, updateParticipants]);
 
   const toggleDeafen = useCallback(async () => {
     const room = roomRef.current;
@@ -571,16 +533,13 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
       await room.localParticipant.setMicrophoneEnabled(false);
       setIsMuted(true);
       setControls({ muted: true, deafened: true });
-      retrackPresence(true, true);
-    } else {
-      retrackPresence(isMuted, newDeafened);
     }
 
     // ParticipantAudioPlayer handles remote audio volume via the `muted` prop,
     // so we don't manipulate remote track volumes here to preserve per-user overrides.
 
     updateParticipants();
-  }, [isDeafened, isMuted, setControls, updateParticipants, retrackPresence]);
+  }, [isDeafened, isMuted, setControls, updateParticipants]);
 
   // ------ SCREEN SHARE ------
   const startScreenShare = useCallback(async (quality: ScreenShareQuality) => {
