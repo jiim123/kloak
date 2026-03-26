@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useVoiceStore } from "@/stores/voiceStore";
+import type { VoiceParticipantMeta } from "@/stores/voiceStore";
 import { useFriendStore } from "@/stores/friendStore";
 
 // Module-scoped watcher state so the voice join flow can temporarily pause watchers
@@ -25,11 +26,17 @@ function ensureWatcher(channelId: string, userId: string) {
 
   const refresh = () => {
     const state = ch.presenceState() as Record<string, unknown[]>;
-    const userIds = extractUserIdsFromPresenceState(state);
+    const { userIds, meta } = extractPresenceData(state);
     const blocked = new Set(useFriendStore.getState().visibilityBlockedUserIds);
     const filtered = blocked.size > 0 ? userIds.filter((id) => !blocked.has(id)) : userIds;
     try {
       useVoiceStore.getState().setPresence(channelId, filtered);
+      // Sync participant meta (muted/deafened) from presence payload
+      const filteredMeta: Record<string, VoiceParticipantMeta> = {};
+      for (const id of filtered) {
+        if (meta[id]) filteredMeta[id] = meta[id];
+      }
+      useVoiceStore.getState().setParticipantMeta(channelId, filteredMeta);
     } catch {
       // ignore
     }
@@ -70,16 +77,26 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object";
 }
 
-function extractUserIdsFromPresenceState(state: Record<string, unknown[]>): string[] {
-  const out: string[] = [];
+function extractPresenceData(state: Record<string, unknown[]>): {
+  userIds: string[];
+  meta: Record<string, VoiceParticipantMeta>;
+} {
+  const userIds: string[] = [];
+  const meta: Record<string, VoiceParticipantMeta> = {};
   Object.values(state || {}).forEach((entries) => {
     if (!Array.isArray(entries) || entries.length === 0) return;
     const last = entries[entries.length - 1];
     if (!isRecord(last)) return;
     const userId = typeof last.user_id === "string" ? last.user_id : null;
-    if (userId) out.push(userId);
+    if (userId) {
+      userIds.push(userId);
+      meta[userId] = {
+        isMuted: last.is_muted === true,
+        isDeafened: last.is_deafened === true,
+      };
+    }
   });
-  return out;
+  return { userIds, meta };
 }
 
 /**
