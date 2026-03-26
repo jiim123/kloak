@@ -20,6 +20,8 @@ import { toast } from "sonner";
 import type { FriendWithUser, UserStatus } from "@/types";
 import { getEffectivePresence } from "@/lib/presence";
 import { useLocation } from "react-router-dom";
+import { openUserProfileModal } from "@/lib/userProfilePopover";
+import { useUIStore } from "@/stores/uiStore";
 
 interface FriendsListProps {
   onOpenDM: () => void;
@@ -43,6 +45,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
     unblockUser,
   } = useFriendStore();
   const { openConversation, setCurrentConversation } = useDMStore();
+  const { openModal } = useUIStore();
 
   const [activeTab, setActiveTab] = useState("online");
   const [addFriendInput, setAddFriendInput] = useState("");
@@ -145,39 +148,46 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
     }
   };
 
+  const handleProfileClick = (userId: string, event: React.MouseEvent) => {
+    openUserProfileModal(openModal, userId, event.currentTarget as HTMLElement);
+  };
+
   const FriendItem = ({ friend, showActions = true }: { friend: FriendWithUser; showActions?: boolean }) => (
     <div className="flex items-center gap-3 px-4 py-3 hover:bg-secondary/30 rounded-lg transition-smooth">
-      {/* Avatar */}
-      <div className="relative flex-shrink-0">
-        <AvatarWithDecoration user={friend} className="w-10 h-10" freezeGifUntilHover />
-        {(() => {
-          const presence = getEffectivePresence((friend.status as UserStatus) || "offline", friend.last_seen);
-          return (
-            <div
-              className={cn(
-                "absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-layout-chat",
-                getStatusClass(presence.status),
-              )}
-            />
-          );
-        })()}
-      </div>
-
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-foreground">{friend.display_name || friend.username}</span>
-          <span className="text-sm text-muted-foreground">{friend.username}</span>
-        </div>
-        {friend.custom_status ? (
-          <p className="text-sm text-muted-foreground truncate">{friend.custom_status}</p>
-        ) : (
-          (() => {
+      {/* Avatar + Info (clickable for profile) */}
+      <button
+        className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer"
+        onClick={(e) => handleProfileClick(friend.id, e)}
+      >
+        <div className="relative flex-shrink-0">
+          <AvatarWithDecoration user={friend} className="w-10 h-10" freezeGifUntilHover />
+          {(() => {
             const presence = getEffectivePresence((friend.status as UserStatus) || "offline", friend.last_seen);
-            return <p className="text-sm text-muted-foreground capitalize">{presence.status || "offline"}</p>;
-          })()
-        )}
-      </div>
+            return (
+              <div
+                className={cn(
+                  "absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-layout-chat",
+                  getStatusClass(presence.status),
+                )}
+              />
+            );
+          })()}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-foreground hover:underline">{friend.display_name || friend.username}</span>
+            <span className="text-sm text-muted-foreground">{friend.username}</span>
+          </div>
+          {friend.custom_status ? (
+            <p className="text-sm text-muted-foreground truncate">{friend.custom_status}</p>
+          ) : (
+            (() => {
+              const presence = getEffectivePresence((friend.status as UserStatus) || "offline", friend.last_seen);
+              return <p className="text-sm text-muted-foreground capitalize">{presence.status || "offline"}</p>;
+            })()
+          )}
+        </div>
+      </button>
 
       {/* Actions */}
       {showActions && (
@@ -218,18 +228,21 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
 
   const PendingItem = ({ request, isOutgoing }: { request: FriendWithUser; isOutgoing: boolean }) => (
     <div className="flex items-center gap-3 px-4 py-3 hover:bg-secondary/30 rounded-lg transition-smooth">
-      {/* Avatar */}
-      <div className="relative flex-shrink-0">
-        <AvatarWithDecoration user={request} className="w-10 h-10" freezeGifUntilHover />
-      </div>
-
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <span className="font-medium text-foreground">{request.display_name || request.username}</span>
-        <p className="text-sm text-muted-foreground">
-          {isOutgoing ? "Outgoing Friend Request" : "Incoming Friend Request"}
-        </p>
-      </div>
+      {/* Avatar + Info (clickable for profile) */}
+      <button
+        className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer"
+        onClick={(e) => handleProfileClick(request.id, e)}
+      >
+        <div className="relative flex-shrink-0">
+          <AvatarWithDecoration user={request} className="w-10 h-10" freezeGifUntilHover />
+        </div>
+        <div className="flex-1 min-w-0">
+          <span className="font-medium text-foreground hover:underline">{request.display_name || request.username}</span>
+          <p className="text-sm text-muted-foreground">
+            {isOutgoing ? "Outgoing Friend Request" : "Incoming Friend Request"}
+          </p>
+        </div>
+      </button>
 
       {/* Actions */}
       <div className="flex items-center gap-2">
@@ -257,16 +270,19 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
 
   const BlockedItem = ({ blocked }: { blocked: FriendWithUser }) => (
     <div className="flex items-center gap-3 px-4 py-3 hover:bg-secondary/30 rounded-lg transition-smooth">
-      {/* Avatar */}
-      <div className="relative flex-shrink-0">
-        <AvatarWithDecoration user={blocked} className="w-10 h-10 opacity-50" freezeGifUntilHover />
-      </div>
-
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <span className="font-medium text-muted-foreground">{blocked.display_name || blocked.username}</span>
-        <p className="text-sm text-muted-foreground">Blocked</p>
-      </div>
+      {/* Avatar + Info (clickable for profile) */}
+      <button
+        className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer"
+        onClick={(e) => handleProfileClick(blocked.id, e)}
+      >
+        <div className="relative flex-shrink-0">
+          <AvatarWithDecoration user={blocked} className="w-10 h-10 opacity-50" freezeGifUntilHover />
+        </div>
+        <div className="flex-1 min-w-0">
+          <span className="font-medium text-muted-foreground hover:underline">{blocked.display_name || blocked.username}</span>
+          <p className="text-sm text-muted-foreground">Blocked</p>
+        </div>
+      </button>
 
       {/* Unblock */}
       <Button size="sm" variant="outline" onClick={() => user?.id && unblockUser(user.id, blocked.id)}>
