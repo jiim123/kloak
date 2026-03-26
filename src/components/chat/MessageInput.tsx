@@ -46,6 +46,7 @@ import { showWarning, handleError } from "@/lib/errorHandler";
 import { messageRateLimiter, validateMessageContent } from "@/lib/security";
 import { canRevealGhostIdentityForUser } from "@/lib/ghostIdentity";
 import { encodeCustomEmojisForTransport } from "@/lib/globalEmojiResolver";
+import { fetchServerEmojis } from "@/lib/serverEmojis";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
