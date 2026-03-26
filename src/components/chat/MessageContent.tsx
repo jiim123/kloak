@@ -67,6 +67,7 @@ interface MessageContentProps {
   users?: UserInfo[];
   messageUser?: UserInfo | null;
   hideEmbeds?: boolean;
+  hideLinksPreview?: boolean;
   customEmojiMap?: Map<string, string>;
   globalEmojiMap?: Map<string, ResolvedEmoji>;
 }
@@ -447,6 +448,7 @@ export const MessageContent = ({
   users,
   messageUser,
   hideEmbeds = false,
+  hideLinksPreview = false,
   customEmojiMap: providedCustomEmojiMap,
   globalEmojiMap: providedGlobalEmojiMap,
 }: MessageContentProps) => {
@@ -1114,7 +1116,7 @@ export const MessageContent = ({
       )}
 
       {/* Link previews (image assets are proxied server-side) */}
-      {linkPreviewsEnabled && !hideEmbeds && previewUrls.length > 0 && (
+      {linkPreviewsEnabled && !hideEmbeds && !hideLinksPreview && previewUrls.length > 0 && (
         <div className="flex flex-col gap-2 mt-2">
           {previewUrls.slice(0, 3).map((url, index) => (
             <LinkPreview key={`${url}-${index}`} url={url} disabled={!linkPreviewsEnabled} messageId={messageId} />
