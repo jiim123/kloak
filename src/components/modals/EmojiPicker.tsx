@@ -19,6 +19,7 @@ interface EmojiPickerProps {
   onOpenChange?: (open: boolean) => void;
   serverId?: string;
   customEmojiFormat?: "legacy" | "inline_token";
+  allowExternalEmojis?: boolean;
 }
 
 const INLINE_CUSTOM_EMOJI_TOKEN_REGEX = /^:ce\[([a-z0-9_]{2,12})\|([a-z0-9/_\.-]{1,300})\]:$/;
@@ -30,6 +31,7 @@ export const EmojiPicker = ({
   onOpenChange,
   serverId,
   customEmojiFormat = "legacy",
+  allowExternalEmojis = true,
 }: EmojiPickerProps) => {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("recent");
