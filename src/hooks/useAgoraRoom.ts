@@ -229,7 +229,7 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
       // in the presence channel's refresh handler — not here — so we don't
       // overwrite remote users' deafened state (which LiveKit doesn't expose).
     }
-  }, [channelId, userId, displayName, isScreenSharing, isCameraSharing, setPresence, setParticipantMeta, isDeafened]);
+  }, [channelId, userId, displayName, isScreenSharing, isCameraSharing, setPresence]);
 
   // ------ JOIN ------
   const join = useCallback(async () => {
