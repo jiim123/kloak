@@ -37,6 +37,19 @@ export const useVoiceStore = create<VoicePresenceState>((set) => ({
         [channelId]: Array.from(new Set(userIds)).sort(),
       },
     })),
+  setParticipantMeta: (channelId, meta) =>
+    set((state) => {
+      const next = { ...state.participantMeta };
+      // Clear old entries for this channel
+      for (const key of Object.keys(next)) {
+        if (key.startsWith(channelId + ":")) delete next[key];
+      }
+      // Set new entries
+      for (const [userId, m] of Object.entries(meta)) {
+        next[`${channelId}:${userId}`] = m;
+      }
+      return { participantMeta: next };
+    }),
   clearPresence: (channelId) =>
     set((state) => {
       if (!state.presenceByChannel[channelId]) return state;
