@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Hash,
   Volume2,
+  VolumeX,
   MessageSquare,
   Settings,
   Plus,
@@ -25,6 +26,7 @@ import {
   ClipboardList,
   EyeOff,
   Eye,
+  MicOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -376,17 +378,7 @@ const SortableChannel = ({
       )}
 
       {channel.type === "voice" && voiceUserIds && voiceUserIds.length > 0 && resolveUser && (
-        <div className="ml-7 mt-1 space-y-1">
-          {voiceUserIds.map((id) => {
-            const info = resolveUser(id);
-            return (
-              <div key={id} className="flex items-center gap-2 px-2 py-1 rounded-md text-xs text-muted-foreground">
-                <AvatarWithDecoration user={info.avatarUser} size={18} freezeGifUntilHover />
-                <span className="truncate">{info.label}</span>
-              </div>
-            );
-          })}
-        </div>
+        <VoiceParticipantList channelId={channel.id} userIds={voiceUserIds} resolveUser={resolveUser} />
       )}
     </div>
   );
