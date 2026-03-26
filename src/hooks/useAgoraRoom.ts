@@ -110,6 +110,15 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
   const [isCameraSharing, setIsCameraSharing] = useState(false);
   const [screenShareQuality, setScreenShareQuality] = useState<ScreenShareQuality | null>(null);
 
+  // Helper to re-track presence with current mute/deafen state
+  const retrackPresence = useCallback(async (muted: boolean, deafened: boolean) => {
+    const ch = presenceChannelRef.current;
+    if (!ch || !userId) return;
+    try {
+      await ch.track({ user_id: userId, is_muted: muted, is_deafened: deafened });
+    } catch { /* non-critical */ }
+  }, [userId]);
+
   // ------ participant rebuild ------
   const updateParticipants = useCallback(() => {
     const room = roomRef.current;
