@@ -465,7 +465,9 @@ export const EmojiPicker = ({
                     </p>
                   </div>
                 )}
-              </div>
+                  </div>
+                );
+              })()
             ) : (
               // Category view
               categories.map(
