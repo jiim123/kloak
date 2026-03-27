@@ -1237,7 +1237,7 @@ export const MessageItem = memo(function MessageItem({
                             freezeGifUntilHover
                           />
                         )}
-                        <span className="text-sm text-muted-foreground tracking-tight inline-flex items-center gap-1.5">
+                        <span className="text-[17px] sm:text-[16px] text-muted-foreground tracking-tight leading-[1.5] inline-flex items-center gap-1.5">
                           {isPollResult && pollIcon}
                           <MessageContent
                             content={cleanedContent}
@@ -1334,7 +1334,7 @@ export const MessageItem = memo(function MessageItem({
                             </Tooltip>
                           )}
                           {showTimestamps && (
-                            <span className="text-[11px] sm:text-[12px] text-muted-foreground leading-none">
+                            <span className="text-[12px] sm:text-[13px] text-muted-foreground leading-none">
                               {formattedTimestamp}
                             </span>
                           )}
@@ -1478,7 +1478,7 @@ export const MessageItem = memo(function MessageItem({
                         <PollMessage pollId={pollId} />
                       </div>
                     ) : (
-                      <div className="text-[14px] sm:text-[14px] font-normal leading-[1.5] font-[Inter,system-ui,sans-serif] [&>div]:flex [&>div]:items-center [&>div]:flex-wrap overflow-hidden max-w-full">
+                      <div className="text-[17px] sm:text-[16px] font-normal leading-[1.5] font-[Inter,system-ui,sans-serif] [&>div]:flex [&>div]:items-center [&>div]:flex-wrap overflow-hidden max-w-[85vw] sm:max-w-[65%]">
                         {currentChannel?.type === "announcement" ? (
                           (() => {
                             // Extract title and content for announcement channels
