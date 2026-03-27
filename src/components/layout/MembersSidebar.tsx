@@ -233,7 +233,7 @@ const MemberListItemContent = forwardRef<HTMLDivElement, MemberListItemContentPr
             {isServerOwner && <Crown className="w-3 h-3 text-amber-400 flex-shrink-0" />}
             <span
               className={cn(
-                "text-[14px] sm:text-[15px] font-medium truncate leading-tight",
+                "text-[13px] font-medium truncate leading-tight font-[Inter,system-ui,sans-serif]",
                 memberIsOffline
                   ? "text-muted-foreground/70"
                   : priorityCustomRoleColor
@@ -263,7 +263,7 @@ const MemberListItemContent = forwardRef<HTMLDivElement, MemberListItemContentPr
             <p
               className={cn(
                 "text-[11px] truncate mt-0.5 max-w-[140px]",
-                memberIsOffline ? "text-muted-foreground/50" : "text-muted-foreground",
+                memberIsOffline ? "text-muted-foreground/60" : "text-muted-foreground/80",
               )}
               title={member.user.custom_status}
             >
