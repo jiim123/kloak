@@ -883,45 +883,7 @@ export const MessageInput = ({
         }}
       />
 
-      {showMentions && (
-        <MentionAutocomplete
-          query={mentionQuery}
-          position={{ top: 40, left: 0 }}
-          onSelect={(opt) => {
-            const before = content.slice(0, mentionStartIndex);
-            const after = content.slice(mentionStartIndex + mentionQuery.length + 1);
-            if (opt.id && (opt.type === "user" || opt.type === "role")) {
-              mentionMappingsRef.current.push({
-                label: opt.label,
-                mentionId: opt.id,
-                mentionType: opt.type,
-              });
-            }
-            setContent(`${before}@${opt.label} ${after}`);
-            setShowMentions(false);
-            setHasMentionOptions(false);
-          }}
-          onClose={() => setShowMentions(false)}
-          onOptionsChange={setHasMentionOptions}
-        />
-      )}
 
-      {showChannels && (
-        <ChannelAutocomplete
-          query={channelQuery}
-          position={{ top: 40, left: 0 }}
-          onSelect={(opt) => {
-            const before = content.slice(0, channelStartIndex);
-            const after = content.slice(channelStartIndex + channelQuery.length + 1);
-            channelMappingsRef.current.push({ channelName: opt.name, channelId: opt.id });
-            setContent(`${before}#${opt.name} ${after}`);
-            setShowChannels(false);
-            setHasChannelOptions(false);
-          }}
-          onClose={() => setShowChannels(false)}
-          onOptionsChange={setHasChannelOptions}
-        />
-      )}
 
       <SelectionFormatToolbar textareaRef={textareaRef} onFormat={handleFormat} />
 
