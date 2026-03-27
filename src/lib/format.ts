@@ -16,7 +16,7 @@ export const formatMessageTimestamp = (date: Date | string): string => {
   const timeString = format(d, 'h:mm a');
 
   if (isToday(d)) {
-    return `Today at ${timeString}`;
+    return timeString;
   }
   if (isYesterday(d)) {
     return `Yesterday at ${timeString}`;
