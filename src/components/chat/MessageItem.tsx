@@ -1478,7 +1478,7 @@ export const MessageItem = memo(function MessageItem({
                         <PollMessage pollId={pollId} />
                       </div>
                     ) : (
-                      <div className="text-[15px] sm:text-[15px] font-normal leading-[1.45] font-[Inter,system-ui,sans-serif] [&>div]:flex [&>div]:items-center [&>div]:flex-wrap overflow-hidden max-w-[650px]">
+                      <div className="text-[16px] sm:text-[15px] font-normal leading-[1.5] sm:leading-[1.45] font-[Inter,system-ui,sans-serif] [&>div]:flex [&>div]:items-center [&>div]:flex-wrap overflow-hidden sm:max-w-[650px] max-w-[90%]">
                         {currentChannel?.type === "announcement" ? (
                           (() => {
                             // Extract title and content for announcement channels
