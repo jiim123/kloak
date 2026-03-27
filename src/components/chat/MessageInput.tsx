@@ -1044,6 +1044,10 @@ export const MessageInput = ({
         pendingAttachments={pendingAttachments}
         onRemoveAttachment={(i: number) => setPendingAttachments((p) => p.filter((_, idx) => idx !== i))}
         onAddMore={canAttachFiles ? () => fileInputRef.current?.click() : undefined}
+        showMentions={showMentions}
+        hasMentionOptions={hasMentionOptions}
+        showChannels={showChannels}
+        hasChannelOptions={hasChannelOptions}
       />
       <AnimatePresence>
         {showChatNoticePopup && requiresChatNoticeAck && (
@@ -1113,6 +1117,10 @@ const MobileOptimizedInput = memo(
     pendingAttachments,
     onRemoveAttachment,
     onAddMore,
+    showMentions,
+    hasMentionOptions,
+    showChannels,
+    hasChannelOptions,
   }: any) => {
     const isMobile = useIsMobile();
     const hasAttachments = pendingAttachments.length > 0;
@@ -1123,7 +1131,7 @@ const MobileOptimizedInput = memo(
           isFocused
             ? "border-white/14 shadow-[0_10px_34px_rgba(0,0,0,0.28)] bg-[rgb(24_24_24_/_55%)]"
             : "border-white/6 hover:border-white/10"
-        } ${replyingTo ? "rounded-t-none" : ""}`}
+        } ${replyingTo || (showMentions && hasMentionOptions) || (showChannels && hasChannelOptions) ? "!rounded-t-none" : ""}`}
       >
         <AnimatePresence>
           {hasAttachments && (
