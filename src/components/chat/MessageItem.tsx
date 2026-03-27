@@ -1346,7 +1346,7 @@ export const MessageItem = memo(function MessageItem({
                     {/* Reply reference */}
                     {message.reply_to && (
                       <div
-                        className="flex items-center gap-2 text-[12px] text-foreground/70 cursor-pointer hover:text-foreground/90 flex-nowrap overflow-hidden transition-colors duration-150 pl-0.5"
+                        className="flex items-center gap-2 text-[11px] sm:text-[12px] text-foreground/70 cursor-pointer hover:text-foreground/90 flex-nowrap overflow-hidden transition-colors duration-150 pl-0.5"
                         onClick={handleReplyClick}
                         onTouchStart={(e) => {
                           // Stop parent long-press timer from starting when tapping reply preview
