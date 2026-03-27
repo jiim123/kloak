@@ -990,7 +990,7 @@ export const MessageItem = memo(function MessageItem({
   // Grouped (chained): zero extra spacing for uniform line density
   const outerClassName = useMemo(() => {
     const base = "px-2";
-    const spacing = compactMode ? "py-0" : isGrouped ? "" : "mt-[20px]";
+    const spacing = compactMode ? "py-0" : isGrouped ? "mt-[3px]" : "mt-[10px]";
     return `${base} ${spacing}`.trim();
   }, [compactMode, isGrouped]);
 
@@ -999,7 +999,7 @@ export const MessageItem = memo(function MessageItem({
   const innerClassName = useMemo(() => {
     const classes = [
       "group relative flex px-4 rounded-lg hover:bg-muted/40",
-      compactMode ? "gap-2 py-0.5" : isGrouped ? "gap-3 py-[2px]" : "gap-3 py-1",
+      compactMode ? "gap-2 py-0.5" : isGrouped ? "gap-3 py-[1px]" : "gap-3 py-0.5",
     ];
     if (isAnnouncementChannel && !isGrouped) {
       classes.push("bg-primary/5 border-l-2 border-l-primary/50 ml-1");
@@ -1133,7 +1133,7 @@ export const MessageItem = memo(function MessageItem({
                   {compactMode ? (
                     <div className="w-16 flex-shrink-0 pt-0.5">
                       <span
-                        className={`text-[10px] font-[Inter,system-ui,sans-serif] text-muted-foreground/70 transition-opacity duration-150 whitespace-nowrap block ${
+                        className={`text-[11px] font-[Inter,system-ui,sans-serif] text-muted-foreground/50 transition-opacity duration-150 whitespace-nowrap block ${
                           showTimestamps || !isGrouped ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                         }`}
                       >
@@ -1194,7 +1194,7 @@ export const MessageItem = memo(function MessageItem({
                         )
                       ) : (
                         <div className="h-full flex items-center justify-center">
-                          <span className="text-[10px] font-[Inter,system-ui,sans-serif] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                          <span className="text-[11px] font-[Inter,system-ui,sans-serif] text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                             {formattedTime}
                           </span>
                         </div>
@@ -1289,7 +1289,7 @@ export const MessageItem = memo(function MessageItem({
                       <span className="inline font-[Inter,system-ui,sans-serif]">
                         <span
                           onClick={handleUsernameClick}
-                          className={`text-[14px] sm:text-[15px] font-medium leading-tight hover:underline cursor-pointer mr-1.5 ${usernameColorClass}`}
+                          className={`text-[13px] font-medium leading-tight hover:underline cursor-pointer mr-1.5 ${usernameColorClass}`}
                           style={usernameColorStyle}
                         >
                           {displayName}
@@ -1312,10 +1312,10 @@ export const MessageItem = memo(function MessageItem({
                     ) : (
                       !isGrouped &&
                       messageUser && (
-                        <div className="flex items-baseline gap-2 mb-0.5 font-[Inter,system-ui,sans-serif]">
+                         <div className="flex items-baseline gap-1.5 mb-0.5 font-[Inter,system-ui,sans-serif]">
                           <span
                             onClick={handleUsernameClick}
-                            className={`text-[14px] sm:text-[15px] font-medium leading-tight hover:underline cursor-pointer ${usernameColorClass}`}
+                            className={`text-[13px] font-medium leading-tight hover:underline cursor-pointer ${usernameColorClass}`}
                             style={usernameColorStyle}
                           >
                             {displayName}
@@ -1334,7 +1334,7 @@ export const MessageItem = memo(function MessageItem({
                             </Tooltip>
                           )}
                           {showTimestamps && (
-                            <span className="text-[11px] sm:text-[12px] text-muted-foreground leading-none">
+                           <span className="text-[12px] text-muted-foreground/60 leading-none">
                               {formattedTimestamp}
                             </span>
                           )}
@@ -1478,7 +1478,7 @@ export const MessageItem = memo(function MessageItem({
                         <PollMessage pollId={pollId} />
                       </div>
                     ) : (
-                      <div className="text-[14px] sm:text-[14px] font-normal leading-[1.5] font-[Inter,system-ui,sans-serif] [&>div]:flex [&>div]:items-center [&>div]:flex-wrap overflow-hidden max-w-full">
+                      <div className="text-[16px] sm:text-[15px] font-normal leading-[1.5] sm:leading-[1.45] font-[Inter,system-ui,sans-serif] [&>div]:flex [&>div]:items-center [&>div]:flex-wrap overflow-hidden sm:max-w-[650px] max-w-[90%]">
                         {currentChannel?.type === "announcement" ? (
                           (() => {
                             // Extract title and content for announcement channels

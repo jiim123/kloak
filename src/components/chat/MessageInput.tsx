@@ -1161,10 +1161,10 @@ const MobileOptimizedInput = memo(
             placeholder={dmPlaceholder ? (hasAttachments ? "Add a comment..." : `Message @${dmPlaceholder.length > (isMobile ? 12 : 17) ? dmPlaceholder.slice(0, isMobile ? 12 : 17) + "…" : dmPlaceholder}`) : (isLockedByNotice ? "Write a message..." : canSendMessage ? "Write a message..." : "Locked")}
             disabled={!canSendMessage}
             rows={1}
-            className="message-input-textarea w-full bg-transparent resize-none outline-none py-1 min-h-[36px] max-h-[160px] overflow-y-auto text-foreground placeholder:text-muted-foreground/60 font-[General_Sans,system-ui,sans-serif]"
+            className="message-input-textarea w-full bg-transparent resize-none outline-none py-1 min-h-[36px] max-h-[160px] overflow-y-auto text-foreground placeholder:text-muted-foreground/60 font-[Inter,system-ui,sans-serif]"
             style={{
-              fontSize: "1em",
-              lineHeight: "1.6",
+              fontSize: "15px",
+              lineHeight: "1.45",
               fontWeight: 400,
             }}
           />
