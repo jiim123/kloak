@@ -8,7 +8,7 @@ import {
   Trash2,
   Pin,
   MoreHorizontal,
-  CornerDownLeft,
+  CornerLeftDown,
   Copy,
   Eye,
   EyeOff,
@@ -1346,7 +1346,7 @@ export const MessageItem = memo(function MessageItem({
                     {/* Reply reference */}
                     {message.reply_to && (
                       <div
-                        className="flex items-center gap-2 text-[11px] text-muted-foreground mb-1.5 mt-0.5 cursor-pointer hover:text-foreground/80 flex-nowrap overflow-hidden transition-colors duration-150 pl-0.5"
+                        className="flex items-center gap-2 text-[11px] text-muted-foreground/80 mb-1.5 mt-0.5 cursor-pointer hover:text-muted-foreground flex-nowrap overflow-hidden transition-colors duration-150 pl-0.5"
                         onClick={handleReplyClick}
                         onTouchStart={(e) => {
                           // Stop parent long-press timer from starting when tapping reply preview
@@ -1356,22 +1356,22 @@ export const MessageItem = memo(function MessageItem({
                           e.stopPropagation();
                         }}
                       >
-                        <CornerDownLeft className="w-3 h-3 flex-shrink-0 text-muted-foreground/60" />
+                        <CornerLeftDown className="w-3 h-3 flex-shrink-0 text-muted-foreground/50" />
                         {showReplyAuthorIdentity ? (
-                          <span className="font-semibold text-primary/80 flex-shrink-0">
+                          <span className="font-medium text-primary/70 flex-shrink-0">
                             {replyUser?.display_name || replyUser?.username || "unknown"}
                           </span>
                         ) : (
-                          <span className="font-semibold text-primary/80 italic flex-shrink-0">Anonymous</span>
+                          <span className="font-medium text-primary/70 italic flex-shrink-0">Anonymous</span>
                         )}
                         {(() => {
                           const replyContent = message.reply_to.content;
                           if (isPollMessageContent(replyContent)) {
-                            return <span className="italic text-muted-foreground/70 flex-shrink-0">poll</span>;
+                            return <span className="italic text-muted-foreground/60 flex-shrink-0">poll</span>;
                           }
                           if (isImageOnlyMessage(replyContent)) {
                             return (
-                              <span className="italic text-muted-foreground/70 flex-shrink-0 flex items-center gap-1">
+                              <span className="italic text-muted-foreground/60 flex-shrink-0 flex items-center gap-1">
                                 <Paperclip className="w-3 h-3" />
                                 attachment
                               </span>
@@ -1388,14 +1388,14 @@ export const MessageItem = memo(function MessageItem({
                             .join(" ");
                           if (!textOnly) {
                             return (
-                              <span className="italic text-muted-foreground/70 flex-shrink-0 flex items-center gap-1">
+                              <span className="italic text-muted-foreground/60 flex-shrink-0 flex items-center gap-1">
                                 <Paperclip className="w-3 h-3" />
                                 attachment
                               </span>
                             );
                           }
                           return (
-                            <span className="truncate max-w-[150px] sm:max-w-[250px] text-muted-foreground/70">
+                            <span className="truncate max-w-[150px] sm:max-w-[250px] text-muted-foreground/60">
                               <ReplyPreview
                                 content={textOnly}
                                 maxLength={40}
