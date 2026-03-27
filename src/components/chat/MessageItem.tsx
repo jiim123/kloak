@@ -1356,7 +1356,7 @@ export const MessageItem = memo(function MessageItem({
                           e.stopPropagation();
                         }}
                       >
-                        <CornerLeftDown className="w-3 h-3 flex-shrink-0" />
+                        <CornerLeftDown className="w-3.5 h-3.5 flex-shrink-0" />
                         {showReplyAuthorIdentity && replyUser ? (
                           <>
                             <img
