@@ -1117,6 +1117,10 @@ const MobileOptimizedInput = memo(
     pendingAttachments,
     onRemoveAttachment,
     onAddMore,
+    showMentions,
+    hasMentionOptions,
+    showChannels,
+    hasChannelOptions,
   }: any) => {
     const isMobile = useIsMobile();
     const hasAttachments = pendingAttachments.length > 0;
