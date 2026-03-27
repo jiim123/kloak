@@ -1357,7 +1357,18 @@ export const MessageItem = memo(function MessageItem({
                         }}
                       >
                         <CornerLeftDown className="w-3 h-3 flex-shrink-0" />
-                        {showReplyAuthorIdentity ? (
+                        {showReplyAuthorIdentity && replyUser ? (
+                          <>
+                            <img
+                              src={replyUser.avatar_url || undefined}
+                              alt=""
+                              className="w-4 h-4 rounded-full flex-shrink-0 object-cover"
+                            />
+                            <span className="font-medium flex-shrink-0">
+                              {replyUser.display_name || replyUser.username || "unknown"}
+                            </span>
+                          </>
+                        ) : showReplyAuthorIdentity ? (
                           <span className="font-medium flex-shrink-0">
                             {replyUser?.display_name || replyUser?.username || "unknown"}
                           </span>
