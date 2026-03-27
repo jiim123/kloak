@@ -219,22 +219,18 @@ export const MentionAutocomplete = ({
   return (
     <div
       ref={containerRef}
-      className="absolute z-50 w-72 bg-card border border-border/50 rounded-xl shadow-xl overflow-hidden"
-      style={{
-        bottom: position.top,
-        left: position.left,
-      }}
+      className="w-full bg-white/5 border-b border-white/6 rounded-t-[14px] overflow-hidden"
     >
-      <div className="px-3 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/50">
+      <div className="px-3 py-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-white/6">
         Mention
       </div>
-      <div className="max-h-64 overflow-y-auto overscroll-contain p-1">
+      <div className="max-h-48 overflow-y-auto overscroll-contain p-1">
         {options.map((option, index) => (
           <div
             key={`${option.type}:${option.id || option.label}`}
             data-mention-index={index}
             className={cn(
-              "flex items-center gap-2.5 px-2.5 py-2 cursor-pointer rounded-lg transition-colors duration-150",
+              "flex items-center gap-2.5 px-2.5 py-1.5 cursor-pointer rounded-lg transition-colors duration-150",
               index === selectedIndex
                 ? "bg-primary/10 text-foreground"
                 : "text-foreground/80 hover:bg-muted/50 hover:text-foreground",
@@ -244,7 +240,7 @@ export const MentionAutocomplete = ({
           >
             {option.type === "user" && option.user ? (
               <>
-                <Avatar className="w-7 h-7 flex-shrink-0">
+                <Avatar className="w-6 h-6 flex-shrink-0">
                   <AvatarImage src={option.user.avatar_url || undefined} />
                   <AvatarFallback
                     className="text-xs font-medium"
@@ -263,7 +259,7 @@ export const MentionAutocomplete = ({
             ) : option.type === "role" && option.role ? (
               <>
                 <div
-                  className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-white"
+                  className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-white"
                   style={option.role.color.startsWith("linear-gradient") ? { background: option.role.color } : { backgroundColor: option.role.color }}
                 >
                   @
@@ -277,8 +273,8 @@ export const MentionAutocomplete = ({
               </>
             ) : (
               <>
-                <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs font-bold text-primary">@</span>
+                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                  <span className="text-[10px] font-bold text-primary">@</span>
                 </div>
                 <div className="flex items-center justify-between flex-1 min-w-0">
                   <span className="font-medium text-[13px]">@{option.label}</span>

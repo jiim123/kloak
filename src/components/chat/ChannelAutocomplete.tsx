@@ -121,42 +121,36 @@ export const ChannelAutocomplete = ({ query, position, onSelect, onClose, onOpti
   return (
     <div
       ref={containerRef}
-      className="absolute z-50 w-72 bg-card border border-border/50 rounded-xl shadow-xl overflow-hidden"
-      style={{
-        bottom: position.top,
-        left: position.left,
-      }}
+      className="w-full bg-white/5 border-b border-white/6 rounded-t-[14px] overflow-hidden"
     >
-      <div className="px-3 py-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wider border-b border-border/50">
+      <div className="px-3 py-1.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wider border-b border-white/6">
         Channels
       </div>
-      <ScrollArea className="max-h-52">
-        <div className="p-1">
-          {options.map((option, index) => (
+      <div className="max-h-48 overflow-y-auto overscroll-contain p-1">
+        {options.map((option, index) => (
+          <div
+            key={option.id}
+            className={cn(
+              "flex items-center gap-2.5 px-2.5 py-1.5 cursor-pointer rounded-lg transition-colors duration-150",
+              index === selectedIndex
+                ? "bg-primary/10 text-foreground"
+                : "text-foreground/80 hover:bg-muted/50 hover:text-foreground",
+            )}
+            onClick={() => onSelect(option)}
+            onMouseEnter={() => setSelectedIndex(index)}
+          >
             <div
-              key={option.id}
               className={cn(
-                "flex items-center gap-2.5 px-2.5 py-2 cursor-pointer rounded-lg transition-colors duration-150",
-                index === selectedIndex
-                  ? "bg-primary/10 text-foreground"
-                  : "text-foreground/80 hover:bg-muted/50 hover:text-foreground",
+                "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-colors",
+                index === selectedIndex ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground",
               )}
-              onClick={() => onSelect(option)}
-              onMouseEnter={() => setSelectedIndex(index)}
             >
-              <div
-                className={cn(
-                  "w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-colors",
-                  index === selectedIndex ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground",
-                )}
-              >
-                {getChannelIcon(option.type)}
-              </div>
-              <span className="font-medium text-[13px] truncate">#{option.name}</span>
+              {getChannelIcon(option.type)}
             </div>
-          ))}
-        </div>
-      </ScrollArea>
+            <span className="font-medium text-[13px] truncate">#{option.name}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
