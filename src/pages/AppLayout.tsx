@@ -606,7 +606,7 @@ const AppLayout = () => {
 
                       <div className="min-w-0 flex-1 flex flex-col overflow-hidden pb-2 pl-2">
                         {showDesktopUnifiedChannelHeader && currentChannel && (
-                          <div className="flex-shrink-0 bg-[#1c1c1c] overflow-visible pr-2 pt-1.5">
+                          <div className="flex-shrink-0 bg-[#1c1c1c] overflow-visible">
                             <ChannelHeader
                               channel={currentChannel}
                               showMessageActions={currentChannel.type !== "tasks"}
@@ -614,7 +614,7 @@ const AppLayout = () => {
                           </div>
                         )}
 
-                        <div className={cn("min-h-0 flex flex-1 gap-2", showDesktopUnifiedChannelHeader && "pt-2")}>
+                        <div className={cn("min-h-0 flex flex-1 gap-2 pr-2", showDesktopUnifiedChannelHeader && "pt-2")}>
                           <div className="min-w-0 flex-1 rounded-[10px] border border-white/5 bg-transparent relative overflow-hidden">
                             <VoicePersistentHost />
                             {/* Keep all views mounted, toggle visibility with CSS to prevent remount sluggishness */}
