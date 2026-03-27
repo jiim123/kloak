@@ -8,7 +8,7 @@ import {
   Trash2,
   Pin,
   MoreHorizontal,
-  CornerUpLeft,
+  CornerDownLeft,
   Copy,
   Eye,
   EyeOff,
@@ -990,7 +990,7 @@ export const MessageItem = memo(function MessageItem({
   // Grouped (chained): zero extra spacing for uniform line density
   const outerClassName = useMemo(() => {
     const base = "px-2";
-    const spacing = compactMode ? "py-0" : isGrouped ? "" : "mt-[17px]";
+    const spacing = compactMode ? "py-0" : isGrouped ? "" : "mt-[20px]";
     return `${base} ${spacing}`.trim();
   }, [compactMode, isGrouped]);
 
@@ -998,8 +998,8 @@ export const MessageItem = memo(function MessageItem({
 
   const innerClassName = useMemo(() => {
     const classes = [
-      "group relative flex px-3 rounded-lg hover:bg-muted/40",
-      compactMode ? "gap-2 py-0.5" : isGrouped ? "gap-3 py-[2px]" : "gap-3 py-0.5",
+      "group relative flex px-4 rounded-lg hover:bg-muted/40",
+      compactMode ? "gap-2 py-0.5" : isGrouped ? "gap-3 py-[2px]" : "gap-3 py-1",
     ];
     if (isAnnouncementChannel && !isGrouped) {
       classes.push("bg-primary/5 border-l-2 border-l-primary/50 ml-1");
@@ -1312,7 +1312,7 @@ export const MessageItem = memo(function MessageItem({
                     ) : (
                       !isGrouped &&
                       messageUser && (
-                        <div className="flex items-baseline gap-2 mb-0.5 font-[Inter,system-ui,sans-serif]">
+                        <div className="flex items-baseline gap-2 mb-1 font-[Inter,system-ui,sans-serif]">
                           <span
                             onClick={handleUsernameClick}
                             className={`text-[14px] sm:text-[15px] font-medium leading-tight hover:underline cursor-pointer ${usernameColorClass}`}
@@ -1346,7 +1346,7 @@ export const MessageItem = memo(function MessageItem({
                     {/* Reply reference */}
                     {message.reply_to && (
                       <div
-                        className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1 cursor-pointer hover:text-foreground flex-nowrap overflow-hidden"
+                        className="flex items-center gap-2 text-[11px] text-muted-foreground mb-1.5 mt-0.5 cursor-pointer hover:text-foreground/80 flex-nowrap overflow-hidden transition-colors duration-150 pl-0.5"
                         onClick={handleReplyClick}
                         onTouchStart={(e) => {
                           // Stop parent long-press timer from starting when tapping reply preview
@@ -1356,23 +1356,22 @@ export const MessageItem = memo(function MessageItem({
                           e.stopPropagation();
                         }}
                       >
-                        <CornerUpLeft className="w-3 h-3 flex-shrink-0" />
-                        <span className="flex-shrink-0">Replying to</span>
+                        <CornerDownLeft className="w-3 h-3 flex-shrink-0 text-muted-foreground/60" />
                         {showReplyAuthorIdentity ? (
-                          <span className="font-medium text-primary flex-shrink-0">
-                            @{replyUser?.display_name || replyUser?.username || "unknown"}
+                          <span className="font-semibold text-primary/80 flex-shrink-0">
+                            {replyUser?.display_name || replyUser?.username || "unknown"}
                           </span>
                         ) : (
-                          <span className="font-medium text-primary italic flex-shrink-0">Anonymous</span>
+                          <span className="font-semibold text-primary/80 italic flex-shrink-0">Anonymous</span>
                         )}
                         {(() => {
                           const replyContent = message.reply_to.content;
                           if (isPollMessageContent(replyContent)) {
-                            return <span className="italic flex-shrink-0">poll</span>;
+                            return <span className="italic text-muted-foreground/70 flex-shrink-0">poll</span>;
                           }
                           if (isImageOnlyMessage(replyContent)) {
                             return (
-                              <span className="italic flex-shrink-0 flex items-center gap-1">
+                              <span className="italic text-muted-foreground/70 flex-shrink-0 flex items-center gap-1">
                                 <Paperclip className="w-3 h-3" />
                                 attachment
                               </span>
@@ -1389,17 +1388,17 @@ export const MessageItem = memo(function MessageItem({
                             .join(" ");
                           if (!textOnly) {
                             return (
-                              <span className="italic flex-shrink-0 flex items-center gap-1">
+                              <span className="italic text-muted-foreground/70 flex-shrink-0 flex items-center gap-1">
                                 <Paperclip className="w-3 h-3" />
                                 attachment
                               </span>
                             );
                           }
                           return (
-                            <span className="truncate max-w-[120px] sm:max-w-[200px]">
+                            <span className="truncate max-w-[150px] sm:max-w-[250px] text-muted-foreground/70">
                               <ReplyPreview
                                 content={textOnly}
-                                maxLength={30}
+                                maxLength={40}
                                 customEmojiMap={customEmojiMap}
                                 globalEmojiMap={globalEmojiMap}
                               />
