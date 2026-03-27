@@ -567,7 +567,7 @@ const AppLayout = () => {
                 {/* Alpha notice banner */}
                 {!isFullscreenSettingsOverlayOpen && <AlphaNoticeBanner />}
 
-                <div className="flex flex-1 overflow-hidden relative px-2 pb-2 pt-1.5 gap-2">
+                <div className="flex flex-1 overflow-hidden relative pr-2 pb-2 pt-1.5 gap-2">
                   {/* Server list on left - hidden during full-screen settings */}
                   {!isFullscreenSettingsOverlayOpen && <ServerSidebar />}
 
