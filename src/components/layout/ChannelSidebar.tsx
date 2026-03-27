@@ -1147,7 +1147,7 @@ export const ChannelSidebar = () => {
   }
 
   return (
-    <div className="h-full flex flex-col bg-[#111111] rounded-[10px]">
+    <div className="h-full flex flex-col">
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Server header with banner */}
         <div className="relative border-b border-white/6">
@@ -1293,7 +1293,7 @@ export const ChannelSidebar = () => {
             <ContextMenuTrigger asChild disabled={isSortingMode}>
               <div
                 className={cn(
-                "flex-1 overflow-y-auto scrollbar-overlay px-1.5 py-2 scrollbar-hide",
+                "flex-1 overflow-y-auto scrollbar-overlay px-2 py-2 scrollbar-hide",
                   isSortingMode && "bg-white/[0.03] border-2 border-dashed border-white/10 rounded-xl mx-1 my-1",
                 )}
                 style={{ touchAction: "pan-y" }}
