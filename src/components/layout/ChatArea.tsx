@@ -44,7 +44,7 @@ const formatSlowmodeDuration = (totalSeconds: number): string => {
 // ── Empty‑channel placeholder (static, extracted to avoid re‑creation) ──
 
 const NoChannelPlaceholder = () => (
-  <div className="h-full flex flex-col items-center justify-center text-center px-4 bg-transparent relative overflow-hidden">
+  <div className="h-full flex flex-col items-center justify-center text-center px-4 bg-layout-members relative overflow-hidden">
     <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent" />
 
     <motion.div
@@ -269,7 +269,7 @@ export const ChatArea = ({ showHeader = true }: ChatAreaProps) => {
   }
 
   return (
-    <div ref={swipeRef} className="h-full flex flex-col min-w-0 max-w-full overflow-x-hidden bg-transparent relative">
+    <div ref={swipeRef} className="h-full flex flex-col min-w-0 max-w-full overflow-x-hidden bg-layout-members relative">
       {/* Channel header */}
       {showHeader && <ChannelHeader channel={currentChannel} />}
 
