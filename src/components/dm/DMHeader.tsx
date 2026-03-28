@@ -23,26 +23,8 @@ interface DMHeaderProps {
   otherUser: User | null | undefined;
 }
 
-const buttonVariants = {
-  initial: {
-    gap: 0,
-    paddingLeft: ".5rem",
-    paddingRight: ".5rem",
-  },
-  animate: (isExpanded: boolean) => ({
-    gap: isExpanded ? ".5rem" : 0,
-    paddingLeft: isExpanded ? ".75rem" : ".5rem",
-    paddingRight: isExpanded ? ".75rem" : ".5rem",
-  }),
-};
 
-const spanVariants = {
-  initial: { width: 0, opacity: 0 },
-  animate: { width: "auto", opacity: 1 },
-  exit: { width: 0, opacity: 0 },
-};
 
-const transition = { delay: 0.1, type: "spring" as const, bounce: 0, duration: 0.6 };
 
 export const DMHeader = ({ otherUser }: DMHeaderProps) => {
   const { openModal, setMobileSidebarOpen } = useUIStore();
