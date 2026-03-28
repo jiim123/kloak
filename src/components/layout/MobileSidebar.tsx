@@ -64,7 +64,7 @@ export const MobileSidebar = ({ isDMView, showFriends, onShowFriendsChange, show
   return (
     <Drawer direction="left" open={isMobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
       <DrawerContent
-        className="p-0 gap-0 bg-layout-sidebar shadow-lg border-r border-border/30 w-[85vw] max-w-[400px] flex flex-row h-full"
+        className="p-0 gap-0 bg-layout-sidebar shadow-lg border-r border-border/30 w-[100vw] max-w-[100vw] flex flex-row h-full"
       >
         <DrawerHeader className="sr-only">
           <DrawerTitle>Navigation</DrawerTitle>
