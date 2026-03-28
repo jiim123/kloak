@@ -99,110 +99,79 @@ export const DMHeader = ({ otherUser }: DMHeaderProps) => {
   if (!otherUser) return null;
 
   return (
-    <div className="px-4 py-2 md:py-0 md:h-12 flex items-center justify-between border-b border-border/50 flex-shrink-0 bg-background/50 backdrop-blur-sm sticky top-0 z-40">
-      {/* Left side - Sidebar toggle (mobile) + User info */}
-      <div className="flex items-center gap-2 min-w-0 flex-1">
-        {/* Mobile sidebar toggle */}
-        <button
-          onClick={() => setMobileSidebarOpen(true)}
-          className="md:hidden p-2 rounded-2xl bg-secondary text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150 flex-shrink-0"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
+    <div className="hidden w-full bg-layout-members md:block">
+      <div className="flex items-center justify-between px-4 py-3">
+        {/* Left side - User info */}
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <button
+            onClick={handleUserClick}
+            className="flex items-center gap-2 min-w-0 flex-1 hover:opacity-80 transition-opacity"
+          >
+            <div className="relative flex-shrink-0">
+              <AvatarWithDecoration
+                user={otherUser}
+                className="w-8 h-8"
+              />
+              <div
+                className={cn(
+                  "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background",
+                  getStatusColor(otherPresence.status)
+                )}
+              />
+            </div>
+            <span className="font-normal text-foreground truncate">
+              {otherUser.display_name || otherUser.username || "Unknown"}
+            </span>
+          </button>
+        </div>
 
-        {/* User info */}
-        <button
-          onClick={handleUserClick}
-          className="flex items-center gap-3 min-w-0 flex-1 hover:opacity-80 transition-opacity"
-        >
-          <div className="relative flex-shrink-0">
-            <AvatarWithDecoration
-              user={otherUser}
-              className="w-8 h-8"
-            />
-            <div
-              className={cn(
-                "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background",
-                getStatusColor(otherPresence.status)
-              )}
-            />
-          </div>
-          <span className="font-medium text-foreground truncate">
-            {otherUser.display_name || otherUser.username || "Unknown"}
-          </span>
-        </button>
-      </div>
+        {/* Right side - Actions */}
+        <div className="flex items-center gap-0.5 flex-shrink-0">
+          <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="relative w-8 h-8 rounded-lg text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                  >
+                    <MoreHorizontal className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>More Options</TooltipContent>
+            </Tooltip>
 
-      {/* Right side - Actions */}
-      <div className="flex items-center gap-1 flex-shrink-0 rounded-xl border border-border/50 bg-background/70 backdrop-blur-xl p-1">
-        <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <DropdownMenuTrigger asChild>
-                <motion.button
-                  variants={buttonVariants}
-                  initial={false}
-                  animate="animate"
-                  custom={hoveredButton === "more"}
-                  transition={transition}
-                  onMouseEnter={() => setHoveredButton("more")}
-                  onMouseLeave={() => setHoveredButton(null)}
-                  className={cn(
-                    "relative flex items-center rounded-xl py-2 text-sm font-medium transition-colors duration-300",
-                    hoveredButton === "more" || isMenuOpen
-                      ? "bg-muted/70 text-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <MoreHorizontal className="w-4 h-4 flex-shrink-0" />
-                  <AnimatePresence initial={false}>
-                    {hoveredButton === "more" && (
-                      <motion.span
-                        variants={spanVariants}
-                        initial="initial"
-                        animate="animate"
-                        exit="exit"
-                        transition={transition}
-                        className="overflow-hidden whitespace-nowrap text-sm"
-                      >
-                        More
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
-                </motion.button>
-              </DropdownMenuTrigger>
-            </TooltipTrigger>
-            <TooltipContent>More Options</TooltipContent>
-          </Tooltip>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem
+                onClick={handleCallUser}
+                className="cursor-pointer"
+              >
+                <Phone className="w-4 h-4" />
+                Call User
+              </DropdownMenuItem>
 
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem
-              onClick={handleCallUser}
-              className="cursor-pointer"
-            >
-              <Phone className="w-4 h-4" />
-              Call User
-            </DropdownMenuItem>
+              <DropdownMenuSeparator />
 
-            <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={handleReportUser}
+                className="cursor-pointer"
+              >
+                <Flag className="w-4 h-4" />
+                Report User
+              </DropdownMenuItem>
 
-            <DropdownMenuItem
-              onClick={handleReportUser}
-              className="cursor-pointer"
-            >
-              <Flag className="w-4 h-4" />
-              Report User
-            </DropdownMenuItem>
-
-            <DropdownMenuItem
-              onClick={handleBlockUser}
-              className="cursor-pointer text-destructive focus:text-destructive"
-            >
-              <Ban className="w-4 h-4" />
-              Block User
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              <DropdownMenuItem
+                onClick={handleBlockUser}
+                className="cursor-pointer text-destructive focus:text-destructive"
+              >
+                <Ban className="w-4 h-4" />
+                Block User
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </div>
   );
