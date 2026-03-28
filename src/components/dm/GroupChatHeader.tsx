@@ -69,7 +69,7 @@ export const GroupChatHeader = ({ conversation, participants }: GroupChatHeaderP
 
   return (
     <>
-      <div className="hidden w-full bg-layout-members md:block">
+      <div className="hidden w-full bg-layout-members md:block sticky top-0 z-40">
         <div className="flex items-center justify-between px-4 py-3">
           {/* Left side - Group info */}
           <div className="flex items-center gap-2 min-w-0 flex-1">
