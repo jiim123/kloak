@@ -21,6 +21,10 @@ import { toast } from "sonner";
 import type { DMConversation, User } from "@/types";
 import { GroupSettingsModal } from "./GroupSettingsModal";
 
+interface GroupChatHeaderProps {
+  conversation: DMConversation;
+  participants: User[];
+}
 
 export const GroupChatHeader = ({ conversation, participants }: GroupChatHeaderProps) => {
   const navigate = useNavigate();
