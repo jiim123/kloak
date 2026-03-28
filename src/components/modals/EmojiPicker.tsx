@@ -262,18 +262,10 @@ export const EmojiPicker = ({
     }));
   }, [recentEmojis]);
 
-  return (
-    <Popover open={open} onOpenChange={onOpenChange}>
-      <PopoverTrigger asChild>{children}</PopoverTrigger>
-      <PopoverContent
-        className="w-[280px] sm:w-[340px] p-0 bg-card border-border/50 rounded-2xl shadow-2xl overflow-hidden"
-        side="top"
-        align="end"
-        sideOffset={12}
-        onOpenAutoFocus={(e) => {
-          e.preventDefault();
-        }}
-      >
+  const isMobile = useIsMobile();
+
+  const pickerContent = (
+    <>
         {/* Search Header */}
         <div className="p-3 border-b border-border/30">
           <div className="relative">
