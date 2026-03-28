@@ -29,6 +29,7 @@ interface GroupChatHeaderProps {
 export const GroupChatHeader = ({ conversation, participants }: GroupChatHeaderProps) => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const { setMobileSidebarOpen } = useUIStore();
   const { leaveGroup, setCurrentConversation, fetchConversations } = useDMStore();
   
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -69,10 +70,16 @@ export const GroupChatHeader = ({ conversation, participants }: GroupChatHeaderP
 
   return (
     <>
-      <div className="hidden w-full bg-layout-members md:block sticky top-0 z-40">
+      <div className="w-full bg-layout-members sticky top-0 z-40" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
         <div className="flex items-center justify-between px-4 py-3">
-          {/* Left side - Group info */}
+          {/* Left side - Back button (mobile) + Group info */}
           <div className="flex items-center gap-2 min-w-0 flex-1">
+            <button
+              onClick={() => setMobileSidebarOpen(true)}
+              className="md:hidden w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-white/5 hover:text-foreground transition-colors flex-shrink-0"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
             <StackedAvatars users={participants} size="sm" />
             <span className="font-normal text-foreground truncate">
               {getGroupDisplayName()}
