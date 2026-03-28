@@ -3,7 +3,6 @@ import { MoreHorizontal, Flag, Ban, Phone } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
-import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { useUIStore } from "@/stores/uiStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useAuthStore } from "@/stores/authStore";
