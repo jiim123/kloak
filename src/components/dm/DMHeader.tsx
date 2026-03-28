@@ -81,7 +81,7 @@ export const DMHeader = ({ otherUser }: DMHeaderProps) => {
   if (!otherUser) return null;
 
   return (
-    <div className="hidden w-full bg-layout-members md:block">
+    <div className="hidden w-full bg-layout-members md:block sticky top-0 z-40">
       <div className="flex items-center justify-between px-4 py-3">
         {/* Left side - User info */}
         <div className="flex items-center gap-2 min-w-0 flex-1">
