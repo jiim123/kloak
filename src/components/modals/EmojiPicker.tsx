@@ -359,7 +359,7 @@ export const EmojiPicker = ({
         )}
 
         {/* Emoji Grid */}
-        <ScrollArea className={isMobile ? "flex-1" : "h-[220px] sm:h-[280px]"} style={isMobile ? { height: "calc(70vh - 160px)" } : undefined}>
+        <ScrollArea className={isMobile ? "flex-1 min-h-0" : "h-[220px] sm:h-[280px]"}>
           <div className="p-2 sm:p-3">
             {search.trim() ? (
               // Search results

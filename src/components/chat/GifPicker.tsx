@@ -183,7 +183,7 @@ function GifPickerContent({
       )}
 
       {/* Content */}
-      <ScrollArea className={isMobile ? "flex-1" : "h-[320px]"} style={isMobile ? { height: "calc(75vh - 140px)" } : undefined}>
+      <ScrollArea className={isMobile ? "flex-1 min-h-0" : "h-[320px]"}>
         <div className="p-2 sm:p-3">
           {tab === "trending" && renderGifGrid(
             gifs, loading,
