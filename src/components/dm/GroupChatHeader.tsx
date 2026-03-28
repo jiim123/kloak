@@ -81,7 +81,7 @@ export const GroupChatHeader = ({ conversation, participants }: GroupChatHeaderP
               <ChevronLeft className="w-5 h-5" />
             </button>
             <StackedAvatars users={participants} size="sm" />
-            <span className="font-normal text-foreground truncate">
+            <span className="font-medium text-foreground truncate">
               {getGroupDisplayName()}
             </span>
           </div>
