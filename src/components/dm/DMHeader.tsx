@@ -90,7 +90,7 @@ export const DMHeader = ({ otherUser }: DMHeaderProps) => {
             className="md:hidden w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-white/5 hover:text-foreground transition-colors flex-shrink-0"
           >
             <ChevronLeft className="w-5 h-5" />
-          </button>
+          <button
             onClick={handleUserClick}
             className="flex items-center gap-2 min-w-0 flex-1 hover:opacity-80 transition-opacity"
           >
