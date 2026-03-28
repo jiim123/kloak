@@ -195,7 +195,7 @@ export const DMChatArea = () => {
 
   if (!currentConversation) {
     return (
-      <div className="h-full flex items-center justify-center bg-layout-chat">
+      <div className="h-full flex items-center justify-center bg-layout-members">
         <div className="text-center text-muted-foreground">
           <p>Select a conversation or start a new one</p>
         </div>
@@ -207,7 +207,7 @@ export const DMChatArea = () => {
   const isBlocked = isBlockedByMe || isBlockedByThem;
 
   return (
-    <div ref={swipeRef} className="h-full flex flex-col bg-layout-chat">
+    <div ref={swipeRef} className="h-full flex flex-col bg-layout-members">
       {/* Header */}
       {isGroup ? (
         <GroupChatHeader conversation={currentConversation} participants={otherParticipants} />

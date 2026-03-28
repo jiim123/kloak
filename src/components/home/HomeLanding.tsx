@@ -54,7 +54,7 @@ export const HomeLanding = () => {
   };
 
   return (
-    <div className="flex-1 h-full bg-layout-chat overflow-y-auto w-full flex items-center justify-center relative min-h-0 py-3 sm:py-0">
+    <div className="flex-1 h-full bg-layout-members overflow-y-auto w-full flex items-center justify-center relative min-h-0 py-3 sm:py-0">
       <div className="max-w-xl sm:max-w-2xl mx-auto px-4 sm:px-6 py-3 sm:py-5 md:py-8 relative z-10 w-full">
         <motion.div
           variants={container}
