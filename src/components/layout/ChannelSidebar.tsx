@@ -1137,7 +1137,7 @@ export const ChannelSidebar = () => {
     <div className="h-full flex flex-col">
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Server header with banner */}
-        <div className="relative border-b border-white/6">
+        <div className="relative">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="group w-full overflow-hidden text-left transition-colors active:scale-[0.995]">
