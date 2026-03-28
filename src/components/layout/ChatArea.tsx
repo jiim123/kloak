@@ -282,8 +282,11 @@ export const ChatArea = ({ showHeader = true }: ChatAreaProps) => {
         openModal={openModal}
       />
 
-      {/* Messages */}
-      <MessageList channelId={currentChannel.id} channelName={channelName} />
+      {/* Messages with top gradient overlay */}
+      <div className="relative flex-1 min-h-0">
+        <div className="pointer-events-none absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-layout-members/80 to-transparent z-10" />
+        <MessageList channelId={currentChannel.id} channelName={channelName} />
+      </div>
 
       {/* Composer area */}
       <div className="shrink-0">
