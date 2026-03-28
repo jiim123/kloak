@@ -552,7 +552,7 @@ const SortableCategory = ({
       )}
       <button
         className={cn(
-          "flex items-center gap-1 text-xs font-normal text-muted-foreground hover:text-foreground uppercase tracking-wider flex-1 py-1",
+          "flex items-center gap-1 text-xs md:text-xs text-[13px] font-normal text-muted-foreground hover:text-foreground uppercase tracking-wider flex-1 py-1",
           isDragging && "opacity-50",
           isSortingMode && "cursor-default",
         )}
