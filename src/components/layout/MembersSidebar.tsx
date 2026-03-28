@@ -341,6 +341,7 @@ export const MembersSidebar = () => {
   const [offlineCursorMemberId, setOfflineCursorMemberId] = useState<string | null>(null);
   const offlineLoadingRef = useRef(false);
   const listViewportRef = useRef<HTMLDivElement | null>(null);
+  const [memberSearchQuery, setMemberSearchQuery] = useState("");
 
   // Mass ban selection mode
   const [massBanMode, setMassBanMode] = useState(false);
