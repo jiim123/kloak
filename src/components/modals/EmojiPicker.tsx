@@ -654,6 +654,35 @@ export const EmojiPicker = ({
             </div>
           </div>
         )}
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerTrigger asChild>{children}</DrawerTrigger>
+        <DrawerContent className="h-[70dvh] p-0 bg-card border-border/50 rounded-t-2xl overflow-hidden flex flex-col">
+          {/* Drag handle */}
+          <div className="flex justify-center pt-2 pb-1">
+            <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+          </div>
+          {pickerContent}
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverTrigger asChild>{children}</PopoverTrigger>
+      <PopoverContent
+        className="w-[280px] sm:w-[340px] p-0 bg-card border-border/50 rounded-2xl shadow-2xl overflow-hidden"
+        side="top"
+        align="end"
+        sideOffset={12}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        {pickerContent}
       </PopoverContent>
     </Popover>
   );
