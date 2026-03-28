@@ -403,7 +403,7 @@ export const GifPicker = ({ children, onSelect, open, onOpenChange }: GifPickerP
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerTrigger asChild>{children}</DrawerTrigger>
-        <DrawerContent className="h-[75dvh] p-0 bg-card border-border/50 rounded-t-2xl overflow-hidden flex flex-col">
+        <DrawerContent className="h-[75vh] max-h-[75vh] p-0 bg-card border-border/50 rounded-t-2xl overflow-hidden flex flex-col">
           <GifPickerContent {...contentProps} />
         </DrawerContent>
       </Drawer>
