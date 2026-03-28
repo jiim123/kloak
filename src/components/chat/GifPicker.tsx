@@ -129,12 +129,6 @@ function GifPickerContent({
 
   return (
     <>
-      {/* Drag handle for mobile drawer */}
-      {isMobile && (
-        <div className="flex justify-center pt-2 pb-1">
-          <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
-        </div>
-      )}
 
       {/* Tab bar */}
       <div className="flex border-b border-border/30">
@@ -403,7 +397,7 @@ export const GifPicker = ({ children, onSelect, open, onOpenChange }: GifPickerP
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerTrigger asChild>{children}</DrawerTrigger>
-        <DrawerContent className="h-[75vh] max-h-[75vh] p-0 bg-card border-border/50 rounded-t-2xl overflow-hidden flex flex-col">
+        <DrawerContent className="min-h-[40vh] max-h-[90vh] p-0 bg-card border-border/50 rounded-t-2xl overflow-hidden flex flex-col">
           <GifPickerContent {...contentProps} />
         </DrawerContent>
       </Drawer>
