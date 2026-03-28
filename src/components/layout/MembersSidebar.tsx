@@ -1,7 +1,7 @@
 import { useMemo, useEffect, memo, useState, useRef, forwardRef } from "react";
 import { ViewportList } from "react-viewport-list";
 import { cn, pickFirstNonBlank } from "@/lib/utils";
-import { Crown, MessageSquare, Edit3, UserX, Ban, VolumeX, Shield, Users, ChevronDown, Loader2, ListChecks, X, Check } from "lucide-react";
+import { Crown, MessageSquare, Edit3, UserX, Ban, VolumeX, Shield, Users, ChevronDown, Loader2, ListChecks, X, Check, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
