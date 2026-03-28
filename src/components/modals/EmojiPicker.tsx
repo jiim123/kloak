@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { FluentEmoji } from "@/components/ui/FluentEmoji";
 import { Search, X, Clock, ChevronLeft, ChevronRight } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -12,6 +13,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { EMOJI_DATA, EmojiCategory } from "@/data/emojiData";
 import { getRecentEmojis, saveRecentEmoji } from "@/lib/emojiRecents";
 import { supabase } from "@/integrations/supabase/client";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface EmojiPickerProps {
   children: React.ReactNode;
@@ -260,18 +262,10 @@ export const EmojiPicker = ({
     }));
   }, [recentEmojis]);
 
-  return (
-    <Popover open={open} onOpenChange={onOpenChange}>
-      <PopoverTrigger asChild>{children}</PopoverTrigger>
-      <PopoverContent
-        className="w-[280px] sm:w-[340px] p-0 bg-card border-border/50 rounded-2xl shadow-2xl overflow-hidden"
-        side="top"
-        align="end"
-        sideOffset={12}
-        onOpenAutoFocus={(e) => {
-          e.preventDefault();
-        }}
-      >
+  const isMobile = useIsMobile();
+
+  const pickerContent = (
+    <>
         {/* Search Header */}
         <div className="p-3 border-b border-border/30">
           <div className="relative">
@@ -365,7 +359,7 @@ export const EmojiPicker = ({
         )}
 
         {/* Emoji Grid */}
-        <ScrollArea className="h-[220px] sm:h-[280px]">
+        <ScrollArea className={isMobile ? "flex-1" : "h-[220px] sm:h-[280px]"} style={isMobile ? { height: "calc(70vh - 160px)" } : undefined}>
           <div className="p-2 sm:p-3">
             {search.trim() ? (
               // Search results
@@ -660,6 +654,35 @@ export const EmojiPicker = ({
             </div>
           </div>
         )}
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerTrigger asChild>{children}</DrawerTrigger>
+        <DrawerContent className="h-[70vh] max-h-[70vh] p-0 bg-card border-border/50 rounded-t-2xl overflow-hidden flex flex-col">
+          {/* Drag handle */}
+          <div className="flex justify-center pt-2 pb-1">
+            <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+          </div>
+          {pickerContent}
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverTrigger asChild>{children}</PopoverTrigger>
+      <PopoverContent
+        className="w-[280px] sm:w-[340px] p-0 bg-card border-border/50 rounded-2xl shadow-2xl overflow-hidden"
+        side="top"
+        align="end"
+        sideOffset={12}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        {pickerContent}
       </PopoverContent>
     </Popover>
   );
