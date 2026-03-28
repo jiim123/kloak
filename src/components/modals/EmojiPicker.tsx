@@ -359,7 +359,7 @@ export const EmojiPicker = ({
         )}
 
         {/* Emoji Grid */}
-        <ScrollArea className={isMobile ? "flex-1" : "h-[220px] sm:h-[280px]"} style={isMobile ? { height: "calc(70dvh - 160px)" } : undefined}>
+        <ScrollArea className={isMobile ? "flex-1" : "h-[220px] sm:h-[280px]"} style={isMobile ? { height: "calc(70vh - 160px)" } : undefined}>
           <div className="p-2 sm:p-3">
             {search.trim() ? (
               // Search results
@@ -661,7 +661,7 @@ export const EmojiPicker = ({
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerTrigger asChild>{children}</DrawerTrigger>
-        <DrawerContent className="h-[70dvh] p-0 bg-card border-border/50 rounded-t-2xl overflow-hidden flex flex-col">
+        <DrawerContent className="h-[70vh] max-h-[70vh] p-0 bg-card border-border/50 rounded-t-2xl overflow-hidden flex flex-col">
           {/* Drag handle */}
           <div className="flex justify-center pt-2 pb-1">
             <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
