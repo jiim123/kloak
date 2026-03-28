@@ -1,7 +1,7 @@
 import { useMemo, useEffect, memo, useState, useRef, forwardRef } from "react";
 import { ViewportList } from "react-viewport-list";
 import { cn, pickFirstNonBlank } from "@/lib/utils";
-import { Crown, MessageSquare, Edit3, UserX, Ban, VolumeX, Shield, Users, ChevronDown, Loader2, ListChecks, X, Check } from "lucide-react";
+import { Crown, MessageSquare, Edit3, UserX, Ban, VolumeX, Shield, Users, ChevronDown, Loader2, ListChecks, X, Check, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -341,6 +341,7 @@ export const MembersSidebar = () => {
   const [offlineCursorMemberId, setOfflineCursorMemberId] = useState<string | null>(null);
   const offlineLoadingRef = useRef(false);
   const listViewportRef = useRef<HTMLDivElement | null>(null);
+  const [memberSearchQuery, setMemberSearchQuery] = useState("");
 
   // Mass ban selection mode
   const [massBanMode, setMassBanMode] = useState(false);
@@ -442,8 +443,14 @@ export const MembersSidebar = () => {
 
   // Filter out offline/invisible members
   const onlineMembers = useMemo(() => {
-    return members.filter((m) => !getMemberPresence(m).isOffline);
-  }, [members]);
+    const online = members.filter((m) => !getMemberPresence(m).isOffline);
+    if (!memberSearchQuery.trim()) return online;
+    const q = memberSearchQuery.toLowerCase();
+    return online.filter((m) => {
+      const name = m.nickname || m.user?.display_name || m.user?.username || "";
+      return name.toLowerCase().includes(q);
+    });
+  }, [members, memberSearchQuery]);
   const onlineMemberUserIdSet = useMemo(() => new Set(onlineMembers.map((m) => m.user_id)), [onlineMembers]);
 
   // Reset paginated offline section when changing servers.
@@ -1053,9 +1060,12 @@ export const MembersSidebar = () => {
   }
 
   const sidebarContent = (
-    <div className="h-full flex flex-col bg-[#111111] w-full overflow-hidden rounded-[10px] border border-white/5 relative">
+    <div className={cn(
+      "h-full flex flex-col w-full overflow-hidden relative",
+      isMobile ? "bg-layout-sidebar-secondary" : "bg-[#111111] rounded-[10px] border border-white/5"
+    )}>
       {/* Header */}
-      <div className="px-4 py-3 border-b border-white/5">
+      <div className={cn("px-3 py-2.5 border-b border-border/10", isMobile && "px-3 py-3")}>
         {massBanMode ? (
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-destructive">Select members to ban</p>
@@ -1068,22 +1078,31 @@ export const MembersSidebar = () => {
             </button>
           </div>
         ) : (
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
-              <span>{onlineCount} online</span>
-            </p>
+          <div className="flex flex-col gap-2">
             {isMobile && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="w-9 h-9 rounded-xl active:scale-95 transition-transform"
-                onClick={() => setMemberSidebarOpen(false)}
-                aria-label="Close members"
-              >
-                <X className="w-4 h-4" />
-              </Button>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-foreground">Members</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-8 h-8 rounded-lg active:scale-95 transition-transform"
+                  onClick={() => setMemberSidebarOpen(false)}
+                  aria-label="Close members"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
             )}
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/60" />
+              <input
+                type="text"
+                placeholder="Search members"
+                value={memberSearchQuery}
+                onChange={(e) => setMemberSearchQuery(e.target.value)}
+                className="w-full h-8 pl-8 pr-3 text-[13px] rounded-lg bg-secondary/50 border-0 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring/30 transition-colors"
+              />
+            </div>
           </div>
         )}
       </div>
@@ -1132,7 +1151,6 @@ export const MembersSidebar = () => {
   if (isMobile) {
     return (
       <Drawer direction="right" open={isMemberSidebarOpen} onOpenChange={setMemberSidebarOpen} modal={false}>
-        {/* Manual overlay for tap-outside-to-close since modal={false} disables the built-in overlay */}
         {isMemberSidebarOpen && (
           <div
             className="fixed inset-0 z-50 bg-black/80"
@@ -1140,12 +1158,12 @@ export const MembersSidebar = () => {
           />
         )}
         <DrawerContent
-          className="p-0 w-60 max-w-[80vw]"
+          className="p-0 w-[100vw] max-w-[100vw]"
         >
           <DrawerHeader className="sr-only">
             <DrawerTitle>Members</DrawerTitle>
           </DrawerHeader>
-          <div className="h-full bg-transparent p-1.5">{sidebarContent}</div>
+          <div className="h-full">{sidebarContent}</div>
         </DrawerContent>
       </Drawer>
     );
