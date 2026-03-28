@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Settings, Menu } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { LogOut, Settings } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { StackedAvatars } from "@/components/ui/stacked-avatars";
 import { Button } from "@/components/ui/button";
@@ -18,44 +17,16 @@ import {
 import { useUIStore } from "@/stores/uiStore";
 import { useDMStore } from "@/stores/dmStore";
 import { useAuthStore } from "@/stores/authStore";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { DMConversation, User } from "@/types";
 import { GroupSettingsModal } from "./GroupSettingsModal";
 
-interface GroupChatHeaderProps {
-  conversation: DMConversation;
-  participants: User[];
-}
-
-const buttonVariants = {
-  initial: {
-    gap: 0,
-    paddingLeft: ".5rem",
-    paddingRight: ".5rem",
-  },
-  animate: (isExpanded: boolean) => ({
-    gap: isExpanded ? ".5rem" : 0,
-    paddingLeft: isExpanded ? ".75rem" : ".5rem",
-    paddingRight: isExpanded ? ".75rem" : ".5rem",
-  }),
-};
-
-const spanVariants = {
-  initial: { width: 0, opacity: 0 },
-  animate: { width: "auto", opacity: 1 },
-  exit: { width: 0, opacity: 0 },
-};
-
-const transition = { delay: 0.1, type: "spring" as const, bounce: 0, duration: 0.6 };
 
 export const GroupChatHeader = ({ conversation, participants }: GroupChatHeaderProps) => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { setMobileSidebarOpen } = useUIStore();
   const { leaveGroup, setCurrentConversation, fetchConversations } = useDMStore();
   
-  const [hoveredButton, setHoveredButton] = useState<string | null>(null);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
@@ -94,105 +65,46 @@ export const GroupChatHeader = ({ conversation, participants }: GroupChatHeaderP
 
   return (
     <>
-      <div className="px-4 py-2 md:py-0 md:h-12 flex items-center justify-between border-b border-border/50 flex-shrink-0 bg-background/50 backdrop-blur-sm sticky top-0 z-40">
-        {/* Left side - Sidebar toggle (mobile) + Group info */}
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          {/* Mobile sidebar toggle */}
-          <button
-            onClick={() => setMobileSidebarOpen(true)}
-            className="md:hidden p-2 rounded-2xl bg-secondary text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150 flex-shrink-0"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-
-          {/* Group info */}
-          <div className="flex items-center gap-3 min-w-0 flex-1">
+      <div className="hidden w-full bg-layout-members md:block">
+        <div className="flex items-center justify-between px-4 py-3">
+          {/* Left side - Group info */}
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <StackedAvatars users={participants} size="sm" />
-            <span className="font-medium text-foreground truncate">
+            <span className="font-normal text-foreground truncate">
               {getGroupDisplayName()}
             </span>
           </div>
-        </div>
 
-        {/* Right side - Action Buttons */}
-        <div className="flex items-center gap-1 flex-shrink-0 rounded-xl border border-border/50 bg-background/70 backdrop-blur-xl p-1">
-          {/* Settings Button */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <motion.button
-                variants={buttonVariants}
-                initial={false}
-                animate="animate"
-                custom={hoveredButton === "settings"}
-                transition={transition}
-                onMouseEnter={() => setHoveredButton("settings")}
-                onMouseLeave={() => setHoveredButton(null)}
-                onClick={() => setShowSettingsModal(true)}
-                className={cn(
-                  "relative flex items-center rounded-xl py-2 text-sm font-medium transition-colors duration-300",
-                  hoveredButton === "settings"
-                    ? "bg-muted/70 text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Settings className="w-4 h-4 flex-shrink-0" />
-                <AnimatePresence initial={false}>
-                  {hoveredButton === "settings" && (
-                    <motion.span
-                      variants={spanVariants}
-                      initial="initial"
-                      animate="animate"
-                      exit="exit"
-                      transition={transition}
-                      className="overflow-hidden whitespace-nowrap text-sm"
-                    >
-                      Settings
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </motion.button>
-            </TooltipTrigger>
-            <TooltipContent>Group Settings</TooltipContent>
-          </Tooltip>
+          {/* Right side - Actions */}
+          <div className="flex items-center gap-0.5 flex-shrink-0">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative w-8 h-8 rounded-lg text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                  onClick={() => setShowSettingsModal(true)}
+                >
+                  <Settings className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Group Settings</TooltipContent>
+            </Tooltip>
 
-          {/* Leave Group Button */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <motion.button
-                variants={buttonVariants}
-                initial={false}
-                animate="animate"
-                custom={hoveredButton === "leave"}
-                transition={transition}
-                onMouseEnter={() => setHoveredButton("leave")}
-                onMouseLeave={() => setHoveredButton(null)}
-                onClick={() => setShowLeaveDialog(true)}
-                className={cn(
-                  "relative flex items-center rounded-xl py-2 text-sm font-medium transition-colors duration-300",
-                  hoveredButton === "leave"
-                    ? "bg-destructive/20 text-destructive"
-                    : "text-muted-foreground hover:text-destructive"
-                )}
-              >
-                <LogOut className="w-4 h-4 flex-shrink-0" />
-                <AnimatePresence initial={false}>
-                  {hoveredButton === "leave" && (
-                    <motion.span
-                      variants={spanVariants}
-                      initial="initial"
-                      animate="animate"
-                      exit="exit"
-                      transition={transition}
-                      className="overflow-hidden whitespace-nowrap text-sm"
-                    >
-                      Leave
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </motion.button>
-            </TooltipTrigger>
-            <TooltipContent>Leave Group</TooltipContent>
-          </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative w-8 h-8 rounded-lg text-muted-foreground hover:bg-destructive/20 hover:text-destructive"
+                  onClick={() => setShowLeaveDialog(true)}
+                >
+                  <LogOut className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Leave Group</TooltipContent>
+            </Tooltip>
+          </div>
         </div>
       </div>
 
