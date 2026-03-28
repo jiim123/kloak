@@ -188,7 +188,7 @@ const ExploreServersOriginal = () => {
   const paginated = regularServers.slice(regularPageStart, regularPageStart + PAGE_SIZE);
 
   return (
-    <div className="h-full flex flex-col bg-layout-chat overflow-hidden">
+    <div className="h-full flex flex-col bg-layout-members overflow-hidden">
       {/* Header - hidden on mobile since we have MobileHeader */}
       <div className="h-12 px-4 hidden md:flex items-center justify-between border-b border-border shadow-sm flex-shrink-0">
         <h2 className="font-medium text-foreground">Explore</h2>
