@@ -1078,8 +1078,8 @@ export const MembersSidebar = () => {
             </button>
           </div>
         ) : (
-          <div className="flex flex-col gap-2">
-            <div className="relative">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50 pointer-events-none" />
               <input
                 type="text"
@@ -1088,16 +1088,6 @@ export const MembersSidebar = () => {
                 onChange={(e) => setMemberSearchQuery(e.target.value)}
                 className="w-full h-11 pl-10 pr-10 rounded-xl bg-muted/30 border border-border/30 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/30 focus:bg-muted/40 transition-all"
               />
-              {isMobile && !memberSearchQuery && (
-                <button
-                  type="button"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-                  onClick={() => setMemberSidebarOpen(false)}
-                  aria-label="Close members"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
               {memberSearchQuery && (
                 <button
                   type="button"
@@ -1108,6 +1098,16 @@ export const MembersSidebar = () => {
                 </button>
               )}
             </div>
+            {isMobile && (
+              <button
+                type="button"
+                className="w-11 h-11 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors flex-shrink-0"
+                onClick={() => setMemberSidebarOpen(false)}
+                aria-label="Close members"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
         )}
       </div>
