@@ -107,7 +107,7 @@ export const DMHeader = ({ otherUser }: DMHeaderProps) => {
                 )}
               />
             </div>
-            <span className="font-normal text-foreground truncate">
+            <span className="font-medium text-foreground truncate">
               {otherUser.display_name || otherUser.username || "Unknown"}
             </span>
           </button>
