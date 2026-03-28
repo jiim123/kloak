@@ -1079,29 +1079,34 @@ export const MembersSidebar = () => {
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            {isMobile && (
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-foreground">Members</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="w-8 h-8 rounded-lg active:scale-95 transition-transform"
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search members..."
+                value={memberSearchQuery}
+                onChange={(e) => setMemberSearchQuery(e.target.value)}
+                className="w-full h-11 pl-10 pr-10 rounded-xl bg-muted/30 border border-border/30 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/30 focus:bg-muted/40 transition-all"
+              />
+              {isMobile && !memberSearchQuery && (
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                   onClick={() => setMemberSidebarOpen(false)}
                   aria-label="Close members"
                 >
                   <X className="w-4 h-4" />
-                </Button>
-              </div>
-            )}
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/60" />
-              <input
-                type="text"
-                placeholder="Search members"
-                value={memberSearchQuery}
-                onChange={(e) => setMemberSearchQuery(e.target.value)}
-                className="w-full h-8 pl-8 pr-3 text-[13px] rounded-lg bg-secondary/50 border-0 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring/30 transition-colors"
-              />
+                </button>
+              )}
+              {memberSearchQuery && (
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                  onClick={() => setMemberSearchQuery("")}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
         )}
