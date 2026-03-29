@@ -1492,7 +1492,27 @@ export const MessageItem = memo(function MessageItem({
 
                             return (
                               <div className="space-y-2 !block">
-                                {title && <h3 className="text-lg font-semibold text-foreground">{title}</h3>}
+                                {title && (
+                                  <h3 className="text-lg font-semibold text-foreground">
+                                    <MessageContent
+                                      content={title}
+                                      currentUserId={user?.id}
+                                      hideEmbeds
+                                      hideLinksPreview
+                                      customEmojiMap={customEmojiMap}
+                                      globalEmojiMap={globalEmojiMap}
+                                      messageUser={
+                                        messageUser
+                                          ? {
+                                              id: messageUser.id,
+                                              username: messageUser.username,
+                                              display_name: messageUser.display_name,
+                                            }
+                                          : undefined
+                                      }
+                                    />
+                                  </h3>
+                                )}
                                 {announcementContent && (
                                   <MessageContent
                                     content={announcementContent}
