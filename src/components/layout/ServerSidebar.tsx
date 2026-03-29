@@ -1062,7 +1062,7 @@ export const ServerSidebar = () => {
               </Tooltip>
 
               {/* Unread DM conversation shortcuts */}
-              <AnimatePresence>
+              <AnimatePresence mode="popLayout">
                 {unreadConversations.map((conv) => {
                   const isGroup = conv.is_group;
                   const otherUser = conv.other_user;
@@ -1085,10 +1085,11 @@ export const ServerSidebar = () => {
                   return (
                     <motion.div
                       key={conv.id}
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0, opacity: 0 }}
-                      transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                      layout
+                      initial={{ opacity: 0, scale: 0.6, y: -8 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.5, y: -12, filter: "blur(4px)" }}
+                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                     >
                       <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
                         <TooltipTrigger asChild>
