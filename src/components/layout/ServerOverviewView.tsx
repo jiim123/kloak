@@ -11,6 +11,7 @@ import { readCachedMemberCount, persistMemberCount } from "@/lib/serverMemberCou
 import { useNavigate } from "react-router-dom";
 import type { Message, User } from "@/types";
 import { getUserFromCache, getOrFetchUser } from "@/stores/userCacheStore";
+import { stripMarkdown } from "@/lib/message";
 
 interface AnnouncementCard {
   id: string;
@@ -81,10 +82,25 @@ export const ServerOverviewView = () => {
           _limit: 5,
         });
         if (error) throw error;
+        // Build maps for formatting mentions/channels in previews
+        const usersMap = new Map<string, { username: string; display_name?: string | null; nickname?: string | null }>();
+        members.forEach((m) => {
+          if (m.user) {
+            usersMap.set(m.user_id, {
+              username: (m.user as User).username,
+              display_name: (m.user as User).display_name,
+              nickname: m.nickname,
+            });
+          }
+        });
+        const channelsMap = new Map<string, { name: string }>();
+        channels.forEach((ch) => channelsMap.set(ch.id, { name: ch.name }));
+
         const announcements: AnnouncementCard[] = (Array.isArray(messagesData) ? messagesData : []).map((msg: any) => {
-          const content = msg.content || "";
-          const parts = content.split("\n\n");
-          const title = parts.length > 1 ? parts[0].trim() : content.split("\n")[0].trim() || "Announcement";
+          const raw = msg.content || "";
+          const stripped = stripMarkdown(raw, usersMap, channelsMap);
+          const parts = stripped.split("\n\n");
+          const title = parts.length > 1 ? parts[0].trim() : stripped.split("\n")[0].trim() || "Announcement";
           return {
             id: msg.id,
             content: title,
