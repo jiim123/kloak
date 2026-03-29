@@ -33,7 +33,7 @@ export const PERMISSION_META: Record<Permission, PermissionMeta> = {
   manage_webhooks: { label: 'Manage Webhooks', description: 'Allows members to create, edit, and delete webhooks for integrations.', enabled: false },
   manage_invites: { label: 'Manage Invites', description: 'Allows members to create and revoke server invite links.', enabled: true },
   create_instant_invite: { label: 'Create Invite', description: 'Allows members to create invite links for the server.', enabled: false },
-  transfer_ownership: { label: 'Transfer Ownership', description: 'Allows the owner to transfer server ownership to another member.', enabled: false },
+  transfer_ownership: { label: 'Transfer Ownership', description: 'Allows the owner to transfer server ownership to another member.', enabled: true },
   connect: { label: 'Connect', description: 'Allows members to join voice channels and listen.', enabled: true },
   speak: { label: 'Speak', description: 'Allows members to speak in voice channels.', enabled: true },
   use_voice_activation: { label: 'Voice Activity', description: 'Allows members to use voice activity detection instead of push-to-talk.', enabled: false },
