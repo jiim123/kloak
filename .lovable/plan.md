@@ -1,22 +1,30 @@
 
 
-## Problem
+## Plan: Isolate Announcement Channels into Separate Components
 
-The thread sheet header has action buttons (pin, lock, edit, delete, close) positioned in the top-right corner. The ImageLightbox also renders controls (zoom, download, close) in the top-right. Since both use high z-index values, the sheet buttons can interfere with lightbox controls or remain clickable behind the lightbox overlay.
+### Goal
+Extract announcement channel rendering into its own dedicated component that looks and behaves identically to the current text channel flow, but is fully independent so future text channel changes don't affect announcements.
 
-## Solution
+### What changes
 
-**Hide the sheet's header action buttons when the lightbox is open.** Since the lightbox is a fullscreen overlay at `z-[9999]`, the simplest and most effective UX fix is to conditionally hide the thread header buttons when `threadAttachmentLightboxUrl` is set. This eliminates any collision without changing either component's z-index or layout.
+**1. Create `src/components/announcement/AnnouncementChatArea.tsx`**
+- A self-contained component that replicates the current text channel rendering from `ChatArea.tsx`
+- Uses its own imports of `ChannelHeader`, `MessageList`, `MessageInput`, `TypingIndicator`
+- Includes its own `PinnedMessageBar` (copied from ChatArea or imported as shared)
+- Has its own hooks: `useTyping`, `useSwipeGestureRef`, emoji loading, slowmode state, pinned message computation
+- Accepts `showHeader` prop, identical interface to other channel area components
 
-## Technical Details
+**2. Update `src/components/layout/ChatArea.tsx`**
+- Add `import { AnnouncementChatArea }` from the new component
+- Add early return for `channelType === "announcement"` routing to `<AnnouncementChatArea showHeader={showHeader} />`, alongside the existing forum/media/tasks routing
+- This fully decouples announcement channels from the text channel code path
 
-**File: `src/components/forum/ForumChannelArea.tsx`**
+**3. Clean up unused legacy announcement files**
+- Delete `AnnouncementView.tsx`, `TiptapEditor.tsx`, `RichTextEditor.tsx`, `AnnouncementPreview.tsx` (all unused)
+- Keep the existing `AnnouncementChannelArea.tsx` as-is or replace it with the new component
 
-- In the thread sheet header (around line 2379), wrap the action buttons `div` with a conditional that hides them when `threadAttachmentLightboxUrl` is truthy:
-  ```tsx
-  <div className={cn("flex items-center gap-1", threadAttachmentLightboxUrl && "invisible")}>
-  ```
-- This keeps the layout stable (buttons still occupy space) but makes them non-interactive and invisible when an attachment lightbox is open. Once the lightbox closes, buttons reappear instantly.
-
-This is a single-line class change — no structural or z-index modifications needed.
+### Technical details
+- The new component will duplicate the ~80 lines of state/hooks/rendering from ChatArea's text channel path (channels, messages, typing, pinned bar, swipe gestures, slowmode, emoji map)
+- `PinnedMessageBar` will be extracted to a shared file or duplicated into the new component to avoid cross-dependency
+- No visual or behavioral changes — the announcement channel will render pixel-identically to how it does today
 
