@@ -1163,12 +1163,12 @@ export const MembersSidebar = () => {
           />
         )}
         <DrawerContent
-          className="p-0 w-[100vw] max-w-[100vw]"
+          className="p-1.5 w-[100vw] max-w-[100vw] bg-background"
         >
           <DrawerHeader className="sr-only">
             <DrawerTitle>Members</DrawerTitle>
           </DrawerHeader>
-          <div className="h-full">{sidebarContent}</div>
+          <div className="h-full overflow-hidden">{sidebarContent}</div>
         </DrawerContent>
       </Drawer>
     );
