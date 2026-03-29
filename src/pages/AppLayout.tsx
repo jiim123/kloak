@@ -606,7 +606,7 @@ const AppLayout = () => {
 
                       <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
                         {showDesktopUnifiedChannelHeader && currentChannel && (
-                          <div className="flex-shrink-0 bg-[#1c1c1c] overflow-visible">
+                          <div className="flex-shrink-0 overflow-visible pt-2 px-2">
                             <ChannelHeader
                               channel={currentChannel}
                               showMessageActions={currentChannel.type !== "tasks"}
