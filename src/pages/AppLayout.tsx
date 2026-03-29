@@ -567,7 +567,7 @@ const AppLayout = () => {
                 {/* Alpha notice banner */}
                 {!isFullscreenSettingsOverlayOpen && <AlphaNoticeBanner />}
 
-                <div className="flex flex-1 overflow-hidden relative">
+                <div className="flex flex-1 overflow-hidden relative p-2 gap-2">
                   {/* Server list on left - hidden during full-screen settings */}
                   {!isFullscreenSettingsOverlayOpen && <ServerSidebar />}
 
@@ -590,7 +590,7 @@ const AppLayout = () => {
 
                   {/* Main layout - ALWAYS mounted so VoicePersistentHost never unmounts */}
                   <div className={cn("flex-1 overflow-hidden", isFullscreenSettingsOverlayOpen && "invisible")}>
-                    <div className="flex h-full gap-2 p-2">
+                    <div className="flex h-full gap-2">
                       <div className="w-[278px] shrink-0 overflow-hidden bg-[#111111] rounded-[10px] border border-white/5">
                         {isDMView ? (
                           <DMSidebar
