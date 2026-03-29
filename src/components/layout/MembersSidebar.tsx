@@ -1062,7 +1062,7 @@ export const MembersSidebar = () => {
   const sidebarContent = (
     <div className={cn(
       "h-full flex flex-col w-full overflow-hidden relative",
-      isMobile ? "bg-layout-sidebar-secondary" : "bg-[#111111] rounded-[10px] border border-white/5"
+      "bg-[#111111] rounded-[10px] border border-white/5"
     )}>
       {/* Header */}
       <div className={cn("px-3 py-2.5 border-b border-border/10", isMobile && "px-3 py-3")}>
@@ -1163,12 +1163,12 @@ export const MembersSidebar = () => {
           />
         )}
         <DrawerContent
-          className="p-0 w-[100vw] max-w-[100vw]"
+          className="p-1.5 w-[100vw] max-w-[100vw] bg-background"
         >
           <DrawerHeader className="sr-only">
             <DrawerTitle>Members</DrawerTitle>
           </DrawerHeader>
-          <div className="h-full">{sidebarContent}</div>
+          <div className="h-full overflow-hidden">{sidebarContent}</div>
         </DrawerContent>
       </Drawer>
     );

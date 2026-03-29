@@ -64,29 +64,31 @@ export const MobileSidebar = ({ isDMView, showFriends, onShowFriendsChange, show
   return (
     <Drawer direction="left" open={isMobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
       <DrawerContent
-        className="p-0 gap-0 bg-layout-sidebar shadow-lg border-r border-border/30 w-[100vw] max-w-[100vw] flex flex-row h-full"
+        className="p-0 gap-0 bg-background shadow-lg border-r border-border/30 w-[100vw] max-w-[100vw] flex flex-row h-full"
       >
         <DrawerHeader className="sr-only">
           <DrawerTitle>Navigation</DrawerTitle>
         </DrawerHeader>
         
-        {/* Server sidebar - always visible */}
-        <div className="w-[72px] flex-shrink-0 bg-layout-sidebar h-full pt-3">
-          <ServerSidebar />
-        </div>
-        
-        {/* Channel/DM sidebar */}
-        <div className="flex-1 min-w-0 bg-layout-sidebar-secondary h-full overflow-hidden">
-          {isDMView ? (
-            <DMSidebar 
-              showFriends={showFriends} 
-              onShowFriendsChange={handleShowFriendsChange} 
-              showExplore={showExplore}
-              onShowExploreChange={handleShowExploreChange}
-            />
-          ) : (
-            <ChannelSidebar />
-          )}
+        <div className="flex flex-row flex-1 gap-1.5 p-1.5 h-full min-w-0">
+          {/* Server sidebar - always visible */}
+          <div className="w-[72px] flex-shrink-0 bg-[#111111] rounded-[10px] border border-white/5 h-full pt-3 overflow-hidden">
+            <ServerSidebar />
+          </div>
+          
+          {/* Channel/DM sidebar */}
+          <div className="flex-1 min-w-0 bg-[#111111] rounded-[10px] border border-white/5 h-full overflow-hidden">
+            {isDMView ? (
+              <DMSidebar 
+                showFriends={showFriends} 
+                onShowFriendsChange={handleShowFriendsChange} 
+                showExplore={showExplore}
+                onShowExploreChange={handleShowExploreChange}
+              />
+            ) : (
+              <ChannelSidebar />
+            )}
+          </div>
         </div>
       </DrawerContent>
     </Drawer>
