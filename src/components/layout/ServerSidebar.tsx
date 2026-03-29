@@ -621,10 +621,19 @@ export const ServerSidebar = () => {
     });
   }, [servers]);
 
-  const { totalUnread: totalDMUnread, hasUnread: hasDMUnread } = useUnreadDMsContext();
+  const { totalUnread: totalDMUnread, hasUnread: hasDMUnread, unreadState, markAsRead, getUnreadCount } = useUnreadDMsContext();
+  const { conversations } = useDMStore();
   const pendingFriendCount = useFriendStore((s) => s.pendingRequests.length);
   const totalHomeBadge = totalDMUnread + pendingFriendCount;
   const hasHomeUnread = hasDMUnread || pendingFriendCount > 0;
+
+  // Get conversations with unread messages, sorted by unread count descending
+  const unreadConversations = useMemo(() => {
+    return conversations
+      .filter((conv) => getUnreadCount(conv.id) > 0)
+      .sort((a, b) => getUnreadCount(b.id) - getUnreadCount(a.id))
+      .slice(0, 5); // Max 5 shown
+  }, [conversations, unreadState, getUnreadCount]);
 
   const getServerInitials = (name: string) => {
     return name
