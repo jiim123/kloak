@@ -1086,10 +1086,15 @@ export const ServerSidebar = () => {
                     <motion.div
                       key={conv.id}
                       layout
-                      initial={{ opacity: 0, scale: 0.6, y: -8 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.5, y: -12, filter: "blur(4px)" }}
-                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                      initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                      animate={{ opacity: 1, height: "auto", marginTop: 0 }}
+                      exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                      transition={{
+                        opacity: { duration: 0.3, ease: "easeInOut" },
+                        height: { duration: 0.35, ease: [0.25, 0.1, 0.25, 1] },
+                        layout: { duration: 0.3, ease: [0.25, 0.1, 0.25, 1] },
+                      }}
+                      style={{ overflow: "hidden" }}
                     >
                       <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
                         <TooltipTrigger asChild>
