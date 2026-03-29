@@ -1481,14 +1481,14 @@ export const MessageItem = memo(function MessageItem({
                       <div className="text-[14px] font-normal leading-[1.5] sm:leading-[1.45] font-[Inter,system-ui,sans-serif] [&>div]:flex [&>div]:items-center [&>div]:flex-wrap overflow-hidden sm:max-w-[650px] max-w-[90%]">
                         {currentChannel?.type === "announcement" ? (
                           (() => {
-                            // Extract title and content for announcement channels
+                            // Only show title+body split when there's an explicit double-newline separator
                             const content = displayContent || "";
-                            const parts = content.split("\n\n");
-                            const title = parts.length > 1 ? parts[0].trim() : content.split("\n")[0].trim() || "";
-                            const announcementContent =
-                              parts.length > 1
-                                ? parts.slice(1).join("\n\n").trim()
-                                : content.split("\n").slice(1).join("\n").trim();
+                            const doubleNewlineIdx = content.indexOf("\n\n");
+                            const hasTitle = doubleNewlineIdx > 0;
+                            const title = hasTitle ? content.slice(0, doubleNewlineIdx).trim() : "";
+                            const announcementContent = hasTitle
+                              ? content.slice(doubleNewlineIdx + 2).trim()
+                              : content;
 
                             return (
                               <div className="space-y-2 !block">
