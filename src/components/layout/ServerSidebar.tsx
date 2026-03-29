@@ -263,7 +263,7 @@ const DraggableServerItem = forwardRef<
     hasUnread: boolean;
     totalMentions: number;
     tooltipsEnabled: boolean;
-    getPillState: (serverId: string | null, hasUnread: boolean) => string;
+    getPillState: (serverId: string, hasUnread: boolean) => string;
     getServerColor: (name: string) => string;
     getServerInitials: (name: string) => string;
     onHover: () => void;
@@ -661,8 +661,9 @@ export const ServerSidebar = () => {
     return colors[index % colors.length];
   };
 
-  const getPillState = (serverId: string | null, hasUnread: boolean) => {
-    if (currentServer?.id === serverId || (serverId === null && currentServer === null)) {
+  const getPillState = (serverId: string, hasUnread: boolean) => {
+    const isActive = serverId === "home" ? currentServer === null : currentServer?.id === serverId;
+    if (isActive) {
       return "active";
     }
     if (hoveredServer === serverId) {
@@ -981,7 +982,7 @@ export const ServerSidebar = () => {
                 <TooltipTrigger asChild>
                   <MotionButton
                     className="relative group mb-1"
-                    onMouseEnter={() => setHoveredServer(null)}
+                    onMouseEnter={() => setHoveredServer("home")}
                     onMouseLeave={() => setHoveredServer(null)}
                     onClick={() => {
                       setCurrentServer(null);
@@ -998,7 +999,7 @@ export const ServerSidebar = () => {
                       className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full"
                       variants={pillVariants}
                       initial="hidden"
-                      animate={getPillState(null, hasHomeUnread)}
+                      animate={getPillState("home", hasHomeUnread)}
                       transition={{ type: "spring", stiffness: 500, damping: 30 }}
                     />
 
