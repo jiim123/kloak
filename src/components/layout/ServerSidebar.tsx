@@ -621,10 +621,19 @@ export const ServerSidebar = () => {
     });
   }, [servers]);
 
-  const { totalUnread: totalDMUnread, hasUnread: hasDMUnread } = useUnreadDMsContext();
+  const { totalUnread: totalDMUnread, hasUnread: hasDMUnread, unreadState, markAsRead, getUnreadCount } = useUnreadDMsContext();
+  const { conversations } = useDMStore();
   const pendingFriendCount = useFriendStore((s) => s.pendingRequests.length);
   const totalHomeBadge = totalDMUnread + pendingFriendCount;
   const hasHomeUnread = hasDMUnread || pendingFriendCount > 0;
+
+  // Get conversations with unread messages, sorted by unread count descending
+  const unreadConversations = useMemo(() => {
+    return conversations
+      .filter((conv) => getUnreadCount(conv.id) > 0)
+      .sort((a, b) => getUnreadCount(b.id) - getUnreadCount(a.id))
+      .slice(0, 5); // Max 5 shown
+  }, [conversations, unreadState, getUnreadCount]);
 
   const getServerInitials = (name: string) => {
     return name
@@ -1051,6 +1060,90 @@ export const ServerSidebar = () => {
                   Home{totalHomeBadge > 0 ? ` (${totalHomeBadge} unread)` : ""}
                 </TooltipContent>
               </Tooltip>
+
+              {/* Unread DM conversation shortcuts */}
+              <AnimatePresence>
+                {unreadConversations.map((conv) => {
+                  const isGroup = conv.is_group;
+                  const otherUser = conv.other_user;
+                  const unreadCount = getUnreadCount(conv.id);
+                  const displayName = isGroup
+                    ? (conv.name || "Group Chat")
+                    : (otherUser?.display_name || otherUser?.username || "User");
+                  const avatarUrl = isGroup
+                    ? null
+                    : otherUser?.avatar_url;
+                  const initials = isGroup
+                    ? (conv.name?.[0] || "G")
+                    : (otherUser?.display_name?.[0] || otherUser?.username?.[0] || "?");
+
+                  // Group: show stacked participant avatars
+                  const groupParticipants = isGroup
+                    ? (conv.participants?.filter((p) => p.user_id !== user?.id).map((p) => p.user) || [])
+                    : [];
+
+                  return (
+                    <motion.div
+                      key={conv.id}
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0, opacity: 0 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                    >
+                      <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
+                        <TooltipTrigger asChild>
+                          <button
+                            className="relative group"
+                            onClick={() => {
+                              setCurrentServer(null);
+                              setCurrentConversation(conv);
+                              closeServerSettings();
+                              closeModal();
+                              navigate("/app");
+                              markAsRead(conv.id);
+                            }}
+                          >
+                            <motion.div
+                              className={cn(
+                                "w-12 h-12 rounded-[16px] flex items-center justify-center overflow-hidden transition-all duration-200",
+                                "bg-secondary/80 hover:bg-secondary hover:rounded-[12px]"
+                              )}
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                            >
+                              {isGroup ? (
+                                <div className="flex items-center justify-center w-full h-full">
+                                  <span className="text-sm font-semibold text-foreground/80">{initials}</span>
+                                </div>
+                              ) : avatarUrl ? (
+                                <img
+                                  src={avatarUrl}
+                                  alt={displayName}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <span className="text-sm font-semibold text-foreground/80">{initials}</span>
+                              )}
+                            </motion.div>
+
+                            {/* Unread badge */}
+                            <motion.span
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
+                            >
+                              {unreadCount > 99 ? "99+" : unreadCount}
+                            </motion.span>
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="font-medium">
+                          {displayName} ({unreadCount} unread)
+                        </TooltipContent>
+                      </Tooltip>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
 
               {/* Separator */}
               <div className="w-8 h-px bg-white/10 mb-1 shrink-0" />
