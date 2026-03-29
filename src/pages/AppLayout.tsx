@@ -453,6 +453,7 @@ const AppLayout = () => {
       totalUnread: unreadDMs.totalUnread,
       hasUnread: unreadDMs.hasUnread,
       refetch: unreadDMs.refetch,
+      unreadState: unreadDMs.unreadState,
     }),
     [
       unreadDMs.getUnreadCount,
@@ -461,6 +462,7 @@ const AppLayout = () => {
       unreadDMs.totalUnread,
       unreadDMs.hasUnread,
       unreadDMs.refetch,
+      unreadDMs.unreadState,
     ],
   );
 
