@@ -105,11 +105,18 @@ const createId = () => {
 };
 
 // Animation variants
+const pillTransition = {
+  type: "spring" as const,
+  stiffness: 400,
+  damping: 28,
+  mass: 0.8,
+};
+
 const pillVariants = {
-  hidden: { height: 0, opacity: 0 },
-  hover: { height: 20, opacity: 1 },
-  unread: { height: 8, opacity: 1 },
-  active: { height: 40, opacity: 1 },
+  hidden: { height: 0, opacity: 0, transition: { ...pillTransition, opacity: { duration: 0.15 } } },
+  hover: { height: 20, opacity: 1, transition: pillTransition },
+  unread: { height: 8, opacity: 1, transition: pillTransition },
+  active: { height: 40, opacity: 1, transition: pillTransition },
 };
 
 const iconVariants = {
