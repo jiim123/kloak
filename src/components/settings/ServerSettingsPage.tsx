@@ -300,7 +300,7 @@ const PERMISSION_META: Record<Permission, PermissionMeta> = {
   transfer_ownership: {
     label: "Transfer Ownership",
     description: "Allows the owner to transfer server ownership to another member.",
-    enabled: false,
+    enabled: true,
   },
   connect: { label: "Connect", description: "Allows members to join voice channels and listen.", enabled: true },
   speak: { label: "Speak", description: "Allows members to speak in voice channels.", enabled: true },
