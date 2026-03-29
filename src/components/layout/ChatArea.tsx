@@ -6,6 +6,7 @@ import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { ForumChannelArea } from "@/components/forum/ForumChannelArea";
 import { MediaChannelArea } from "@/components/media/MediaChannelArea";
 import { TasksChannelArea } from "@/components/tasks/TasksChannelArea";
+import { AnnouncementChatArea } from "@/components/announcement/AnnouncementChatArea";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useMessageStore } from "@/stores/messageStore";
@@ -254,6 +255,10 @@ export const ChatArea = ({ showHeader = true }: ChatAreaProps) => {
 
   if (channelType === "voice") {
     return null;
+  }
+
+  if (channelType === "announcement") {
+    return <AnnouncementChatArea showHeader={showHeader} />;
   }
 
   if (channelType === "forum") {
