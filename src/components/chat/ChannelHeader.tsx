@@ -40,7 +40,7 @@ export const ChannelHeader = ({
               : Hash;
 
   return (
-    <div className="hidden w-full bg-layout-members md:block">
+    <div className="hidden w-full bg-[#111111] rounded-[10px] border border-white/5 md:block">
       <div className="flex items-center justify-between px-4 py-3">
       {/* Left side - Channel info */}
       <div className="flex items-center gap-2 min-w-0 flex-1">
