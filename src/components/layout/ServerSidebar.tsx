@@ -263,7 +263,7 @@ const DraggableServerItem = forwardRef<
     hasUnread: boolean;
     totalMentions: number;
     tooltipsEnabled: boolean;
-    getPillState: (serverId: string | null, hasUnread: boolean) => string;
+    getPillState: (serverId: string, hasUnread: boolean) => string;
     getServerColor: (name: string) => string;
     getServerInitials: (name: string) => string;
     onHover: () => void;
