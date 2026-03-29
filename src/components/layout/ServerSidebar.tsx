@@ -355,8 +355,7 @@ const DraggableServerItem = forwardRef<
                     variants={pillVariants}
                     initial="hidden"
                     animate={getPillState(server.id, hasUnread)}
-                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                  />
+                    />
 
                   <motion.div
                     variants={iconVariants}
@@ -1007,7 +1006,6 @@ export const ServerSidebar = () => {
                       variants={pillVariants}
                       initial="hidden"
                       animate={getPillState("home", hasHomeUnread)}
-                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
                     />
 
                     <motion.div
