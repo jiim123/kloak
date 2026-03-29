@@ -936,7 +936,7 @@ export const ServerSidebar = () => {
   );
 
   return (
-    <div className="h-full w-[68px] shrink-0 flex flex-col items-center md:border-r md:border-white/6 bg-transparent relative overflow-hidden">
+    <div className="h-full w-[68px] shrink-0 flex flex-col items-center bg-[#111111] rounded-[10px] border border-white/5 relative overflow-hidden">
       {/* Server list */}
       <DndContext
         sensors={sensors}
