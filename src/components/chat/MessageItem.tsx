@@ -1560,98 +1560,6 @@ export const MessageItem = memo(function MessageItem({
                       </div>
                     )}
 
-                    {/* Reactions - skip for system messages */}
-                    {!message.is_system_message && message.reactions && message.reactions.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {message.reactions.map((reaction) => (
-                          <HoverCard key={reaction.emoji} openDelay={200}>
-                            <HoverCardTrigger asChild>
-                              <span className="inline-flex">
-                                <button
-                                  onClick={() =>
-                                    canAddReactions && handleReactionClick(reaction.emoji, reaction.hasReacted)
-                                  }
-                                  onTouchStart={(e) => {
-                                    if (!isMobile) return;
-                                    reactionLongPressRef.current = setTimeout(() => {
-                                      e.preventDefault();
-                                      setReactionDrawerOpen(true);
-                                    }, 500);
-                                  }}
-                                  onTouchEnd={() => {
-                                    if (reactionLongPressRef.current) {
-                                      clearTimeout(reactionLongPressRef.current);
-                                      reactionLongPressRef.current = null;
-                                    }
-                                  }}
-                                  onTouchMove={() => {
-                                    if (reactionLongPressRef.current) {
-                                      clearTimeout(reactionLongPressRef.current);
-                                      reactionLongPressRef.current = null;
-                                    }
-                                  }}
-                                  disabled={!canAddReactions}
-                                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full border ${
-                                    reaction.hasReacted
-                                      ? "bg-primary/20 border-primary text-primary"
-                                      : "bg-secondary/80 border-transparent hover:border-border hover:bg-secondary"
-                                  } ${!canAddReactions ? "opacity-50 cursor-not-allowed" : ""}`}
-                                >
-                                  {reactionEmojiNode(reaction.emoji)}
-                                  <span className="text-sm font-medium">{reaction.count}</span>
-                                </button>
-                              </span>
-                            </HoverCardTrigger>
-                            <HoverCardContent className="w-auto p-1.5" align="start" side="top">
-                              {isGhostMode ? (
-                                <div className="flex items-center gap-1">
-                                  <div className="shrink-0">{reactionEmojiNodeLarge(reaction.emoji)}</div>
-                                  <div className="min-w-0 text-sm leading-tight text-muted-foreground">
-                                    {reaction.count} {reaction.count === 1 ? "person" : "people"} reacted
-                                  </div>
-                                </div>
-                              ) : (
-                                (() => {
-                                  const names = getReactionUserNames(reaction.users);
-                                  const preview = names.slice(0, 4);
-                                  const remaining = Math.max(0, names.length - preview.length);
-                                  return (
-                                    <div className="flex items-center gap-1">
-                                      <div className="shrink-0">{reactionEmojiNodeLarge(reaction.emoji)}</div>
-                                      <div className="min-w-0 text-sm leading-tight">
-                                        <span className="text-muted-foreground">reacted by</span>{" "}
-                                        {preview.map((name, idx) => (
-                                          <span key={`${reaction.emoji}-${name}`}>
-                                            <span className="truncate">{name}</span>
-                                            {idx < preview.length - 1 ? ", " : ""}
-                                          </span>
-                                        ))}
-                                        {remaining > 0 && (
-                                          <>
-                                            {preview.length > 0 ? ", " : ""}
-                                            <button
-                                              type="button"
-                                              className="text-primary underline hover:no-underline"
-                                              onClick={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                setReactionDetailsEmoji(reaction.emoji);
-                                              }}
-                                            >
-                                              {remaining} others
-                                            </button>
-                                          </>
-                                        )}
-                                      </div>
-                                    </div>
-                                  );
-                                })()
-                              )}
-                            </HoverCardContent>
-                          </HoverCard>
-                        ))}
-                      </div>
-                    )}
                   </>
                 )}
               </div>
@@ -1830,6 +1738,99 @@ export const MessageItem = memo(function MessageItem({
             )}
           </ContextMenuContent>
         </ContextMenu>
+
+        {/* Reactions - rendered outside ContextMenu to avoid interfering with message actions */}
+        {!message.is_system_message && message.reactions && message.reactions.length > 0 && (
+          <div className={cn("flex flex-wrap gap-2 px-4", compactMode ? "pl-4" : "pl-[68px]")}>
+            {message.reactions.map((reaction) => (
+              <HoverCard key={reaction.emoji} openDelay={200}>
+                <HoverCardTrigger asChild>
+                  <span className="inline-flex">
+                    <button
+                      onClick={() =>
+                        canAddReactions && handleReactionClick(reaction.emoji, reaction.hasReacted)
+                      }
+                      onTouchStart={(e) => {
+                        if (!isMobile) return;
+                        reactionLongPressRef.current = setTimeout(() => {
+                          e.preventDefault();
+                          setReactionDrawerOpen(true);
+                        }, 500);
+                      }}
+                      onTouchEnd={() => {
+                        if (reactionLongPressRef.current) {
+                          clearTimeout(reactionLongPressRef.current);
+                          reactionLongPressRef.current = null;
+                        }
+                      }}
+                      onTouchMove={() => {
+                        if (reactionLongPressRef.current) {
+                          clearTimeout(reactionLongPressRef.current);
+                          reactionLongPressRef.current = null;
+                        }
+                      }}
+                      disabled={!canAddReactions}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-full border ${
+                        reaction.hasReacted
+                          ? "bg-primary/20 border-primary text-primary"
+                          : "bg-secondary/80 border-transparent hover:border-border hover:bg-secondary"
+                      } ${!canAddReactions ? "opacity-50 cursor-not-allowed" : ""}`}
+                    >
+                      {reactionEmojiNode(reaction.emoji)}
+                      <span className="text-sm font-medium">{reaction.count}</span>
+                    </button>
+                  </span>
+                </HoverCardTrigger>
+                <HoverCardContent className="w-auto p-1.5" align="start" side="top">
+                  {isGhostMode ? (
+                    <div className="flex items-center gap-1">
+                      <div className="shrink-0">{reactionEmojiNodeLarge(reaction.emoji)}</div>
+                      <div className="min-w-0 text-sm leading-tight text-muted-foreground">
+                        {reaction.count} {reaction.count === 1 ? "person" : "people"} reacted
+                      </div>
+                    </div>
+                  ) : (
+                    (() => {
+                      const names = getReactionUserNames(reaction.users);
+                      const preview = names.slice(0, 4);
+                      const remaining = Math.max(0, names.length - preview.length);
+                      return (
+                        <div className="flex items-center gap-1">
+                          <div className="shrink-0">{reactionEmojiNodeLarge(reaction.emoji)}</div>
+                          <div className="min-w-0 text-sm leading-tight">
+                            <span className="text-muted-foreground">reacted by</span>{" "}
+                            {preview.map((name, idx) => (
+                              <span key={`${reaction.emoji}-${name}`}>
+                                <span className="truncate">{name}</span>
+                                {idx < preview.length - 1 ? ", " : ""}
+                              </span>
+                            ))}
+                            {remaining > 0 && (
+                              <>
+                                {preview.length > 0 ? ", " : ""}
+                                <button
+                                  type="button"
+                                  className="text-primary underline hover:no-underline"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setReactionDetailsEmoji(reaction.emoji);
+                                  }}
+                                >
+                                  {remaining} others
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()
+                  )}
+                </HoverCardContent>
+              </HoverCard>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Mobile action drawer */}
