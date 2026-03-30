@@ -1571,6 +1571,25 @@ export const MessageItem = memo(function MessageItem({
                                   onClick={() =>
                                     canAddReactions && handleReactionClick(reaction.emoji, reaction.hasReacted)
                                   }
+                                  onTouchStart={(e) => {
+                                    if (!isMobile) return;
+                                    reactionLongPressRef.current = setTimeout(() => {
+                                      e.preventDefault();
+                                      setReactionDrawerOpen(true);
+                                    }, 500);
+                                  }}
+                                  onTouchEnd={() => {
+                                    if (reactionLongPressRef.current) {
+                                      clearTimeout(reactionLongPressRef.current);
+                                      reactionLongPressRef.current = null;
+                                    }
+                                  }}
+                                  onTouchMove={() => {
+                                    if (reactionLongPressRef.current) {
+                                      clearTimeout(reactionLongPressRef.current);
+                                      reactionLongPressRef.current = null;
+                                    }
+                                  }}
                                   disabled={!canAddReactions}
                                   className={`flex items-center gap-2 px-3 py-1.5 rounded-full border ${
                                     reaction.hasReacted
