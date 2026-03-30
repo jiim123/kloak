@@ -343,10 +343,12 @@ export const MessageItem = memo(function MessageItem({
   const [reactionDetailsEmoji, setReactionDetailsEmoji] = useState<string | null>(null);
   const [attachmentLightboxUrl, setAttachmentLightboxUrl] = useState<string | null>(null);
   const [reactionUserNameOverrides, setReactionUserNameOverrides] = useState<Map<string, string>>(new Map());
+  const [reactionDrawerOpen, setReactionDrawerOpen] = useState(false);
 
   // Refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reactionLongPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Check if pending optimistic message
   const isPending = useMemo(() => {
@@ -1569,6 +1571,25 @@ export const MessageItem = memo(function MessageItem({
                                   onClick={() =>
                                     canAddReactions && handleReactionClick(reaction.emoji, reaction.hasReacted)
                                   }
+                                  onTouchStart={(e) => {
+                                    if (!isMobile) return;
+                                    reactionLongPressRef.current = setTimeout(() => {
+                                      e.preventDefault();
+                                      setReactionDrawerOpen(true);
+                                    }, 500);
+                                  }}
+                                  onTouchEnd={() => {
+                                    if (reactionLongPressRef.current) {
+                                      clearTimeout(reactionLongPressRef.current);
+                                      reactionLongPressRef.current = null;
+                                    }
+                                  }}
+                                  onTouchMove={() => {
+                                    if (reactionLongPressRef.current) {
+                                      clearTimeout(reactionLongPressRef.current);
+                                      reactionLongPressRef.current = null;
+                                    }
+                                  }}
                                   disabled={!canAddReactions}
                                   className={`flex items-center gap-2 px-3 py-1.5 rounded-full border ${
                                     reaction.hasReacted
@@ -1982,6 +2003,66 @@ export const MessageItem = memo(function MessageItem({
                 </>
               )}
             </div>
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      {/* Reaction details drawer (mobile long-press) */}
+      <Drawer open={reactionDrawerOpen} onOpenChange={setReactionDrawerOpen}>
+        <DrawerContent className="max-h-[85vh]">
+          <DrawerHeader>
+            <DrawerTitle>Reactions</DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 pb-6 overflow-y-auto space-y-4">
+            {/* Tap-to-toggle reaction row */}
+            {canAddReactions && !isBlockedUser && (
+              <div className="flex flex-wrap gap-2">
+                {(message.reactions ?? []).map((reaction) => (
+                  <button
+                    key={`drawer-toggle-${reaction.emoji}`}
+                    onClick={() => {
+                      handleReactionClick(reaction.emoji, reaction.hasReacted);
+                    }}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-colors ${
+                      reaction.hasReacted
+                        ? "bg-primary/20 border-primary text-primary"
+                        : "bg-secondary/80 border-transparent hover:border-border hover:bg-secondary"
+                    }`}
+                  >
+                    {reactionEmojiNode(reaction.emoji)}
+                    <span className="text-sm font-medium">{reaction.count}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Who reacted list */}
+            {(message.reactions ?? []).map((reaction) => {
+              const names = isGhostMode ? [] : getReactionUserNames(reaction.users);
+              return (
+                <div key={`drawer-details-${reaction.emoji}`} className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    {reactionEmojiNodeLarge(reaction.emoji)}
+                    <span className="text-sm font-semibold text-foreground">
+                      {reaction.count}
+                    </span>
+                  </div>
+                  {isGhostMode ? (
+                    <p className="text-sm text-muted-foreground pl-10">
+                      {reaction.count} {reaction.count === 1 ? "person" : "people"} reacted
+                    </p>
+                  ) : (
+                    <div className="pl-10 space-y-1">
+                      {names.map((name, idx) => (
+                        <p key={`${reaction.emoji}-user-${idx}`} className="text-sm text-foreground">
+                          {name}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </DrawerContent>
       </Drawer>
