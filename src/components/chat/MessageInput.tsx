@@ -10,9 +10,9 @@ import {
   WifiOff,
   Lock,
   SquareChartGantt,
-  MoreHorizontal,
   ImagePlay,
   Info,
+  Check,
   Check,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
