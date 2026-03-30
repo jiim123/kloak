@@ -2007,6 +2007,66 @@ export const MessageItem = memo(function MessageItem({
         </DrawerContent>
       </Drawer>
 
+      {/* Reaction details drawer (mobile long-press) */}
+      <Drawer open={reactionDrawerOpen} onOpenChange={setReactionDrawerOpen}>
+        <DrawerContent className="max-h-[85vh]">
+          <DrawerHeader>
+            <DrawerTitle>Reactions</DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 pb-6 overflow-y-auto space-y-4">
+            {/* Tap-to-toggle reaction row */}
+            {canAddReactions && !isBlockedUser && (
+              <div className="flex flex-wrap gap-2">
+                {(message.reactions ?? []).map((reaction) => (
+                  <button
+                    key={`drawer-toggle-${reaction.emoji}`}
+                    onClick={() => {
+                      handleReactionClick(reaction.emoji, reaction.hasReacted);
+                    }}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-colors ${
+                      reaction.hasReacted
+                        ? "bg-primary/20 border-primary text-primary"
+                        : "bg-secondary/80 border-transparent hover:border-border hover:bg-secondary"
+                    }`}
+                  >
+                    {reactionEmojiNode(reaction.emoji)}
+                    <span className="text-sm font-medium">{reaction.count}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Who reacted list */}
+            {(message.reactions ?? []).map((reaction) => {
+              const names = isGhostMode ? [] : getReactionUserNames(reaction.users);
+              return (
+                <div key={`drawer-details-${reaction.emoji}`} className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    {reactionEmojiNodeLarge(reaction.emoji)}
+                    <span className="text-sm font-semibold text-foreground">
+                      {reaction.count}
+                    </span>
+                  </div>
+                  {isGhostMode ? (
+                    <p className="text-sm text-muted-foreground pl-10">
+                      {reaction.count} {reaction.count === 1 ? "person" : "people"} reacted
+                    </p>
+                  ) : (
+                    <div className="pl-10 space-y-1">
+                      {names.map((name, idx) => (
+                        <p key={`${reaction.emoji}-user-${idx}`} className="text-sm text-foreground">
+                          {name}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </DrawerContent>
+      </Drawer>
+
       {/* Delete confirmation modal */}
       <DeleteMessageModal message={showDeleteModal ? message : null} onClose={() => setShowDeleteModal(false)} customDeleteHandler={isDM ? dmActions?.deleteMessage : undefined} />
 
