@@ -343,10 +343,12 @@ export const MessageItem = memo(function MessageItem({
   const [reactionDetailsEmoji, setReactionDetailsEmoji] = useState<string | null>(null);
   const [attachmentLightboxUrl, setAttachmentLightboxUrl] = useState<string | null>(null);
   const [reactionUserNameOverrides, setReactionUserNameOverrides] = useState<Map<string, string>>(new Map());
+  const [reactionDrawerOpen, setReactionDrawerOpen] = useState(false);
 
   // Refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reactionLongPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Check if pending optimistic message
   const isPending = useMemo(() => {
