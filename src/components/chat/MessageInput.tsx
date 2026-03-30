@@ -143,7 +143,6 @@ const ActionBar = memo(
   }: any) => {
     const showCharacterWarning = content.length > MAX_LENGTH - 200;
     const isMobile = useIsMobile();
-    const shouldCollapse = isMobile && content.length > 10;
     const canSend = (content.trim() || hasAttachments) && !isSending && canSubmitMessage;
 
     const iconBtnClass =
@@ -153,46 +152,22 @@ const ActionBar = memo(
       <div className="flex items-center justify-between px-2 sm:px-3 pb-2 pt-0.5">
         {/* Left actions */}
         <div className="flex items-center gap-0.5">
-          {shouldCollapse ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button type="button" className={iconBtnClass} onMouseDown={(e) => e.preventDefault()}>
-                  <MoreHorizontal className="w-5 h-5" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="min-w-[160px]">
-                {onAttachClick && (
-                  <DropdownMenuItem onClick={onAttachClick} disabled={!canSendMessage}>
-                    <Paperclip className="w-4 h-4 mr-2" /> Attach file
-                  </DropdownMenuItem>
-                )}
-                {setShowCreatePoll && (
-                  <DropdownMenuItem onClick={() => setShowCreatePoll(true)} disabled={!canSendMessage}>
-                    <SquareChartGantt className="w-4 h-4 mr-2" /> Create poll
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
+          {onAttachClick && (
+            <button onClick={onAttachClick} disabled={!canSendMessage} className={iconBtnClass}>
+              <Paperclip className="w-5 h-5" />
+            </button>
+          )}
+          {setShowCreatePoll && (
             <>
-              {onAttachClick && (
-                <button onClick={onAttachClick} disabled={!canSendMessage} className={iconBtnClass}>
-                  <Paperclip className="w-5 h-5" />
-                </button>
-              )}
-              {setShowCreatePoll && (
-                <>
-                  <div className="w-px h-5 bg-white/8 mx-0.5" />
-                  <button
-                    type="button"
-                    onClick={() => setShowCreatePoll(true)}
-                    disabled={!canSendMessage}
-                    className={iconBtnClass}
-                  >
-                    <SquareChartGantt className="w-5 h-5" />
-                  </button>
-                </>
-              )}
+              <div className="w-px h-5 bg-white/8 mx-0.5" />
+              <button
+                type="button"
+                onClick={() => setShowCreatePoll(true)}
+                disabled={!canSendMessage}
+                className={iconBtnClass}
+              >
+                <SquareChartGantt className="w-5 h-5" />
+              </button>
             </>
           )}
 
