@@ -330,7 +330,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
     onSwipeRight: () => setMobileSidebarOpen(true),
     onSwipeLeft: () => setMemberSidebarOpen(true),
     threshold: 50,
-    enabled: isMobile,
+    enabled: false,
   });
 
   const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
