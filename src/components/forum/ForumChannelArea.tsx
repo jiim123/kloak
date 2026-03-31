@@ -1959,7 +1959,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
   };
 
   return (
-    <div ref={swipeRef} className="h-full min-w-0 bg-background">
+    <div ref={swipeRef} className="h-full min-w-0 max-w-full overflow-x-hidden bg-background">
       {showHeader && <ChannelHeader channel={currentChannel} />}
 
       <div className={cn("relative flex overflow-hidden", showHeader ? "h-[calc(100%-57px)]" : "h-full")}>
