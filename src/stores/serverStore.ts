@@ -276,6 +276,7 @@ interface ServerState {
       icon_url?: string | null;
       banner_url?: string | null;
       is_published?: boolean;
+      is_nsfw?: boolean;
       about?: string | null;
     },
   ) => Promise<void>;
