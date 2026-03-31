@@ -57,6 +57,7 @@ import { DockNavigation } from "@/components/ui/dock-navigation";
 import { useUIStore, THEMES, type Theme } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useFriendStore } from "@/stores/friendStore";
+import { useServerStore } from "@/stores/serverStore";
 import { useNotificationSound } from "@/hooks/useNotificationSound";
 import { supabase } from "@/integrations/supabase/client";
 import { secureUpload, secureListAndDelete } from "@/lib/storageUpload";
