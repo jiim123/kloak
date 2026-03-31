@@ -908,7 +908,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-medium">{option.title}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{option.description}</p>
+                    <p className="text-[12px] text-muted-foreground mt-1">{option.description}</p>
                   </div>
                   {active && <Check className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />}
                 </div>
