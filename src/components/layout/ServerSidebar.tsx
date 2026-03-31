@@ -151,19 +151,26 @@ const ServerIconVisual = ({
   getServerInitials: (name: string) => string;
 }) => {
   return (
-    <div
-      className={cn(
-        "w-12 h-12 overflow-hidden rounded-full flex items-center justify-center",
-        !server.icon_url && getServerColor(server.name),
-      )}
-    >
-      {server.icon_url ? (
-        <Avatar className="w-12 h-12 border-0">
-          <AvatarImage src={server.icon_url} alt={server.name} className="object-cover" />
-          <AvatarFallback className={getServerColor(server.name)}>{getServerInitials(server.name)}</AvatarFallback>
-        </Avatar>
-      ) : (
-        <span className="text-sm font-bold text-white">{getServerInitials(server.name)}</span>
+    <div className="relative">
+      <div
+        className={cn(
+          "w-12 h-12 overflow-hidden rounded-full flex items-center justify-center",
+          !server.icon_url && getServerColor(server.name),
+        )}
+      >
+        {server.icon_url ? (
+          <Avatar className="w-12 h-12 border-0">
+            <AvatarImage src={server.icon_url} alt={server.name} className="object-cover" />
+            <AvatarFallback className={getServerColor(server.name)}>{getServerInitials(server.name)}</AvatarFallback>
+          </Avatar>
+        ) : (
+          <span className="text-sm font-bold text-white">{getServerInitials(server.name)}</span>
+        )}
+      </div>
+      {server.is_nsfw && (
+        <span className="absolute -bottom-0.5 -right-0.5 px-1 py-px text-[8px] font-bold leading-none rounded bg-destructive text-destructive-foreground uppercase tracking-wide">
+          18+
+        </span>
       )}
     </div>
   );
