@@ -2104,6 +2104,7 @@ export type Database = {
           icon_url: string | null
           id: string
           invite_code: string
+          is_nsfw: boolean
           is_published: boolean
           is_verified: boolean
           name: string
@@ -2120,6 +2121,7 @@ export type Database = {
           icon_url?: string | null
           id?: string
           invite_code: string
+          is_nsfw?: boolean
           is_published?: boolean
           is_verified?: boolean
           name: string
@@ -2136,6 +2138,7 @@ export type Database = {
           icon_url?: string | null
           id?: string
           invite_code?: string
+          is_nsfw?: boolean
           is_published?: boolean
           is_verified?: boolean
           name?: string
@@ -2985,6 +2988,7 @@ export type Database = {
       }
       users: {
         Row: {
+          allow_nsfw: boolean
           avatar_decoration: string | null
           avatar_url: string | null
           banner_color: string | null
@@ -3004,6 +3008,7 @@ export type Database = {
           username: string
         }
         Insert: {
+          allow_nsfw?: boolean
           avatar_decoration?: string | null
           avatar_url?: string | null
           banner_color?: string | null
@@ -3023,6 +3028,7 @@ export type Database = {
           username: string
         }
         Update: {
+          allow_nsfw?: boolean
           avatar_decoration?: string | null
           avatar_url?: string | null
           banner_color?: string | null
@@ -4477,6 +4483,10 @@ export type Database = {
         Returns: Json
       }
       update_user_last_seen: { Args: { _user_id: string }; Returns: boolean }
+      update_user_nsfw_preference: {
+        Args: { _allow_nsfw: boolean; _user_id: string }
+        Returns: boolean
+      }
       update_user_presence: { Args: { _user_id: string }; Returns: undefined }
       update_user_profile: {
         Args: { _updates: Json; _user_id: string }
