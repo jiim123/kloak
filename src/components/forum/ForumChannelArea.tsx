@@ -2358,7 +2358,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                 <SheetContent
                   side="right"
                   hideCloseButton
-                  className="w-[90vw] max-w-2xl p-0 sm:max-w-2xl"
+                  className="w-[100vw] sm:w-[90vw] max-w-2xl p-0 sm:max-w-2xl [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_.relative.group]:max-w-full [&_.relative.group]:overflow-hidden"
                   onEscapeKeyDown={(event) => {
                     if (threadAttachmentLightboxUrl) event.preventDefault();
                   }}
