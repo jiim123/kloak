@@ -27,6 +27,7 @@ export interface User {
   last_seen: string | null;
   pronouns?: string | null;
   is_bot?: boolean | null;
+  allow_nsfw?: boolean;
 }
 
 export interface UserProfile extends User {
