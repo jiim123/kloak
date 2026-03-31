@@ -63,7 +63,7 @@ import { secureUpload } from "@/lib/storageUpload";
 import { handleError, showSuccess, showWarning } from "@/lib/errorHandler";
 import { formatMessageTimestamp } from "@/lib/format";
 import { formatDistanceToNow } from "date-fns";
-import { isImageOnlyMessage } from "@/lib/message";
+import { isImageOnlyMessage, stripMarkdown } from "@/lib/message";
 import { isPollMessageContent } from "@/lib/poll";
 import { MessageContent, ReplyPreview } from "@/components/chat/MessageContent";
 import { ImageLightbox } from "@/components/modals/ImageLightbox";
@@ -2198,7 +2198,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                           {/* Content preview */}
                           {threadPreview && (
                             <p className="line-clamp-2 text-[0.9375rem] text-foreground">
-                              {threadPreview}
+                              {stripMarkdown(threadPreview)}
                             </p>
                           )}
 
@@ -2276,7 +2276,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                           {/* Content preview */}
                           {threadPreview && (
                             <p className="line-clamp-2 text-sm text-foreground">
-                              {threadPreview}
+                              {stripMarkdown(threadPreview)}
                             </p>
                           )}
 
@@ -2572,7 +2572,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                                   </div>
                                 </div>
                               ) : (
-                                <div className="text-sm text-foreground">
+                                <div className="text-sm text-foreground min-w-0 max-w-full overflow-hidden [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_.relative.group]:max-w-full [&_.relative.group]:overflow-hidden">
                                   <MessageContent
                                     content={threadDescription.replace(/kloak-attachment:\/\/[^\s]*/g, '').trim()}
                                     currentUserId={user?.id}
@@ -3037,7 +3037,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                               <AvatarImage src={opUser?.avatar_url} />
                               <AvatarFallback>{opUser?.username?.[0]?.toUpperCase() || "?"}</AvatarFallback>
                             </Avatar>
-                            <div className="flex-1">
+                            <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-2">
                                 <button
                                   type="button"
@@ -3127,7 +3127,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                                   </div>
                                 </div>
                               ) : (
-                                <div className="text-sm text-foreground">
+                                <div className="text-sm text-foreground min-w-0 max-w-full overflow-hidden [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_.relative.group]:max-w-full [&_.relative.group]:overflow-hidden">
                                   <MessageContent
                                     content={threadDescription.replace(/kloak-attachment:\/\/[^\s]*/g, '').trim()}
                                     currentUserId={user?.id}
