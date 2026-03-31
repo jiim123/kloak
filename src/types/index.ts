@@ -27,6 +27,7 @@ export interface User {
   last_seen: string | null;
   pronouns?: string | null;
   is_bot?: boolean | null;
+  allow_nsfw?: boolean;
 }
 
 export interface UserProfile extends User {
@@ -131,6 +132,7 @@ export interface Server {
   icon_url: string | null;
   banner_url: string | null;
   is_published: boolean;
+  is_nsfw?: boolean;
   about: string | null;
   owner_id: string;
   invite_code: string;

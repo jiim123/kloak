@@ -276,6 +276,7 @@ interface ServerState {
       icon_url?: string | null;
       banner_url?: string | null;
       is_published?: boolean;
+      is_nsfw?: boolean;
       about?: string | null;
     },
   ) => Promise<void>;
@@ -433,6 +434,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
           icon_url: string | null;
           banner_url: string | null;
           is_published?: boolean;
+          is_nsfw?: boolean;
           about?: string | null;
           system_channel_join_id?: string | null;
           system_channel_leave_id?: string | null;
@@ -454,6 +456,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
           icon_url: item.icon_url,
           banner_url: item.banner_url,
           is_published: item.is_published ?? false,
+          is_nsfw: item.is_nsfw ?? false,
           about: item.about ?? null,
           system_channel_join_id: item.system_channel_join_id ?? null,
           system_channel_leave_id: item.system_channel_leave_id ?? null,
@@ -579,6 +582,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
       icon_url?: string | null;
       banner_url?: string | null;
       is_published?: boolean;
+      is_nsfw?: boolean;
       about?: string | null;
       system_channel_join_id?: string | null;
       system_channel_leave_id?: string | null;

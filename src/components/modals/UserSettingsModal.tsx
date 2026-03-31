@@ -847,6 +847,42 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     { id: "no_one", title: "No One", description: "Nobody can start new DMs with you." },
   ];
 
+  const [nsfwConfirmOpen, setNsfwConfirmOpen] = useState(false);
+  const allowNsfw = user?.allow_nsfw ?? false;
+
+  const handleNsfwToggle = async (enable: boolean) => {
+    if (!user?.id) return;
+    if (enable) {
+      setNsfwConfirmOpen(true);
+      return;
+    }
+    const { error } = await supabase.rpc('update_user_nsfw_preference', {
+      _user_id: user.id,
+      _allow_nsfw: false,
+    });
+    if (error) {
+      toast.error('Failed to update NSFW preference');
+    } else {
+      updateUser({ allow_nsfw: false } as any);
+      toast.success('NSFW content disabled');
+    }
+  };
+
+  const confirmEnableNsfw = async () => {
+    if (!user?.id) return;
+    setNsfwConfirmOpen(false);
+    const { error } = await supabase.rpc('update_user_nsfw_preference', {
+      _user_id: user.id,
+      _allow_nsfw: true,
+    });
+    if (error) {
+      toast.error('Failed to update NSFW preference');
+    } else {
+      updateUser({ allow_nsfw: true } as any);
+      toast.success('NSFW content enabled');
+    }
+  };
+
   const privacyContent = (
     <div className="space-y-4">
       <div className="p-4 rounded-xl bg-secondary/30 border border-border/50 space-y-2">
@@ -880,6 +916,37 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           })}
         </div>
       </div>
+
+      {/* NSFW Content */}
+      <div className="p-4 rounded-xl bg-secondary/30 border border-border/50 space-y-2">
+        <div className="flex items-center gap-2 mb-1">
+          <AlertTriangle className="w-4 h-4 text-muted-foreground" />
+          <h3 className="text-sm font-medium">Content Settings</h3>
+        </div>
+        <p className="text-xs text-muted-foreground mb-2">Control access to age-restricted content.</p>
+        <SettingsToggle
+          icon={Eye}
+          label="Allow NSFW Content"
+          description="Enable access to channels and servers marked as NSFW (Not Safe For Work)"
+          checked={allowNsfw}
+          onCheckedChange={handleNsfwToggle}
+        />
+      </div>
+
+      <AlertDialog open={nsfwConfirmOpen} onOpenChange={setNsfwConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Enable NSFW Content?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to enable NSFW content? You must be 18 or older to view age-restricted content.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmEnableNsfw}>I'm 18+, Enable</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 
