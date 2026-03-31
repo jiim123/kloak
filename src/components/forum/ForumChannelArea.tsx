@@ -2572,7 +2572,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                                   </div>
                                 </div>
                               ) : (
-                                <div className="text-sm text-foreground">
+                                <div className="text-sm text-foreground min-w-0 max-w-full overflow-hidden [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_.relative.group]:max-w-full [&_.relative.group]:overflow-hidden">
                                   <MessageContent
                                     content={threadDescription.replace(/kloak-attachment:\/\/[^\s]*/g, '').trim()}
                                     currentUserId={user?.id}
