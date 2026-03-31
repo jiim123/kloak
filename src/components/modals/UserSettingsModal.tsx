@@ -888,10 +888,10 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     <div className="space-y-4">
       <div className="p-4 rounded-xl bg-secondary/30 border border-border/50 space-y-2">
         <div className="flex items-center gap-2 mb-1">
-          <Shield className="w-4 h-4 text-muted-foreground" />
+          <MessageCircleWarning className="w-4 h-4 text-muted-foreground" />
           <h3 className="text-sm font-medium">Direct Message Privacy</h3>
         </div>
-        <p className="text-xs text-muted-foreground mb-2">Control who can start a new DM conversation with you.</p>
+        <p className="text-[12px] text-muted-foreground mb-2">Control who can start a new DM conversation with you.</p>
         <div className="space-y-2">
           {privacyOptions.map((option) => {
             const active = dmPrivacy === option.id;
