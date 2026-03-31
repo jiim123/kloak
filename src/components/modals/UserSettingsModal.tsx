@@ -937,7 +937,10 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       <AlertDialog open={nsfwConfirmOpen} onOpenChange={setNsfwConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Enable NSFW Content?</AlertDialogTitle>
+            <AlertDialogTitle className="font-normal flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-kloak-warning flex-shrink-0" />
+              Enable NSFW Content?
+            </AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to enable NSFW content? You must be 18 or older to view age-restricted content.
             </AlertDialogDescription>
