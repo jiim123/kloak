@@ -342,7 +342,7 @@ const SortableChannel = ({
 
         {/* NSFW badge */}
         {channel.is_nsfw && (
-          <span className="px-1 py-0.5 text-[10px] font-mono rounded bg-destructive/40 text-destructive uppercase tracking-wide flex-shrink-0">
+          <span className="px-1.5 py-0.5 text-[11px] font-sans font-medium rounded-full bg-kloak-dnd text-white border border-kloak-dnd/60 uppercase leading-none flex-shrink-0">
             NSFW
           </span>
         )}
