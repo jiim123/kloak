@@ -16,6 +16,7 @@ import {
   Globe,
   Monitor,
   MessageSquare,
+  MessageCircleWarning,
   Clock,
   Sparkles,
   Volume2,
