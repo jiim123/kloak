@@ -433,6 +433,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
           icon_url: string | null;
           banner_url: string | null;
           is_published?: boolean;
+          is_nsfw?: boolean;
           about?: string | null;
           system_channel_join_id?: string | null;
           system_channel_leave_id?: string | null;
