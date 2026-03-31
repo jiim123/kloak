@@ -3037,7 +3037,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                               <AvatarImage src={opUser?.avatar_url} />
                               <AvatarFallback>{opUser?.username?.[0]?.toUpperCase() || "?"}</AvatarFallback>
                             </Avatar>
-                            <div className="flex-1">
+                            <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-2">
                                 <button
                                   type="button"
