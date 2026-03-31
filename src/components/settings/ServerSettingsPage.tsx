@@ -2125,6 +2125,34 @@ export const ServerSettingsPage = () => {
                   </p>
                 </div>
 
+                {/* Age-Restricted Server (owner-only) */}
+                {isOwner && (
+                  <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
+                    <Label className="text-sm font-medium">Age-Restricted Server (NSFW)</Label>
+                    <div className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border/50 bg-secondary/30">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground">Mark as NSFW</p>
+                        <p className="text-xs text-muted-foreground">
+                          Mark this server as containing age-restricted content. Users must enable NSFW in their settings to see this server in Explore.
+                        </p>
+                      </div>
+                      <Switch
+                        checked={server?.is_nsfw ?? false}
+                        onCheckedChange={async (checked) => {
+                          if (!server || !user) return;
+                          try {
+                            await updateServer(server.id, user.id, { is_nsfw: checked });
+                            toast.success(checked ? 'Server marked as NSFW' : 'Server NSFW removed');
+                          } catch {
+                            toast.error('Failed to update NSFW setting');
+                          }
+                        }}
+                        disabled={isLoading || isUploadingIcon || isUploadingBanner}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {/* Publish Server (owner-only) */}
                 {isOwner && (
                   <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
