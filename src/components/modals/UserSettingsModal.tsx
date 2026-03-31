@@ -865,8 +865,12 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     if (error) {
       toast.error('Failed to update NSFW preference');
     } else {
-      updateUser({ allow_nsfw: false } as any);
+      useAuthStore.getState().setUser({ ...user, allow_nsfw: false });
       toast.success('NSFW content disabled');
+      const currentServer = useServerStore.getState().currentServer;
+      if (currentServer) {
+        useServerStore.getState().fetchChannels(currentServer.id, { force: true });
+      }
     }
   };
 
