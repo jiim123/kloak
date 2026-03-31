@@ -2198,7 +2198,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                           {/* Content preview */}
                           {threadPreview && (
                             <p className="line-clamp-2 text-[0.9375rem] text-foreground">
-                              {threadPreview}
+                              {stripMarkdown(threadPreview)}
                             </p>
                           )}
 
