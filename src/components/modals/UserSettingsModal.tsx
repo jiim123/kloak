@@ -924,7 +924,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           <AlertTriangle className="w-4 h-4 text-muted-foreground" />
           <h3 className="text-sm font-medium">Content Settings</h3>
         </div>
-        <p className="text-xs text-muted-foreground mb-2">Control access to age-restricted content.</p>
+        <p className="text-[12px] text-muted-foreground mb-2">Control access to age-restricted content.</p>
         <SettingsToggle
           icon={Eye}
           label="Allow NSFW Content"
