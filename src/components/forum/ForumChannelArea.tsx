@@ -63,7 +63,7 @@ import { secureUpload } from "@/lib/storageUpload";
 import { handleError, showSuccess, showWarning } from "@/lib/errorHandler";
 import { formatMessageTimestamp } from "@/lib/format";
 import { formatDistanceToNow } from "date-fns";
-import { isImageOnlyMessage } from "@/lib/message";
+import { isImageOnlyMessage, stripMarkdown } from "@/lib/message";
 import { isPollMessageContent } from "@/lib/poll";
 import { MessageContent, ReplyPreview } from "@/components/chat/MessageContent";
 import { ImageLightbox } from "@/components/modals/ImageLightbox";
