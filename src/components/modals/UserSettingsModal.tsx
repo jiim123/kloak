@@ -16,6 +16,7 @@ import {
   Globe,
   Monitor,
   MessageSquare,
+  MessageCircleWarning,
   Clock,
   Sparkles,
   Volume2,
@@ -884,13 +885,13 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   };
 
   const privacyContent = (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="p-4 rounded-xl bg-secondary/30 border border-border/50 space-y-2">
         <div className="flex items-center gap-2 mb-1">
-          <Shield className="w-4 h-4 text-muted-foreground" />
+          <MessageCircleWarning className="w-4 h-4 text-muted-foreground" />
           <h3 className="text-sm font-medium">Direct Message Privacy</h3>
         </div>
-        <p className="text-xs text-muted-foreground mb-2">Control who can start a new DM conversation with you.</p>
+        <p className="text-[12px] text-muted-foreground mb-2">Control who can start a new DM conversation with you.</p>
         <div className="space-y-2">
           {privacyOptions.map((option) => {
             const active = dmPrivacy === option.id;
@@ -907,7 +908,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-medium">{option.title}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{option.description}</p>
+                    <p className="text-[12px] text-muted-foreground mt-1">{option.description}</p>
                   </div>
                   {active && <Check className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />}
                 </div>
@@ -923,7 +924,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           <AlertTriangle className="w-4 h-4 text-muted-foreground" />
           <h3 className="text-sm font-medium">Content Settings</h3>
         </div>
-        <p className="text-xs text-muted-foreground mb-2">Control access to age-restricted content.</p>
+        <p className="text-[12px] text-muted-foreground mb-2">Control access to age-restricted content.</p>
         <SettingsToggle
           icon={Eye}
           label="Allow NSFW Content"
@@ -936,7 +937,10 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       <AlertDialog open={nsfwConfirmOpen} onOpenChange={setNsfwConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Enable NSFW Content?</AlertDialogTitle>
+            <AlertDialogTitle className="font-normal flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-kloak-warning flex-shrink-0" />
+              Enable NSFW Content?
+            </AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to enable NSFW content? You must be 18 or older to view age-restricted content.
             </AlertDialogDescription>
