@@ -885,7 +885,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   };
 
   const privacyContent = (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="p-4 rounded-xl bg-secondary/30 border border-border/50 space-y-2">
         <div className="flex items-center gap-2 mb-1">
           <MessageCircleWarning className="w-4 h-4 text-muted-foreground" />
