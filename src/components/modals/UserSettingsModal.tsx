@@ -57,6 +57,7 @@ import { DockNavigation } from "@/components/ui/dock-navigation";
 import { useUIStore, THEMES, type Theme } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useFriendStore } from "@/stores/friendStore";
+import { useServerStore } from "@/stores/serverStore";
 import { useNotificationSound } from "@/hooks/useNotificationSound";
 import { supabase } from "@/integrations/supabase/client";
 import { secureUpload, secureListAndDelete } from "@/lib/storageUpload";
@@ -864,8 +865,12 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     if (error) {
       toast.error('Failed to update NSFW preference');
     } else {
-      updateUser({ allow_nsfw: false } as any);
+      useAuthStore.getState().setUser({ ...user, allow_nsfw: false });
       toast.success('NSFW content disabled');
+      const currentServer = useServerStore.getState().currentServer;
+      if (currentServer) {
+        useServerStore.getState().fetchChannels(currentServer.id, { force: true });
+      }
     }
   };
 
@@ -879,8 +884,12 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     if (error) {
       toast.error('Failed to update NSFW preference');
     } else {
-      updateUser({ allow_nsfw: true } as any);
+      useAuthStore.getState().setUser({ ...user, allow_nsfw: true });
       toast.success('NSFW content enabled');
+      const currentServer = useServerStore.getState().currentServer;
+      if (currentServer) {
+        useServerStore.getState().fetchChannels(currentServer.id, { force: true });
+      }
     }
   };
 
