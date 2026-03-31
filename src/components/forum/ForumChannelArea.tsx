@@ -330,7 +330,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
     onSwipeRight: () => setMobileSidebarOpen(true),
     onSwipeLeft: () => setMemberSidebarOpen(true),
     threshold: 50,
-    enabled: isMobile,
+    enabled: false,
   });
 
   const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
@@ -1959,7 +1959,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
   };
 
   return (
-    <div ref={swipeRef} className="h-full min-w-0 bg-background">
+    <div ref={swipeRef} className="h-full min-w-0 max-w-full overflow-x-hidden bg-background">
       {showHeader && <ChannelHeader channel={currentChannel} />}
 
       <div className={cn("relative flex overflow-hidden", showHeader ? "h-[calc(100%-57px)]" : "h-full")}>
@@ -2358,7 +2358,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                 <SheetContent
                   side="right"
                   hideCloseButton
-                  className="w-[90vw] max-w-2xl p-0 sm:max-w-2xl"
+                  className="w-[100vw] sm:w-[90vw] max-w-2xl p-0 sm:max-w-2xl [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_.relative.group]:max-w-full [&_.relative.group]:overflow-hidden"
                   onEscapeKeyDown={(event) => {
                     if (threadAttachmentLightboxUrl) event.preventDefault();
                   }}
