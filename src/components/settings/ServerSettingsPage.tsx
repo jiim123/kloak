@@ -27,6 +27,7 @@ import {
   Plug,
   Pencil,
   Search,
+  CircleUser,
 } from "lucide-react";
 
 import {
@@ -40,6 +41,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -832,6 +834,18 @@ export const ServerSettingsPage = () => {
             {role.name}
           </span>
         </div>
+        {role.is_self_assignable && (
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <CircleUser className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+              </TooltipTrigger>
+              <TooltipContent side="left">
+                <p>This is a self assignable role</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
       </div>
     );
   };
