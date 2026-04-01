@@ -2153,6 +2153,41 @@ export const ServerSettingsPage = () => {
                   </div>
                 )}
 
+                {/* Minimum Account Age */}
+                {canManageServer && (
+                  <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
+                    <Label className="text-sm font-medium">Minimum Account Age to Join</Label>
+                    <div className="p-3 rounded-lg border border-border/50 bg-secondary/30 space-y-3">
+                      <p className="text-xs text-muted-foreground">
+                        Require new members to have an account older than this to join your server. Helps prevent raids from freshly created accounts.
+                      </p>
+                      <Select
+                        value={String(server?.min_account_age_days ?? 0)}
+                        onValueChange={async (value) => {
+                          if (!server || !user) return;
+                          try {
+                            await updateServer(server.id, user.id, { min_account_age_days: Number(value) });
+                            toast.success('Minimum account age updated');
+                          } catch {
+                            toast.error('Failed to update minimum account age');
+                          }
+                        }}
+                        disabled={isLoading || isUploadingIcon || isUploadingBanner}
+                      >
+                        <SelectTrigger className="w-full sm:w-[220px] bg-background/50">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">No restriction</SelectItem>
+                          <SelectItem value="1">1 day</SelectItem>
+                          <SelectItem value="5">5 days</SelectItem>
+                          <SelectItem value="14">14 days</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+
                 {/* Publish Server (owner-only) */}
                 {isOwner && (
                   <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">

@@ -589,6 +589,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
       system_channel_leave_id?: string | null;
       enable_join_messages?: boolean;
       enable_leave_messages?: boolean;
+      min_account_age_days?: number;
     },
   ) => {
     // Note: publishing is owner-only in the update_server RPC
