@@ -68,7 +68,6 @@ export const useRealtimeMembers = (serverId: string | null, opts?: { full?: bool
   useEffect(() => {
     if (!serverId) return;
 
-    let lastMemberIds = new Set(members.map((m) => m.user_id));
     let refetchTimer: ReturnType<typeof setTimeout> | null = null;
 
     const handlePresenceChange = (event: Event) => {
@@ -80,7 +79,11 @@ export const useRealtimeMembers = (serverId: string | null, opts?: { full?: bool
 
       if (!userId) return;
 
-      const isInList = lastMemberIds.has(userId);
+      // Always read current members from the store to avoid stale closure
+      const currentMembers = useServerStore.getState().members;
+      const currentMemberIds = new Set(currentMembers.map((m) => m.user_id));
+
+      const isInList = currentMemberIds.has(userId);
       const isComingOnline = newStatus !== 'offline' && !isInList;
       const isGoingOffline = newStatus === 'offline' && isInList;
 
@@ -98,5 +101,23 @@ export const useRealtimeMembers = (serverId: string | null, opts?: { full?: bool
       window.removeEventListener('kloak-presence-change', handlePresenceChange);
       if (refetchTimer) clearTimeout(refetchTimer);
     };
-  }, [serverId, members, useFull]);
+  }, [serverId, useFull]);
+
+  // Reliable background poll to catch any missed presence changes.
+  // The event-driven kloak-presence-change handles most updates instantly,
+  // but this catches edge cases where events are missed during effect re-mounts.
+  useEffect(() => {
+    if (!serverId) return;
+
+    const MEMBER_POLL_INTERVAL_MS = 60_000; // 60 seconds
+
+    const pollMembers = () => {
+      if (document.visibilityState !== 'visible') return;
+      fetchMembersRef.current(serverId, { full: useFull });
+    };
+
+    const intervalId = setInterval(pollMembers, MEMBER_POLL_INTERVAL_MS);
+
+    return () => clearInterval(intervalId);
+  }, [serverId, useFull]);
 };
