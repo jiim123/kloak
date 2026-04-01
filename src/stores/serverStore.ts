@@ -278,6 +278,7 @@ interface ServerState {
       is_published?: boolean;
       is_nsfw?: boolean;
       about?: string | null;
+      min_account_age_days?: number;
     },
   ) => Promise<void>;
   joinServer: (inviteCode: string, userId: string, joinSource?: "discover" | "invite_link") => Promise<Server | null>;
