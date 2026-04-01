@@ -5,7 +5,6 @@ import { acquireChannel, subscribeChannel, releaseChannel } from '@/lib/sharedCh
 
 export const useRealtimeMembers = (serverId: string | null, opts?: { full?: boolean }) => {
   const useFull = opts?.full === true;
-  const members = useServerStore((s) => s.members);
 
   // Use refs to avoid recreating subscription when store functions change
   const fetchMembersRef = useRef(useServerStore.getState().fetchMembers);
