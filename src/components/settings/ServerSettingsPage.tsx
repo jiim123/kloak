@@ -27,6 +27,7 @@ import {
   Plug,
   Pencil,
   Search,
+  CircleUser,
 } from "lucide-react";
 
 import {
