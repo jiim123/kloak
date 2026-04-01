@@ -141,6 +141,7 @@ export interface Server {
   system_channel_leave_id?: string | null;
   enable_join_messages?: boolean;
   enable_leave_messages?: boolean;
+  min_account_age_days?: number;
 }
 
 export interface ServerWithMembership extends Server {

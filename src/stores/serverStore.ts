@@ -278,6 +278,7 @@ interface ServerState {
       is_published?: boolean;
       is_nsfw?: boolean;
       about?: string | null;
+      min_account_age_days?: number;
     },
   ) => Promise<void>;
   joinServer: (inviteCode: string, userId: string, joinSource?: "discover" | "invite_link") => Promise<Server | null>;
@@ -440,6 +441,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
           system_channel_leave_id?: string | null;
           enable_join_messages?: boolean;
           enable_leave_messages?: boolean;
+          min_account_age_days?: number;
           created_at: string;
           role: ServerRole;
           nickname: string | null;
@@ -462,6 +464,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
           system_channel_leave_id: item.system_channel_leave_id ?? null,
           enable_join_messages: item.enable_join_messages ?? true,
           enable_leave_messages: item.enable_leave_messages ?? true,
+          min_account_age_days: item.min_account_age_days ?? 0,
           created_at: item.created_at,
           role: item.role,
           nickname: item.nickname,
@@ -588,6 +591,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
       system_channel_leave_id?: string | null;
       enable_join_messages?: boolean;
       enable_leave_messages?: boolean;
+      min_account_age_days?: number;
     },
   ) => {
     // Note: publishing is owner-only in the update_server RPC

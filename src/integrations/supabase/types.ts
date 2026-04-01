@@ -2107,6 +2107,7 @@ export type Database = {
           is_nsfw: boolean
           is_published: boolean
           is_verified: boolean
+          min_account_age_days: number
           name: string
           owner_id: string
           system_channel_join_id: string | null
@@ -2124,6 +2125,7 @@ export type Database = {
           is_nsfw?: boolean
           is_published?: boolean
           is_verified?: boolean
+          min_account_age_days?: number
           name: string
           owner_id: string
           system_channel_join_id?: string | null
@@ -2141,6 +2143,7 @@ export type Database = {
           is_nsfw?: boolean
           is_published?: boolean
           is_verified?: boolean
+          min_account_age_days?: number
           name?: string
           owner_id?: string
           system_channel_join_id?: string | null
