@@ -611,6 +611,7 @@ export const ServerSettingsPage = () => {
     members,
     roles,
     channels,
+    categories,
     fetchMembers,
     fetchRoles,
     fetchServers,
@@ -2222,11 +2223,14 @@ export const ServerSettingsPage = () => {
                           <SelectItem value="none">None</SelectItem>
                           {channels
                             .filter((ch) => ch.server_id === server.id && ch.type === "text")
-                            .map((channel) => (
-                              <SelectItem key={channel.id} value={channel.id}>
-                                #{channel.name}
-                              </SelectItem>
-                            ))}
+                            .map((channel) => {
+                              const category = categories.find((c) => c.id === channel.category_id);
+                              return (
+                                <SelectItem key={channel.id} value={channel.id}>
+                                  {category ? `${category.name} › ` : ""}#{channel.name}
+                                </SelectItem>
+                              );
+                            })}
                         </SelectContent>
                       </Select>
                     </div>
@@ -2245,11 +2249,14 @@ export const ServerSettingsPage = () => {
                           <SelectItem value="none">None</SelectItem>
                           {channels
                             .filter((ch) => ch.server_id === server.id && ch.type === "text")
-                            .map((channel) => (
-                              <SelectItem key={channel.id} value={channel.id}>
-                                #{channel.name}
-                              </SelectItem>
-                            ))}
+                            .map((channel) => {
+                              const category = categories.find((c) => c.id === channel.category_id);
+                              return (
+                                <SelectItem key={channel.id} value={channel.id}>
+                                  {category ? `${category.name} › ` : ""}#{channel.name}
+                                </SelectItem>
+                              );
+                            })}
                         </SelectContent>
                       </Select>
                     </div>
