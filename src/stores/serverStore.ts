@@ -463,6 +463,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
           system_channel_leave_id: item.system_channel_leave_id ?? null,
           enable_join_messages: item.enable_join_messages ?? true,
           enable_leave_messages: item.enable_leave_messages ?? true,
+          min_account_age_days: item.min_account_age_days ?? 0,
           created_at: item.created_at,
           role: item.role,
           nickname: item.nickname,
