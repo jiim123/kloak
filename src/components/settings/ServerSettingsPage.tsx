@@ -611,6 +611,7 @@ export const ServerSettingsPage = () => {
     members,
     roles,
     channels,
+    categories,
     fetchMembers,
     fetchRoles,
     fetchServers,
