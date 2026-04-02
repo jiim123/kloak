@@ -132,6 +132,10 @@ export const EditChannelModal = () => {
       setBlockLinks(false);
       setAllowedLinkDomains([]);
       setGhostMode(false);
+      setBlockAttachments(false);
+      setDisableReactions(false);
+      setDisablePolls(false);
+      setAutoDeleteSeconds("null");
 
       if (category.id) {
         fetchCategoryPermissions(category.id).catch((error) => {
