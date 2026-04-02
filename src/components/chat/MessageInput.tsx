@@ -729,7 +729,7 @@ export const MessageInput = ({
       };
       setPendingAttachments((prev) => [...prev, attachment].slice(0, MAX_ATTACHMENTS));
     },
-    [user, isSending, canAttachFiles],
+    [user, isSending, canAttachFiles, blockAttachments, canManageMessages],
   );
 
   const handleFormat = (type: string, val?: string) => {
