@@ -1570,7 +1570,7 @@ export const MessageItem = memo(function MessageItem({
               {!isEditing && !message.is_system_message && (
                 <div className="absolute right-2 -top-4 hidden md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 md:flex items-center gap-1 bg-background border border-border rounded-xl shadow-md p-1 transition-opacity duration-100">
                   {/* Quick reactions - top 3 most used */}
-                  {canAddReactions && !isBlockedUser && topEmojis.map((emoji) => (
+                  {effectiveCanAddReactions && !isBlockedUser && topEmojis.map((emoji) => (
                     <button
                       key={`quick-${emoji}`}
                       className="p-1.5 rounded-lg bg-transparent hover:bg-muted transition-colors"
@@ -1582,7 +1582,7 @@ export const MessageItem = memo(function MessageItem({
                     </button>
                   ))}
                   {/* Reactions - Desktop */}
-                  {canAddReactions && !isBlockedUser && (
+                  {effectiveCanAddReactions && !isBlockedUser && (
                     <EmojiPicker
                       open={showDesktopEmojiPicker}
                       onOpenChange={setShowDesktopEmojiPicker}
@@ -1843,7 +1843,7 @@ export const MessageItem = memo(function MessageItem({
           </DrawerHeader>
           <div className="px-4 pb-8">
             {/* Quick reactions row - horizontally scrollable */}
-            {canAddReactions && !isBlockedUser && (
+            {effectiveCanAddReactions && !isBlockedUser && (
               <div className="mb-4 rounded-xl bg-muted/50 overflow-hidden">
                 <div className="flex items-center gap-1.5 p-2 overflow-x-auto scrollbar-hide">
                   {QUICK_REACTIONS.map((emoji) => (
@@ -2018,7 +2018,7 @@ export const MessageItem = memo(function MessageItem({
           </DrawerHeader>
           <div className="px-4 pb-6 overflow-y-auto space-y-4">
             {/* Tap-to-toggle reaction row */}
-            {canAddReactions && !isBlockedUser && (
+            {effectiveCanAddReactions && !isBlockedUser && (
               <div className="flex flex-wrap gap-2">
                 {(message.reactions ?? []).map((reaction) => (
                   <button
