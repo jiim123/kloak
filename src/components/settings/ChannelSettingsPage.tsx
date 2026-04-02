@@ -34,6 +34,10 @@ import {
   Plus,
   X,
   Info,
+  Paperclip,
+  SmileOff,
+  BarChartHorizontal,
+  Timer,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
