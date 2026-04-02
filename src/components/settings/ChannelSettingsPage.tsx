@@ -35,7 +35,7 @@ import {
   X,
   Info,
   Paperclip,
-  SmileMinus,
+  MessageSquareOff,
   BarChartHorizontal,
   Timer,
 } from "lucide-react";
