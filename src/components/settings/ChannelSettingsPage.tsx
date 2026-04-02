@@ -199,6 +199,10 @@ export const ChannelSettingsPage = () => {
           block_links: blockLinks,
           allowed_link_domains: allowedLinkDomains,
           ghost_mode: ghostMode,
+          block_attachments: blockAttachments,
+          disable_reactions: disableReactions,
+          disable_polls: disablePolls,
+          auto_delete_seconds: autoDeleteSeconds === "null" ? null : parseInt(autoDeleteSeconds, 10),
         };
 
         const trimmedTopic = topic.trim();

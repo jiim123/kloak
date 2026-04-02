@@ -216,6 +216,14 @@ export interface Channel {
   ghost_mode: boolean;
   /** Max users allowed in a voice channel (0 = unlimited) */
   voice_user_limit?: number;
+  /** When true, only admins/owners can post attachments */
+  block_attachments: boolean;
+  /** When true, reactions are disabled (except for admins/owners) */
+  disable_reactions: boolean;
+  /** When true, poll creation is disabled (except for admins/owners) */
+  disable_polls: boolean;
+  /** Auto-delete messages after N seconds (null = disabled) */
+  auto_delete_seconds: number | null;
 }
 
 export interface ChannelMember {
