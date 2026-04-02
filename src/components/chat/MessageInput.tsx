@@ -1012,10 +1012,10 @@ export const MessageInput = ({
         }}
         currentServer={isDM ? undefined : currentServer}
         allowExternalEmojis={canUseExternalEmojis}
-        onAttachClick={canAttachFiles ? () => fileInputRef.current?.click() : undefined}
+        onAttachClick={effectiveCanAttach ? () => fileInputRef.current?.click() : undefined}
         pendingAttachments={pendingAttachments}
         onRemoveAttachment={(i: number) => setPendingAttachments((p) => p.filter((_, idx) => idx !== i))}
-        onAddMore={canAttachFiles ? () => fileInputRef.current?.click() : undefined}
+        onAddMore={effectiveCanAttach ? () => fileInputRef.current?.click() : undefined}
         showMentions={showMentions}
         hasMentionOptions={hasMentionOptions}
         showChannels={showChannels}
