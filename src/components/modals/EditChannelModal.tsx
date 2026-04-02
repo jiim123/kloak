@@ -511,6 +511,60 @@ export const EditChannelModal = () => {
         )}
       </div>
 
+      {/* Content Restrictions */}
+      <div className="space-y-3">
+        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Content Restrictions</Label>
+
+        <ToggleCard
+          icon={Paperclip}
+          label="Block Attachments"
+          description="Prevent members from uploading files and images. Admins and owners can still post attachments."
+          checked={blockAttachments}
+          onCheckedChange={setBlockAttachments}
+        />
+
+        <ToggleCard
+          icon={MessageSquareOff}
+          label="Disable Reactions"
+          description="Prevent members from adding emoji reactions to messages. Admins and owners can still react."
+          checked={disableReactions}
+          onCheckedChange={setDisableReactions}
+        />
+
+        <ToggleCard
+          icon={BarChartHorizontal}
+          label="Disable Polls"
+          description="Prevent members from creating polls in this channel. Admins and owners can still create polls."
+          checked={disablePolls}
+          onCheckedChange={setDisablePolls}
+        />
+      </div>
+
+      {/* Auto-Delete */}
+      <div className="space-y-3">
+        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Auto-Delete Messages</Label>
+        <Select value={autoDeleteSeconds} onValueChange={setAutoDeleteSeconds}>
+          <SelectTrigger className="h-11 rounded-xl border-border/50 bg-secondary/30">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
+                <Timer className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <SelectValue />
+            </div>
+          </SelectTrigger>
+          <SelectContent className="rounded-xl border-border/50">
+            <SelectItem value="null" className="rounded-lg">Disabled</SelectItem>
+            <SelectItem value="3600" className="rounded-lg">After 1 hour</SelectItem>
+            <SelectItem value="86400" className="rounded-lg">After 24 hours</SelectItem>
+            <SelectItem value="604800" className="rounded-lg">After 7 days</SelectItem>
+            <SelectItem value="2592000" className="rounded-lg">After 30 days</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          Automatically delete messages after a set time period. Pinned and system messages are preserved.
+        </p>
+      </div>
+
       {/* Danger Zone */}
       <div className="p-4 rounded-xl border border-destructive/30 bg-destructive/5 space-y-4">
         <div className="flex items-start gap-3">
