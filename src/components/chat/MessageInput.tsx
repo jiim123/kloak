@@ -972,8 +972,8 @@ export const MessageInput = ({
             e.target.blur();
           }
         }}
-        showCreatePoll={isDM ? undefined : showCreatePoll}
-        setShowCreatePoll={isDM ? undefined : setShowCreatePoll}
+        showCreatePoll={isDM || !effectiveCanCreatePoll ? undefined : showCreatePoll}
+        setShowCreatePoll={isDM || !effectiveCanCreatePoll ? undefined : setShowCreatePoll}
         showEmojiPicker={showEmojiPicker}
         setShowEmojiPicker={setShowEmojiPicker}
         showGifPicker={isDM ? undefined : showGifPicker}
