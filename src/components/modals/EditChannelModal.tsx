@@ -152,6 +152,10 @@ export const EditChannelModal = () => {
       setBlockLinks(channel.block_links || false);
       setAllowedLinkDomains(channel.allowed_link_domains || []);
       setGhostMode(channel.ghost_mode || false);
+      setBlockAttachments(channel.block_attachments || false);
+      setDisableReactions(channel.disable_reactions || false);
+      setDisablePolls(channel.disable_polls || false);
+      setAutoDeleteSeconds(channel.auto_delete_seconds != null ? String(channel.auto_delete_seconds) : "null");
 
       if (channel.id) {
         fetchChannelPermissions(channel.id).catch((error) => {
