@@ -1750,7 +1750,7 @@ export const MessageItem = memo(function MessageItem({
                   <span className="inline-flex">
                     <button
                       onClick={() =>
-                        canAddReactions && handleReactionClick(reaction.emoji, reaction.hasReacted)
+                        effectiveCanAddReactions && handleReactionClick(reaction.emoji, reaction.hasReacted)
                       }
                       onTouchStart={(e) => {
                         if (!isMobile) return;
@@ -1771,12 +1771,12 @@ export const MessageItem = memo(function MessageItem({
                           reactionLongPressRef.current = null;
                         }
                       }}
-                      disabled={!canAddReactions}
+                      disabled={!effectiveCanAddReactions}
                       className={`flex items-center gap-2 px-3 py-1.5 rounded-full border ${
                         reaction.hasReacted
                           ? "bg-primary/20 border-primary text-primary"
                           : "bg-secondary/80 border-transparent hover:border-border hover:bg-secondary"
-                      } ${!canAddReactions ? "opacity-50 cursor-not-allowed" : ""}`}
+                      } ${!effectiveCanAddReactions ? "opacity-50 cursor-not-allowed" : ""}`}
                     >
                       {reactionEmojiNode(reaction.emoji)}
                       <span className="text-sm font-medium">{reaction.count}</span>
