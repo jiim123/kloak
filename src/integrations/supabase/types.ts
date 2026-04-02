@@ -575,10 +575,14 @@ export type Database = {
       channels: {
         Row: {
           allowed_link_domains: string[] | null
+          auto_delete_seconds: number | null
+          block_attachments: boolean
           block_links: boolean
           category_id: string | null
           chat_notice: string | null
           created_at: string | null
+          disable_polls: boolean
+          disable_reactions: boolean
           ghost_mode: boolean
           icon: string | null
           id: string
@@ -596,10 +600,14 @@ export type Database = {
         }
         Insert: {
           allowed_link_domains?: string[] | null
+          auto_delete_seconds?: number | null
+          block_attachments?: boolean
           block_links?: boolean
           category_id?: string | null
           chat_notice?: string | null
           created_at?: string | null
+          disable_polls?: boolean
+          disable_reactions?: boolean
           ghost_mode?: boolean
           icon?: string | null
           id?: string
@@ -617,10 +625,14 @@ export type Database = {
         }
         Update: {
           allowed_link_domains?: string[] | null
+          auto_delete_seconds?: number | null
+          block_attachments?: boolean
           block_links?: boolean
           category_id?: string | null
           chat_notice?: string | null
           created_at?: string | null
+          disable_polls?: boolean
+          disable_reactions?: boolean
           ghost_mode?: boolean
           icon?: string | null
           id?: string
@@ -3335,6 +3347,7 @@ export type Database = {
         Args: { _username: string }
         Returns: boolean
       }
+      cleanup_auto_delete_messages: { Args: never; Returns: undefined }
       clear_streaming_chat_on_streamer_leave: {
         Args: { _user_id: string; _voice_channel_id: string }
         Returns: boolean

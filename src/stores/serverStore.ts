@@ -1148,6 +1148,10 @@ export const useServerStore = create<ServerState>((set, get) => ({
           channelData.voice_user_limit !== undefined && channelData.voice_user_limit !== null
             ? Number(channelData.voice_user_limit)
             : 0,
+        block_attachments: Boolean(channelData.block_attachments),
+        disable_reactions: Boolean(channelData.disable_reactions),
+        disable_polls: Boolean(channelData.disable_polls),
+        auto_delete_seconds: channelData.auto_delete_seconds != null ? Number(channelData.auto_delete_seconds) : null,
       };
 
       // For announcement channels, set is_read_only to true
@@ -1297,6 +1301,12 @@ export const useServerStore = create<ServerState>((set, get) => ({
           channelData.voice_user_limit !== undefined && channelData.voice_user_limit !== null
             ? Number(channelData.voice_user_limit)
             : undefined,
+        block_attachments: channelData.block_attachments !== undefined ? Boolean(channelData.block_attachments) : undefined,
+        disable_reactions: channelData.disable_reactions !== undefined ? Boolean(channelData.disable_reactions) : undefined,
+        disable_polls: channelData.disable_polls !== undefined ? Boolean(channelData.disable_polls) : undefined,
+        auto_delete_seconds: channelData.auto_delete_seconds !== undefined
+          ? (channelData.auto_delete_seconds != null ? Number(channelData.auto_delete_seconds) : null)
+          : undefined,
       };
 
       // Remove undefined values

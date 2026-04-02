@@ -356,6 +356,10 @@ export const MessageInput = ({
   const canSendMessage = isDM ? true : (!isMuted && canSendMessagesPermission && canSendInReadOnly);
   const canManageMessages = isDM ? false : hasPermission("manage_messages");
   const canAttachFiles = isDM ? true : hasPermission("attach_files");
+  const blockAttachments = isDM ? false : (activeChannel?.block_attachments || false);
+  const effectiveCanAttach = canAttachFiles && !(blockAttachments && !canManageMessages);
+  const disablePolls = isDM ? false : (activeChannel?.disable_polls || false);
+  const effectiveCanCreatePoll = !(disablePolls && !canManageMessages);
   const canMentionEveryone = isDM ? true : hasPermission("mention_everyone");
   const canMentionRoles = isDM ? true : hasPermission("mention_roles");
   const canUseExternalEmojis = isDM ? true : hasPermission("use_external_emojis");
@@ -712,9 +716,9 @@ export const MessageInput = ({
       if (!files || files.length === 0) return;
       const pasteFile = Array.from(files).find((f) => ALLOWED_FILE_TYPES.includes(f.type));
       if (!pasteFile) return;
-      if (!canAttachFiles) {
+      if (!canAttachFiles || (blockAttachments && !canManageMessages)) {
         e.preventDefault();
-        toast.error("You don't have permission to attach files in this channel");
+        toast.error(blockAttachments ? "Attachments are not allowed in this channel" : "You don't have permission to attach files in this channel");
         return;
       }
       e.preventDefault();
@@ -725,7 +729,7 @@ export const MessageInput = ({
       };
       setPendingAttachments((prev) => [...prev, attachment].slice(0, MAX_ATTACHMENTS));
     },
-    [user, isSending, canAttachFiles],
+    [user, isSending, canAttachFiles, blockAttachments, canManageMessages],
   );
 
   const handleFormat = (type: string, val?: string) => {
@@ -826,8 +830,8 @@ export const MessageInput = ({
         multiple
         hidden
         onChange={(e) => {
-          if (!canAttachFiles) {
-            toast.error("You don't have permission to attach files in this channel");
+          if (!effectiveCanAttach) {
+            toast.error(blockAttachments ? "Attachments are not allowed in this channel" : "You don't have permission to attach files in this channel");
             e.target.value = "";
             return;
           }
@@ -968,8 +972,8 @@ export const MessageInput = ({
             e.target.blur();
           }
         }}
-        showCreatePoll={isDM ? undefined : showCreatePoll}
-        setShowCreatePoll={isDM ? undefined : setShowCreatePoll}
+        showCreatePoll={isDM || !effectiveCanCreatePoll ? undefined : showCreatePoll}
+        setShowCreatePoll={isDM || !effectiveCanCreatePoll ? undefined : setShowCreatePoll}
         showEmojiPicker={showEmojiPicker}
         setShowEmojiPicker={setShowEmojiPicker}
         showGifPicker={isDM ? undefined : showGifPicker}
@@ -1008,10 +1012,10 @@ export const MessageInput = ({
         }}
         currentServer={isDM ? undefined : currentServer}
         allowExternalEmojis={canUseExternalEmojis}
-        onAttachClick={canAttachFiles ? () => fileInputRef.current?.click() : undefined}
+        onAttachClick={effectiveCanAttach ? () => fileInputRef.current?.click() : undefined}
         pendingAttachments={pendingAttachments}
         onRemoveAttachment={(i: number) => setPendingAttachments((p) => p.filter((_, idx) => idx !== i))}
-        onAddMore={canAttachFiles ? () => fileInputRef.current?.click() : undefined}
+        onAddMore={effectiveCanAttach ? () => fileInputRef.current?.click() : undefined}
         showMentions={showMentions}
         hasMentionOptions={hasMentionOptions}
         showChannels={showChannels}

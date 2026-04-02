@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Hash, Volume2, MessageSquare, Pin, Search, Lock, Megaphone, Film, Users, ClipboardList } from "lucide-react";
+import { Hash, Volume2, MessageSquare, Pin, Search, Lock, Megaphone, Film, Users, ClipboardList, Timer } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -78,6 +78,18 @@ export const ChannelHeader = ({
             <Separator orientation="vertical" className="h-5 mx-2" />
             <span className="text-muted-foreground text-sm truncate hidden lg:inline">{channel.topic}</span>
           </>
+        )}
+
+        {channel.auto_delete_seconds && (
+          <Tooltip>
+            <TooltipTrigger>
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-400/70 ml-1">
+                <Timer className="w-3 h-3" />
+                Auto-delete: {channel.auto_delete_seconds === 3600 ? '1h' : channel.auto_delete_seconds === 86400 ? '24h' : channel.auto_delete_seconds === 604800 ? '7d' : '30d'}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>Messages in this channel are automatically deleted</TooltipContent>
+          </Tooltip>
         )}
       </div>
 

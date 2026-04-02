@@ -34,6 +34,10 @@ import {
   Plus,
   X,
   Info,
+  Paperclip,
+  MessageSquareOff,
+  BarChartHorizontal,
+  Timer,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -81,6 +85,10 @@ export const ChannelSettingsPage = () => {
   const [allowedLinkDomains, setAllowedLinkDomains] = useState<string[]>([]);
   const [newDomain, setNewDomain] = useState("");
   const [ghostMode, setGhostMode] = useState(false);
+  const [blockAttachments, setBlockAttachments] = useState(false);
+  const [disableReactions, setDisableReactions] = useState(false);
+  const [disablePolls, setDisablePolls] = useState(false);
+  const [autoDeleteSeconds, setAutoDeleteSeconds] = useState<string>("null");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState("");
@@ -121,6 +129,10 @@ export const ChannelSettingsPage = () => {
       setBlockLinks(false);
       setAllowedLinkDomains([]);
       setGhostMode(false);
+      setBlockAttachments(false);
+      setDisableReactions(false);
+      setDisablePolls(false);
+      setAutoDeleteSeconds("null");
 
       if (category.id) {
         fetchCategoryPermissions(category.id).catch((error) => {
@@ -138,6 +150,10 @@ export const ChannelSettingsPage = () => {
       setBlockLinks(channel.block_links || false);
       setAllowedLinkDomains(channel.allowed_link_domains || []);
       setGhostMode(channel.ghost_mode || false);
+      setBlockAttachments(channel.block_attachments || false);
+      setDisableReactions(channel.disable_reactions || false);
+      setDisablePolls(channel.disable_polls || false);
+      setAutoDeleteSeconds(channel.auto_delete_seconds != null ? String(channel.auto_delete_seconds) : "null");
 
       if (channel.id) {
         fetchChannelPermissions(channel.id).catch((error) => {
@@ -187,6 +203,10 @@ export const ChannelSettingsPage = () => {
           block_links: blockLinks,
           allowed_link_domains: allowedLinkDomains,
           ghost_mode: ghostMode,
+          block_attachments: blockAttachments,
+          disable_reactions: disableReactions,
+          disable_polls: disablePolls,
+          auto_delete_seconds: autoDeleteSeconds === "null" ? null : parseInt(autoDeleteSeconds, 10),
         };
 
         const trimmedTopic = topic.trim();
@@ -515,6 +535,60 @@ export const ChannelSettingsPage = () => {
             )}
           </div>
         )}
+      </div>
+
+      {/* Content Restrictions */}
+      <div className="space-y-3">
+        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Content Restrictions</Label>
+
+        <ToggleCard
+          icon={Paperclip}
+          label="Block Attachments"
+          description="Prevent members from uploading files and images. Admins and owners can still post attachments."
+          checked={blockAttachments}
+          onCheckedChange={setBlockAttachments}
+        />
+
+        <ToggleCard
+          icon={MessageSquareOff}
+          label="Disable Reactions"
+          description="Prevent members from adding emoji reactions to messages. Admins and owners can still react."
+          checked={disableReactions}
+          onCheckedChange={setDisableReactions}
+        />
+
+        <ToggleCard
+          icon={BarChartHorizontal}
+          label="Disable Polls"
+          description="Prevent members from creating polls in this channel. Admins and owners can still create polls."
+          checked={disablePolls}
+          onCheckedChange={setDisablePolls}
+        />
+      </div>
+
+      {/* Auto-Delete */}
+      <div className="space-y-3">
+        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Auto-Delete Messages</Label>
+        <Select value={autoDeleteSeconds} onValueChange={setAutoDeleteSeconds}>
+          <SelectTrigger className="h-11 rounded-xl border-border/50 bg-secondary/30">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
+                <Timer className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <SelectValue />
+            </div>
+          </SelectTrigger>
+          <SelectContent className="rounded-xl border-border/50">
+            <SelectItem value="null" className="rounded-lg">Disabled</SelectItem>
+            <SelectItem value="3600" className="rounded-lg">After 1 hour</SelectItem>
+            <SelectItem value="86400" className="rounded-lg">After 24 hours</SelectItem>
+            <SelectItem value="604800" className="rounded-lg">After 7 days</SelectItem>
+            <SelectItem value="2592000" className="rounded-lg">After 30 days</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          Automatically delete messages after a set time period. Pinned and system messages are preserved.
+        </p>
       </div>
     </div>
   );
