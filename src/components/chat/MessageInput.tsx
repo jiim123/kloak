@@ -716,9 +716,9 @@ export const MessageInput = ({
       if (!files || files.length === 0) return;
       const pasteFile = Array.from(files).find((f) => ALLOWED_FILE_TYPES.includes(f.type));
       if (!pasteFile) return;
-      if (!canAttachFiles) {
+      if (!canAttachFiles || (blockAttachments && !canManageMessages)) {
         e.preventDefault();
-        toast.error("You don't have permission to attach files in this channel");
+        toast.error(blockAttachments ? "Attachments are not allowed in this channel" : "You don't have permission to attach files in this channel");
         return;
       }
       e.preventDefault();
