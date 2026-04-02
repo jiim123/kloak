@@ -830,8 +830,8 @@ export const MessageInput = ({
         multiple
         hidden
         onChange={(e) => {
-          if (!canAttachFiles) {
-            toast.error("You don't have permission to attach files in this channel");
+          if (!effectiveCanAttach) {
+            toast.error(blockAttachments ? "Attachments are not allowed in this channel" : "You don't have permission to attach files in this channel");
             e.target.value = "";
             return;
           }
