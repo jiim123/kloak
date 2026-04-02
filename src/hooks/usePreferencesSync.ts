@@ -221,7 +221,7 @@ export const usePreferencesSync = () => {
           await supabase.from("user_preferences").upsert({
             user_id: user.id,
             ...pickCurrentPreferences(),
-          });
+          }, { onConflict: 'user_id' });
         }
 
         hydratedUserIdRef.current = user.id;
