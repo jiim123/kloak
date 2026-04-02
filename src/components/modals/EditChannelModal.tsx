@@ -34,6 +34,10 @@ import {
   Eye,
   Plus,
   Info,
+  Paperclip,
+  MessageSquareOff,
+  BarChartHorizontal,
+  Timer,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ChannelPermissionsEditor } from "./ChannelPermissionsEditor";
