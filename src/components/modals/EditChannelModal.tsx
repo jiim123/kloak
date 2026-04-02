@@ -86,6 +86,10 @@ export const EditChannelModal = () => {
   const [allowedLinkDomains, setAllowedLinkDomains] = useState<string[]>([]);
   const [newDomain, setNewDomain] = useState("");
   const [ghostMode, setGhostMode] = useState(false);
+  const [blockAttachments, setBlockAttachments] = useState(false);
+  const [disableReactions, setDisableReactions] = useState(false);
+  const [disablePolls, setDisablePolls] = useState(false);
+  const [autoDeleteSeconds, setAutoDeleteSeconds] = useState<string>("null");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState("");
