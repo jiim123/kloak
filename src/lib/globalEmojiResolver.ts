@@ -458,7 +458,6 @@ export async function resolveQualifiedEmojisByNameFallback(keys: string[]): Prom
       if (filePath) {
         value = getCdnUrl('server-emojis', filePath);
       }
-      }
       qualifiedFallbackCache.set(key, { value, cachedAt: Date.now() });
       out.set(key, value);
     }
