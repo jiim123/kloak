@@ -39,8 +39,7 @@ export function useBackgroundSync() {
     isSyncingRef.current = true;
     setSyncStatus('syncing');
     
-    const toastId = toast({
-      title: 'Syncing messages...',
+    toast.warning('Syncing messages...', {
       description: `Sending ${queuedMessages.length} queued message${queuedMessages.length > 1 ? 's' : ''}`,
     });
     
