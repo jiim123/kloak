@@ -62,10 +62,8 @@ export function useBackgroundSync() {
     }
     
     if (successCount > 0) {
-      toast({
-        title: 'Messages synced',
+      toast.success('Messages synced', {
         description: `Successfully sent ${successCount} message${successCount > 1 ? 's' : ''}`,
-        variant: 'success',
       });
     }
     
