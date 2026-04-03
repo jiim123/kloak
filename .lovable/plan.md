@@ -1,25 +1,37 @@
 
 
-# Fix: Media channel uploads sending wrong URL format
+# Fix: Store CDN URLs instead of kloak-attachment:// for attachment file_url
 
 ## Problem
 
-When uploading to a media channel, line 406 in `MediaChannelArea.tsx` constructs a `kloak-attachment://` URL:
-```
-mediaUrl = `kloak-attachment://${result.path}`;
-```
+Three upload sites construct `kloak-attachment://${result.path}` instead of using the CDN URL returned by `secureUpload` (`result.publicUrl`). This affects both the `file_url` stored in `message_attachments`/`dm_attachments` tables AND the URL embedded in message content.
 
-The `insert_media_item` RPC requires a valid `http(s)://` URL (enforced by a database constraint), so this fails with `"Media URL must be a valid http(s) URL"`.
+## Changes
 
-## Fix
+### 1. `src/components/chat/MessageInput.tsx` (line 585)
 
-One line change in `src/components/media/MediaChannelArea.tsx` line 406:
+Replace `kloak-attachment://${res.path}` with `res.publicUrl`.
 
-Replace `kloak-attachment://${result.path}` with `result.publicUrl`, which is the full Bunny CDN URL (e.g. `https://kloakcdn.b-cdn.net/attachments/...`).
+### 2. `src/hooks/useAttachmentQueue.ts` (line 156)
 
-`secureUpload` already returns the CDN URL as `publicUrl` for attachment uploads, so no other files need changes.
+Replace `kloak-attachment://${result.path}` with `result.publicUrl`.
+
+### 3. `src/components/forum/ForumChannelArea.tsx` (line 641)
+
+Replace `kloak-attachment://${result.path}` with `result.publicUrl`.
+
+### 4. `src/components/chat/MessageItem.tsx` (line 373-374) — content stripping
+
+CDN attachment URLs will now appear in message content. Add a regex to strip `https://kloakcdn.b-cdn.net/attachments/` URLs alongside the existing Supabase and kloak-attachment patterns. The existing `att.file_url` loop (line 367-371) already handles exact matches, but a fallback regex ensures no CDN URLs leak into displayed content.
 
 ## Files Modified
 
-1. `src/components/media/MediaChannelArea.tsx` — line 406 only
+1. `src/components/chat/MessageInput.tsx` — 1 line
+2. `src/hooks/useAttachmentQueue.ts` — 1 line
+3. `src/components/forum/ForumChannelArea.tsx` — 1 line
+4. `src/components/chat/MessageItem.tsx` — add CDN URL stripping regex
+
+## Not Changed
+
+`bunny-upload.ts`, `signedUrl.ts`, Edge Functions (per instructions). The `useSignedUrl` hook already passes non-attachment https URLs through as-is (line 88-91), so CDN URLs will work without modification.
 
