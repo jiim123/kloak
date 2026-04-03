@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { CheckmarkAnimation } from "@/components/ui/checkmark-animation";
 import { useAuthStore } from "@/stores/authStore";
 
@@ -36,7 +36,7 @@ export const OnboardingModal = ({
   // Fall back to auth store secretKey in case the prop hasn't been set yet (race condition)
   const storeSecretKey = useAuthStore((s) => s.secretKey);
   const secretKey = secretKeyProp || storeSecretKey;
-  const { toast } = useToast();
+  
   const [currentStep, setCurrentStep] = useState<OnboardingStep>(1);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [keyStoredAccepted, setKeyStoredAccepted] = useState(false);
@@ -66,10 +66,10 @@ export const OnboardingModal = ({
         try { document.execCommand("copy"); } finally { document.body.removeChild(textArea); }
       }
       setKeyCopied(true);
-      toast({ title: "Copied!", description: "Secret key copied to clipboard." });
+      toast.success("Copied!", { description: "Secret key copied to clipboard." });
     } catch (err) {
       console.error("Copy failed:", err);
-      toast({ variant: "destructive", title: "Copy failed", description: "Please manually select and copy the key." });
+      toast.error("Copy failed", { description: "Please manually select and copy the key." });
     }
   };
 

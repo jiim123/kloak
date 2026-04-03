@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useServerStore } from '@/stores/serverStore';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { acquireChannel, subscribeChannel, releaseChannel } from '@/lib/sharedChannel';
 
 export const useRealtimeMembers = (serverId: string | null, opts?: { full?: boolean }) => {

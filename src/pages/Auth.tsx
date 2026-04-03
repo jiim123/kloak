@@ -25,7 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { OnboardingModal } from "@/components/modals/OnboardingModal";
 import { NavigationMenu } from "@/components/layout/NavigationMenu";
@@ -67,7 +67,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isLoading, error, createAccount, login, setError, setLoading } = useAuthStore();
-  const { toast } = useToast();
+  
 
   const redirectParam = useMemo(() => new URLSearchParams(location.search).get("redirect"), [location.search]);
 
@@ -265,9 +265,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
     const rateLimit = checkRegistrationRateLimit();
     if (!rateLimit.allowed) {
       setRateLimitCooldown(rateLimit.remainingSeconds || 30);
-      toast({
-        variant: "destructive",
-        title: "Too many attempts",
+      toast.error("Too many attempts", {
         description: `Please wait ${rateLimit.remainingSeconds} seconds before trying again.`,
       });
       return;
@@ -312,9 +310,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
       setCaptchaToken(null);
       setCaptchaError(null);
       captchaRef.current?.resetCaptcha();
-      toast({
-        variant: "destructive",
-        title: "Account creation failed",
+      toast.error("Account creation failed", {
         description: "Please try again. If the problem persists, check your internet connection.",
       });
     }
@@ -340,8 +336,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
 
     const success = await login(trimmedKey);
     if (success) {
-      toast({
-        title: "Welcome back!",
+      toast.success("Welcome back!", {
         description: "Successfully logged in.",
       });
 

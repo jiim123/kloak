@@ -4,7 +4,7 @@ import { useSyncStore } from '@/stores/syncStore';
 import { useOfflineQueueStore } from '@/stores/offlineQueueStore';
 import { useMessageStore } from '@/stores/messageStore';
 import { useServerStore } from '@/stores/serverStore';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
 const RECONNECT_DELAYS = [1000, 2000, 5000, 10000, 30000]; // Exponential backoff
@@ -39,8 +39,7 @@ export function useBackgroundSync() {
     isSyncingRef.current = true;
     setSyncStatus('syncing');
     
-    const toastId = toast({
-      title: 'Syncing messages...',
+    toast.warning('Syncing messages...', {
       description: `Sending ${queuedMessages.length} queued message${queuedMessages.length > 1 ? 's' : ''}`,
     });
     
@@ -63,18 +62,14 @@ export function useBackgroundSync() {
     }
     
     if (successCount > 0) {
-      toast({
-        title: 'Messages synced',
+      toast.success('Messages synced', {
         description: `Successfully sent ${successCount} message${successCount > 1 ? 's' : ''}`,
-        variant: 'success',
       });
     }
     
     if (failCount > 0) {
-      toast({
-        title: 'Some messages failed',
+      toast.error('Some messages failed', {
         description: `${failCount} message${failCount > 1 ? 's' : ''} couldn't be sent`,
-        variant: 'destructive',
       });
     }
     
@@ -107,10 +102,8 @@ export function useBackgroundSync() {
         setConnectionStatus('connected');
         resetReconnectAttempts();
         
-        toast({
-          title: 'Reconnected',
+        toast.success('Reconnected', {
           description: 'You\'re back online!',
-          variant: 'success',
         });
         
         // Sync queued messages
