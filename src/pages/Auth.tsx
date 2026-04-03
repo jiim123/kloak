@@ -67,7 +67,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isLoading, error, createAccount, login, setError, setLoading } = useAuthStore();
-  const { toast } = useToast();
+  
 
   const redirectParam = useMemo(() => new URLSearchParams(location.search).get("redirect"), [location.search]);
 
