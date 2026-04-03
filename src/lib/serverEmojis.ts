@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { getCdnUrl } from '@/lib/bunny-upload';
 
 export type ServerEmoji = {
   id: string;
