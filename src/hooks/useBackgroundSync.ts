@@ -4,7 +4,7 @@ import { useSyncStore } from '@/stores/syncStore';
 import { useOfflineQueueStore } from '@/stores/offlineQueueStore';
 import { useMessageStore } from '@/stores/messageStore';
 import { useServerStore } from '@/stores/serverStore';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
 const RECONNECT_DELAYS = [1000, 2000, 5000, 10000, 30000]; // Exponential backoff
