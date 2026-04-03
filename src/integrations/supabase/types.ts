@@ -2192,6 +2192,24 @@ export type Database = {
           },
         ]
       }
+      storage_cleanup_queue: {
+        Row: {
+          created_at: string
+          file_url: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          file_url: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          file_url?: string
+          id?: string
+        }
+        Relationships: []
+      }
       streaming_channel_sessions: {
         Row: {
           started_at: string
