@@ -7,6 +7,7 @@
  * disambiguate using the :name~ServerName: syntax.
  */
 import { supabase } from '@/integrations/supabase/client';
+import { getCdnUrl } from '@/lib/bunny-upload';
 import { useServerStore } from '@/stores/serverStore';
 
 export interface ResolvedEmoji {
@@ -133,10 +134,9 @@ export async function getGlobalEmojiMap(opts?: { force?: boolean }): Promise<Map
         const server = serverById.get(row.server_id);
         if (!server) continue;
 
-        const { data: urlData } = supabase.storage.from('server-emojis').getPublicUrl(row.file_path);
         const resolved: ResolvedEmoji = {
           name: row.name,
-          url: urlData.publicUrl,
+          url: getCdnUrl('server-emojis', row.file_path),
           serverId: server.id,
           serverName: server.name,
           serverIcon: server.icon_url,
@@ -350,8 +350,7 @@ function scheduleFallbackFlush() {
         const filePath = firstFilePathByName.get(name);
         let value: string | null = null;
         if (filePath) {
-          const { data: urlData } = supabase.storage.from('server-emojis').getPublicUrl(filePath);
-          value = urlData.publicUrl;
+          value = getCdnUrl('server-emojis', filePath);
         }
 
         fallbackCache.set(name, { value, cachedAt: Date.now() });
@@ -457,8 +456,7 @@ export async function resolveQualifiedEmojisByNameFallback(keys: string[]): Prom
       const filePath = fileByKey.get(key);
       let value: string | null = null;
       if (filePath) {
-        const { data: urlData } = supabase.storage.from('server-emojis').getPublicUrl(filePath);
-        value = urlData.publicUrl || null;
+        value = getCdnUrl('server-emojis', filePath);
       }
       qualifiedFallbackCache.set(key, { value, cachedAt: Date.now() });
       out.set(key, value);

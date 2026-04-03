@@ -1,23 +1,27 @@
 /**
- * Signed URL generation utilities for private Supabase Storage buckets.
+ * Signed URL generation utilities for private Bunny CDN storage buckets.
  *
- * The "attachments" bucket is private. Public URLs no longer resolve.
- * All attachment rendering must go through signed URLs.
+ * The "attachments" bucket is private. Files are fetched through a server-side
+ * proxy Edge Function that returns binary data. We convert the blob into an
+ * object URL and cache it.
  *
  * - In-memory cache with configurable TTL (no localStorage).
  * - 5-minute refresh buffer so URLs are regenerated before expiry.
- * - Batch support via `createSignedUrls` (plural) to avoid N+1 requests.
  * - In-flight deduplication for concurrent requests to the same path.
  * - LRU-style eviction when cache exceeds MAX_ENTRIES.
+ * - Object URLs are revoked on eviction/expiry to free memory.
  */
 
-import { supabase } from "@/integrations/supabase/client";
+import { getKeyHashAsync } from "@/integrations/supabase/client";
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const SIGNED_URL_EXPIRY = 1800; // 30 minutes
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+
+const OBJECT_URL_EXPIRY = 1800; // 30 minutes (matches original signed URL TTL)
 const CACHE_REFRESH_BUFFER = 300; // Refresh 5 min before expiry
 const MAX_CACHE_ENTRIES = 300;
 
@@ -27,25 +31,40 @@ const MAX_CACHE_ENTRIES = 300;
 
 interface CacheEntry {
   url: string;
-  /** Unix-epoch **seconds** when this signed URL expires */
+  /** Unix-epoch **seconds** when this object URL should be considered expired */
   expiresAt: number;
 }
 
 const urlCache = new Map<string, CacheEntry>();
+
+/** Revoke a blob object URL if it looks like one. */
+function safeRevoke(url: string) {
+  if (url.startsWith("blob:")) {
+    try {
+      URL.revokeObjectURL(url);
+    } catch {
+      // ignore
+    }
+  }
+}
 
 function evictIfNeeded() {
   if (urlCache.size <= MAX_CACHE_ENTRIES) return;
   const now = nowSec();
   // First pass: drop expired
   for (const [key, entry] of urlCache) {
-    if (entry.expiresAt <= now) urlCache.delete(key);
+    if (entry.expiresAt <= now) {
+      safeRevoke(entry.url);
+      urlCache.delete(key);
+    }
   }
   if (urlCache.size <= MAX_CACHE_ENTRIES) return;
   // Second pass: evict oldest (insertion-order)
   const excess = urlCache.size - MAX_CACHE_ENTRIES;
   let count = 0;
-  for (const key of urlCache.keys()) {
+  for (const [key, entry] of urlCache) {
     if (count >= excess) break;
+    safeRevoke(entry.url);
     urlCache.delete(key);
     count++;
   }
@@ -69,13 +88,21 @@ export function _peekCache(filePath: string): string | null {
 
 /** Remove a single entry from the cache so the next access re-signs. */
 export function invalidateCacheEntry(filePath: string): void {
-  urlCache.delete(filePath);
+  const entry = urlCache.get(filePath);
+  if (entry) {
+    safeRevoke(entry.url);
+    urlCache.delete(filePath);
+  }
 }
 
-function setCache(filePath: string, signedUrl: string) {
+function setCache(filePath: string, objectUrl: string) {
+  // Revoke any previous URL for this path
+  const existing = urlCache.get(filePath);
+  if (existing) safeRevoke(existing.url);
+
   urlCache.set(filePath, {
-    url: signedUrl,
-    expiresAt: nowSec() + SIGNED_URL_EXPIRY,
+    url: objectUrl,
+    expiresAt: nowSec() + OBJECT_URL_EXPIRY,
   });
   evictIfNeeded();
 }
@@ -87,7 +114,7 @@ function setCache(filePath: string, signedUrl: string) {
 const inflight = new Map<string, Promise<string | null>>();
 
 // ---------------------------------------------------------------------------
-// Path helpers
+// Path helpers (kept for backward compatibility with legacy Supabase URLs in DB)
 // ---------------------------------------------------------------------------
 
 const SUPABASE_HOST = (() => {
@@ -101,7 +128,7 @@ const SUPABASE_HOST = (() => {
 
 /**
  * Returns true when the URL points to the attachments bucket in our
- * Supabase project (public or signed path).
+ * Supabase project (legacy public or signed path).
  */
 export function isSupabaseAttachmentUrl(url: string): boolean {
   if (!SUPABASE_HOST) return false;
@@ -132,12 +159,14 @@ export function extractStoragePath(url: string): string | null {
 }
 
 // ---------------------------------------------------------------------------
-// Single URL
+// Single URL — blob proxy via Edge Function
 // ---------------------------------------------------------------------------
 
 /**
- * Get a signed URL for a single attachment path.
- * Returns the signed URL or null on failure.
+ * Get a blob object URL for a single attachment path.
+ * Fetches the file binary through the Edge Function proxy and creates
+ * a local object URL via `URL.createObjectURL`.
+ * Returns the object URL or null on failure.
  */
 export async function getSignedAttachmentUrl(filePath: string): Promise<string | null> {
   const cached = getCached(filePath);
@@ -147,22 +176,41 @@ export async function getSignedAttachmentUrl(filePath: string): Promise<string |
   let pending = inflight.get(filePath);
   if (pending) return pending;
 
-  const promise = supabase.storage
-    .from("attachments")
-    .createSignedUrl(filePath, SIGNED_URL_EXPIRY)
-    .then(({ data, error }) => {
-      if (error || !data?.signedUrl) {
-        console.warn("[signedUrl] Failed to sign path:", filePath, error?.message);
+  const promise = (async () => {
+    try {
+      const keyHash = await getKeyHashAsync();
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${ANON_KEY}`,
+      };
+      if (keyHash) headers["x-key-hash"] = keyHash;
+
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/sign-bunny-url`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ bucket: "attachments", path: filePath }),
+      });
+
+      if (!res.ok) {
+        console.warn("[signedUrl] Blob proxy failed for path:", filePath, res.status);
         return null;
       }
-      setCache(filePath, data.signedUrl);
-      return data.signedUrl;
-    })
-    .finally(() => {
-      inflight.delete(filePath);
-    });
+
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      setCache(filePath, objectUrl);
+      return objectUrl;
+    } catch (err) {
+      console.warn("[signedUrl] Failed to fetch attachment:", filePath, err);
+      return null;
+    }
+  })();
 
   inflight.set(filePath, promise);
+  promise.finally(() => {
+    inflight.delete(filePath);
+  });
+
   return promise;
 }
 
@@ -171,8 +219,9 @@ export async function getSignedAttachmentUrl(filePath: string): Promise<string |
 // ---------------------------------------------------------------------------
 
 /**
- * Get signed URLs for multiple attachment paths at once.
- * Uses the Supabase batch endpoint (`createSignedUrls`) to minimise requests.
+ * Get blob object URLs for multiple attachment paths at once.
+ * Uses individual requests with in-flight deduplication (no batch endpoint
+ * since the Edge Function returns binary data).
  */
 export async function getSignedAttachmentUrls(
   filePaths: string[],
@@ -192,23 +241,13 @@ export async function getSignedAttachmentUrls(
 
   if (pathsToFetch.length === 0) return results;
 
-  const { data, error } = await supabase.storage
-    .from("attachments")
-    .createSignedUrls(pathsToFetch, SIGNED_URL_EXPIRY);
+  // Fetch individually (dedup handled by inflight map)
+  const fetches = pathsToFetch.map(async (p) => {
+    const url = await getSignedAttachmentUrl(p);
+    if (url) results.set(p, url);
+  });
 
-  if (error) {
-    console.warn("[signedUrl] Batch sign failed:", error.message);
-  }
-
-  if (data) {
-    for (const item of data) {
-      if (item.signedUrl && item.path) {
-        setCache(item.path, item.signedUrl);
-        results.set(item.path, item.signedUrl);
-      }
-    }
-  }
-
+  await Promise.all(fetches);
   return results;
 }
 
@@ -217,7 +256,7 @@ export async function getSignedAttachmentUrls(
 // ---------------------------------------------------------------------------
 
 /**
- * Given a full public/signed Supabase attachment URL, return a fresh signed URL.
+ * Given a full public/signed Supabase attachment URL, return a fresh object URL.
  * Non-attachment URLs are returned as-is. Returns null on extraction/signing failure.
  */
 export async function resolveSignedUrl(fullUrl: string): Promise<string | null> {
@@ -228,7 +267,7 @@ export async function resolveSignedUrl(fullUrl: string): Promise<string | null> 
 }
 
 /**
- * Resolve signed URLs for an array of full public/signed attachment URLs.
+ * Resolve object URLs for an array of full public/signed attachment URLs.
  * Non-attachment URLs are returned as-is.
  */
 export async function resolveSignedUrls(

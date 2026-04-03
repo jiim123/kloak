@@ -12,7 +12,7 @@ import { getGlobalEmojiDuplicates } from "@/lib/globalEmojiResolver";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { EMOJI_DATA, EmojiCategory } from "@/data/emojiData";
 import { getRecentEmojis, saveRecentEmoji } from "@/lib/emojiRecents";
-import { supabase } from "@/integrations/supabase/client";
+import { getCdnUrl } from "@/lib/bunny-upload";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface EmojiPickerProps {
@@ -497,7 +497,7 @@ export const EmojiPicker = ({
                               const inlineMatch = emoji.match(INLINE_CUSTOM_EMOJI_TOKEN_REGEX);
                               if (inlineMatch) {
                                 const filePath = inlineMatch[2];
-                                const { data: urlData } = supabase.storage.from("server-emojis").getPublicUrl(filePath);
+                                const emojiUrl = getCdnUrl("server-emojis", filePath);
                                 return (
                                   <button
                                     key={`${cat.key}-${emoji}-${i}`}
@@ -508,7 +508,7 @@ export const EmojiPicker = ({
                                     title={emoji}
                                   >
                                     <img
-                                      src={urlData.publicUrl}
+                                      src={emojiUrl}
                                       alt={inlineMatch[1]}
                                       className="w-9 h-9 object-contain"
                                     />

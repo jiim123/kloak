@@ -53,6 +53,7 @@ import { useRealtimeMembers } from "@/hooks";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
+import { getCdnUrl } from "@/lib/bunny-upload";
 import { secureUpload, secureDelete, secureListAndDelete } from "@/lib/storageUpload";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -243,8 +244,7 @@ export const ServerSettingsModal = () => {
   // Memoize emoji URLs to prevent regenerating on every render
   const serverEmojisWithUrls = useMemo(() => {
     return serverEmojis.map((emoji) => {
-      const { data: urlData } = supabase.storage.from("server-emojis").getPublicUrl(emoji.file_path);
-      return { ...emoji, url: urlData.publicUrl };
+      return { ...emoji, url: getCdnUrl("server-emojis", emoji.file_path) };
     });
   }, [serverEmojis]);
 
