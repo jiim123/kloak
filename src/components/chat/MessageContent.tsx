@@ -84,8 +84,7 @@ const CUSTOM_EMOJI_RENDER_REGEX =
   /:ce\[([a-z0-9_]{2,12})\|([a-z0-9/_\.-]{1,300})\]:|:([a-z0-9_]{2,12})(?:~([^:]{1,50}))?:/g;
 
 const getServerEmojiPublicUrl = (filePath: string): string => {
-  const { data } = supabase.storage.from("server-emojis").getPublicUrl(filePath);
-  return data.publicUrl;
+  return getCdnUrl("server-emojis", filePath);
 };
 
 // Check if URL is an image (including GIFs)
