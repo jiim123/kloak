@@ -310,9 +310,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
       setCaptchaToken(null);
       setCaptchaError(null);
       captchaRef.current?.resetCaptcha();
-      toast({
-        variant: "destructive",
-        title: "Account creation failed",
+      toast.error("Account creation failed", {
         description: "Please try again. If the problem persists, check your internet connection.",
       });
     }
