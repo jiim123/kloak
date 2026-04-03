@@ -12,7 +12,7 @@ import { getGlobalEmojiDuplicates } from "@/lib/globalEmojiResolver";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { EMOJI_DATA, EmojiCategory } from "@/data/emojiData";
 import { getRecentEmojis, saveRecentEmoji } from "@/lib/emojiRecents";
-import { supabase } from "@/integrations/supabase/client";
+import { getCdnUrl } from "@/lib/bunny-upload";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface EmojiPickerProps {
