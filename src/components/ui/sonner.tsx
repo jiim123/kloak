@@ -25,9 +25,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
           error:
             "bg-red-950 border-red-500/20 text-red-200",
           warning:
-            "bg-amber-950/70 border-amber-500/20 text-amber-200",
+            "bg-amber-950 border-amber-500/20 text-amber-200",
           info:
-            "bg-amber-950/70 border-amber-500/20 text-amber-200",
+            "bg-amber-950 border-amber-500/20 text-amber-200",
           title: "text-[14px] font-medium leading-snug",
           description: "text-[13px] opacity-70 mt-0.5 leading-snug",
           closeButton:
