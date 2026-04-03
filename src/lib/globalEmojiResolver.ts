@@ -351,7 +351,6 @@ function scheduleFallbackFlush() {
         let value: string | null = null;
         if (filePath) {
           value = getCdnUrl('server-emojis', filePath);
-          }
         }
 
         fallbackCache.set(name, { value, cachedAt: Date.now() });
