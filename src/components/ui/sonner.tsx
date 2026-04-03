@@ -21,13 +21,13 @@ const Toaster = ({ ...props }: ToasterProps) => {
           toast:
             "kloak-toast w-full flex items-start gap-3 rounded-2xl border px-4 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.3)] font-sans text-sm max-w-[420px]",
           success:
-            "bg-emerald-950/70 border-emerald-500/20 text-emerald-200",
+            "bg-emerald-950 border-emerald-500/20 text-emerald-200",
           error:
-            "bg-red-950/70 border-red-500/20 text-red-200",
+            "bg-red-950 border-red-500/20 text-red-200",
           warning:
-            "bg-amber-950/70 border-amber-500/20 text-amber-200",
+            "bg-amber-950 border-amber-500/20 text-amber-200",
           info:
-            "bg-amber-950/70 border-amber-500/20 text-amber-200",
+            "bg-amber-950 border-amber-500/20 text-amber-200",
           title: "text-[14px] font-medium leading-snug",
           description: "text-[13px] opacity-70 mt-0.5 leading-snug",
           closeButton:
