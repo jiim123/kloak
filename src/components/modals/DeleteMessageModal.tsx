@@ -149,12 +149,9 @@ export const DeleteMessageModal = ({
               <div className="flex flex-wrap gap-1.5">
                 {images.slice(0, 4).map((url, i) => (
                   <div key={i} className="relative">
-                    <img
-                      src={url}
-                      alt="Attachment"
-                      className="w-20 h-20 rounded-md object-cover select-none pointer-events-none"
-                      onContextMenu={(e) => e.preventDefault()}
-                      draggable={false}
+                    <ResolvedImage
+                      url={url}
+                      className="w-20 h-20 rounded-md object-cover"
                     />
                   </div>
                 ))}
