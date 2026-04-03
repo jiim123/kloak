@@ -66,7 +66,7 @@ export const OnboardingModal = ({
         try { document.execCommand("copy"); } finally { document.body.removeChild(textArea); }
       }
       setKeyCopied(true);
-      toast({ title: "Copied!", description: "Secret key copied to clipboard." });
+      toast.success("Copied!", { description: "Secret key copied to clipboard." });
     } catch (err) {
       console.error("Copy failed:", err);
       toast({ variant: "destructive", title: "Copy failed", description: "Please manually select and copy the key." });
