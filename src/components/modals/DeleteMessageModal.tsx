@@ -29,9 +29,38 @@ interface DeleteMessageModalProps {
 // Helper to check if a line is an image URL
 const isImageUrl = (line: string): boolean => {
   const trimmed = line.trim();
+  if (/^kloak-attachment:\/\/.+/i.test(trimmed)) return true;
   if (/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(trimmed)) return true;
   if (/^https?:\/\/.*supabase.*\/storage\/.*$/i.test(trimmed)) return true;
   return false;
+};
+
+// Component to resolve kloak-attachment:// URLs to displayable src
+const ResolvedImage = ({ url, className }: { url: string; className?: string }) => {
+  const [src, setSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (url.startsWith("kloak-attachment://")) {
+      const path = extractStoragePath(url);
+      if (path) {
+        getSignedAttachmentUrl(path).then(setSrc).catch(() => {});
+      }
+    } else {
+      setSrc(url);
+    }
+  }, [url]);
+
+  if (!src) return <div className={`${className} bg-muted animate-pulse`} />;
+
+  return (
+    <img
+      src={src}
+      alt="Attachment"
+      className={`${className} select-none pointer-events-none`}
+      onContextMenu={(e) => e.preventDefault()}
+      draggable={false}
+    />
+  );
 };
 
 // Parse content into caption text and image URLs
