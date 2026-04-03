@@ -5,7 +5,6 @@ import { HelmetProvider } from "react-helmet-async";
 import Index from "./pages/Index";
 
 // Lazy-load UI shell components to defer vendor-ui and vendor-utils chunks from initial load
-const LazyToaster = lazy(() => import("@/components/ui/toaster").then(m => ({ default: m.Toaster })));
 const LazySonner = lazy(() => import("@/components/ui/sonner").then(m => ({ default: m.Toaster })));
 const LazyTooltipProvider = lazy(() => import("@/components/ui/tooltip").then(m => ({ default: m.TooltipProvider })));
 
