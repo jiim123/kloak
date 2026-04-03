@@ -497,7 +497,7 @@ export const EmojiPicker = ({
                               const inlineMatch = emoji.match(INLINE_CUSTOM_EMOJI_TOKEN_REGEX);
                               if (inlineMatch) {
                                 const filePath = inlineMatch[2];
-                                const { data: urlData } = supabase.storage.from("server-emojis").getPublicUrl(filePath);
+                                const emojiUrl = getCdnUrl("server-emojis", filePath);
                                 return (
                                   <button
                                     key={`${cat.key}-${emoji}-${i}`}

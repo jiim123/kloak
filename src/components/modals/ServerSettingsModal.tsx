@@ -243,8 +243,7 @@ export const ServerSettingsModal = () => {
   // Memoize emoji URLs to prevent regenerating on every render
   const serverEmojisWithUrls = useMemo(() => {
     return serverEmojis.map((emoji) => {
-      const { data: urlData } = supabase.storage.from("server-emojis").getPublicUrl(emoji.file_path);
-      return { ...emoji, url: urlData.publicUrl };
+      return { ...emoji, url: getCdnUrl("server-emojis", emoji.file_path) };
     });
   }, [serverEmojis]);
 

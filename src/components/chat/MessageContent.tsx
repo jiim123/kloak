@@ -3,6 +3,7 @@ import { isSupabaseAttachmentUrl, resolveSignedUrl, getSignedAttachmentUrl } fro
 import { replaceNativeEmojisInElement } from "@/lib/fluentEmoji";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { getCdnUrl } from "@/lib/bunny-upload";
 import { CodeBlock, InlineCode } from "./CodeBlock";
 import { LinkPreview } from "./LinkPreview";
 import { InviteLinkPreview } from "./InviteLinkPreview";
