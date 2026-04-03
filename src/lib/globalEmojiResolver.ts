@@ -7,6 +7,7 @@
  * disambiguate using the :name~ServerName: syntax.
  */
 import { supabase } from '@/integrations/supabase/client';
+import { getCdnUrl } from '@/lib/bunny-upload';
 import { useServerStore } from '@/stores/serverStore';
 
 export interface ResolvedEmoji {
