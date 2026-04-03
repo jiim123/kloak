@@ -83,7 +83,7 @@ export const ChannelHeader = ({
         {channel.auto_delete_seconds && (
           <Tooltip>
             <TooltipTrigger>
-              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-400/70 ml-1">
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-rose-400/70 ml-1">
                 <Timer className="w-3 h-3" />
                 Auto-delete: {channel.auto_delete_seconds === 3600 ? '1h' : channel.auto_delete_seconds === 86400 ? '24h' : channel.auto_delete_seconds === 604800 ? '7d' : '30d'}
               </span>
