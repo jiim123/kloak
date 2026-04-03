@@ -12,14 +12,14 @@ const Toaster = ({ ...props }: ToasterProps) => {
       theme="dark"
       position={isMobile ? "top-center" : "bottom-right"}
       visibleToasts={3}
-      closeButton={isMobile}
+      closeButton
       gap={8}
       className="toaster group"
       toastOptions={{
         unstyled: true,
         classNames: {
           toast:
-            "kloak-toast w-full flex items-start gap-3 rounded-2xl border px-4 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.3)] font-sans text-sm max-w-[420px]",
+            "kloak-toast relative overflow-hidden w-full flex items-start gap-3 rounded-2xl border px-4 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.3)] font-sans text-sm max-w-[420px]",
           success:
             "bg-emerald-950 border-emerald-500/20 text-emerald-200",
           error:
@@ -31,7 +31,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           title: "text-[14px] font-medium leading-snug",
           description: "text-[13px] opacity-70 mt-0.5 leading-snug",
           closeButton:
-            "!bg-transparent !border-0 !text-current opacity-50 hover:opacity-100 transition-opacity",
+            "!static !ml-auto !shrink-0 !self-start !w-6 !h-6 !rounded-full !bg-white/10 !border !border-white/10 !text-current !opacity-60 hover:!opacity-100 !transition-opacity !flex !items-center !justify-center !transform-none !top-auto !right-auto !left-auto",
         },
       }}
       icons={{
