@@ -1,3 +1,4 @@
+// DEPRECATED: uploads now go through upload-to-bunny Edge Function
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { createServiceClient as createSharedServiceClient, enforceRateLimit, getClientId } from "../_shared/edgeSecurity.ts";
