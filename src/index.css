@@ -1169,17 +1169,25 @@ body {
   animation: kloak-toast-exit 0.2s ease-in forwards;
 }
 
-/* Progress bar for auto-dismiss */
+/* Progress bar for auto-dismiss — inset inside the toast */
 [data-sonner-toast]::after {
   content: '';
   position: absolute;
-  bottom: 0;
-  left: 0;
+  bottom: 4px;
+  left: 8px;
+  right: 8px;
   height: 2px;
-  border-radius: 0 0 1rem 1rem;
+  border-radius: 9999px;
   background: currentColor;
-  opacity: 0.3;
+  opacity: 0.25;
   animation: kloak-progress-shrink var(--toast-duration, 4s) linear forwards;
+  transform-origin: left;
+}
+
+/* Close button icon size inside the circle */
+[data-sonner-toast] [data-close-button] svg {
+  width: 12px !important;
+  height: 12px !important;
 }
 
 /* Mobile toast full-width */

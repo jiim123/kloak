@@ -31,7 +31,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           title: "text-[14px] font-medium leading-snug",
           description: "text-[13px] opacity-70 mt-0.5 leading-snug",
           closeButton:
-            "!bg-transparent !border-0 !text-current opacity-50 hover:opacity-100 transition-opacity",
+            "!static !ml-auto !shrink-0 !self-start !w-6 !h-6 !rounded-full !bg-white/10 !border !border-white/10 !text-current !opacity-60 hover:!opacity-100 !transition-opacity !flex !items-center !justify-center !transform-none !top-auto !right-auto !left-auto",
         },
       }}
       icons={{
