@@ -68,10 +68,8 @@ export function useBackgroundSync() {
     }
     
     if (failCount > 0) {
-      toast({
-        title: 'Some messages failed',
+      toast.error('Some messages failed', {
         description: `${failCount} message${failCount > 1 ? 's' : ''} couldn't be sent`,
-        variant: 'destructive',
       });
     }
     
