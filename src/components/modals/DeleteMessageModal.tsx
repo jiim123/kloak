@@ -41,7 +41,7 @@ const ResolvedImage = ({ url, className }: { url: string; className?: string }) 
 
   useEffect(() => {
     if (url.startsWith("kloak-attachment://")) {
-      const path = extractStoragePath(url);
+      const path = url.replace("kloak-attachment://", "");
       if (path) {
         getSignedAttachmentUrl(path).then(setSrc).catch(() => {});
       }
