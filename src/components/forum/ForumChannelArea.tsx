@@ -638,7 +638,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
         const result = await secureUpload("attachments", fileName, attachment.file, {
           contentType: attachment.file.type,
         });
-        urls.push(`kloak-attachment://${result.path}`);
+        urls.push(result.publicUrl);
       }
       return urls;
     },
