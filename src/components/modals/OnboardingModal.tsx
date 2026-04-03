@@ -69,7 +69,7 @@ export const OnboardingModal = ({
       toast.success("Copied!", { description: "Secret key copied to clipboard." });
     } catch (err) {
       console.error("Copy failed:", err);
-      toast({ variant: "destructive", title: "Copy failed", description: "Please manually select and copy the key." });
+      toast.error("Copy failed", { description: "Please manually select and copy the key." });
     }
   };
 

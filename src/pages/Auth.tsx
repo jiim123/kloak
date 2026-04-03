@@ -336,8 +336,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
 
     const success = await login(trimmedKey);
     if (success) {
-      toast({
-        title: "Welcome back!",
+      toast.success("Welcome back!", {
         description: "Successfully logged in.",
       });
 
