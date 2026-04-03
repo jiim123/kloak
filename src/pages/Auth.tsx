@@ -265,9 +265,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
     const rateLimit = checkRegistrationRateLimit();
     if (!rateLimit.allowed) {
       setRateLimitCooldown(rateLimit.remainingSeconds || 30);
-      toast({
-        variant: "destructive",
-        title: "Too many attempts",
+      toast.error("Too many attempts", {
         description: `Please wait ${rateLimit.remainingSeconds} seconds before trying again.`,
       });
       return;
