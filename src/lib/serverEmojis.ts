@@ -150,12 +150,11 @@ export async function fetchServerEmojis(serverId: string, opts?: { force?: boole
     if (error) throw error;
 
     const items = (data ?? []).map((row) => {
-      const { data: urlData } = supabase.storage.from('server-emojis').getPublicUrl(row.file_path);
       return {
         id: row.id,
         name: row.name,
         file_path: row.file_path,
-        url: urlData.publicUrl,
+        url: getCdnUrl('server-emojis', row.file_path),
       } satisfies ServerEmoji;
     });
 

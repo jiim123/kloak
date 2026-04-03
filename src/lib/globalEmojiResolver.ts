@@ -457,8 +457,8 @@ export async function resolveQualifiedEmojisByNameFallback(keys: string[]): Prom
       const filePath = fileByKey.get(key);
       let value: string | null = null;
       if (filePath) {
-        const { data: urlData } = supabase.storage.from('server-emojis').getPublicUrl(filePath);
-        value = urlData.publicUrl || null;
+        value = getCdnUrl('server-emojis', filePath);
+      }
       }
       qualifiedFallbackCache.set(key, { value, cachedAt: Date.now() });
       out.set(key, value);
