@@ -23,7 +23,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           success:
             "bg-emerald-950 border-emerald-500/20 text-emerald-200",
           error:
-            "bg-red-950/70 border-red-500/20 text-red-200",
+            "bg-red-950 border-red-500/20 text-red-200",
           warning:
             "bg-amber-950/70 border-amber-500/20 text-amber-200",
           info:
