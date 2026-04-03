@@ -350,7 +350,7 @@ function scheduleFallbackFlush() {
         const filePath = firstFilePathByName.get(name);
         let value: string | null = null;
         if (filePath) {
-          const { data: urlData } = supabase.storage.from('server-emojis').getPublicUrl(filePath);
+          value = getCdnUrl('server-emojis', filePath);
           value = urlData.publicUrl;
         }
 
