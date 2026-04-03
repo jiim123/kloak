@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,8 +13,8 @@ import { useMessageStore } from "@/stores/messageStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useMessageUser } from "@/stores/userCacheStore";
 import { getMessagePreview } from "@/lib/message";
+import { getSignedAttachmentUrl, extractStoragePath } from "@/lib/signedUrl";
 import type { Message } from "@/types";
-
 interface DeleteMessageModalProps {
   message?: Message | null;
   open?: boolean;
@@ -28,9 +29,38 @@ interface DeleteMessageModalProps {
 // Helper to check if a line is an image URL
 const isImageUrl = (line: string): boolean => {
   const trimmed = line.trim();
+  if (/^kloak-attachment:\/\/.+/i.test(trimmed)) return true;
   if (/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(trimmed)) return true;
   if (/^https?:\/\/.*supabase.*\/storage\/.*$/i.test(trimmed)) return true;
   return false;
+};
+
+// Component to resolve kloak-attachment:// URLs to displayable src
+const ResolvedImage = ({ url, className }: { url: string; className?: string }) => {
+  const [src, setSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (url.startsWith("kloak-attachment://")) {
+      const path = extractStoragePath(url);
+      if (path) {
+        getSignedAttachmentUrl(path).then(setSrc).catch(() => {});
+      }
+    } else {
+      setSrc(url);
+    }
+  }, [url]);
+
+  if (!src) return <div className={`${className} bg-muted animate-pulse`} />;
+
+  return (
+    <img
+      src={src}
+      alt="Attachment"
+      className={`${className} select-none pointer-events-none`}
+      onContextMenu={(e) => e.preventDefault()}
+      draggable={false}
+    />
+  );
 };
 
 // Parse content into caption text and image URLs
@@ -119,12 +149,9 @@ export const DeleteMessageModal = ({
               <div className="flex flex-wrap gap-1.5">
                 {images.slice(0, 4).map((url, i) => (
                   <div key={i} className="relative">
-                    <img
-                      src={url}
-                      alt="Attachment"
-                      className="w-20 h-20 rounded-md object-cover select-none pointer-events-none"
-                      onContextMenu={(e) => e.preventDefault()}
-                      draggable={false}
+                    <ResolvedImage
+                      url={url}
+                      className="w-20 h-20 rounded-md object-cover"
                     />
                   </div>
                 ))}
