@@ -3938,8 +3938,8 @@ export type Database = {
           _description?: string
           _file_size?: number
           _height?: number
-          _media_type?: string
-          _media_url?: string
+          _media_type: string
+          _media_url: string
           _thumbnail_url?: string
           _title?: string
           _user_id: string
