@@ -21,7 +21,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           toast:
             "kloak-toast w-full flex items-start gap-3 rounded-2xl border px-4 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.3)] font-sans text-sm max-w-[420px]",
           success:
-            "bg-emerald-950/70 border-emerald-500/20 text-emerald-200",
+            "bg-emerald-950 border-emerald-500/20 text-emerald-200",
           error:
             "bg-red-950/70 border-red-500/20 text-red-200",
           warning:
