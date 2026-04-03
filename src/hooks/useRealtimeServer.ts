@@ -3,7 +3,7 @@ import { useMessageStore } from '@/stores/messageStore';
 import { useServerStore } from '@/stores/serverStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useConnectionStatus } from './useConnectionStatus';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { acquireChannel, subscribeChannel, releaseChannel } from '@/lib/sharedChannel';
 type RealtimeRow = Record<string, unknown>;
 type RealtimeErrorLike = { message?: string; name?: string; cause?: unknown };
