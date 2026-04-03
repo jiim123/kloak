@@ -12,7 +12,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       theme="dark"
       position={isMobile ? "top-center" : "bottom-right"}
       visibleToasts={3}
-      closeButton={isMobile}
+      closeButton
       gap={8}
       className="toaster group"
       toastOptions={{
