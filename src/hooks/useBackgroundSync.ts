@@ -102,10 +102,8 @@ export function useBackgroundSync() {
         setConnectionStatus('connected');
         resetReconnectAttempts();
         
-        toast({
-          title: 'Reconnected',
+        toast.success('Reconnected', {
           description: 'You\'re back online!',
-          variant: 'success',
         });
         
         // Sync queued messages

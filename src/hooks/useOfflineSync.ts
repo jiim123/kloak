@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useOnlineStatus } from './useOnlineStatus';
 import { useOfflineQueueStore } from '@/stores/offlineQueueStore';
 import { useMessageStore } from '@/stores/messageStore';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 export function useOfflineSync() {
   const { isOnline, wasOffline } = useOnlineStatus();
@@ -16,10 +16,8 @@ export function useOfflineSync() {
       isSyncing.current = true;
 
       const syncMessages = async () => {
-        toast({
-          title: "Reconnected",
+        toast.warning("Reconnected", {
           description: `Sending ${queuedMessages.length} queued message${queuedMessages.length > 1 ? 's' : ''}...`,
-          variant: "info",
         });
 
         let successCount = 0;
@@ -41,18 +39,14 @@ export function useOfflineSync() {
         }
 
         if (successCount > 0) {
-          toast({
-            title: "Messages sent",
+          toast.success("Messages sent", {
             description: `Successfully sent ${successCount} queued message${successCount > 1 ? 's' : ''}.`,
-            variant: "success",
           });
         }
 
         if (failCount > 0) {
-          toast({
-            title: "Some messages failed",
+          toast.error("Some messages failed", {
             description: `${failCount} message${failCount > 1 ? 's' : ''} couldn't be sent. Please try again.`,
-            variant: "destructive",
           });
         }
 

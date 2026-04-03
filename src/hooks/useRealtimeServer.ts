@@ -53,7 +53,7 @@ export const useRealtimeServer = (serverId: string | null) => {
     const remaining = channels.filter((c) => c.server_id === sid);
     const fallback = remaining[0] || null;
     setCurrentChannel(fallback);
-    toast({ title: message });
+    toast.warning(message);
   }, []);
 
   const refreshAccessibleState = useCallback((sid: string, accessLostMessage: string) => {
