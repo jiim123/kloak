@@ -403,7 +403,7 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
           upsert: false,
         });
 
-        mediaUrl = `kloak-attachment://${result.path}`;
+        mediaUrl = result.publicUrl;
 
         if (ALLOWED_VIDEO_TYPES.includes(selectedFile.type)) {
           mediaType = "video";
