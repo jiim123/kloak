@@ -508,7 +508,7 @@ export const EmojiPicker = ({
                                     title={emoji}
                                   >
                                     <img
-                                      src={urlData.publicUrl}
+                                      src={emojiUrl}
                                       alt={inlineMatch[1]}
                                       className="w-9 h-9 object-contain"
                                     />

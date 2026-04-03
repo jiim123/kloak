@@ -53,6 +53,7 @@ import { useRealtimeMembers } from "@/hooks";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
+import { getCdnUrl } from "@/lib/bunny-upload";
 import { secureUpload, secureDelete, secureListAndDelete } from "@/lib/storageUpload";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
