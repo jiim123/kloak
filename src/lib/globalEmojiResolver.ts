@@ -134,10 +134,9 @@ export async function getGlobalEmojiMap(opts?: { force?: boolean }): Promise<Map
         const server = serverById.get(row.server_id);
         if (!server) continue;
 
-        const { data: urlData } = supabase.storage.from('server-emojis').getPublicUrl(row.file_path);
         const resolved: ResolvedEmoji = {
           name: row.name,
-          url: urlData.publicUrl,
+          url: getCdnUrl('server-emojis', row.file_path),
           serverId: server.id,
           serverName: server.name,
           serverIcon: server.icon_url,
