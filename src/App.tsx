@@ -68,7 +68,6 @@ const App = () => (
       <Suspense fallback={null}>
         <LazyTooltipProvider>
           <Suspense fallback={null}>
-            <LazyToaster />
             <LazySonner />
           </Suspense>
           <AppContent />

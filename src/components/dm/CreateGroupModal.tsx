@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { useFriendStore } from "@/stores/friendStore";
 import { useDMStore } from "@/stores/dmStore";
 import { useAuthStore } from "@/stores/authStore";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import type { User } from "@/types";
 
 interface CreateGroupModalProps {
@@ -24,7 +24,6 @@ export const CreateGroupModal = ({ open, onOpenChange }: CreateGroupModalProps) 
   const { user } = useAuthStore();
   const { friends, fetchFriends } = useFriendStore();
   const { createGroupConversation } = useDMStore();
-  const { toast } = useToast();
   
   const [groupName, setGroupName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -64,9 +63,7 @@ export const CreateGroupModal = ({ open, onOpenChange }: CreateGroupModalProps) 
 
   const handleCreate = async () => {
     if (selectedFriends.length < 2) {
-      toast({
-        variant: "destructive",
-        title: "Select more friends",
+      toast.error("Select more friends", {
         description: "You need at least 2 friends to create a group.",
       });
       return;
@@ -85,16 +82,13 @@ export const CreateGroupModal = ({ open, onOpenChange }: CreateGroupModalProps) 
     setIsCreating(false);
 
     if (conversation) {
-      toast({
-        title: "Group created",
+      toast.success("Group created", {
         description: `Your group "${groupName.trim() || 'New Group'}" has been created.`,
       });
       onOpenChange(false);
       navigate("/app");
     } else {
-      toast({
-        variant: "destructive",
-        title: "Failed to create group",
+      toast.error("Failed to create group", {
         description: "Something went wrong. Please try again.",
       });
     }
