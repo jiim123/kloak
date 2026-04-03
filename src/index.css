@@ -1122,3 +1122,72 @@ body {
 .app-no-motion [class*="shadow-overlay"] {
   box-shadow: none !important;
 }
+
+/* ── Kloak Toast Animations ── */
+@keyframes kloak-toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes kloak-toast-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes kloak-icon-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes kloak-progress-shrink {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+.kloak-toast-icon-fade {
+  animation: kloak-icon-fade 0.4s ease-out 0.15s both;
+}
+
+/* Sonner toast animation overrides */
+[data-sonner-toaster] [data-sonner-toast] {
+  animation: kloak-toast-enter 0.3s ease-out;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-removed="true"] {
+  animation: kloak-toast-exit 0.2s ease-in forwards;
+}
+
+/* Progress bar for auto-dismiss */
+[data-sonner-toast]::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  border-radius: 0 0 1rem 1rem;
+  background: currentColor;
+  opacity: 0.3;
+  animation: kloak-progress-shrink var(--toast-duration, 4s) linear forwards;
+}
+
+/* Mobile toast full-width */
+@media (max-width: 767px) {
+  [data-sonner-toaster] {
+    --width: calc(100vw - 2rem) !important;
+  }
+  [data-sonner-toaster] [data-sonner-toast] {
+    min-height: 44px;
+  }
+}
