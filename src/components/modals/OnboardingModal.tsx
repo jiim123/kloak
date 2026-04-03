@@ -36,7 +36,7 @@ export const OnboardingModal = ({
   // Fall back to auth store secretKey in case the prop hasn't been set yet (race condition)
   const storeSecretKey = useAuthStore((s) => s.secretKey);
   const secretKey = secretKeyProp || storeSecretKey;
-  const { toast } = useToast();
+  
   const [currentStep, setCurrentStep] = useState<OnboardingStep>(1);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [keyStoredAccepted, setKeyStoredAccepted] = useState(false);
