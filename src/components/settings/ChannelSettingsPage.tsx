@@ -386,15 +386,11 @@ export const ChannelSettingsPage = () => {
     </div>
   );
 
-  // Settings group box wrapper
+  // Settings group box wrapper — matches ServerSettingsPage pattern
   const SettingsGroup = ({ title, children }: { title: string; children: React.ReactNode }) => (
-    <div className="rounded-xl border border-border/50 bg-secondary/10 overflow-hidden">
-      <div className="px-4 py-3 border-b border-border/40">
-        <h3 className="text-xs font-[500] uppercase tracking-wider text-muted-foreground">{title}</h3>
-      </div>
-      <div className="p-4 space-y-3">
-        {children}
-      </div>
+    <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
+      <Label className="text-sm font-medium">{title}</Label>
+      {children}
     </div>
   );
 
