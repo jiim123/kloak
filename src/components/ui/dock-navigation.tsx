@@ -91,8 +91,8 @@ export const DockNavigation = ({ navItems, activeTab, onTabChange, className }: 
               className={cn(
                 "relative flex flex-col items-center gap-1 px-4 py-2.5 rounded-xl transition-all flex-shrink-0",
                 isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                  ? "bg-secondary/60 text-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
               )}
             >
               <Icon className="w-5 h-5" />
