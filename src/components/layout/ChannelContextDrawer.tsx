@@ -97,10 +97,10 @@ const DrawerSubmenu = ({
     <div>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium rounded-lg text-foreground hover:bg-secondary/40 active:bg-secondary/60 transition-colors"
+        className="flex items-center gap-3 w-full px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
       >
-        <Icon className="w-4 h-4 flex-shrink-0" />
-        <span className="flex-1 text-left">{label}</span>
+        <Icon className="w-5 h-5 flex-shrink-0 text-muted-foreground" />
+        <span className="flex-1 font-medium">{label}</span>
         <ChevronRight
           className={cn(
             "w-4 h-4 text-muted-foreground transition-transform duration-150",
