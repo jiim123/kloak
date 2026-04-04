@@ -1847,13 +1847,13 @@ export const MessageItem = memo(function MessageItem({
             {effectiveCanAddReactions && !isBlockedUser && (
               <div className="mb-4 rounded-xl bg-muted/50 overflow-hidden">
                 <div className="flex items-center gap-1.5 p-2 overflow-x-auto scrollbar-hide">
-                  {QUICK_REACTIONS.map((emoji) => (
+                {QUICK_REACTIONS.map((emoji) => (
                     <button
                       key={emoji}
                       onClick={() => handleMobileAddReaction(emoji)}
-                      className="text-2xl p-2.5 hover:bg-accent rounded-xl active:scale-90 transition-all flex-shrink-0"
+                      className="p-2.5 hover:bg-secondary/40 active:bg-secondary/60 rounded-xl active:scale-90 transition-all flex-shrink-0"
                     >
-                      {emoji}
+                      <FluentEmoji emoji={emoji} size={28} />
                     </button>
                   ))}
                   {/* Divider */}
@@ -1866,7 +1866,7 @@ export const MessageItem = memo(function MessageItem({
                     serverId={currentServer?.id}
                   >
                     <button
-                      className="p-2.5 rounded-xl bg-secondary/80 hover:bg-accent transition-colors flex-shrink-0"
+                      className="p-2.5 rounded-xl bg-secondary/60 hover:bg-secondary/40 transition-colors flex-shrink-0"
                       aria-label="More emojis"
                     >
                       <MoreHorizontal className="w-5 h-5 text-muted-foreground" />
@@ -1881,7 +1881,7 @@ export const MessageItem = memo(function MessageItem({
               {/* Reply */}
               {!isBlockedUser && (
                 <button
-                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-accent active:bg-accent text-left transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
                   onClick={() => {
                     handleReply();
                     setShowMobileActions(false);
@@ -1894,7 +1894,7 @@ export const MessageItem = memo(function MessageItem({
               {/* Edit (own messages) */}
               {isOwnMessage && (
                 <button
-                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-accent active:bg-accent text-left transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
                   onClick={() => {
                     handleStartEditing();
                     setShowMobileActions(false);
@@ -1908,7 +1908,7 @@ export const MessageItem = memo(function MessageItem({
               {/* Pin */}
               {canPinMessages && (
                 <button
-                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-accent active:bg-accent text-left transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
                   onClick={() => {
                     handlePin();
                     setShowMobileActions(false);
@@ -1922,7 +1922,7 @@ export const MessageItem = memo(function MessageItem({
               {/* Remove Embed */}
               {isOwnMessage && hasEmbeddableUrls && !isEmbedHidden && (
                 <button
-                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-accent active:bg-accent text-left transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
                   onClick={() => {
                     handleRemoveEmbed();
                     setShowMobileActions(false);
@@ -1937,7 +1937,7 @@ export const MessageItem = memo(function MessageItem({
 
               {/* Copy Text */}
               <button
-                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-accent active:bg-accent text-left transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
                 onClick={() => {
                   handleCopyText();
                   setShowMobileActions(false);
@@ -1949,7 +1949,7 @@ export const MessageItem = memo(function MessageItem({
 
               {/* Copy Message ID */}
               <button
-                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-accent active:bg-accent text-left transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
                 onClick={() => {
                   handleCopyMessageId();
                   setShowMobileActions(false);
