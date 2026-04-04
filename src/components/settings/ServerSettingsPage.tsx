@@ -690,6 +690,7 @@ export const ServerSettingsPage = () => {
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
   const bannerInputRef = useRef<HTMLInputElement>(null);
+  const roleEditContainerRef = useRef<HTMLDivElement>(null);
 
   // Track explicit removals so displayUrl becomes null immediately
   const [iconRemoved, setIconRemoved] = useState(false);
