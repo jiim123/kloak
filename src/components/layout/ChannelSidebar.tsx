@@ -314,11 +314,11 @@ const SortableChannel = ({
       <button
         onClick={isSortingMode ? undefined : onSelect}
         className={cn(
-          "group relative flex-1 min-w-0 flex items-center gap-2 px-2.5 py-1.5 text-sm md:text-sm text-[15px] transition-all duration-150 select-none rounded-[3px]",
+          "group relative flex-1 min-w-0 flex items-center gap-2 px-2.5 py-2 md:py-1.5 text-[13px] font-medium transition-all duration-150 select-none rounded-[3px]",
           "hover:bg-white/[0.04]",
           isActive && !isSortingMode && "bg-white/[0.06] text-foreground",
           !isActive && "text-muted-foreground hover:text-foreground",
-          isUnread && !isActive && "text-foreground font-medium",
+          isUnread && !isActive && "text-foreground font-semibold",
           isDragging && "opacity-50 shadow-lg ring-2 ring-primary/30 bg-secondary",
           isSortingMode && "cursor-default",
         )}
