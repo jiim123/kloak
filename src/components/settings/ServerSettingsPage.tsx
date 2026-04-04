@@ -2473,8 +2473,9 @@ export const ServerSettingsPage = () => {
             <TabsContent value="roles" className="m-0 h-full pr-16">
               {canManageRoles ? (
                 <div className="flex h-full">
-                  {/* Left Side - Roles List */}
-                  <div className="w-64 border-r border-border flex flex-col">
+                  {/* Left Side - Roles List (hidden on mobile when editing) */}
+                  {(!isMobile || (!selectedRole && editingRole === null)) && (
+                  <div className={cn("border-r border-border flex flex-col", isMobile ? "w-full" : "w-64")}>
                     <div className="p-4 border-b border-border">
                       <div className="flex items-center justify-between mb-2">
                         <h4 className="text-sm font-medium">Roles</h4>
@@ -2527,11 +2528,35 @@ export const ServerSettingsPage = () => {
                       )}
                     </ScrollArea>
                   </div>
+                  )}
 
-                  {/* Right Side - Role Settings (unified view) */}
+                  {/* Right Side - Role Settings (full screen on mobile) */}
+                  {(!isMobile || selectedRole || editingRole !== null) && (
                   <div className="flex-1 overflow-y-auto">
                     {selectedRole ? (
                       <div className="p-6 space-y-6 max-w-2xl">
+                        {/* Back button on mobile */}
+                        {isMobile && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedRole(null);
+                              setEditingRole(null);
+                              setRoleName("");
+                              setRoleColor("#5865F2");
+                              setRoleIcon("");
+                              setRoleIsSelfAssignable(false);
+                              setColorType("solid");
+                              setGradientColors(["#5865F2", "#7289DA"]);
+                              setGradientAngle(135);
+                            }}
+                            className="flex items-center gap-1 -ml-2 mb-2"
+                          >
+                            <ArrowLeft className="w-4 h-4" />
+                            Back to Roles
+                          </Button>
+                        )}
                         {/* Role Details Section */}
                         <div>
                           <h3 className="text-lg font-medium mb-1">Edit Role</h3>
@@ -2683,6 +2708,27 @@ export const ServerSettingsPage = () => {
                     ) : (
                       <div className="p-6 max-w-2xl">
                         <div className="space-y-5">
+                          {/* Back button on mobile for create view */}
+                          {isMobile && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setEditingRole(null);
+                                setRoleName("");
+                                setRoleColor("#5865F2");
+                                setRoleIcon("");
+                                setRoleIsSelfAssignable(false);
+                                setColorType("solid");
+                                setGradientColors(["#5865F2", "#7289DA"]);
+                                setGradientAngle(135);
+                              }}
+                              className="flex items-center gap-1 -ml-2 mb-2"
+                            >
+                              <ArrowLeft className="w-4 h-4" />
+                              Back to Roles
+                            </Button>
+                          )}
                           <div>
                             <h3 className="text-lg font-medium mb-1">Create New Role</h3>
                             <p className="text-sm text-muted-foreground">Create a new role for your server</p>
@@ -2789,6 +2835,7 @@ export const ServerSettingsPage = () => {
                       </div>
                     )}
                   </div>
+                  )}
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
