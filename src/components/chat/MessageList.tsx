@@ -171,17 +171,6 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   const prevChannelIdRef = useRef<string>(channelId);
   const didInitialBottomScrollRef = useRef(false);
   const lastScrollHeightRef = useRef(0);
-  const pendingPrependAnchorRef = useRef<{
-    requestId: number;
-    prevTop: number;
-    prevHeight: number;
-    anchorMessageId: string | null;
-    anchorOffset: number | null;
-  } | null>(null);
-  const prependRequestIdRef = useRef(0);
-  const [prependComplete, setPrependComplete] = useState(0);
-  // Guard: prevents handleLoadOlder from firing during programmatic scroll-to-bottom
-  const isProgrammaticScrollRef = useRef(false);
 
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
