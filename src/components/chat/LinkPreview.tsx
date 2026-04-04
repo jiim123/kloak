@@ -207,15 +207,13 @@ export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
   if (preview.type === "youtube" && preview.videoId) {
     if (showEmbed) {
       return (
-        <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[480px]">
+        <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[480px]" style={{ aspectRatio: '16 / 9' }}>
           <iframe
-            width="480"
-            height="270"
             src={`https://www.youtube.com/embed/${preview.videoId}?autoplay=1`}
             title={preview.title || "YouTube video"}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
-            className="w-full aspect-video"
+            className="w-full h-full"
           />
         </div>
       );
