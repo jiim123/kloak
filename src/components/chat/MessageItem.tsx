@@ -1894,7 +1894,7 @@ export const MessageItem = memo(function MessageItem({
               {/* Edit (own messages) */}
               {isOwnMessage && (
                 <button
-                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-accent active:bg-accent text-left transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
                   onClick={() => {
                     handleStartEditing();
                     setShowMobileActions(false);
@@ -1908,7 +1908,7 @@ export const MessageItem = memo(function MessageItem({
               {/* Pin */}
               {canPinMessages && (
                 <button
-                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-accent active:bg-accent text-left transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
                   onClick={() => {
                     handlePin();
                     setShowMobileActions(false);
@@ -1922,7 +1922,7 @@ export const MessageItem = memo(function MessageItem({
               {/* Remove Embed */}
               {isOwnMessage && hasEmbeddableUrls && !isEmbedHidden && (
                 <button
-                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-accent active:bg-accent text-left transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
                   onClick={() => {
                     handleRemoveEmbed();
                     setShowMobileActions(false);
@@ -1937,7 +1937,7 @@ export const MessageItem = memo(function MessageItem({
 
               {/* Copy Text */}
               <button
-                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-accent active:bg-accent text-left transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
                 onClick={() => {
                   handleCopyText();
                   setShowMobileActions(false);
@@ -1949,7 +1949,7 @@ export const MessageItem = memo(function MessageItem({
 
               {/* Copy Message ID */}
               <button
-                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-accent active:bg-accent text-left transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
                 onClick={() => {
                   handleCopyMessageId();
                   setShowMobileActions(false);
