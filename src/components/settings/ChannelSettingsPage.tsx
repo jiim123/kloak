@@ -100,6 +100,7 @@ const SettingsGroup = ({ title, children }: { title: string; children: React.Rea
   </div>
 );
 
+export const ChannelSettingsPage = () => {
   const { activeModal, modalData, closeModal } = useUIStore();
   const {
     channels,
