@@ -81,6 +81,13 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { ChannelContextMenu } from "@/components/layout/ChannelContextMenu";
+import { ChannelContextDrawer } from "@/components/layout/ChannelContextDrawer";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { fetchAndCacheUser, getUserFromCache, useUserCacheStore } from "@/stores/userCacheStore";
 import { openUserProfileModal } from "@/lib/userProfilePopover";
 import type { Channel, ChannelCategory, ServerRole } from "@/types";
