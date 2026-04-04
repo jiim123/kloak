@@ -1866,7 +1866,7 @@ export const MessageItem = memo(function MessageItem({
                     serverId={currentServer?.id}
                   >
                     <button
-                      className="p-2.5 rounded-xl bg-secondary/80 hover:bg-accent transition-colors flex-shrink-0"
+                      className="p-2.5 rounded-xl bg-secondary/60 hover:bg-secondary/40 transition-colors flex-shrink-0"
                       aria-label="More emojis"
                     >
                       <MoreHorizontal className="w-5 h-5 text-muted-foreground" />
