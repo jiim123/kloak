@@ -480,7 +480,7 @@ export const ChannelSettingsPage = () => {
             <div className="flex gap-2">
               <Input
                 value={newDomain}
-                onChange={(e) => setNewDomain(e.target.value.toLowerCase().trim())}
+                onChange={(e) => setNewDomain(e.target.value.toLowerCase())}
                 placeholder="e.g. github.com"
                 className="h-9 rounded-lg border-border/50 bg-secondary/30 text-sm"
                 onKeyDown={(e) => {
