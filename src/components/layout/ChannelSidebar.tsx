@@ -772,6 +772,7 @@ export const ChannelSidebar = () => {
   const [activeType, setActiveType] = useState<"channel" | "category" | null>(null);
   const [overCategoryId, setOverCategoryId] = useState<string | null>(null);
   const [isSortingMode, setIsSortingMode] = useState(false);
+  const [bgDrawerOpen, setBgDrawerOpen] = useState(false);
 
   const channelIds = useMemo(() => (channels || []).map((c) => c.id), [channels]);
   const { getChannelUnread, markAsRead } = useUnreadChannelsContext();
