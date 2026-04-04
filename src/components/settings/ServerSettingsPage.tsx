@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -28,6 +29,7 @@ import {
   Pencil,
   Search,
   CircleUser,
+  ArrowLeft,
 } from "lucide-react";
 
 import {
@@ -631,6 +633,7 @@ export const ServerSettingsPage = () => {
     updateMember,
   } = useServerStore();
   const { user } = useAuthStore();
+  const isMobile = useIsMobile();
 
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -670,6 +673,7 @@ export const ServerSettingsPage = () => {
   const [roleIsSelfAssignable, setRoleIsSelfAssignable] = useState(false);
   const [activeRoleId, setActiveRoleId] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<CustomServerRole | null>(null);
+  const [mobileRoleCreateView, setMobileRoleCreateView] = useState(false);
 
   const [colorType, setColorType] = useState<"solid" | "gradient">("solid");
   const [gradientColors, setGradientColors] = useState<string[]>(["#5865F2", "#7289DA"]);
@@ -813,6 +817,7 @@ export const ServerSettingsPage = () => {
           }
           setRoleIcon(role.icon || "");
           setRoleIsSelfAssignable(Boolean(role.is_self_assignable));
+          setMobileRoleCreateView(false);
         }}
         className={cn(
           "flex items-center gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer",
@@ -2470,8 +2475,9 @@ export const ServerSettingsPage = () => {
             <TabsContent value="roles" className="m-0 h-full pr-16">
               {canManageRoles ? (
                 <div className="flex h-full">
-                  {/* Left Side - Roles List */}
-                  <div className="w-64 border-r border-border flex flex-col">
+                  {/* Left Side - Roles List (hidden on mobile when editing) */}
+                  {(!isMobile || (!selectedRole && !mobileRoleCreateView)) && (
+                  <div className={cn("border-r border-border flex flex-col", isMobile ? "w-full" : "w-64")}>
                     <div className="p-4 border-b border-border">
                       <div className="flex items-center justify-between mb-2">
                         <h4 className="text-sm font-medium">Roles</h4>
@@ -2488,6 +2494,7 @@ export const ServerSettingsPage = () => {
                             setColorType("solid");
                             setGradientColors(["#5865F2", "#7289DA"]);
                             setGradientAngle(135);
+                            if (isMobile) setMobileRoleCreateView(true);
                           }}
                           className="h-8 w-8 p-0"
                           title="Create New Role"
@@ -2524,11 +2531,36 @@ export const ServerSettingsPage = () => {
                       )}
                     </ScrollArea>
                   </div>
+                  )}
 
-                  {/* Right Side - Role Settings (unified view) */}
+                  {/* Right Side - Role Settings (full screen on mobile) */}
+                  {(!isMobile || selectedRole || mobileRoleCreateView) && (
                   <div className="flex-1 overflow-y-auto">
                     {selectedRole ? (
                       <div className="p-6 space-y-6 max-w-2xl">
+                        {/* Back button on mobile */}
+                        {isMobile && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedRole(null);
+                              setEditingRole(null);
+                              setRoleName("");
+                              setRoleColor("#5865F2");
+                              setRoleIcon("");
+                              setRoleIsSelfAssignable(false);
+                              setColorType("solid");
+                              setGradientColors(["#5865F2", "#7289DA"]);
+                              setGradientAngle(135);
+                              setMobileRoleCreateView(false);
+                            }}
+                            className="flex items-center gap-1 -ml-2 mb-2"
+                          >
+                            <ArrowLeft className="w-4 h-4" />
+                            Back to Roles
+                          </Button>
+                        )}
                         {/* Role Details Section */}
                         <div>
                           <h3 className="text-lg font-medium mb-1">Edit Role</h3>
@@ -2680,6 +2712,28 @@ export const ServerSettingsPage = () => {
                     ) : (
                       <div className="p-6 max-w-2xl">
                         <div className="space-y-5">
+                          {/* Back button on mobile for create view */}
+                          {isMobile && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setEditingRole(null);
+                                setRoleName("");
+                                setRoleColor("#5865F2");
+                                setRoleIcon("");
+                                setRoleIsSelfAssignable(false);
+                                setColorType("solid");
+                                setGradientColors(["#5865F2", "#7289DA"]);
+                                setGradientAngle(135);
+                                setMobileRoleCreateView(false);
+                              }}
+                              className="flex items-center gap-1 -ml-2 mb-2"
+                            >
+                              <ArrowLeft className="w-4 h-4" />
+                              Back to Roles
+                            </Button>
+                          )}
                           <div>
                             <h3 className="text-lg font-medium mb-1">Create New Role</h3>
                             <p className="text-sm text-muted-foreground">Create a new role for your server</p>
@@ -2786,6 +2840,7 @@ export const ServerSettingsPage = () => {
                       </div>
                     )}
                   </div>
+                  )}
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
