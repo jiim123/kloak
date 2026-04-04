@@ -390,11 +390,37 @@ const SortableChannel = ({
     </div>
   );
 
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const handleMobileContextMenu = (e: React.MouseEvent | React.TouchEvent) => {
+    if (isMobile && !isSortingMode && !isDraggingAny) {
+      e.preventDefault();
+      setDrawerOpen(true);
+    }
+  };
+
   return (
     <div ref={setNodeRef} style={style} className="relative">
       {/* In sort mode or during drag on mobile - disable context menu */}
       {isMobile && (isSortingMode || isDraggingAny) ? (
         buttonContent
+      ) : isMobile ? (
+        <>
+          <div onContextMenu={handleMobileContextMenu}>
+            {buttonContent}
+          </div>
+          <ChannelContextDrawer
+            open={drawerOpen}
+            onOpenChange={setDrawerOpen}
+            channel={channel}
+            isAdmin={isAdmin}
+            categories={categories}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onCopyLink={onCopyLink}
+            onMarkAsRead={onMarkAsRead}
+          />
+        </>
       ) : (
         <ContextMenu>
           <ContextMenuTrigger asChild disabled={isDraggingAny}>
