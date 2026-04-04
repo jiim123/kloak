@@ -239,9 +239,9 @@ export const ChannelContextDrawer = ({
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="max-h-[85vh]">
         <DrawerHeader className="pb-2">
-          <DrawerTitle className="text-base font-medium">#{channel.name}</DrawerTitle>
+          <DrawerTitle className="text-sm font-medium text-muted-foreground">#{channel.name}</DrawerTitle>
         </DrawerHeader>
-        <div className="overflow-y-auto px-2 pb-6 space-y-0.5">
+        <div className="overflow-y-auto px-4 pb-8 space-y-1">
           {isAdmin ? (
             <>
               {/* Quick actions */}
