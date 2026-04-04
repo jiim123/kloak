@@ -325,7 +325,7 @@ export const parseTextContent = (
     const alignClass = align === "center" ? "mx-auto block" : align === "right" ? "ml-auto block" : "mr-auto block";
     if (isTrustedInlineImageUrl(url)) {
       const widthStyle = width !== "auto" ? `width="${escapeHtml(width)}"` : "";
-      return `<img src="${escapeHtml(url)}" alt="Image" ${widthStyle} class="${alignClass} max-w-full rounded-lg my-2 cursor-pointer hover:opacity-90" loading="lazy" data-image-url="${escapeHtml(url)}" data-align="${align}" />`;
+      return `<img src="${escapeHtml(url)}" alt="Image" ${widthStyle} class="${alignClass} max-w-full rounded-lg my-2 cursor-pointer hover:opacity-90" loading="lazy" data-image-url="${escapeHtml(url)}" data-align="${align}" style="min-height:40px;max-height:350px;background:rgb(24 24 24 / 40%)" onload="this.style.backgroundColor='transparent'" />`;
     }
     return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="${alignClass} message-link">View image</a>`;
   });
