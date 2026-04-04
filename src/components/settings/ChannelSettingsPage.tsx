@@ -59,7 +59,47 @@ const SLOWMODE_OPTIONS = [
   { value: "3600", label: "1 hour" },
 ];
 
-export const ChannelSettingsPage = () => {
+// Toggle card component for switches
+const ToggleCard = ({
+  icon: Icon,
+  label,
+  description,
+  checked,
+  onCheckedChange,
+  disabled,
+}: {
+  icon: React.ElementType;
+  label: string;
+  description: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  disabled?: boolean;
+}) => (
+  <div
+    className={cn(
+      "flex items-center gap-4 p-4 rounded-xl bg-secondary/30 border border-border/50",
+      disabled && "opacity-60",
+    )}
+  >
+    <div className="w-10 h-10 rounded-xl bg-secondary/80 flex items-center justify-center flex-shrink-0">
+      <Icon className="w-5 h-5 text-muted-foreground" />
+    </div>
+    <div className="flex-1 min-w-0">
+      <p className="text-sm font-medium">{label}</p>
+      <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+    </div>
+    <Switch checked={checked} onCheckedChange={onCheckedChange} disabled={disabled} />
+  </div>
+);
+
+// Settings group box wrapper — matches ServerSettingsPage pattern
+const SettingsGroup = ({ title, children }: { title: string; children: React.ReactNode }) => (
+  <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
+    <Label className="text-sm font-medium">{title}</Label>
+    {children}
+  </div>
+);
+
   const { activeModal, modalData, closeModal } = useUIStore();
   const {
     channels,
