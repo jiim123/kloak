@@ -673,6 +673,7 @@ export const ServerSettingsPage = () => {
   const [roleIsSelfAssignable, setRoleIsSelfAssignable] = useState(false);
   const [activeRoleId, setActiveRoleId] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<CustomServerRole | null>(null);
+  const [mobileRoleCreateView, setMobileRoleCreateView] = useState(false);
 
   const [colorType, setColorType] = useState<"solid" | "gradient">("solid");
   const [gradientColors, setGradientColors] = useState<string[]>(["#5865F2", "#7289DA"]);
