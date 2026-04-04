@@ -359,7 +359,7 @@ export const parseTextContent = (
     }
     if (isImageUrl(url)) {
       if (isTrustedInlineImageUrl(url)) {
-        return `<img src="${escapeHtml(url)}" alt="Image" class="block mr-auto max-w-full sm:max-w-[400px] max-h-[60vh] sm:max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90 object-contain" loading="lazy" data-image-url="${escapeHtml(url)}" />`;
+        return `<img src="${escapeHtml(url)}" alt="Image" class="block mr-auto max-w-full sm:max-w-[400px] max-h-[60vh] sm:max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90 object-contain" loading="lazy" data-image-url="${escapeHtml(url)}" style="min-height:40px;max-height:350px;background:rgb(24 24 24 / 40%)" onload="this.style.backgroundColor='transparent'" />`;
       }
       return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="message-link">${escapeHtml(url)}</a>`;
     }

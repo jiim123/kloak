@@ -752,11 +752,13 @@ export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
       className="mt-2 block rounded-lg border border-border bg-secondary/50 overflow-hidden max-w-full sm:max-w-[400px] hover:bg-secondary/70 transition-colors group"
     >
       {preview.image && (
-        <div className="relative">
+        <div className="relative overflow-hidden" style={{ minHeight: '80px' }}>
           <img
             src={preview.image}
             alt={preview.title || ""}
             className="w-full h-40 object-cover"
+            style={{ backgroundColor: 'rgb(24 24 24 / 40%)' }}
+            onLoad={(e) => { (e.target as HTMLImageElement).style.backgroundColor = 'transparent'; }}
             onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
           />
         </div>

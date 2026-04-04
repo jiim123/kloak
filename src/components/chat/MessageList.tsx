@@ -599,6 +599,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
           ref={containerRef}
           className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative bg-transparent"
           onScroll={handleScroll}
+          style={{ overflowAnchor: 'auto' }}
         >
           <div style={{ overflowAnchor: "none" }}>{headerContent}</div>
           {isFetchingOlder && (
