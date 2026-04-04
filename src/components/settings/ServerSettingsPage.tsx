@@ -690,6 +690,7 @@ export const ServerSettingsPage = () => {
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
   const bannerInputRef = useRef<HTMLInputElement>(null);
+  const roleEditContainerRef = useRef<HTMLDivElement>(null);
 
   // Track explicit removals so displayUrl becomes null immediately
   const [iconRemoved, setIconRemoved] = useState(false);
@@ -818,6 +819,7 @@ export const ServerSettingsPage = () => {
           setRoleIcon(role.icon || "");
           setRoleIsSelfAssignable(Boolean(role.is_self_assignable));
           setMobileRoleCreateView(false);
+          setTimeout(() => roleEditContainerRef.current?.scrollTo({ top: 0 }), 0);
         }}
         className={cn(
           "flex items-center gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer",
@@ -2535,7 +2537,7 @@ export const ServerSettingsPage = () => {
 
                   {/* Right Side - Role Settings (full screen on mobile) */}
                   {(!isMobile || selectedRole || mobileRoleCreateView) && (
-                  <div className="flex-1 overflow-y-auto">
+                  <div className="flex-1 overflow-y-auto" ref={roleEditContainerRef}>
                     {selectedRole ? (
                       <div className="p-6 space-y-6 max-w-2xl">
                         {/* Back button on mobile */}
