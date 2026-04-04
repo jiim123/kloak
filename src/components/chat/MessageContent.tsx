@@ -340,7 +340,7 @@ export const parseTextContent = (
     const audioExts = ["mp3", "ogg", "wav", "flac", "m4a"];
 
     if (imageExts.includes(ext)) {
-      return `<img data-attachment-path="${escapeHtml(path)}" alt="Image" class="block mr-auto max-w-full sm:max-w-[400px] max-h-[60vh] sm:max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90 object-contain" loading="lazy" style="visibility:hidden" />`;
+      return `<img data-attachment-path="${escapeHtml(path)}" alt="Image" class="block mr-auto max-w-full sm:max-w-[400px] max-h-[60vh] sm:max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90 object-contain" loading="lazy" style="visibility:hidden;min-height:40px;max-height:350px;background:rgb(24 24 24 / 40%)" onload="this.style.backgroundColor='transparent'" />`;
     } else if (videoExts.includes(ext)) {
       return `<video data-attachment-path="${escapeHtml(path)}" controls preload="metadata" class="block max-w-full w-full sm:max-w-[480px] rounded-lg my-2 aspect-video object-contain bg-black/10">Your browser does not support video.</video>`;
     } else if (audioExts.includes(ext)) {
