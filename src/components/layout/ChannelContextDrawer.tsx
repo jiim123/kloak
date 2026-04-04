@@ -110,7 +110,7 @@ export const ChannelContextDrawer = ({
 
   const close = () => onOpenChange(false);
 
-  const act = (fn: () => void | Promise<void>) => {
+  const act = (fn: () => void | Promise<void> | unknown) => {
     close();
     fn();
   };
