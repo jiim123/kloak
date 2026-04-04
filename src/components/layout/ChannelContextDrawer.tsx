@@ -239,7 +239,7 @@ export const ChannelContextDrawer = ({
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="max-h-[85vh]">
         <DrawerHeader className="pb-2">
-          <DrawerTitle className="text-base font-semibold">#{channel.name}</DrawerTitle>
+          <DrawerTitle className="text-base font-medium">#{channel.name}</DrawerTitle>
         </DrawerHeader>
         <div className="overflow-y-auto px-2 pb-6 space-y-0.5">
           {isAdmin ? (
