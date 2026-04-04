@@ -299,26 +299,13 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
         const added = Math.max(1, currentLength - prevLength);
         setNewMessageCount((prev) => prev + added);
       } else {
-        // Guard: mark as programmatic so handleScroll won't corrupt isNearBottomRef
-        isProgrammaticScrollRef.current = true;
-        const nudge = () => {
-          const n = containerRef.current;
-          if (n) {
-            n.scrollTop = n.scrollHeight;
-            isNearBottomRef.current = true;
-            lastScrollHeightRef.current = n.scrollHeight;
-          }
-        };
-        // Immediate (before paint via useLayoutEffect)
-        nudge();
-        // Retry at 50ms, 150ms, 300ms for async content (images, embeds)
-        setTimeout(nudge, 50);
-        setTimeout(nudge, 150);
-        setTimeout(() => {
-          nudge();
-          // Release guard after final nudge
-          isProgrammaticScrollRef.current = false;
-        }, 300);
+        // Single immediate scroll — ResizeObserver handles subsequent size changes
+        const n = containerRef.current;
+        if (n) {
+          n.scrollTop = n.scrollHeight;
+          isNearBottomRef.current = true;
+          lastScrollHeightRef.current = n.scrollHeight;
+        }
       }
     }
 
