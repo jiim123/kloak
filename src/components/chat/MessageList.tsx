@@ -386,29 +386,6 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       });
   }, [hasMore, isLoading, isFetchingOlder, channelData?.oldestLoadedAt]);
 
-  // Prepend anchor restoration — ONLY fires on actual prepend completion
-  useLayoutEffect(() => {
-    const anchor = pendingPrependAnchorRef.current;
-    if (!anchor) return;
-    const node = containerRef.current;
-    if (!node) return;
-
-    if (anchor.anchorMessageId && anchor.anchorOffset !== null) {
-      const anchorEl = document.getElementById(`message-${anchor.anchorMessageId}`);
-      if (anchorEl) {
-        const containerTop = node.getBoundingClientRect().top;
-        const nextOffset = anchorEl.getBoundingClientRect().top - containerTop;
-        const offsetDelta = nextOffset - anchor.anchorOffset;
-        if (offsetDelta !== 0) node.scrollTop += offsetDelta;
-        pendingPrependAnchorRef.current = null;
-        return;
-      }
-    }
-
-    const heightDelta = node.scrollHeight - anchor.prevHeight;
-    if (heightDelta !== 0) node.scrollTop = anchor.prevTop + heightDelta;
-    pendingPrependAnchorRef.current = null;
-  }, [prependComplete]);
 
   // Scroll handler — skips during programmatic scrolls, always syncs isNearBottomRef
   const handleScroll = useCallback(() => {
