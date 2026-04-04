@@ -379,33 +379,11 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     if (!beforeCursor) return;
 
     startReachedCooldownRef.current = true;
-    const scroller = containerRef.current;
-    const prevTop = scroller?.scrollTop ?? 0;
-    const prevHeight = scroller?.scrollHeight ?? 0;
-    let anchorMessageId: string | null = null;
-    let anchorOffset: number | null = null;
-    if (scroller) {
-      const containerTop = scroller.getBoundingClientRect().top;
-      for (const msg of msgs) {
-        const el = document.getElementById(`message-${msg.id}`);
-        if (!el) continue;
-        const rect = el.getBoundingClientRect();
-        if (rect.bottom >= containerTop + 1) {
-          anchorMessageId = msg.id;
-          anchorOffset = rect.top - containerTop;
-          break;
-        }
-      }
-    }
-    const requestId = ++prependRequestIdRef.current;
 
-    pendingPrependAnchorRef.current = { requestId, prevTop, prevHeight, anchorMessageId, anchorOffset };
-
-    fetchMessagesRef.current(channelIdRef.current, 50, beforeCursor).then(() => {
-      setPrependComplete((prev) => prev + 1);
-    }).finally(() => {
-      setTimeout(() => { startReachedCooldownRef.current = false; }, 220);
-    });
+    fetchMessagesRef.current(channelIdRef.current, 50, beforeCursor)
+      .finally(() => {
+        setTimeout(() => { startReachedCooldownRef.current = false; }, 220);
+      });
   }, [hasMore, isLoading, isFetchingOlder, channelData?.oldestLoadedAt]);
 
   // Prepend anchor restoration — ONLY fires on actual prepend completion
