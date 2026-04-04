@@ -633,6 +633,7 @@ export const ServerSettingsPage = () => {
     updateMember,
   } = useServerStore();
   const { user } = useAuthStore();
+  const isMobile = useIsMobile();
 
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
