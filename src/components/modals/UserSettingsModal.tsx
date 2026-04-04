@@ -564,217 +564,201 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
   // Account Content
   const accountContent = (
-    <div className="space-y-6">
-      {/* Username Display */}
-      <div className="space-y-3">
-        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Username</Label>
-        <div className="flex items-center gap-3 p-4 bg-secondary/50 rounded-xl border border-border/50">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+    <div className="space-y-5">
+      {/* Username */}
+      <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
+        <Label className="text-sm font-medium">Username</Label>
+        <div className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-secondary/30">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
             <User className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <span className="font-medium">{user?.username}</span>
+            <span className="text-sm font-medium">{user?.username}</span>
             <p className="text-xs text-muted-foreground mt-0.5">Cannot be changed</p>
           </div>
         </div>
       </div>
 
-      {/* Secret Key Section */}
-      <div className="space-y-4">
-        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Secret Key</Label>
-
-        {/* Secret Key Security Notice */}
-        <div className="p-4 rounded-xl bg-secondary/50 border border-border/50 space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Shield className="w-5 h-5 text-primary" />
-            </div>
-            <div className="flex-1">
-              <h4 className="text-sm font-medium">Secret Key</h4>
-              <p className="text-xs text-muted-foreground">Your key was shown once during registration</p>
-            </div>
+      {/* Secret Key */}
+      <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
+        <Label className="text-sm font-medium">Secret Key</Label>
+        <div className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-secondary/30">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <Shield className="w-5 h-5 text-primary" />
           </div>
-
-          <div className="p-3 rounded-lg border border-border bg-secondary/30">
-            <p className="text-sm text-muted-foreground">
-              For security, Kloak does not store your secret key. It was displayed once when you created your account.
-            </p>
-            <p className="text-xs text-muted-foreground mt-2">
-              If you lose your secret key, you will not be able to recover your account. Make sure you have it saved in a secure location.
-            </p>
+          <div className="flex-1">
+            <p className="text-sm font-medium">Shown once during registration</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Kloak does not store your secret key</p>
           </div>
         </div>
-
+        <div className="p-3 rounded-lg border border-border/50 bg-secondary/30 space-y-2">
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            For security, your secret key was displayed once when you created your account.
+          </p>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            If you lose your secret key, you will not be able to recover your account. Make sure you have it saved in a secure location.
+          </p>
+        </div>
       </div>
 
       {/* App Updates - Only show in Tauri */}
       {isTauriApp && (
-        <div className="space-y-4">
-          <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">App Updates</Label>
-
-          <div className="p-4 rounded-xl bg-secondary/50 border border-border/50 space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Download className="w-5 h-5 text-primary" />
-              </div>
-              <div className="flex-1">
-                <h4 className="text-sm font-medium">Check for Updates</h4>
-                <p className="text-xs text-muted-foreground">
-                  {updateInfo.available ? (
-                    `Update available: v${updateInfo.version}`
-                  ) : updateInfo.error ? (
-                    <span className="text-destructive">
-                      {updateInfo.error}
-                      {updateInfo.error.includes("Unknown") && (
-                        <span className="block mt-1 text-[10px] opacity-75">
-                          Open DevTools (F12) Console for details
-                        </span>
-                      )}
-                    </span>
-                  ) : (
-                    "Check if a new version is available"
-                  )}
-                </p>
-              </div>
+        <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
+          <Label className="text-sm font-medium">App Updates</Label>
+          <div className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-secondary/30">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Download className="w-5 h-5 text-primary" />
             </div>
-
-            {updateInfo.available ? (
-              <div className="space-y-3">
-                {updateInfo.body && (
-                  <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
-                    <p className="text-xs text-muted-foreground whitespace-pre-wrap">{updateInfo.body}</p>
-                  </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium">Check for Updates</p>
+              <p className="text-xs text-muted-foreground">
+                {updateInfo.available ? (
+                  `Update available: v${updateInfo.version}`
+                ) : updateInfo.error ? (
+                  <span className="text-destructive">
+                    {updateInfo.error}
+                    {updateInfo.error.includes("Unknown") && (
+                      <span className="block mt-1 text-[10px] opacity-75">
+                        Open DevTools (F12) Console for details
+                      </span>
+                    )}
+                  </span>
+                ) : (
+                  "Check if a new version is available"
                 )}
-                {updateInfo.error && (
-                  <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-                    <div className="flex items-start gap-2">
-                      <AlertTriangle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-destructive font-medium">Installation Error</p>
-                        <p className="text-xs text-destructive/80 mt-1 break-words font-mono bg-destructive/5 p-2 rounded">
-                          {updateInfo.error}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground mt-2">
-                          Common issues: Missing .sig file, network error, or permission denied. Check GitHub releases
-                          for update files.
-                        </p>
-                      </div>
+              </p>
+            </div>
+          </div>
+
+          {updateInfo.available ? (
+            <div className="space-y-3">
+              {updateInfo.body && (
+                <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+                  <p className="text-xs text-muted-foreground whitespace-pre-wrap">{updateInfo.body}</p>
+                </div>
+              )}
+              {updateInfo.error && (
+                <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-destructive font-medium">Installation Error</p>
+                      <p className="text-xs text-destructive/80 mt-1 break-words font-mono bg-destructive/5 p-2 rounded">
+                        {updateInfo.error}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-2">
+                        Common issues: Missing .sig file, network error, or permission denied. Check GitHub releases
+                        for update files.
+                      </p>
                     </div>
                   </div>
-                )}
-                <Button onClick={installUpdate} disabled={isInstalling} className="w-full h-11 rounded-xl">
-                  {isInstalling ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      {updateInfo.error ? "Retry Installation" : "Installing Update..."}
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-4 h-4 mr-2" />
-                      Install Update
-                    </>
-                  )}
-                </Button>
-                {isInstalling && !updateInfo.error && (
-                  <div className="space-y-2">
-                    <p className="text-xs text-center text-muted-foreground">Downloading and installing update...</p>
-                    <p className="text-[10px] text-center text-muted-foreground/70">
-                      The app will restart automatically after installation completes.
-                    </p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <Button
-                variant="secondary"
-                onClick={checkUpdate}
-                disabled={isChecking}
-                className="w-full h-11 rounded-xl"
-              >
-                {isChecking ? (
+                </div>
+              )}
+              <Button onClick={installUpdate} disabled={isInstalling} className="w-full h-11 rounded-xl">
+                {isInstalling ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Checking...
+                    {updateInfo.error ? "Retry Installation" : "Installing Update..."}
                   </>
                 ) : (
                   <>
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Check for Updates
+                    <Download className="w-4 h-4 mr-2" />
+                    Install Update
                   </>
                 )}
               </Button>
-            )}
-          </div>
+              {isInstalling && !updateInfo.error && (
+                <div className="space-y-2">
+                  <p className="text-xs text-center text-muted-foreground">Downloading and installing update...</p>
+                  <p className="text-[10px] text-center text-muted-foreground/70">
+                    The app will restart automatically after installation completes.
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Button
+              variant="secondary"
+              onClick={checkUpdate}
+              disabled={isChecking}
+              className="w-full h-11 rounded-xl"
+            >
+              {isChecking ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Checking...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Check for Updates
+                </>
+              )}
+            </Button>
+          )}
         </div>
       )}
 
       {/* DevTools - Only show in Tauri */}
       {isTauriApp && (
-        <div className="space-y-4">
-          <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Developer Tools
-          </Label>
-
-          <div className="p-4 rounded-xl bg-secondary/50 border border-border/50 space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Monitor className="w-5 h-5 text-primary" />
-              </div>
-              <div className="flex-1">
-                <h4 className="text-sm font-medium">Open DevTools</h4>
-                <p className="text-xs text-muted-foreground">Open browser DevTools to view console logs and debug</p>
-              </div>
+        <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
+          <Label className="text-sm font-medium">Developer Tools</Label>
+          <div className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-secondary/30">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Monitor className="w-5 h-5 text-primary" />
             </div>
-            <div className="p-3 rounded-lg bg-muted/50 border border-border/50 space-y-2">
-              <p className="text-xs text-muted-foreground">
-                DevTools: Press <kbd className="text-[10px] bg-background px-1.5 py-0.5 rounded border">F12</kbd> or{" "}
-                <kbd className="text-[10px] bg-background px-1.5 py-0.5 rounded border">Ctrl+Shift+I</kbd> to open.
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={async () => {
-                  try {
-                    const { invoke } = await import("@tauri-apps/api/core");
-                    const appDataDir = await invoke<string>("get_app_data_dir");
-                    const logPath = `${appDataDir}\\updater-error.log`;
-                    alert(
-                      `App Data Directory:\n${appDataDir}\n\nUpdater Error Log:\n${logPath}\n\n(Only exists if updater failed to initialize)`,
-                    );
-                  } catch (error) {
-                    console.error("Failed to get app data dir:", error);
-                    alert("Failed to get app data directory. Check console.");
-                  }
-                }}
-                className="w-full h-8 text-xs"
-              >
-                <Monitor className="w-3 h-3 mr-1" />
-                Show App Data Directory Path
-              </Button>
+            <div className="flex-1">
+              <p className="text-sm font-medium">Open DevTools</p>
+              <p className="text-xs text-muted-foreground">Open browser DevTools to view console logs and debug</p>
             </div>
+          </div>
+          <div className="p-3 rounded-lg border border-border/50 bg-secondary/30 space-y-2">
+            <p className="text-xs text-muted-foreground">
+              DevTools: Press <kbd className="text-[10px] bg-background px-1.5 py-0.5 rounded border">F12</kbd> or{" "}
+              <kbd className="text-[10px] bg-background px-1.5 py-0.5 rounded border">Ctrl+Shift+I</kbd> to open.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                try {
+                  const { invoke } = await import("@tauri-apps/api/core");
+                  const appDataDir = await invoke<string>("get_app_data_dir");
+                  const logPath = `${appDataDir}\\updater-error.log`;
+                  alert(
+                    `App Data Directory:\n${appDataDir}\n\nUpdater Error Log:\n${logPath}\n\n(Only exists if updater failed to initialize)`,
+                  );
+                } catch (error) {
+                  console.error("Failed to get app data dir:", error);
+                  alert("Failed to get app data directory. Check console.");
+                }
+              }}
+              className="w-full h-8 text-xs"
+            >
+              <Monitor className="w-3 h-3 mr-1" />
+              Show App Data Directory Path
+            </Button>
           </div>
         </div>
       )}
 
       {/* Danger Zone */}
-      <div className="pt-6 mt-6 border-t border-destructive/20">
-        <div className="p-4 rounded-xl bg-destructive/5 border border-destructive/20 space-y-4">
-          <div>
-            <h4 className="text-sm font-medium text-destructive">Danger Zone</h4>
-            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-              Actions here are irreversible. Please make sure you have saved your secret key before logging out.
-            </p>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Button variant="secondary" onClick={handleLogoutClick} className="flex-1 h-11 rounded-xl">
-              <LogOut className="w-4 h-4 mr-2" />
-              Log Out
-            </Button>
-            <Button variant="error" onClick={handleDeletePreview} className="flex-1 h-11 rounded-xl">
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete Account
-            </Button>
-          </div>
+      <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 space-y-3">
+        <div>
+          <Label className="text-sm font-medium text-destructive">Danger Zone</Label>
+          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+            Actions here are irreversible. Please make sure you have saved your secret key before logging out.
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button variant="secondary" onClick={handleLogoutClick} className="flex-1 h-11 rounded-xl">
+            <LogOut className="w-4 h-4 mr-2" />
+            Log Out
+          </Button>
+          <Button variant="error" onClick={handleDeletePreview} className="flex-1 h-11 rounded-xl">
+            <Trash2 className="w-4 h-4 mr-2" />
+            Delete Account
+          </Button>
         </div>
       </div>
     </div>
