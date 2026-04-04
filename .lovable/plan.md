@@ -1,37 +1,39 @@
 
 
-# Fix: Store CDN URLs instead of kloak-attachment:// for attachment file_url
+## Mobile Channel Context Menu as Bottom Drawer
 
-## Problem
+### Problem
+On mobile, channel context menus appear as standard context menus (long-press popups), which are awkward to use on touch devices. They should appear as bottom drawers, matching the existing mobile drawer pattern used elsewhere (e.g., message actions).
 
-Three upload sites construct `kloak-attachment://${result.path}` instead of using the CDN URL returned by `secureUpload` (`result.publicUrl`). This affects both the `file_url` stored in `message_attachments`/`dm_attachments` tables AND the URL embedded in message content.
+### Approach
+On mobile, replace all three context menus in `ChannelSidebar.tsx` with long-press-triggered bottom drawers. On desktop, keep the existing context menu behavior unchanged.
 
-## Changes
+### Changes
 
-### 1. `src/components/chat/MessageInput.tsx` (line 585)
+**1. Create `ChannelContextDrawer` component** (`src/components/layout/ChannelContextDrawer.tsx`)
+- A new bottom Drawer component that renders the same menu items as `ChannelContextMenu` but in a mobile-friendly drawer format
+- Uses the existing `Drawer` component from `src/components/ui/drawer.tsx`
+- Accepts an `open` / `onOpenChange` prop pair, plus the same props as `ChannelContextMenu` (channel, isAdmin, categories, onEdit, onDelete, onCopyLink, onMarkAsRead)
+- Menu items styled with the standardized `hover:bg-secondary/40 active:bg-secondary/60` pattern (matching mobile message actions drawer)
+- Groups items with visual separators, each item having an icon + label row
 
-Replace `kloak-attachment://${res.path}` with `res.publicUrl`.
+**2. Update `SortableChannel` in `ChannelSidebar.tsx`**
+- Add state: `const [drawerOpen, setDrawerOpen] = useState(false)`
+- On mobile (non-sort, non-drag): replace `<ContextMenu>` wrapper with a long-press handler on the button that opens the drawer, plus render `<ChannelContextDrawer>` alongside
+- On desktop: keep existing `<ContextMenu>` + `<ChannelContextMenu>` unchanged
+- Long-press detection: use `onContextMenu` (which fires on long-press on mobile) to `preventDefault` and open the drawer
 
-### 2. `src/hooks/useAttachmentQueue.ts` (line 156)
+**3. Update `SortableCategory` in `ChannelSidebar.tsx`**
+- Same pattern: on mobile, the category header long-press opens a small drawer with "Edit Category" and "Delete Category" options (admin only)
+- On desktop: keep existing context menu
 
-Replace `kloak-attachment://${result.path}` with `result.publicUrl`.
+**4. Update background context menu (line ~1279)**
+- On mobile: replace with a long-press drawer containing "Create Category", "Create Channel", "Sort Channels" options
+- On desktop: keep existing context menu
 
-### 3. `src/components/forum/ForumChannelArea.tsx` (line 641)
-
-Replace `kloak-attachment://${result.path}` with `result.publicUrl`.
-
-### 4. `src/components/chat/MessageItem.tsx` (line 373-374) — content stripping
-
-CDN attachment URLs will now appear in message content. Add a regex to strip `https://kloakcdn.b-cdn.net/attachments/` URLs alongside the existing Supabase and kloak-attachment patterns. The existing `att.file_url` loop (line 367-371) already handles exact matches, but a fallback regex ensures no CDN URLs leak into displayed content.
-
-## Files Modified
-
-1. `src/components/chat/MessageInput.tsx` — 1 line
-2. `src/hooks/useAttachmentQueue.ts` — 1 line
-3. `src/components/forum/ForumChannelArea.tsx` — 1 line
-4. `src/components/chat/MessageItem.tsx` — add CDN URL stripping regex
-
-## Not Changed
-
-`bunny-upload.ts`, `signedUrl.ts`, Edge Functions (per instructions). The `useSignedUrl` hook already passes non-attachment https URLs through as-is (line 88-91), so CDN URLs will work without modification.
+### Technical Details
+- The `onContextMenu` event fires on mobile long-press, so we intercept it with `e.preventDefault()` and `setDrawerOpen(true)` on mobile
+- The Drawer uses `direction="bottom"` (default) with the standard drag handle
+- Channel name displayed in the drawer header for context
+- All drawer items close the drawer after action via `onOpenChange(false)` before executing the callback
 
