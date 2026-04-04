@@ -318,7 +318,7 @@ const SortableChannel = ({
           "hover:bg-white/[0.04]",
           isActive && !isSortingMode && "bg-white/[0.06] text-foreground",
           !isActive && "text-muted-foreground hover:text-foreground",
-          isUnread && !isActive && "text-foreground font-semibold",
+          isUnread && !isActive && "text-foreground font-[500]",
           isDragging && "opacity-50 shadow-lg ring-2 ring-primary/30 bg-secondary",
           isSortingMode && "cursor-default",
         )}
