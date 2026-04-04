@@ -1881,7 +1881,7 @@ export const MessageItem = memo(function MessageItem({
               {/* Reply */}
               {!isBlockedUser && (
                 <button
-                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-accent active:bg-accent text-left transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
                   onClick={() => {
                     handleReply();
                     setShowMobileActions(false);
