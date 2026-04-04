@@ -395,6 +395,7 @@ const SortableChannel = ({
   const handleMobileContextMenu = (e: React.MouseEvent | React.TouchEvent) => {
     if (isMobile && !isSortingMode && !isDraggingAny) {
       e.preventDefault();
+      e.stopPropagation();
       setDrawerOpen(true);
     }
   };
@@ -603,6 +604,7 @@ const SortableCategory = ({
   const handleCatMobileContext = (e: React.MouseEvent | React.TouchEvent) => {
     if (isMobile && isAdmin && !isSortingMode && !isDraggingAny) {
       e.preventDefault();
+      e.stopPropagation();
       setCatDrawerOpen(true);
     }
   };

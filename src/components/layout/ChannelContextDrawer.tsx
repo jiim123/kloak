@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Edit2,
   Trash2,
@@ -19,6 +20,7 @@ import {
   Clock,
   Eye,
   EyeOff,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useMemo } from "react";
@@ -28,6 +30,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { cn } from "@/lib/utils";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useUIStore } from "@/stores/uiStore";
@@ -51,26 +54,68 @@ const DrawerItem = ({
   label,
   onClick,
   destructive,
+  suffix,
 }: {
   icon: React.ElementType;
   label: string;
   onClick: () => void;
   destructive?: boolean;
+  suffix?: React.ReactNode;
 }) => (
   <button
     onClick={onClick}
-    className={`flex items-center gap-3 w-full px-4 py-3 text-sm font-medium rounded-lg transition-colors
-      ${destructive
+    className={cn(
+      "flex items-center gap-3 w-full px-4 py-3 text-sm font-medium rounded-lg transition-colors",
+      destructive
         ? "text-destructive hover:bg-destructive/10 active:bg-destructive/20"
-        : "text-foreground hover:bg-secondary/40 active:bg-secondary/60"
-      }`}
+        : "text-foreground hover:bg-secondary/40 active:bg-secondary/60",
+    )}
   >
     <Icon className="w-4 h-4 flex-shrink-0" />
-    <span>{label}</span>
+    <span className="flex-1 text-left">{label}</span>
+    {suffix}
   </button>
 );
 
 const DrawerSeparator = () => <div className="h-px bg-border/50 my-1" />;
+
+/** Collapsible submenu group */
+const DrawerSubmenu = ({
+  icon: Icon,
+  label,
+  children,
+  defaultOpen = false,
+}: {
+  icon: React.ElementType;
+  label: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <div>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium rounded-lg text-foreground hover:bg-secondary/40 active:bg-secondary/60 transition-colors"
+      >
+        <Icon className="w-4 h-4 flex-shrink-0" />
+        <span className="flex-1 text-left">{label}</span>
+        <ChevronRight
+          className={cn(
+            "w-4 h-4 text-muted-foreground transition-transform duration-150",
+            isOpen && "rotate-90",
+          )}
+        />
+      </button>
+      {isOpen && (
+        <div className="ml-4 border-l border-border/30 pl-2 space-y-0.5 animate-fade-in">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const ChannelContextDrawer = ({
   open,
@@ -199,7 +244,7 @@ export const ChannelContextDrawer = ({
         <div className="overflow-y-auto px-2 pb-6 space-y-0.5">
           {isAdmin ? (
             <>
-              {/* Admin menu */}
+              {/* Quick actions */}
               <DrawerItem
                 icon={Settings}
                 label="Channel Settings"
@@ -223,35 +268,37 @@ export const ChannelContextDrawer = ({
                 onClick={() => act(() => toast.info("Archive Channel — coming soon!"))}
               />
 
-              {/* Move to category */}
+              {/* Move to Category submenu */}
               {(otherCategories.length > 0 || channel.category_id) && (
                 <>
                   <DrawerSeparator />
-                  <div className="px-4 py-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Move to Category
-                  </div>
-                  {channel.category_id && (
-                    <DrawerItem
-                      icon={Hash}
-                      label="Uncategorized"
-                      onClick={() => handleMoveToCategory(null)}
-                    />
-                  )}
-                  {otherCategories.map((cat) => (
-                    <DrawerItem
-                      key={cat.id}
-                      icon={FolderInput}
-                      label={cat.name}
-                      onClick={() => handleMoveToCategory(cat.id)}
-                    />
-                  ))}
+                  <DrawerSubmenu icon={FolderInput} label="Move to Category">
+                    {channel.category_id && (
+                      <DrawerItem
+                        icon={Hash}
+                        label="Uncategorized"
+                        onClick={() => handleMoveToCategory(null)}
+                      />
+                    )}
+                    {otherCategories.map((cat) => (
+                      <DrawerItem
+                        key={cat.id}
+                        icon={FolderInput}
+                        label={cat.name}
+                        onClick={() => handleMoveToCategory(cat.id)}
+                      />
+                    ))}
+                  </DrawerSubmenu>
                 </>
               )}
 
               <DrawerSeparator />
 
-              <DrawerItem icon={Link} label="Copy Channel Link" onClick={() => act(onCopyLink)} />
-              <DrawerItem icon={Copy} label="Copy Channel ID" onClick={handleCopyChannelId} />
+              {/* Sharing submenu */}
+              <DrawerSubmenu icon={Link} label="Sharing">
+                <DrawerItem icon={Link} label="Copy Channel Link" onClick={() => act(onCopyLink)} />
+                <DrawerItem icon={Copy} label="Copy Channel ID" onClick={handleCopyChannelId} />
+              </DrawerSubmenu>
 
               <DrawerSeparator />
 
@@ -259,7 +306,7 @@ export const ChannelContextDrawer = ({
             </>
           ) : (
             <>
-              {/* Member menu */}
+              {/* Quick actions */}
               {onMarkAsRead && (
                 <DrawerItem icon={Check} label="Mark as Read" onClick={() => act(onMarkAsRead)} />
               )}
@@ -281,41 +328,41 @@ export const ChannelContextDrawer = ({
 
               <DrawerSeparator />
 
-              {/* Notification levels */}
-              <div className="px-4 py-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Notifications
-              </div>
-              <DrawerItem
-                icon={BellRing}
-                label={`All Messages${notifLevel === "all" ? " ✓" : ""}`}
-                onClick={() => handleSetNotifLevel("all")}
-              />
-              <DrawerItem
-                icon={Bell}
-                label={`@Mentions Only${notifLevel === "mentions" ? " ✓" : ""}`}
-                onClick={() => handleSetNotifLevel("mentions")}
-              />
-              <DrawerItem
-                icon={BellOff}
-                label={`Nothing${notifLevel === "nothing" ? " ✓" : ""}`}
-                onClick={() => handleSetNotifLevel("nothing")}
-              />
+              {/* Notifications submenu */}
+              <DrawerSubmenu icon={Bell} label="Notifications">
+                <DrawerItem
+                  icon={BellRing}
+                  label="All Messages"
+                  onClick={() => handleSetNotifLevel("all")}
+                  suffix={notifLevel === "all" ? <Check className="w-3 h-3 text-muted-foreground" /> : undefined}
+                />
+                <DrawerItem
+                  icon={Bell}
+                  label="@Mentions Only"
+                  onClick={() => handleSetNotifLevel("mentions")}
+                  suffix={notifLevel === "mentions" ? <Check className="w-3 h-3 text-muted-foreground" /> : undefined}
+                />
+                <DrawerItem
+                  icon={BellOff}
+                  label="Nothing"
+                  onClick={() => handleSetNotifLevel("nothing")}
+                  suffix={notifLevel === "nothing" ? <Check className="w-3 h-3 text-muted-foreground" /> : undefined}
+                />
+                <DrawerSeparator />
+                <DrawerItem icon={Clock} label="15 Minutes" onClick={() => handleMuteFor(15)} />
+                <DrawerItem icon={Clock} label="1 Hour" onClick={() => handleMuteFor(60)} />
+                <DrawerItem icon={Clock} label="8 Hours" onClick={() => handleMuteFor(480)} />
+                <DrawerItem icon={Clock} label="24 Hours" onClick={() => handleMuteFor(1440)} />
+                <DrawerItem icon={VolumeX} label="Until I turn it back on" onClick={() => handleMuteFor(null)} />
+              </DrawerSubmenu>
 
               <DrawerSeparator />
 
-              <div className="px-4 py-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Mute for Duration
-              </div>
-              <DrawerItem icon={Clock} label="15 Minutes" onClick={() => handleMuteFor(15)} />
-              <DrawerItem icon={Clock} label="1 Hour" onClick={() => handleMuteFor(60)} />
-              <DrawerItem icon={Clock} label="8 Hours" onClick={() => handleMuteFor(480)} />
-              <DrawerItem icon={Clock} label="24 Hours" onClick={() => handleMuteFor(1440)} />
-              <DrawerItem icon={VolumeX} label="Until I turn it back on" onClick={() => handleMuteFor(null)} />
-
-              <DrawerSeparator />
-
-              <DrawerItem icon={Link} label="Copy Channel Link" onClick={() => act(onCopyLink)} />
-              <DrawerItem icon={Copy} label="Copy Channel ID" onClick={handleCopyChannelId} />
+              {/* Sharing submenu */}
+              <DrawerSubmenu icon={Link} label="Sharing">
+                <DrawerItem icon={Link} label="Copy Channel Link" onClick={() => act(onCopyLink)} />
+                <DrawerItem icon={Copy} label="Copy Channel ID" onClick={handleCopyChannelId} />
+              </DrawerSubmenu>
             </>
           )}
         </div>
