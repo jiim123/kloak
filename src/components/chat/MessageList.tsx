@@ -171,17 +171,6 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   const prevChannelIdRef = useRef<string>(channelId);
   const didInitialBottomScrollRef = useRef(false);
   const lastScrollHeightRef = useRef(0);
-  const pendingPrependAnchorRef = useRef<{
-    requestId: number;
-    prevTop: number;
-    prevHeight: number;
-    anchorMessageId: string | null;
-    anchorOffset: number | null;
-  } | null>(null);
-  const prependRequestIdRef = useRef(0);
-  const [prependComplete, setPrependComplete] = useState(0);
-  // Guard: prevents handleLoadOlder from firing during programmatic scroll-to-bottom
-  const isProgrammaticScrollRef = useRef(false);
 
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
@@ -310,26 +299,13 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
         const added = Math.max(1, currentLength - prevLength);
         setNewMessageCount((prev) => prev + added);
       } else {
-        // Guard: mark as programmatic so handleScroll won't corrupt isNearBottomRef
-        isProgrammaticScrollRef.current = true;
-        const nudge = () => {
-          const n = containerRef.current;
-          if (n) {
-            n.scrollTop = n.scrollHeight;
-            isNearBottomRef.current = true;
-            lastScrollHeightRef.current = n.scrollHeight;
-          }
-        };
-        // Immediate (before paint via useLayoutEffect)
-        nudge();
-        // Retry at 50ms, 150ms, 300ms for async content (images, embeds)
-        setTimeout(nudge, 50);
-        setTimeout(nudge, 150);
-        setTimeout(() => {
-          nudge();
-          // Release guard after final nudge
-          isProgrammaticScrollRef.current = false;
-        }, 300);
+        // Single immediate scroll — ResizeObserver handles subsequent size changes
+        const n = containerRef.current;
+        if (n) {
+          n.scrollTop = n.scrollHeight;
+          isNearBottomRef.current = true;
+          lastScrollHeightRef.current = n.scrollHeight;
+        }
       }
     }
 
@@ -352,18 +328,13 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     const node = containerRef.current;
     if (!node) return;
 
-    isProgrammaticScrollRef.current = true;
     node.scrollTop = node.scrollHeight;
-
-    setTimeout(() => {
-      if (node) node.scrollTop = node.scrollHeight;
-      isProgrammaticScrollRef.current = false;
-    }, 100);
+    lastScrollHeightRef.current = node.scrollHeight;
+    isNearBottomRef.current = true;
 
     setShowJumpToPresent(false);
     showJumpToPresentRef.current = false;
     setNewMessageCount(0);
-    isNearBottomRef.current = true;
 
     const allMsgs = messagesRef.current;
     if (allMsgs.length > 0) {
@@ -408,64 +379,15 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     if (!beforeCursor) return;
 
     startReachedCooldownRef.current = true;
-    const scroller = containerRef.current;
-    const prevTop = scroller?.scrollTop ?? 0;
-    const prevHeight = scroller?.scrollHeight ?? 0;
-    let anchorMessageId: string | null = null;
-    let anchorOffset: number | null = null;
-    if (scroller) {
-      const containerTop = scroller.getBoundingClientRect().top;
-      for (const msg of msgs) {
-        const el = document.getElementById(`message-${msg.id}`);
-        if (!el) continue;
-        const rect = el.getBoundingClientRect();
-        if (rect.bottom >= containerTop + 1) {
-          anchorMessageId = msg.id;
-          anchorOffset = rect.top - containerTop;
-          break;
-        }
-      }
-    }
-    const requestId = ++prependRequestIdRef.current;
 
-    pendingPrependAnchorRef.current = { requestId, prevTop, prevHeight, anchorMessageId, anchorOffset };
-
-    fetchMessagesRef.current(channelIdRef.current, 50, beforeCursor).then(() => {
-      setPrependComplete((prev) => prev + 1);
-    }).finally(() => {
-      setTimeout(() => { startReachedCooldownRef.current = false; }, 220);
-    });
+    fetchMessagesRef.current(channelIdRef.current, 50, beforeCursor)
+      .finally(() => {
+        setTimeout(() => { startReachedCooldownRef.current = false; }, 220);
+      });
   }, [hasMore, isLoading, isFetchingOlder, channelData?.oldestLoadedAt]);
 
-  // Prepend anchor restoration — ONLY fires on actual prepend completion
-  useLayoutEffect(() => {
-    const anchor = pendingPrependAnchorRef.current;
-    if (!anchor) return;
-    const node = containerRef.current;
-    if (!node) return;
 
-    if (anchor.anchorMessageId && anchor.anchorOffset !== null) {
-      const anchorEl = document.getElementById(`message-${anchor.anchorMessageId}`);
-      if (anchorEl) {
-        const containerTop = node.getBoundingClientRect().top;
-        const nextOffset = anchorEl.getBoundingClientRect().top - containerTop;
-        const offsetDelta = nextOffset - anchor.anchorOffset;
-        if (offsetDelta !== 0) node.scrollTop += offsetDelta;
-        pendingPrependAnchorRef.current = null;
-        return;
-      }
-    }
-
-    const heightDelta = node.scrollHeight - anchor.prevHeight;
-    if (heightDelta !== 0) node.scrollTop = anchor.prevTop + heightDelta;
-    pendingPrependAnchorRef.current = null;
-  }, [prependComplete]);
-
-  // Scroll handler — skips during programmatic scrolls, always syncs isNearBottomRef
   const handleScroll = useCallback(() => {
-    // Fix B: Skip entirely during programmatic scrolls to prevent ref corruption
-    if (isProgrammaticScrollRef.current) return;
-
     const node = containerRef.current;
     if (!node) return;
 
@@ -495,31 +417,23 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }
   }, [handleLoadOlder, handleAtBottomStateChange]);
 
-  // Initial bottom scroll — multiple retries for reliability
+  // Initial bottom scroll
   useEffect(() => {
     if (isLoading || msgCount === 0 || didInitialBottomScrollRef.current) return;
     didInitialBottomScrollRef.current = true;
-    isProgrammaticScrollRef.current = true;
 
     const scrollDown = () => {
       const node = containerRef.current;
       if (node) {
         node.scrollTop = node.scrollHeight;
         lastScrollHeightRef.current = node.scrollHeight;
+        isNearBottomRef.current = true;
       }
     };
 
-    // Immediate attempt
     scrollDown();
-    // Retries to catch late-rendering content
+    // Single retry after a frame for late-rendering content
     requestAnimationFrame(scrollDown);
-    setTimeout(scrollDown, 50);
-    setTimeout(scrollDown, 150);
-    setTimeout(() => {
-      scrollDown();
-      isNearBottomRef.current = true;
-      isProgrammaticScrollRef.current = false;
-    }, 300);
   }, [isLoading, msgCount]);
 
   // ResizeObserver + MutationObserver — dual safety net for auto-scroll
@@ -685,6 +599,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
           ref={containerRef}
           className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative bg-transparent"
           onScroll={handleScroll}
+          style={{ overflowAnchor: 'auto' }}
         >
           <div style={{ overflowAnchor: "none" }}>{headerContent}</div>
           {isFetchingOlder && (

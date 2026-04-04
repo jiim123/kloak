@@ -325,7 +325,7 @@ export const parseTextContent = (
     const alignClass = align === "center" ? "mx-auto block" : align === "right" ? "ml-auto block" : "mr-auto block";
     if (isTrustedInlineImageUrl(url)) {
       const widthStyle = width !== "auto" ? `width="${escapeHtml(width)}"` : "";
-      return `<img src="${escapeHtml(url)}" alt="Image" ${widthStyle} class="${alignClass} max-w-full rounded-lg my-2 cursor-pointer hover:opacity-90" loading="lazy" data-image-url="${escapeHtml(url)}" data-align="${align}" />`;
+      return `<img src="${escapeHtml(url)}" alt="Image" ${widthStyle} class="${alignClass} max-w-full rounded-lg my-2 cursor-pointer hover:opacity-90" loading="lazy" data-image-url="${escapeHtml(url)}" data-align="${align}" style="min-height:40px;max-height:350px;background:rgb(24 24 24 / 40%)" onload="this.style.backgroundColor='transparent'" />`;
     }
     return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="${alignClass} message-link">View image</a>`;
   });
@@ -340,7 +340,7 @@ export const parseTextContent = (
     const audioExts = ["mp3", "ogg", "wav", "flac", "m4a"];
 
     if (imageExts.includes(ext)) {
-      return `<img data-attachment-path="${escapeHtml(path)}" alt="Image" class="block mr-auto max-w-full sm:max-w-[400px] max-h-[60vh] sm:max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90 object-contain" loading="lazy" style="visibility:hidden" />`;
+      return `<img data-attachment-path="${escapeHtml(path)}" alt="Image" class="block mr-auto max-w-full sm:max-w-[400px] max-h-[60vh] sm:max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90 object-contain" loading="lazy" style="visibility:hidden;min-height:40px;max-height:350px;background:rgb(24 24 24 / 40%)" onload="this.style.backgroundColor='transparent'" />`;
     } else if (videoExts.includes(ext)) {
       return `<video data-attachment-path="${escapeHtml(path)}" controls preload="metadata" class="block max-w-full w-full sm:max-w-[480px] rounded-lg my-2 aspect-video object-contain bg-black/10">Your browser does not support video.</video>`;
     } else if (audioExts.includes(ext)) {
@@ -359,7 +359,7 @@ export const parseTextContent = (
     }
     if (isImageUrl(url)) {
       if (isTrustedInlineImageUrl(url)) {
-        return `<img src="${escapeHtml(url)}" alt="Image" class="block mr-auto max-w-full sm:max-w-[400px] max-h-[60vh] sm:max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90 object-contain" loading="lazy" data-image-url="${escapeHtml(url)}" />`;
+        return `<img src="${escapeHtml(url)}" alt="Image" class="block mr-auto max-w-full sm:max-w-[400px] max-h-[60vh] sm:max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90 object-contain" loading="lazy" data-image-url="${escapeHtml(url)}" style="min-height:40px;max-height:350px;background:rgb(24 24 24 / 40%)" onload="this.style.backgroundColor='transparent'" />`;
       }
       return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="message-link">${escapeHtml(url)}</a>`;
     }

@@ -186,15 +186,19 @@ export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
     const lightboxUrl = preview.image || url;
     return (
       <a href={url} target="_blank" rel="noopener noreferrer" className="block mt-2">
-        <img
-          src={lightboxUrl}
-          alt="Linked image"
-          className="max-w-full sm:max-w-[400px] max-h-[300px] rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-          data-image-url={lightboxUrl}
-          onError={(e) => {
-            (e.target as HTMLImageElement).style.display = "none";
-          }}
-        />
+        <div className="relative overflow-hidden rounded-lg" style={{ minHeight: '80px' }}>
+          <img
+            src={lightboxUrl}
+            alt="Linked image"
+            className="max-w-full sm:max-w-[400px] max-h-[300px] rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+            style={{ backgroundColor: 'rgb(24 24 24 / 40%)' }}
+            data-image-url={lightboxUrl}
+            onLoad={(e) => { (e.target as HTMLImageElement).style.backgroundColor = 'transparent'; }}
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
+          />
+        </div>
       </a>
     );
   }
@@ -203,15 +207,13 @@ export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
   if (preview.type === "youtube" && preview.videoId) {
     if (showEmbed) {
       return (
-        <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[480px]">
+        <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[480px]" style={{ aspectRatio: '16 / 9' }}>
           <iframe
-            width="480"
-            height="270"
             src={`https://www.youtube.com/embed/${preview.videoId}?autoplay=1`}
             title={preview.title || "YouTube video"}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
-            className="w-full aspect-video"
+            className="w-full h-full"
           />
         </div>
       );
@@ -257,13 +259,12 @@ export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
   if (preview.type === "vimeo" && preview.vimeoId) {
     if (showEmbed) {
       return (
-        <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[480px]">
+        <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[480px]" style={{ aspectRatio: '16 / 9' }}>
           <iframe
             src={`https://player.vimeo.com/video/${preview.vimeoId}?autoplay=1`}
-            width="480" height="270"
             allow="autoplay; fullscreen; picture-in-picture"
             allowFullScreen
-            className="w-full aspect-video"
+            className="w-full h-full"
             title={preview.title || "Vimeo video"}
           />
         </div>
@@ -751,11 +752,13 @@ export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
       className="mt-2 block rounded-lg border border-border bg-secondary/50 overflow-hidden max-w-full sm:max-w-[400px] hover:bg-secondary/70 transition-colors group"
     >
       {preview.image && (
-        <div className="relative">
+        <div className="relative overflow-hidden" style={{ minHeight: '80px' }}>
           <img
             src={preview.image}
             alt={preview.title || ""}
             className="w-full h-40 object-cover"
+            style={{ backgroundColor: 'rgb(24 24 24 / 40%)' }}
+            onLoad={(e) => { (e.target as HTMLImageElement).style.backgroundColor = 'transparent'; }}
             onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
           />
         </div>
