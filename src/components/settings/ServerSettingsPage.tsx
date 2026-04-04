@@ -2493,6 +2493,7 @@ export const ServerSettingsPage = () => {
                             setColorType("solid");
                             setGradientColors(["#5865F2", "#7289DA"]);
                             setGradientAngle(135);
+                            if (isMobile) setMobileRoleCreateView(true);
                           }}
                           className="h-8 w-8 p-0"
                           title="Create New Role"
