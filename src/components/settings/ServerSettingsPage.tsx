@@ -2552,6 +2552,7 @@ export const ServerSettingsPage = () => {
                               setColorType("solid");
                               setGradientColors(["#5865F2", "#7289DA"]);
                               setGradientAngle(135);
+                              setMobileRoleCreateView(false);
                             }}
                             className="flex items-center gap-1 -ml-2 mb-2"
                           >
