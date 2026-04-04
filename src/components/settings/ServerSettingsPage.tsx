@@ -2475,7 +2475,7 @@ export const ServerSettingsPage = () => {
               {canManageRoles ? (
                 <div className="flex h-full">
                   {/* Left Side - Roles List (hidden on mobile when editing) */}
-                  {(!isMobile || (!selectedRole && editingRole === null)) && (
+                  {(!isMobile || (!selectedRole && !mobileRoleCreateView)) && (
                   <div className={cn("border-r border-border flex flex-col", isMobile ? "w-full" : "w-64")}>
                     <div className="p-4 border-b border-border">
                       <div className="flex items-center justify-between mb-2">
