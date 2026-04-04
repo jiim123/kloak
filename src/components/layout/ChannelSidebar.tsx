@@ -1350,14 +1350,20 @@ export const ChannelSidebar = () => {
           onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
         >
-          <ContextMenu>
-            <ContextMenuTrigger asChild disabled={isSortingMode}>
+          {isMobile ? (
+            <>
               <div
                 className={cn(
-                "flex-1 overflow-y-auto scrollbar-overlay px-2 py-2 scrollbar-hide",
+                  "flex-1 overflow-y-auto scrollbar-overlay px-2 py-2 scrollbar-hide",
                   isSortingMode && "bg-white/[0.03] border-2 border-dashed border-white/10 rounded-xl mx-1 my-1",
                 )}
                 style={{ touchAction: "pan-y" }}
+                onContextMenu={(e) => {
+                  if (isAdmin && !isSortingMode) {
+                    e.preventDefault();
+                    setBgDrawerOpen(true);
+                  }
+                }}
               >
                 {/* Default sections */}
                 <div className="mb-2 space-y-0.5">
@@ -1370,7 +1376,6 @@ export const ChannelSidebar = () => {
                       !isOverviewActive && "text-muted-foreground hover:text-foreground",
                     )}
                   >
-                    {/* Active indicator */}
                     <div
                       className={cn(
                         "absolute left-1 top-1.5 bottom-1.5 w-0.5 bg-white rounded-full transition-opacity duration-150",
@@ -1387,20 +1392,15 @@ export const ChannelSidebar = () => {
                     </div>
                     <span className="truncate flex-1 text-left">Overview</span>
                   </button>
-
                 </div>
 
-                {/* Uncategorized channels */}
                 <UncategorizedDropZone
                   isDragOver={overCategoryId === null && activeType === "channel"}
                   hasChannels={uncategorizedChannels.length > 0}
                 >
                   {uncategorizedChannels.length > 0 && (
                     <div className="mb-3 space-y-0.5">
-                      <SortableContext
-                        items={uncategorizedChannels.map((c) => c.id)}
-                        strategy={verticalListSortingStrategy}
-                      >
+                      <SortableContext items={uncategorizedChannels.map((c) => c.id)} strategy={verticalListSortingStrategy}>
                         {uncategorizedChannels.map((channel) => {
                           const { unreadCount, mentionCount } = getSidebarChannelUnread(channel.id);
                           return (
@@ -1428,7 +1428,6 @@ export const ChannelSidebar = () => {
                   )}
                 </UncategorizedDropZone>
 
-                {/* Categories */}
                 <SortableContext items={sortedCategories.map((c) => c.id)} strategy={verticalListSortingStrategy}>
                   {sortedCategories.map((category) => (
                     <SortableCategory
@@ -1459,7 +1458,6 @@ export const ChannelSidebar = () => {
                   ))}
                 </SortableContext>
 
-                {/* Hidden Channels section */}
                 {hiddenChannels.length > 0 && (
                   <div className="mt-4 border-t border-border/30 pt-2">
                     <button
@@ -1501,7 +1499,204 @@ export const ChannelSidebar = () => {
                   </div>
                 )}
 
-                {/* Empty state */}
+                {(channels || []).length === 0 && (categories || []).length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-12 text-center animate-fade-in">
+                    <div className="w-12 h-12 rounded-xl bg-secondary/50 flex items-center justify-center mb-3">
+                      <Hash className="w-6 h-6 text-muted-foreground/50" />
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-2">No channels yet</p>
+                    {isAdmin && (
+                      <Button
+                        variant="link"
+                        size="sm"
+                        onClick={() => openModal("create-channel", { serverId: currentServer.id })}
+                      >
+                        Create a channel
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Mobile background drawer */}
+              {isAdmin && (
+                <Drawer open={bgDrawerOpen} onOpenChange={setBgDrawerOpen}>
+                  <DrawerContent>
+                    <DrawerHeader className="pb-2">
+                      <DrawerTitle className="text-base font-semibold">Channel Options</DrawerTitle>
+                    </DrawerHeader>
+                    <div className="px-2 pb-6 space-y-0.5">
+                      <button
+                        onClick={() => { setBgDrawerOpen(false); openModal("create-channel", { serverId: currentServer.id, isCategory: true }); }}
+                        className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium rounded-lg text-foreground hover:bg-secondary/40 active:bg-secondary/60 transition-colors"
+                      >
+                        <FolderPlus className="w-4 h-4" />
+                        Create Category
+                      </button>
+                      <button
+                        onClick={() => { setBgDrawerOpen(false); openModal("create-channel", { serverId: currentServer.id }); }}
+                        className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium rounded-lg text-foreground hover:bg-secondary/40 active:bg-secondary/60 transition-colors"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Create Channel
+                      </button>
+                      <div className="h-px bg-border/50 my-1" />
+                      <button
+                        onClick={() => { setBgDrawerOpen(false); setIsSortingMode(true); }}
+                        className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium rounded-lg text-foreground hover:bg-secondary/40 active:bg-secondary/60 transition-colors"
+                      >
+                        <ArrowUpDown className="w-4 h-4" />
+                        Sort Channels
+                      </button>
+                    </div>
+                  </DrawerContent>
+                </Drawer>
+              )}
+            </>
+          ) : (
+          <ContextMenu>
+            <ContextMenuTrigger asChild disabled={isSortingMode}>
+              <div
+                className={cn(
+                "flex-1 overflow-y-auto scrollbar-overlay px-2 py-2 scrollbar-hide",
+                  isSortingMode && "bg-white/[0.03] border-2 border-dashed border-white/10 rounded-xl mx-1 my-1",
+                )}
+                style={{ touchAction: "pan-y" }}
+              >
+                {/* Default sections */}
+                <div className="mb-2 space-y-0.5">
+                  <button
+                    onClick={handleSelectOverview}
+                    className={cn(
+                      "group relative w-full flex items-center gap-2 px-2.5 py-1.5 text-sm transition-all duration-150 select-none",
+                      "hover:bg-white/[0.04]",
+                      isOverviewActive && "bg-white/[0.06] text-foreground",
+                      !isOverviewActive && "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "absolute left-1 top-1.5 bottom-1.5 w-0.5 bg-white rounded-full transition-opacity duration-150",
+                        isOverviewActive ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                    <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
+                      <Info
+                        className={cn(
+                          "w-4 h-4 flex-shrink-0 transition-colors translate-y-[0.5px]",
+                          isOverviewActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground",
+                        )}
+                      />
+                    </div>
+                    <span className="truncate flex-1 text-left">Overview</span>
+                  </button>
+                </div>
+
+                <UncategorizedDropZone
+                  isDragOver={overCategoryId === null && activeType === "channel"}
+                  hasChannels={uncategorizedChannels.length > 0}
+                >
+                  {uncategorizedChannels.length > 0 && (
+                    <div className="mb-3 space-y-0.5">
+                      <SortableContext items={uncategorizedChannels.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+                        {uncategorizedChannels.map((channel) => {
+                          const { unreadCount, mentionCount } = getSidebarChannelUnread(channel.id);
+                          return (
+                            <SortableChannel
+                              key={channel.id}
+                              channel={channel}
+                              isActive={currentChannel?.id === channel.id}
+                              isUnread={unreadCount > 0}
+                              mentionCount={mentionCount}
+                              isAdmin={isAdmin}
+                              voiceUserIds={voicePresenceByChannel[channel.id]}
+                              resolveUser={resolveUser}
+                              onSelect={() => handleSelectChannel(channel)}
+                              onEdit={() => openModal("edit-channel", { channelId: channel.id })}
+                              onDelete={() => handleDeleteChannel(channel.id)}
+                              onCopyLink={() => handleCopyChannelLink(channel.id)}
+                              isMobile={isMobile}
+                              isDraggingAny={isDraggingAny}
+                              isSortingMode={isSortingMode}
+                            />
+                          );
+                        })}
+                      </SortableContext>
+                    </div>
+                  )}
+                </UncategorizedDropZone>
+
+                <SortableContext items={sortedCategories.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+                  {sortedCategories.map((category) => (
+                    <SortableCategory
+                      key={category.id}
+                      category={category}
+                      channels={getChannelsForCategory(category.id)}
+                      isCollapsed={collapsedCategories.has(category.id)}
+                      isAdmin={isAdmin}
+                      currentChannelId={currentChannel?.id}
+                      getChannelUnread={getSidebarChannelUnread}
+                      onToggle={() => toggleCategory(category.id)}
+                      onSelectChannel={handleSelectChannel}
+                      onAddChannel={() => openModal("create-channel", { categoryId: category.id })}
+                      onEditChannel={(channelId) => openModal("edit-channel", { channelId })}
+                      onEditCategory={() => openModal("edit-channel", { isCategory: true, categoryId: category.id })}
+                      onDeleteCategory={() => handleDeleteCategory(category.id)}
+                      onDeleteChannel={handleDeleteChannel}
+                      onCopyChannelLink={handleCopyChannelLink}
+                      onMarkAsRead={(channelId) => markAsRead(channelId)}
+                      isDragOver={overCategoryId === category.id && activeType === "channel"}
+                      voicePresenceByChannel={voicePresenceByChannel}
+                      resolveUser={resolveUser}
+                      isMobile={isMobile}
+                      isDraggingAny={isDraggingAny}
+                      isSortingMode={isSortingMode}
+                      allCategories={sortedCategories}
+                    />
+                  ))}
+                </SortableContext>
+
+                {hiddenChannels.length > 0 && (
+                  <div className="mt-4 border-t border-border/30 pt-2">
+                    <button
+                      onClick={() => setShowHidden(!showHidden)}
+                      className="w-full flex items-center gap-1.5 px-2 py-1 text-xs font-normal uppercase text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showHidden ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                      <EyeOff className="w-3 h-3" />
+                      <span>Hidden Channels ({hiddenChannels.length})</span>
+                    </button>
+                    {showHidden && (
+                      <div className="mt-1 space-y-0.5 opacity-60">
+                        {hiddenChannels.map((channel) => {
+                          const { unreadCount, mentionCount } = getSidebarChannelUnread(channel.id);
+                          return (
+                            <SortableChannel
+                              key={channel.id}
+                              channel={channel}
+                              isActive={currentChannel?.id === channel.id}
+                              isUnread={unreadCount > 0}
+                              mentionCount={mentionCount}
+                              isAdmin={isAdmin}
+                              voiceUserIds={voicePresenceByChannel[channel.id]}
+                              resolveUser={resolveUser}
+                              onSelect={() => handleSelectChannel(channel)}
+                              onEdit={() => openModal("edit-channel", { channelId: channel.id })}
+                              onDelete={() => handleDeleteChannel(channel.id)}
+                              onCopyLink={() => handleCopyChannelLink(channel.id)}
+                              onMarkAsRead={() => markAsRead(channel.id)}
+                              isMobile={isMobile}
+                              isDraggingAny={isDraggingAny}
+                              isSortingMode={isSortingMode}
+                              categories={sortedCategories}
+                            />
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {(channels || []).length === 0 && (categories || []).length === 0 && (
                   <div className="flex flex-col items-center justify-center py-12 text-center animate-fade-in">
                     <div className="w-12 h-12 rounded-xl bg-secondary/50 flex items-center justify-center mb-3">
@@ -1534,19 +1729,10 @@ export const ChannelSidebar = () => {
                   <Plus className="w-4 h-4 mr-2" />
                   Create Channel
                 </ContextMenuItem>
-                {/* Sort Channels - mobile only */}
-                {isMobile && (
-                  <>
-                    <ContextMenuSeparator />
-                    <ContextMenuItem onClick={() => setIsSortingMode(true)}>
-                      <ArrowUpDown className="w-4 h-4 mr-2" />
-                      Sort Channels
-                    </ContextMenuItem>
-                  </>
-                )}
               </ContextMenuContent>
             )}
           </ContextMenu>
+          )}
           <DragOverlay>{getActiveItem()}</DragOverlay>
         </DndContext>
 
