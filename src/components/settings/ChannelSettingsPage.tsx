@@ -386,37 +386,46 @@ export const ChannelSettingsPage = () => {
     </div>
   );
 
+  // Settings group box wrapper
+  const SettingsGroup = ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <div className="rounded-xl border border-border/50 bg-secondary/10 overflow-hidden">
+      <div className="px-4 py-3 border-b border-border/40">
+        <h3 className="text-xs font-[500] uppercase tracking-wider text-muted-foreground">{title}</h3>
+      </div>
+      <div className="p-4 space-y-3">
+        {children}
+      </div>
+    </div>
+  );
+
   // Channel Settings Tab Content
   const channelSettingsContent = (
-    <div className="space-y-6">
-      {/* Slowmode */}
-      <div className="space-y-3">
-        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Slowmode</Label>
-        <Select value={slowmodeSeconds} onValueChange={setSlowmodeSeconds}>
-          <SelectTrigger className="h-11 rounded-xl border-border/50 bg-secondary/30">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
-                <Clock className="w-4 h-4 text-muted-foreground" />
+    <div className="space-y-5">
+      {/* Channel Behavior */}
+      <SettingsGroup title="Channel Behavior">
+        {/* Slowmode */}
+        <div className="space-y-2">
+          <Select value={slowmodeSeconds} onValueChange={setSlowmodeSeconds}>
+            <SelectTrigger className="h-11 rounded-xl border-border/50 bg-secondary/30">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <SelectValue />
               </div>
-              <SelectValue />
-            </div>
-          </SelectTrigger>
-          <SelectContent className="rounded-xl border-border/50">
-            {SLOWMODE_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value} className="rounded-lg">
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <p className="text-xs text-muted-foreground">
-          Members will only be able to send one message per this time period
-        </p>
-      </div>
-
-      {/* Toggles */}
-      <div className="space-y-3">
-        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Channel Options</Label>
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-border/50">
+              {SLOWMODE_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value} className="rounded-lg">
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Members will only be able to send one message per this time period
+          </p>
+        </div>
 
         <ToggleCard
           icon={Lock}
@@ -446,12 +455,10 @@ export const ChannelSettingsPage = () => {
           onCheckedChange={setGhostMode}
           disabled={channel?.ghost_mode}
         />
-      </div>
+      </SettingsGroup>
 
-      {/* Link Restrictions */}
-      <div className="space-y-3">
-        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Link Restrictions</Label>
-
+      {/* Content & Media Restrictions */}
+      <SettingsGroup title="Content & Media Restrictions">
         <ToggleCard
           icon={Link2}
           label="Block Links"
@@ -535,11 +542,6 @@ export const ChannelSettingsPage = () => {
             )}
           </div>
         )}
-      </div>
-
-      {/* Content Restrictions */}
-      <div className="space-y-3">
-        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Content Restrictions</Label>
 
         <ToggleCard
           icon={Paperclip}
@@ -564,32 +566,33 @@ export const ChannelSettingsPage = () => {
           checked={disablePolls}
           onCheckedChange={setDisablePolls}
         />
-      </div>
+      </SettingsGroup>
 
-      {/* Auto-Delete */}
-      <div className="space-y-3">
-        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Auto-Delete Messages</Label>
-        <Select value={autoDeleteSeconds} onValueChange={setAutoDeleteSeconds}>
-          <SelectTrigger className="h-11 rounded-xl border-border/50 bg-secondary/30">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
-                <Timer className="w-4 h-4 text-muted-foreground" />
+      {/* Message Retention */}
+      <SettingsGroup title="Message Retention">
+        <div className="space-y-2">
+          <Select value={autoDeleteSeconds} onValueChange={setAutoDeleteSeconds}>
+            <SelectTrigger className="h-11 rounded-xl border-border/50 bg-secondary/30">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
+                  <Timer className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <SelectValue />
               </div>
-              <SelectValue />
-            </div>
-          </SelectTrigger>
-          <SelectContent className="rounded-xl border-border/50">
-            <SelectItem value="null" className="rounded-lg">Disabled</SelectItem>
-            <SelectItem value="3600" className="rounded-lg">After 1 hour</SelectItem>
-            <SelectItem value="86400" className="rounded-lg">After 24 hours</SelectItem>
-            <SelectItem value="604800" className="rounded-lg">After 7 days</SelectItem>
-            <SelectItem value="2592000" className="rounded-lg">After 30 days</SelectItem>
-          </SelectContent>
-        </Select>
-        <p className="text-xs text-muted-foreground">
-          Automatically delete messages after a set time period. Pinned and system messages are preserved.
-        </p>
-      </div>
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-border/50">
+              <SelectItem value="null" className="rounded-lg">Disabled</SelectItem>
+              <SelectItem value="3600" className="rounded-lg">After 1 hour</SelectItem>
+              <SelectItem value="86400" className="rounded-lg">After 24 hours</SelectItem>
+              <SelectItem value="604800" className="rounded-lg">After 7 days</SelectItem>
+              <SelectItem value="2592000" className="rounded-lg">After 30 days</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Automatically delete messages after a set time period. Pinned and system messages are preserved.
+          </p>
+        </div>
+      </SettingsGroup>
     </div>
   );
 
