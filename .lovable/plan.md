@@ -1,39 +1,53 @@
 
 
-## Mobile Channel Context Menu as Bottom Drawer
+## Fix MessageList Scroll and Layout Issues
 
-### Problem
-On mobile, channel context menus appear as standard context menus (long-press popups), which are awkward to use on touch devices. They should appear as bottom drawers, matching the existing mobile drawer pattern used elsewhere (e.g., message actions).
+Four interconnected changes to eliminate scroll jumps, layout shifts, and unreliable scroll behavior.
 
-### Approach
-On mobile, replace all three context menus in `ChannelSidebar.tsx` with long-press-triggered bottom drawers. On desktop, keep the existing context menu behavior unchanged.
+---
 
-### Changes
+### 1. CSS Scroll Anchoring (replace manual anchor restoration)
 
-**1. Create `ChannelContextDrawer` component** (`src/components/layout/ChannelContextDrawer.tsx`)
-- A new bottom Drawer component that renders the same menu items as `ChannelContextMenu` but in a mobile-friendly drawer format
-- Uses the existing `Drawer` component from `src/components/ui/drawer.tsx`
-- Accepts an `open` / `onOpenChange` prop pair, plus the same props as `ChannelContextMenu` (channel, isAdmin, categories, onEdit, onDelete, onCopyLink, onMarkAsRead)
-- Menu items styled with the standardized `hover:bg-secondary/40 active:bg-secondary/60` pattern (matching mobile message actions drawer)
-- Groups items with visual separators, each item having an icon + label row
+**File: `src/components/chat/MessageList.tsx`**
 
-**2. Update `SortableChannel` in `ChannelSidebar.tsx`**
-- Add state: `const [drawerOpen, setDrawerOpen] = useState(false)`
-- On mobile (non-sort, non-drag): replace `<ContextMenu>` wrapper with a long-press handler on the button that opens the drawer, plus render `<ChannelContextDrawer>` alongside
-- On desktop: keep existing `<ContextMenu>` + `<ChannelContextMenu>` unchanged
-- Long-press detection: use `onContextMenu` (which fires on long-press on mobile) to `preventDefault` and open the drawer
+- Add `style={{ overflowAnchor: 'auto' }}` to the scroll container div (line ~686)
+- Simplify `handleLoadOlder` to just fetch without manual anchor tracking — remove the anchor measurement block (lines 411-431), the `prependRequestIdRef`/`setPrependComplete` calls
+- Remove the prepend anchor restoration `useLayoutEffect` (lines 441-462)
+- Remove unused refs/state: `pendingPrependAnchorRef`, `prependRequestIdRef`, `prependComplete`/`setPrependComplete`
 
-**3. Update `SortableCategory` in `ChannelSidebar.tsx`**
-- Same pattern: on mobile, the category header long-press opens a small drawer with "Edit Category" and "Delete Category" options (admin only)
-- On desktop: keep existing context menu
+### 2. Reserve Space for Images and Embeds
 
-**4. Update background context menu (line ~1279)**
-- On mobile: replace with a long-press drawer containing "Create Category", "Create Channel", "Sort Channels" options
-- On desktop: keep existing context menu
+**File: `src/components/chat/MessageContent.tsx`**
+- For attachment images (line ~343): add `min-height: 40px; max-height: 350px; background: rgb(24 24 24 / 40%)` to the inline style, plus an `onload` handler to clear the background
+- For trusted inline images (lines ~328, ~362): add `min-height: 40px` and placeholder background
 
-### Technical Details
-- The `onContextMenu` event fires on mobile long-press, so we intercept it with `e.preventDefault()` and `setDrawerOpen(true)` on mobile
-- The Drawer uses `direction="bottom"` (default) with the standard drag handle
-- Channel name displayed in the drawer header for context
-- All drawer items close the drawer after action via `onOpenChange(false)` before executing the callback
+**File: `src/components/chat/LinkPreview.tsx`**
+- Wrap preview images in containers with `min-height: 80px`
+- For YouTube/Vimeo iframes: wrap in `aspect-ratio: 16/9` containers instead of fixed width/height
+- For Spotify/SoundCloud: ensure fixed-height containers
+
+### 3. Simplify Scroll-to-Bottom (remove setTimeout cascade)
+
+**File: `src/components/chat/MessageList.tsx`**
+
+- **New message nudge** (lines 291-338): Replace the `setTimeout` cascade (50ms, 150ms, 300ms) with a single immediate `scrollTop = scrollHeight`. The ResizeObserver already handles subsequent size changes from async content.
+- **Initial bottom scroll** (lines 498-523): Replace the 4-retry cascade with `scrollDown()` + one `requestAnimationFrame(scrollDown)`
+- **`scrollToBottom`** (lines 351-376): Remove the `setTimeout` retry, just do one immediate scroll
+
+### 4. Remove `isProgrammaticScrollRef` Guard
+
+**File: `src/components/chat/MessageList.tsx`**
+
+- Remove `isProgrammaticScrollRef` declaration (line 184)
+- Remove all assignments to it (lines 314, 331, 355, 361, 502, 521)
+- Remove the early return in `handleScroll` that checks it (line 467)
+- The `isNearBottomRef` logic already correctly tracks scroll position
+
+---
+
+### What stays unchanged
+- Message grouping, date dividers, deduplication, unread divider logic
+- `useScrollToMessage`, `useRealtimePolls`
+- ResizeObserver/MutationObserver setup (kept as-is, it's the correct approach)
+- No new dependencies
 
