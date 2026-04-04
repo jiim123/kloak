@@ -65,19 +65,19 @@ const DrawerItem = ({
   <button
     onClick={onClick}
     className={cn(
-      "flex items-center gap-3 w-full px-4 py-3 text-sm font-medium rounded-lg transition-colors",
+      "flex items-center gap-3 w-full px-4 py-3.5 rounded-xl text-left transition-colors",
       destructive
-        ? "text-destructive hover:bg-destructive/10 active:bg-destructive/20"
-        : "text-foreground hover:bg-secondary/40 active:bg-secondary/60",
+        ? "text-destructive hover:bg-destructive/10 active:bg-destructive/10"
+        : "hover:bg-secondary/40 active:bg-secondary/60",
     )}
   >
-    <Icon className="w-4 h-4 flex-shrink-0" />
-    <span className="flex-1 text-left">{label}</span>
+    <Icon className={cn("w-5 h-5 flex-shrink-0", destructive ? "" : "text-muted-foreground")} />
+    <span className="flex-1 font-medium">{label}</span>
     {suffix}
   </button>
 );
 
-const DrawerSeparator = () => <div className="h-px bg-border/50 my-1" />;
+const DrawerSeparator = () => <div className="my-2 h-px bg-border" />;
 
 /** Collapsible submenu group */
 const DrawerSubmenu = ({
