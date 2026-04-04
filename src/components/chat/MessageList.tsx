@@ -328,18 +328,13 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     const node = containerRef.current;
     if (!node) return;
 
-    isProgrammaticScrollRef.current = true;
     node.scrollTop = node.scrollHeight;
-
-    setTimeout(() => {
-      if (node) node.scrollTop = node.scrollHeight;
-      isProgrammaticScrollRef.current = false;
-    }, 100);
+    lastScrollHeightRef.current = node.scrollHeight;
+    isNearBottomRef.current = true;
 
     setShowJumpToPresent(false);
     showJumpToPresentRef.current = false;
     setNewMessageCount(0);
-    isNearBottomRef.current = true;
 
     const allMsgs = messagesRef.current;
     if (allMsgs.length > 0) {
