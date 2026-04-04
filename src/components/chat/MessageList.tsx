@@ -417,31 +417,23 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }
   }, [handleLoadOlder, handleAtBottomStateChange]);
 
-  // Initial bottom scroll — multiple retries for reliability
+  // Initial bottom scroll
   useEffect(() => {
     if (isLoading || msgCount === 0 || didInitialBottomScrollRef.current) return;
     didInitialBottomScrollRef.current = true;
-    isProgrammaticScrollRef.current = true;
 
     const scrollDown = () => {
       const node = containerRef.current;
       if (node) {
         node.scrollTop = node.scrollHeight;
         lastScrollHeightRef.current = node.scrollHeight;
+        isNearBottomRef.current = true;
       }
     };
 
-    // Immediate attempt
     scrollDown();
-    // Retries to catch late-rendering content
+    // Single retry after a frame for late-rendering content
     requestAnimationFrame(scrollDown);
-    setTimeout(scrollDown, 50);
-    setTimeout(scrollDown, 150);
-    setTimeout(() => {
-      scrollDown();
-      isNearBottomRef.current = true;
-      isProgrammaticScrollRef.current = false;
-    }, 300);
   }, [isLoading, msgCount]);
 
   // ResizeObserver + MutationObserver — dual safety net for auto-scroll
