@@ -1897,7 +1897,7 @@ export const ServerSettingsPage = () => {
                 {/* Overview */}
                 <TabsTrigger
                   value="overview"
-                  className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
+                  className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-secondary/60 data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
                 >
                   <Settings className="w-4 h-4" />
                   Overview
@@ -1913,7 +1913,7 @@ export const ServerSettingsPage = () => {
                     </div>
                     <TabsTrigger
                       value="emojis"
-                      className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
+                      className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-secondary/60 data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
                     >
                       <Smile className="w-4 h-4" />
                       Emojis
@@ -1929,7 +1929,7 @@ export const ServerSettingsPage = () => {
                 </div>
                 <TabsTrigger
                   value="roles"
-                  className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
+                  className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-secondary/60 data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
                 >
                   <Palette className="w-4 h-4" />
                   Roles
@@ -1937,7 +1937,7 @@ export const ServerSettingsPage = () => {
                 {canManageInvites && (
                   <TabsTrigger
                     value="invites"
-                    className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
+                    className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-secondary/60 data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
                   >
                     <Link2 className="w-4 h-4" />
                     Invites
@@ -1945,14 +1945,14 @@ export const ServerSettingsPage = () => {
                 )}
                 <TabsTrigger
                   value="members"
-                  className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
+                  className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-secondary/60 data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
                 >
                   <Users className="w-4 h-4" />
                   Members
                 </TabsTrigger>
                 <TabsTrigger
                   value="bans"
-                  className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
+                  className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-secondary/60 data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
                 >
                   <Ban className="w-4 h-4" />
                   Bans
@@ -1968,7 +1968,7 @@ export const ServerSettingsPage = () => {
                     </div>
                     <TabsTrigger
                       value="integrations"
-                      className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
+                      className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-secondary/60 data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
                     >
                       <Plug className="w-4 h-4" />
                       Integrations
@@ -1982,7 +1982,7 @@ export const ServerSettingsPage = () => {
                     <Separator className="my-3" />
                     <TabsTrigger
                       value="transfer"
-                      className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
+                      className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-secondary/60 data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
                     >
                       <Crown className="w-4 h-4" />
                       Transfer Ownership

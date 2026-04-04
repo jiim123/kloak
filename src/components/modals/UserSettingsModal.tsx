@@ -1391,7 +1391,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                       className={cn(
                         "w-full flex items-center gap-2.5 text-sm font-medium px-3 py-2 rounded-md transition-colors",
                         isActive
-                          ? "bg-primary text-primary-foreground"
+                          ? "bg-secondary/60 text-foreground"
                           : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
                       )}
                     >
