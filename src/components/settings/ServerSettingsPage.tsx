@@ -817,6 +817,7 @@ export const ServerSettingsPage = () => {
           }
           setRoleIcon(role.icon || "");
           setRoleIsSelfAssignable(Boolean(role.is_self_assignable));
+          setMobileRoleCreateView(false);
         }}
         className={cn(
           "flex items-center gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer",
