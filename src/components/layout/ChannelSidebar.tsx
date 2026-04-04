@@ -598,6 +598,15 @@ const SortableCategory = ({
     </div>
   );
 
+  const [catDrawerOpen, setCatDrawerOpen] = useState(false);
+
+  const handleCatMobileContext = (e: React.MouseEvent | React.TouchEvent) => {
+    if (isMobile && isAdmin && !isSortingMode && !isDraggingAny) {
+      e.preventDefault();
+      setCatDrawerOpen(true);
+    }
+  };
+
   return (
     <div
       ref={(node) => {
@@ -615,6 +624,37 @@ const SortableCategory = ({
       <div className="group flex items-center gap-1 px-0.5 mb-1">
         {isMobile && (isSortingMode || isDraggingAny) ? (
           categoryButton
+        ) : isMobile ? (
+          <>
+            <div onContextMenu={handleCatMobileContext} className="flex-1">
+              {categoryButton}
+            </div>
+            {isAdmin && (
+              <Drawer open={catDrawerOpen} onOpenChange={setCatDrawerOpen}>
+                <DrawerContent>
+                  <DrawerHeader className="pb-2">
+                    <DrawerTitle className="text-base font-semibold">{category.name}</DrawerTitle>
+                  </DrawerHeader>
+                  <div className="px-2 pb-6 space-y-0.5">
+                    <button
+                      onClick={() => { setCatDrawerOpen(false); onEditCategory(); }}
+                      className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium rounded-lg text-foreground hover:bg-secondary/40 active:bg-secondary/60 transition-colors"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                      Edit Category
+                    </button>
+                    <button
+                      onClick={() => { setCatDrawerOpen(false); onDeleteCategory(); }}
+                      className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium rounded-lg text-destructive hover:bg-destructive/10 active:bg-destructive/20 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete Category
+                    </button>
+                  </div>
+                </DrawerContent>
+              </Drawer>
+            )}
+          </>
         ) : (
           <ContextMenu>
             <ContextMenuTrigger asChild disabled={isDraggingAny}>
