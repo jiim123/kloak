@@ -1847,13 +1847,13 @@ export const MessageItem = memo(function MessageItem({
             {effectiveCanAddReactions && !isBlockedUser && (
               <div className="mb-4 rounded-xl bg-muted/50 overflow-hidden">
                 <div className="flex items-center gap-1.5 p-2 overflow-x-auto scrollbar-hide">
-                  {QUICK_REACTIONS.map((emoji) => (
+                {QUICK_REACTIONS.map((emoji) => (
                     <button
                       key={emoji}
                       onClick={() => handleMobileAddReaction(emoji)}
-                      className="text-2xl p-2.5 hover:bg-accent rounded-xl active:scale-90 transition-all flex-shrink-0"
+                      className="p-2.5 hover:bg-secondary/40 active:bg-secondary/60 rounded-xl active:scale-90 transition-all flex-shrink-0"
                     >
-                      {emoji}
+                      <FluentEmoji emoji={emoji} size={28} />
                     </button>
                   ))}
                   {/* Divider */}
