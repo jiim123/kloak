@@ -387,11 +387,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   }, [hasMore, isLoading, isFetchingOlder, channelData?.oldestLoadedAt]);
 
 
-  // Scroll handler — skips during programmatic scrolls, always syncs isNearBottomRef
   const handleScroll = useCallback(() => {
-    // Fix B: Skip entirely during programmatic scrolls to prevent ref corruption
-    if (isProgrammaticScrollRef.current) return;
-
     const node = containerRef.current;
     if (!node) return;
 
