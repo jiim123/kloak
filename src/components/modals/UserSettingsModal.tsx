@@ -1431,16 +1431,19 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
             {/* Content */}
             <div className="p-6 pr-16">
-              <h2 className="text-xl font-medium mb-1">{navItems.find((n) => n.id === activeTab)?.label}</h2>
-              <p className="text-sm text-muted-foreground mb-6">
-                {activeTab === "account" && "Manage your account credentials and security"}
-                {activeTab === "profile" && "Customize how others see you"}
-                {activeTab === "privacy" && "Manage your direct message privacy preferences"}
-                {activeTab === "voice" && "Configure your audio input, output, and voice settings"}
-                {activeTab === "notifications" && "Control how you receive notifications"}
-                {activeTab === "appearance" && "Personalize your app experience"}
-                {activeTab === "blocked" && "View and unblock users"}
-              </p>
+              {activeTab !== "account" && (
+                <>
+                  <h2 className="text-xl font-medium mb-1">{navItems.find((n) => n.id === activeTab)?.label}</h2>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    {activeTab === "profile" && "Customize how others see you"}
+                    {activeTab === "privacy" && "Manage your direct message privacy preferences"}
+                    {activeTab === "voice" && "Configure your audio input, output, and voice settings"}
+                    {activeTab === "notifications" && "Control how you receive notifications"}
+                    {activeTab === "appearance" && "Personalize your app experience"}
+                    {activeTab === "blocked" && "View and unblock users"}
+                  </p>
+                </>
+              )}
 
               <div className={cn(activeTab !== "profile" && "max-w-xl")}>{renderContent()}</div>
             </div>
