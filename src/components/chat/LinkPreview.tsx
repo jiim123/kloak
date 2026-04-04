@@ -259,13 +259,12 @@ export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
   if (preview.type === "vimeo" && preview.vimeoId) {
     if (showEmbed) {
       return (
-        <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[480px]">
+        <div className="mt-2 rounded-lg overflow-hidden border border-border max-w-[480px]" style={{ aspectRatio: '16 / 9' }}>
           <iframe
             src={`https://player.vimeo.com/video/${preview.vimeoId}?autoplay=1`}
-            width="480" height="270"
             allow="autoplay; fullscreen; picture-in-picture"
             allowFullScreen
-            className="w-full aspect-video"
+            className="w-full h-full"
             title={preview.title || "Vimeo video"}
           />
         </div>
