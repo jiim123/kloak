@@ -186,15 +186,19 @@ export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
     const lightboxUrl = preview.image || url;
     return (
       <a href={url} target="_blank" rel="noopener noreferrer" className="block mt-2">
-        <img
-          src={lightboxUrl}
-          alt="Linked image"
-          className="max-w-full sm:max-w-[400px] max-h-[300px] rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-          data-image-url={lightboxUrl}
-          onError={(e) => {
-            (e.target as HTMLImageElement).style.display = "none";
-          }}
-        />
+        <div className="relative overflow-hidden rounded-lg" style={{ minHeight: '80px' }}>
+          <img
+            src={lightboxUrl}
+            alt="Linked image"
+            className="max-w-full sm:max-w-[400px] max-h-[300px] rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+            style={{ backgroundColor: 'rgb(24 24 24 / 40%)' }}
+            data-image-url={lightboxUrl}
+            onLoad={(e) => { (e.target as HTMLImageElement).style.backgroundColor = 'transparent'; }}
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
+          />
+        </div>
       </a>
     );
   }
