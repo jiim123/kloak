@@ -2535,7 +2535,7 @@ export const ServerSettingsPage = () => {
 
                   {/* Right Side - Role Settings (full screen on mobile) */}
                   {(!isMobile || selectedRole || mobileRoleCreateView) && (
-                  <div className="flex-1 overflow-y-auto">
+                  <div className="flex-1 overflow-y-auto" ref={roleEditContainerRef}>
                     {selectedRole ? (
                       <div className="p-6 space-y-6 max-w-2xl">
                         {/* Back button on mobile */}
