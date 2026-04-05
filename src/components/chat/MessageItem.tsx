@@ -391,6 +391,15 @@ export const MessageItem = memo(function MessageItem({
   const channels = useServerStore((state) => state.channels);
 
   const { currentMember, messageMember, usersMap, channelsMap } = useMemo(() => {
+    if (isDM) {
+      return {
+        currentMember: undefined,
+        messageMember: undefined,
+        usersMap: new Map<string, { username: string; display_name?: string | null; nickname?: string | null }>(),
+        channelsMap: new Map<string, { name: string }>(),
+      };
+    }
+
     const userMap = new Map<string, { username: string; display_name?: string | null; nickname?: string | null }>();
     members.forEach((m) => {
       if (m.user) {
@@ -413,7 +422,7 @@ export const MessageItem = memo(function MessageItem({
       usersMap: userMap,
       channelsMap: channelMap,
     };
-  }, [members, channels, user?.id, message.user_id]);
+  }, [members, channels, user?.id, message.user_id, isDM]);
 
   const messageRoles = useMemo(
     () => messageMember?.roles ?? authorStyleFallback?.roles ?? [],
