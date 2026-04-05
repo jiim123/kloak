@@ -7,6 +7,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useUIStore } from "@/stores/uiStore";
 import { useServerStore } from "@/stores/serverStore";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 const channelIcons: Record<string, typeof Hash> = {
   text: Hash,
@@ -28,6 +29,7 @@ export const ChannelInfoModal = () => {
   const activeModal = useUIStore((s) => s.activeModal);
   const closeModal = useUIStore((s) => s.closeModal);
   const channel = useServerStore((s) => s.currentChannel);
+  const server = useServerStore((s) => s.currentServer);
 
   const isOpen = activeModal === "channel-info";
 
@@ -65,7 +67,16 @@ export const ChannelInfoModal = () => {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && closeModal()}>
       <DialogContent className="max-w-sm bg-card border-border">
-        <DialogHeader>
+        <DialogHeader className="text-left">
+          {server && (
+            <div className="flex items-center gap-2 mb-3">
+              <Avatar className="w-5 h-5 rounded">
+                <AvatarImage src={server.icon_url || undefined} alt={server.name} />
+                <AvatarFallback className="text-[10px] rounded bg-muted">{server.name.charAt(0)}</AvatarFallback>
+              </Avatar>
+              <span className="text-xs text-muted-foreground font-medium">{server.name}</span>
+            </div>
+          )}
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
               <Icon className="w-4 h-4 text-muted-foreground" />
@@ -73,11 +84,11 @@ export const ChannelInfoModal = () => {
             <DialogTitle className="text-foreground">{channel.name}</DialogTitle>
           </div>
           {channel.topic ? (
-            <DialogDescription className="text-muted-foreground text-sm mt-2 whitespace-pre-wrap">
+            <DialogDescription className="text-muted-foreground text-sm mt-2 whitespace-pre-wrap text-left">
               {channel.topic}
             </DialogDescription>
           ) : (
-            <DialogDescription className="text-muted-foreground/50 text-sm mt-2">
+            <DialogDescription className="text-muted-foreground/50 text-sm mt-2 text-left">
               No description set.
             </DialogDescription>
           )}
