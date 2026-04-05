@@ -35,9 +35,9 @@
 @tailwind utilities;
 
 @layer base {
+  @layer base {
   /* ========================================
-     DEFAULT THEME (Orange/Amber brand)
-     Dark mode by default
+     DEFAULT THEME 
      ======================================== */
   :root,
   .default {
