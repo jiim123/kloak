@@ -190,7 +190,7 @@ const ExploreServersOriginal = () => {
   return (
     <div className="h-full flex flex-col bg-layout-members overflow-hidden">
       {/* Header - hidden on mobile since we have MobileHeader */}
-      <div className="h-12 px-4 hidden md:flex items-center justify-between border-b border-border shadow-sm flex-shrink-0">
+      <div className="h-12 px-4 hidden md:flex items-center justify-between border-b border-border bg-layout-sidebar-secondary flex-shrink-0">
         <h2 className="font-medium text-foreground">Explore</h2>
       </div>
 
