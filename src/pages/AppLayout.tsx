@@ -43,6 +43,7 @@ import {
   ImportDiscordTemplateModal,
   ImportEmojiPackModal,
   SetStatusModal,
+  ChannelInfoModal,
 } from "@/components/modals";
 import { PersistentEmbedContainer } from "@/components/chat/PersistentEmbedContainer";
 import { DesktopTitleBar } from "@/components/layout/DesktopTitleBar";
