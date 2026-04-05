@@ -433,6 +433,7 @@ export const MessageItem = memo(function MessageItem({
   // Note: avoid per-message global listeners/effects in message rows.
 
   const priorityRoleWithIcon = useMemo<Pick<CustomServerRole, "name" | "icon"> | null>(() => {
+    if (isDM) return null;
     const memberRoles = messageRoles;
     if (memberRoles.length === 0) return null;
 
@@ -462,7 +463,7 @@ export const MessageItem = memo(function MessageItem({
 
     if (!best?.icon) return null;
     return { name: best.name, icon: best.icon };
-  }, [messageRoles, roles]);
+  }, [isDM, messageRoles, roles]);
 
   const roleIconNode = useMemo(() => {
     if (!priorityRoleWithIcon?.icon) return null;
