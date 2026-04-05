@@ -284,7 +284,7 @@ const ExploreServersOriginal = () => {
             className="text-center py-12 space-y-3"
           >
             <div className="inline-flex items-center justify-center p-3 rounded-full bg-muted/50">
-              <Compass className="w-6 h-6 text-muted-foreground" />
+              <Search className="w-6 h-6 text-muted-foreground" />
             </div>
             <p className="text-sm text-muted-foreground">No public servers found.</p>
             {query && (
