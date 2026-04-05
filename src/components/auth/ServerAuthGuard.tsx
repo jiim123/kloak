@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, forwardRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
@@ -28,7 +28,7 @@ const membershipCacheKey = (userId: string, serverId: string) => `${userId}:${se
  * users with role 'owner' or 'admin' via is_server_admin_or_owner(), so even
  * if a savvy user bypasses the guard, the DB will reject their write.
  */
-export const ServerAuthGuard = ({ children }: ServerAuthGuardProps) => {
+export const ServerAuthGuard = forwardRef<HTMLDivElement, ServerAuthGuardProps>(({ children }, _ref) => {
   const { serverId } = useParams<{ serverId: string }>();
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
@@ -128,4 +128,6 @@ export const ServerAuthGuard = ({ children }: ServerAuthGuardProps) => {
   if (checking || !authorized) return null;
 
   return <>{children}</>;
-};
+});
+
+ServerAuthGuard.displayName = 'ServerAuthGuard';

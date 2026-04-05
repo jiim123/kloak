@@ -195,7 +195,7 @@ const FolderItem = ({
 
   return (
     <ContextMenu>
-      <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
+      <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
         <ContextMenuTrigger asChild>
           <TooltipTrigger asChild>
             <MotionButton
@@ -344,7 +344,7 @@ const DraggableServerItem = forwardRef<
             exit={{ opacity: 0, x: -20, transition: { duration: 0.15 } }}
             layout
           >
-            <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
+            <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
               <TooltipTrigger asChild>
                 <MotionButton
                   className={cn("relative group", isDragging && "opacity-40")}
@@ -991,7 +991,7 @@ export const ServerSidebar = () => {
               )}
 
               {/* Home / Direct Messages button */}
-              <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
+              <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
                 <TooltipTrigger asChild>
                   <MotionButton
                     className="relative group mb-1"
@@ -1109,7 +1109,7 @@ export const ServerSidebar = () => {
                       }}
                       style={{ overflow: "hidden" }}
                     >
-                      <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
+                      <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
                         <TooltipTrigger asChild>
                           <button
                             className="relative group"
@@ -1350,7 +1350,7 @@ export const ServerSidebar = () => {
       <div className="absolute bottom-0 left-0 right-0 pl-3 pr-2 pb-3 pt-2 bg-layout-sidebar z-10">
         <div className="w-8 h-0.5 bg-border rounded-full shrink-0 mx-auto mb-2" />
         <div className="flex justify-center">
-          <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
+          <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
             <TooltipTrigger asChild>
               <MotionButton
                 whileTap={{ scale: 0.95 }}

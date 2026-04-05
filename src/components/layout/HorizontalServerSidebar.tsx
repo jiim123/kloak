@@ -508,7 +508,7 @@ const HorizontalSortableServerItem = forwardRef<
                 "before:absolute before:left-[-6px] before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-8 before:bg-primary before:rounded-full",
             )}
           >
-            <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
+            <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
               <TooltipTrigger asChild>
                 <MotionButton
                   className={cn("relative group", isDragging && "opacity-40")}
@@ -1158,7 +1158,7 @@ export const HorizontalServerSidebar = () => {
               )}
 
               {/* Home / Direct Messages button */}
-              <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
+              <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
                 <TooltipTrigger asChild>
                   <MotionButton
                     className="relative group flex-shrink-0"
@@ -1340,7 +1340,7 @@ export const HorizontalServerSidebar = () => {
               </SortableContext>
 
               {/* Add Server button - inline with servers */}
-              <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
+              <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
                 <TooltipTrigger asChild>
                   <MotionButton
                     whileTap={{ scale: 0.95 }}
@@ -1416,7 +1416,7 @@ export const HorizontalServerSidebar = () => {
         <div className="w-0.5 h-6 bg-border rounded-full" />
 
         {/* Notification bell */}
-        <Tooltip delayDuration={300} open={tooltipsEnabled ? undefined : false}>
+        <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
           <TooltipTrigger asChild>
             <div>
               <NotificationBell variant="sidebar" />
