@@ -1,43 +1,55 @@
 
 
-## Channel Header: Topic Visibility and Mobile Channel Info Modal
+## Console Error Audit: Fix All Warnings and Failed API Calls
 
-### Changes
+### Issues Found
 
-**1. `src/stores/uiStore.ts`** — Add `"channel-info"` to `ModalType` union (line 39, before `| null`)
+**1. `X-Frame-Options` meta tag ignored by browsers**
+- `index.html` line 34: `<meta http-equiv="X-Frame-Options" content="DENY" />`
+- Browsers only respect X-Frame-Options via HTTP headers, not meta tags. This fires a console error on every page load.
+- **Fix**: Remove the meta tag entirely. The CSP `frame-ancestors` directive (if needed) is the modern replacement and can be set via HTTP header on the hosting side.
 
-**2. `src/components/chat/ChannelHeader.tsx`** — Desktop topic improvements
+**2. Tooltip controlled/uncontrolled switching warning (repeated ~10x)**
+- Pattern: `<Tooltip open={tooltipsEnabled ? undefined : false}>` in `ServerSidebar.tsx` and `HorizontalServerSidebar.tsx`
+- When `tooltipsEnabled` is `false`, `open` is `false` (controlled). When `true`, `open` is `undefined` (uncontrolled). React warns about this switch.
+- **Fix**: Always pass a defined `open` value. When tooltips are disabled, pass `open={false}`. When enabled, omit the `open` prop entirely by conditionally rendering. Simplest approach: render the Tooltip with `open` never set when enabled — use a wrapper pattern or simply never pass `undefined`. The cleanest fix: `open={tooltipsEnabled ? undefined : false}` → remove the `open` prop and instead wrap content in a condition:
+  ```tsx
+  // Before (causes warning):
+  <Tooltip open={tooltipsEnabled ? undefined : false}>
+  
+  // After (no warning — always uncontrolled, just disabled via pointer-events or skip render):
+  <Tooltip open={!tooltipsEnabled ? false : undefined}>
+  ```
+  Actually the issue is the *switch*. The fix is to always keep it controlled: `open={tooltipOpen}` where `tooltipOpen` is managed via state. But that's too invasive. Simpler: extract a small wrapper component `<ConditionalTooltip enabled={tooltipsEnabled}>` that either renders the full `<Tooltip>` (uncontrolled) or just renders children directly (no Tooltip at all). This avoids ever switching.
 
-- Make channel name `flex-shrink-0` so it never gets pushed out
-- Replace the current `<span className="truncate">` for topic with a CSS-truncated clickable element: `overflow: hidden`, `text-overflow: ellipsis`, `white-space: nowrap`, `max-width` constrained by flex layout (no hard character limit)
-- Wrap the topic span in a `Popover` trigger — clicking shows the full topic in a `PopoverContent`
+**3. `ServerAuthGuard` forwardRef warning**
+- `App.tsx` line 16: `const ServerAuthGuard = lazy(() => ...)` — used as a route wrapper, React Router's `Outlet` passes a ref to it.
+- `ServerAuthGuard` is a plain function component, not wrapped in `forwardRef`.
+- **Fix**: Wrap the export in `React.forwardRef` in `ServerAuthGuard.tsx`. Since the component doesn't use the ref, just accept and ignore it.
 
-**3. `src/components/layout/MobileHeader.tsx`** — Make title tappable
+**4. Link previews fetched for CDN attachment URLs (wasteful 400s/undefined results)**
+- Edge function logs show repeated calls to `fetch-link-preview` for `kloakcdn.b-cdn.net` attachment URLs (`.wav`, etc.). These return `undefined` since CDN files have no OG tags.
+- Also causes 404s on `fetch-link-preview-asset` trying to get favicons for `kloakcdn.b-cdn.net`.
+- **Fix**: In `LinkPreview.tsx` or `MessageContent.tsx` where URLs are extracted, skip URLs whose host is `kloakcdn.b-cdn.net` (the Bunny CDN). These are already rendered as inline attachments.
 
-- When viewing a server channel (`!isDMView && currentChannel`), wrap the title area in a `<button>` that calls `openModal("channel-info")`
-- Import `useUIStore` (already imported) and use `openModal`
+**5. `get_voice_channel_meta_for_token` permission denied**
+- Edge function `get-livekit-token` calls an RPC `get_voice_channel_meta_for_token` but gets `permission denied for function`.
+- **Fix**: Create a migration to `GRANT EXECUTE` on this function to the appropriate role (`anon` or `authenticated`, matching how the edge function calls it — likely via service role client, so grant to `service_role` if not already, or check if the function exists and has correct permissions).
 
-**4. New file: `src/components/chat/ChannelInfoModal.tsx`** — Mobile channel info modal
+### Files to Change
 
-- Uses `Dialog` component, opens when `activeModal === "channel-info"`
-- Reads `currentChannel` from `serverStore`
-- Shows: channel icon + name, full topic/description (if any)
-- Lists only **enabled** channel settings, each as a row with:
-  - `CircleCheck` icon in Kloak status green: `text-[hsl(var(--kloak-online))]` (the `160 92% 39%` emerald green used for online status across all themes)
-  - Setting label text
-- Settings to check:
-  - `is_private` → "Private Channel"
-  - `is_read_only` → "Read-only"
-  - `ghost_mode` → "Ghost Mode"
-  - `block_links` → "Link Blocking" (+ show allowed domains if any)
-  - `block_attachments` → "Attachments Disabled"
-  - `disable_reactions` → "Reactions Disabled"
-  - `disable_polls` → "Polls Disabled"
-  - `slowmode_seconds > 0` → "Slowmode: Xs"
-  - `auto_delete_seconds` → "Auto-delete: 1h/24h/7d/30d"
-  - `is_nsfw` → "NSFW"
+| File | Change |
+|---|---|
+| `index.html` | Remove line 34 (`X-Frame-Options` meta tag) |
+| `src/components/auth/ServerAuthGuard.tsx` | Wrap in `forwardRef` |
+| `src/components/layout/ServerSidebar.tsx` | Replace `open={tooltipsEnabled ? undefined : false}` pattern with a `ConditionalTooltip` wrapper |
+| `src/components/layout/HorizontalServerSidebar.tsx` | Same tooltip fix |
+| New: `src/components/ui/ConditionalTooltip.tsx` | Small wrapper: if `enabled`, render `<Tooltip>` (no `open` prop); if not, render children only |
+| `src/components/chat/MessageContent.tsx` | Skip link preview for `kloakcdn.b-cdn.net` URLs in `extractUrls` or where `LinkPreview` is rendered |
+| Migration SQL | `GRANT EXECUTE ON FUNCTION get_voice_channel_meta_for_token TO service_role` |
 
-**5. `src/components/modals/index.ts`** — Export `ChannelInfoModal`
-
-**6. `src/pages/AppLayout.tsx`** — Import and render `<ChannelInfoModal />` alongside other modals (~line 698)
+### What stays unchanged
+- `postMessage` warnings from `lovable.js` — this is Lovable platform infrastructure, not project code
+- `site.webmanifest` CORS redirect — also Lovable platform infrastructure
+- All existing functionality (tooltips still appear on hover when enabled, link previews still work for real URLs)
 
