@@ -128,4 +128,6 @@ export const ServerAuthGuard = forwardRef<HTMLDivElement, ServerAuthGuardProps>(
   if (checking || !authorized) return null;
 
   return <>{children}</>;
-};
+});
+
+ServerAuthGuard.displayName = 'ServerAuthGuard';
