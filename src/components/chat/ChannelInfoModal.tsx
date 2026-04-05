@@ -29,6 +29,7 @@ export const ChannelInfoModal = () => {
   const activeModal = useUIStore((s) => s.activeModal);
   const closeModal = useUIStore((s) => s.closeModal);
   const channel = useServerStore((s) => s.currentChannel);
+  const server = useServerStore((s) => s.currentServer);
 
   const isOpen = activeModal === "channel-info";
 
