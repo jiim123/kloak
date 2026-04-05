@@ -35,13 +35,6 @@
 @tailwind utilities;
 
 @layer base {
-  /* ========================================
-     DEFAULT THEME 
-     ======================================== */
-  @layer base {
-  /* ========================================
-     DEFAULT THEME 
-     ======================================== */
   :root,
   .default {
     /* Brand palette - Silver-grey #ECECEC */
