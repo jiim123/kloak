@@ -1545,7 +1545,7 @@ export const ServerSettingsPage = () => {
 
   const uploadBanner = async (serverId: string, file: File): Promise<string | null> => {
     const ext = file.name.split(".").pop() || "png";
-    const filePath = `${serverId}/banner.${ext}`;
+    const filePath = `${serverId}/banner-${Date.now()}.${ext}`;
 
     try {
       const result = await secureUpload("server-icons", filePath, file, { upsert: true });
