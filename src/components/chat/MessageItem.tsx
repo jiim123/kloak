@@ -1027,6 +1027,7 @@ export const MessageItem = memo(function MessageItem({
   }, [compactMode, isMentioned, isHighlighted, isPending, isAnnouncementChannel, isGrouped]);
 
   const topCustomRoleColor = useMemo(() => {
+    if (isDM) return null;
     const memberRoles = messageRoles;
     if (memberRoles.length === 0) return null;
 
@@ -1044,13 +1045,14 @@ export const MessageItem = memo(function MessageItem({
     }
 
     return best?.color ?? null;
-  }, [messageRoles, roles]);
+  }, [isDM, messageRoles, roles]);
 
   const usernameColorClass = useMemo(() => {
+    if (isDM) return "text-foreground";
     if (showGhostIdentity) return "text-muted-foreground";
     if (!topCustomRoleColor) return getRoleColor(messageBaseRole ?? undefined);
     return isGradientColor(topCustomRoleColor) ? "text-transparent" : "text-foreground";
-  }, [topCustomRoleColor, messageBaseRole, showGhostIdentity]);
+  }, [isDM, topCustomRoleColor, messageBaseRole, showGhostIdentity]);
 
   const usernameColorStyle = useMemo(() => {
     if (showGhostIdentity) return undefined;
