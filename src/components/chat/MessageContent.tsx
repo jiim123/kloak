@@ -165,12 +165,24 @@ const isTrustedInlineImageUrl = (url: string): boolean => {
   }
 };
 
+// Hosts whose URLs are already rendered as inline attachments — skip link previews
+const SKIP_PREVIEW_HOSTS = new Set(["kloakcdn.b-cdn.net"]);
+
 // Extract URLs from content
 const extractUrls = (content: string): string[] => {
   const urlPattern = /https?:\/\/[^\s<>`\]]+/g;
   const matches = content.match(urlPattern) || [];
-  // Return unique URLs, filtered to only safe URLs
-  return [...new Set(matches)].filter(isSafeUrl);
+  // Return unique URLs, filtered to only safe URLs and excluding CDN attachment hosts
+  return [...new Set(matches)].filter((url) => {
+    if (!isSafeUrl(url)) return false;
+    try {
+      const host = new URL(url).hostname;
+      if (SKIP_PREVIEW_HOSTS.has(host)) return false;
+    } catch {
+      return false;
+    }
+    return true;
+  });
 };
 
 // Parse message into segments (text, code blocks, inline code)
