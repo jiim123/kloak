@@ -80,10 +80,7 @@
     <!-- Critical inline styles to prevent FOUC while CSS loads via JS -->
     <style>
       /* Critical @font-face so browser can start fetching fonts before JS-injected CSS arrives */
-      @font-face { font-family: "General Sans"; src: url("/fonts/GeneralSans-Medium.otf") format("opentype"); font-weight: 500; font-style: normal; font-display: swap; }
-      @font-face { font-family: "General Sans"; src: url("/fonts/GeneralSans-Regular.otf") format("opentype"); font-weight: 400; font-style: normal; font-display: swap; }
-      @font-face { font-family: "General Sans"; src: url("/fonts/GeneralSans-Light.otf") format("opentype"); font-weight: 300; font-style: normal; font-display: swap; }
-      @font-face { font-family: "Monaspace Krypton"; src: url("/fonts/MonaspaceKrypton-Regular.otf") format("opentype"); font-weight: 400; font-style: normal; font-display: swap; }
+      @font-face { font-family: "General Sans"; src: url("https://kloakweb.b-cdn.net/fonts/MirandaSans-VariableFont_wght.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
       :root { --background: 0 0% 4%; --foreground: 60 9% 85%; }
       body { margin: 0; background-color: hsl(0, 0%, 4%); color: hsl(60, 9%, 85%); font-family: "General Sans", system-ui, -apple-system, sans-serif; }
       #root { min-height: 100vh; }
