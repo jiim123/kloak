@@ -1,39 +1,43 @@
 
 
-## Fix Server Role Data Leaking into DM View
-
-### Problem
-When switching from a server to DMs, `MessageItem` still reads `members` and `roles` from `serverStore` (which retains the last server's data). This causes DM messages to show server role colors, role icons, and nicknames from the previously viewed server. The `authorStyleFallback` prop also passes server role data through unguarded.
+## Channel Header: Topic Visibility and Mobile Channel Info Modal
 
 ### Changes
 
-**File: `src/components/chat/MessageItem.tsx`**
+**1. `src/stores/uiStore.ts`** — Add `"channel-info"` to `ModalType` union (line 39, before `| null`)
 
-All changes use the existing `isDM` constant (line 298: `const isDM = !!dmActions`).
+**2. `src/components/chat/ChannelHeader.tsx`** — Desktop topic improvements
 
-1. **Add `effectiveAuthorStyle` guard** — after line 298:
-```typescript
-const effectiveAuthorStyle = isDM ? undefined : authorStyleFallback;
-```
+- Make channel name `flex-shrink-0` so it never gets pushed out
+- Replace the current `<span className="truncate">` for topic with a CSS-truncated clickable element: `overflow: hidden`, `text-overflow: ellipsis`, `white-space: nowrap`, `max-width` constrained by flex layout (no hard character limit)
+- Wrap the topic span in a `Popover` trigger — clicking shows the full topic in a `PopoverContent`
 
-2. **Guard `messageMember` and `currentMember`** (lines 392-415): When `isDM`, skip the `members.find()` lookups — set both to `undefined`. The `usersMap` and `channelsMap` can also be empty maps in DM mode since they're for server mention resolution.
+**3. `src/components/layout/MobileHeader.tsx`** — Make title tappable
 
-3. **Guard `messageRoles` and `messageBaseRole`** (lines 417-421): Replace `authorStyleFallback` with `effectiveAuthorStyle`:
-   - `messageMember?.roles ?? effectiveAuthorStyle?.roles ?? []` — and force to `[]` when `isDM`
-   - `messageMember?.role ?? effectiveAuthorStyle?.role` — and force to `undefined` when `isDM`
+- When viewing a server channel (`!isDMView && currentChannel`), wrap the title area in a `<button>` that calls `openModal("channel-info")`
+- Import `useUIStore` (already imported) and use `openModal`
 
-4. **Guard `priorityRoleWithIcon`** (lines 425-455): When `isDM`, return `null` immediately — no role icons in DMs.
+**4. New file: `src/components/chat/ChannelInfoModal.tsx`** — Mobile channel info modal
 
-5. **Guard `topCustomRoleColor`** (lines 1018-1036): When `isDM`, return `null` — no custom role color in DMs.
+- Uses `Dialog` component, opens when `activeModal === "channel-info"`
+- Reads `currentChannel` from `serverStore`
+- Shows: channel icon + name, full topic/description (if any)
+- Lists only **enabled** channel settings, each as a row with:
+  - `CircleCheck` icon in Kloak status green: `text-[hsl(var(--kloak-online))]` (the `160 92% 39%` emerald green used for online status across all themes)
+  - Setting label text
+- Settings to check:
+  - `is_private` → "Private Channel"
+  - `is_read_only` → "Read-only"
+  - `ghost_mode` → "Ghost Mode"
+  - `block_links` → "Link Blocking" (+ show allowed domains if any)
+  - `block_attachments` → "Attachments Disabled"
+  - `disable_reactions` → "Reactions Disabled"
+  - `disable_polls` → "Polls Disabled"
+  - `slowmode_seconds > 0` → "Slowmode: Xs"
+  - `auto_delete_seconds` → "Auto-delete: 1h/24h/7d/30d"
+  - `is_nsfw` → "NSFW"
 
-6. **Guard `usernameColorClass`** (lines 1038-1042): When `isDM`, always return `"text-foreground"`.
+**5. `src/components/modals/index.ts`** — Export `ChannelInfoModal`
 
-7. **Guard `displayName`** (lines 1052-1059): When `isDM`, skip `messageMember?.nickname` and `effectiveAuthorStyle?.nickname` — use only `messageUser?.display_name` or `messageUser?.username`.
-
-### What stays unchanged
-- Server store is not cleared on DM switch
-- Role color logic within servers unchanged
-- DM message sending/receiving unchanged
-- Avatar and user-level display names unchanged
-- All scroll/layout fixes from Plan 1 (already implemented)
+**6. `src/pages/AppLayout.tsx`** — Import and render `<ChannelInfoModal />` alongside other modals (~line 698)
 
