@@ -324,9 +324,9 @@ export const EditChannelModal = () => {
           onChange={(e) => setTopic(e.target.value)}
           placeholder="Let everyone know what this channel is for..."
           className="rounded-xl border-border/50 bg-secondary/30 min-h-[100px] resize-none"
-          maxLength={1024}
+          maxLength={120}
         />
-        <p className="text-xs text-muted-foreground text-right">{topic.length}/1024</p>
+        <p className="text-xs text-muted-foreground text-right">{topic.length}/120</p>
       </div>
 
       <div className="space-y-3">
