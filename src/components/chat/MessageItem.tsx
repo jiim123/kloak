@@ -425,10 +425,10 @@ export const MessageItem = memo(function MessageItem({
   }, [members, channels, user?.id, message.user_id, isDM]);
 
   const messageRoles = useMemo(
-    () => messageMember?.roles ?? authorStyleFallback?.roles ?? [],
-    [messageMember?.roles, authorStyleFallback?.roles],
+    () => isDM ? [] : (messageMember?.roles ?? effectiveAuthorStyle?.roles ?? []),
+    [isDM, messageMember?.roles, effectiveAuthorStyle?.roles],
   );
-  const messageBaseRole = messageMember?.role ?? authorStyleFallback?.role;
+  const messageBaseRole = isDM ? undefined : (messageMember?.role ?? effectiveAuthorStyle?.role);
 
   // Note: avoid per-message global listeners/effects in message rows.
 
