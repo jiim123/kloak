@@ -17,12 +17,8 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <link rel="manifest" href="/site.webmanifest" />
 
-    <!-- Preload critical fonts for LCP (hero heading uses General Sans Medium) -->
-    <link rel="preload" href="/fonts/GeneralSans-Medium.otf" as="font" type="font/otf" crossorigin />
-    <link rel="preload" href="/fonts/GeneralSans-Regular.otf" as="font" type="font/otf" crossorigin />
-    <link rel="preload" href="/fonts/GeneralSans-Light.otf" as="font" type="font/otf" crossorigin />
-    <!-- Preload landing page mono font (largest font, breaks dependency chain) -->
-    <link rel="preload" href="/fonts/MonaspaceKrypton-Regular.otf" as="font" type="font/otf" crossorigin />
+    <!-- Preload Miranda Sans variable font from Bunny CDN -->
+    <link rel="preload" href="https://kloakweb.b-cdn.net/fonts/MirandaSans-VariableFont_wght.woff2" as="font" type="font/woff2" crossorigin />
 
     <!-- Google Fonts: async load to avoid render-blocking -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
