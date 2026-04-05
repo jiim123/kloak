@@ -296,6 +296,7 @@ export const MessageItem = memo(function MessageItem({
   dmActions,
 }: MessageItemProps) {
   const isDM = !!dmActions;
+  const effectiveAuthorStyle = isDM ? undefined : authorStyleFallback;
   // Selectors - granular to prevent unnecessary re-renders
   const user = useAuthStore((state) => state.user);
   // Extract each message store function separately to avoid re-renders on unrelated changes
@@ -390,6 +391,15 @@ export const MessageItem = memo(function MessageItem({
   const channels = useServerStore((state) => state.channels);
 
   const { currentMember, messageMember, usersMap, channelsMap } = useMemo(() => {
+    if (isDM) {
+      return {
+        currentMember: undefined,
+        messageMember: undefined,
+        usersMap: new Map<string, { username: string; display_name?: string | null; nickname?: string | null }>(),
+        channelsMap: new Map<string, { name: string }>(),
+      };
+    }
+
     const userMap = new Map<string, { username: string; display_name?: string | null; nickname?: string | null }>();
     members.forEach((m) => {
       if (m.user) {
@@ -412,17 +422,18 @@ export const MessageItem = memo(function MessageItem({
       usersMap: userMap,
       channelsMap: channelMap,
     };
-  }, [members, channels, user?.id, message.user_id]);
+  }, [members, channels, user?.id, message.user_id, isDM]);
 
   const messageRoles = useMemo(
-    () => messageMember?.roles ?? authorStyleFallback?.roles ?? [],
-    [messageMember?.roles, authorStyleFallback?.roles],
+    () => isDM ? [] : (messageMember?.roles ?? effectiveAuthorStyle?.roles ?? []),
+    [isDM, messageMember?.roles, effectiveAuthorStyle?.roles],
   );
-  const messageBaseRole = messageMember?.role ?? authorStyleFallback?.role;
+  const messageBaseRole = isDM ? undefined : (messageMember?.role ?? effectiveAuthorStyle?.role);
 
   // Note: avoid per-message global listeners/effects in message rows.
 
   const priorityRoleWithIcon = useMemo<Pick<CustomServerRole, "name" | "icon"> | null>(() => {
+    if (isDM) return null;
     const memberRoles = messageRoles;
     if (memberRoles.length === 0) return null;
 
@@ -452,7 +463,7 @@ export const MessageItem = memo(function MessageItem({
 
     if (!best?.icon) return null;
     return { name: best.name, icon: best.icon };
-  }, [messageRoles, roles]);
+  }, [isDM, messageRoles, roles]);
 
   const roleIconNode = useMemo(() => {
     if (!priorityRoleWithIcon?.icon) return null;
@@ -1016,6 +1027,7 @@ export const MessageItem = memo(function MessageItem({
   }, [compactMode, isMentioned, isHighlighted, isPending, isAnnouncementChannel, isGrouped]);
 
   const topCustomRoleColor = useMemo(() => {
+    if (isDM) return null;
     const memberRoles = messageRoles;
     if (memberRoles.length === 0) return null;
 
@@ -1033,13 +1045,14 @@ export const MessageItem = memo(function MessageItem({
     }
 
     return best?.color ?? null;
-  }, [messageRoles, roles]);
+  }, [isDM, messageRoles, roles]);
 
   const usernameColorClass = useMemo(() => {
+    if (isDM) return "text-foreground";
     if (showGhostIdentity) return "text-muted-foreground";
     if (!topCustomRoleColor) return getRoleColor(messageBaseRole ?? undefined);
     return isGradientColor(topCustomRoleColor) ? "text-transparent" : "text-foreground";
-  }, [topCustomRoleColor, messageBaseRole, showGhostIdentity]);
+  }, [isDM, topCustomRoleColor, messageBaseRole, showGhostIdentity]);
 
   const usernameColorStyle = useMemo(() => {
     if (showGhostIdentity) return undefined;
@@ -1051,12 +1064,17 @@ export const MessageItem = memo(function MessageItem({
 
   const displayName = showGhostIdentity
     ? "Anonymous"
-    : pickFirstNonBlank(
-        messageMember?.nickname,
-        authorStyleFallback?.nickname,
-        messageUser?.display_name,
-        messageUser?.username,
-      ) ?? "Unknown";
+    : isDM
+      ? pickFirstNonBlank(
+          messageUser?.display_name,
+          messageUser?.username,
+        ) ?? "Unknown"
+      : pickFirstNonBlank(
+          messageMember?.nickname,
+          effectiveAuthorStyle?.nickname,
+          messageUser?.display_name,
+          messageUser?.username,
+        ) ?? "Unknown";
   const isBotMessageAuthor = !showGhostIdentity && Boolean(messageUser?.is_bot);
 
   const handleUsernameClick = useCallback(
