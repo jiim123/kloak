@@ -1,10 +1,31 @@
-/* Google Fonts loaded asynchronously via index.html */
-
-/* Miranda Sans variable font from Bunny CDN */
 @font-face {
-  font-family: "General Sans";
-  src: url("https://kloakweb.b-cdn.net/fonts/MirandaSans-VariableFont_wght.woff2") format("woff2");
-  font-weight: 100 900;
+  font-family: "Monaspace Krypton";
+  src: url("/fonts/MonaspaceKrypton-Light.otf") format("opentype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Monaspace Krypton";
+  src: url("/fonts/MonaspaceKrypton-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Monaspace Krypton";
+  src: url("/fonts/MonaspaceKrypton-Medium.otf") format("opentype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Monaspace Krypton";
+  src: url("/fonts/MonaspaceKrypton-Bold.otf") format("opentype");
+  font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
@@ -403,9 +424,7 @@
   }
 
   html {
-    font-family:
-      "General Sans", system-ui,
-      sans-serif;
+    font-family: "General Sans", system-ui, sans-serif;
     /* Disable pull-to-refresh and overscroll */
     overscroll-behavior: none;
   }
@@ -1057,13 +1076,21 @@ body {
 }
 
 @keyframes kloak-icon-fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes kloak-progress-shrink {
-  from { width: 100%; }
-  to { width: 0%; }
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
 }
 
 .kloak-toast-icon-fade {
@@ -1081,7 +1108,7 @@ body {
 
 /* Progress bar for auto-dismiss — inset inside the toast */
 [data-sonner-toast]::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: 4px;
   left: 8px;
