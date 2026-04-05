@@ -1064,12 +1064,17 @@ export const MessageItem = memo(function MessageItem({
 
   const displayName = showGhostIdentity
     ? "Anonymous"
-    : pickFirstNonBlank(
-        messageMember?.nickname,
-        authorStyleFallback?.nickname,
-        messageUser?.display_name,
-        messageUser?.username,
-      ) ?? "Unknown";
+    : isDM
+      ? pickFirstNonBlank(
+          messageUser?.display_name,
+          messageUser?.username,
+        ) ?? "Unknown"
+      : pickFirstNonBlank(
+          messageMember?.nickname,
+          effectiveAuthorStyle?.nickname,
+          messageUser?.display_name,
+          messageUser?.username,
+        ) ?? "Unknown";
   const isBotMessageAuthor = !showGhostIdentity && Boolean(messageUser?.is_bot);
 
   const handleUsernameClick = useCallback(
