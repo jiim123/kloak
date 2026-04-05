@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Hash, Volume2, MessageSquare, Pin, Search, Lock, Megaphone, Film, Users, ClipboardList, Timer } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
