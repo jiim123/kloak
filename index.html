@@ -34,7 +34,11 @@
     <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
 
-    <!-- Content Security Policy -->
+    <!-- Content Security Policy
+         Note: hCaptcha may log a console warning about an inline event handler
+         violating script-src. This is cosmetic — hCaptcha runs inside its own
+         iframe (allowed by frame-src) and functions correctly. Do NOT add
+         'unsafe-inline' to script-src to suppress it. -->
     <meta
       http-equiv="Content-Security-Policy"
       content="
@@ -45,7 +49,7 @@
       font-src 'self' https://fonts.gstatic.com;
       img-src 'self' data: blob: https: http:;
       media-src 'self' blob: https:;
-      connect-src 'self' http://ipc.localhost https://foquucurnwpqcvgqukpz.supabase.co https://*.supabase.co https://*.functions.supabase.co wss://*.supabase.co https://api.kibun.social wss://api.kibun.social https://livekit.kibun.social wss://livekit.kibun.social https://api.giphy.com https://media.giphy.com https://media0.giphy.com https://media1.giphy.com https://media2.giphy.com https://media3.giphy.com https://media4.giphy.com https://kloakcdn.b-cdn.net https://hcaptcha.com https://*.hcaptcha.com https://sentry.hcaptcha.com;
+      connect-src 'self' http://ipc.localhost https://foquucurnwpqcvgqukpz.supabase.co https://*.supabase.co https://*.functions.supabase.co wss://*.supabase.co https://api.kibun.social wss://api.kibun.social https://livekit.kibun.social wss://livekit.kibun.social https://api.giphy.com https://media.giphy.com https://media0.giphy.com https://media1.giphy.com https://media2.giphy.com https://media3.giphy.com https://media4.giphy.com https://kloakcdn.b-cdn.net https://static.klipy.com https://hcaptcha.com https://*.hcaptcha.com https://sentry.hcaptcha.com;
       frame-src https://www.youtube.com https://player.vimeo.com https://store.steampowered.com https://open.spotify.com https://w.soundcloud.com https://player.twitch.tv https://clips.twitch.tv https://player.kick.com https://hcaptcha.com https://*.hcaptcha.com;
       object-src 'none';
       base-uri 'self';
