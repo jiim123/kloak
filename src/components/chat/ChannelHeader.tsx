@@ -77,7 +77,16 @@ export const ChannelHeader = ({
         {channel.topic && (
           <>
             <Separator orientation="vertical" className="h-5 mx-2" />
-            <span className="text-muted-foreground text-sm truncate hidden lg:inline">{channel.topic}</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="text-muted-foreground text-sm truncate hidden lg:inline cursor-pointer hover:text-foreground transition-colors text-left min-w-0">
+                  {channel.topic}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 max-h-60 overflow-y-auto text-sm text-foreground whitespace-pre-wrap" align="start">
+                {channel.topic}
+              </PopoverContent>
+            </Popover>
           </>
         )}
 

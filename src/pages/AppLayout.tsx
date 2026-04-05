@@ -697,6 +697,7 @@ const AppLayout = () => {
         <ImportDiscordTemplateModal />
         <ImportEmojiPackModal />
         <SetStatusModal />
+        <ChannelInfoModal />
 
         {/* Persistent embed container for Twitch/Kick streams */}
         <PersistentEmbedContainer />
