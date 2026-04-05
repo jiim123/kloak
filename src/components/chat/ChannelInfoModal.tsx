@@ -7,6 +7,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useUIStore } from "@/stores/uiStore";
 import { useServerStore } from "@/stores/serverStore";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 const channelIcons: Record<string, typeof Hash> = {
   text: Hash,
