@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, MessageSquare, Compass, UserRoundPlus, Users, LogOut, Ban } from "lucide-react";
+import { Search, MessageSquare, Radar, UserRoundPlus, Users, LogOut, Ban } from "lucide-react";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -148,7 +148,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
               onShowExploreChange(true);
             }}
           >
-            <Compass className="w-5 h-5" />
+            <Radar className="w-5 h-5" />
             <span>Explore</span>
           </Button>
         </div>
