@@ -148,7 +148,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
               onShowExploreChange(true);
             }}
           >
-            <Compass className="w-5 h-5" />
+            <Radar className="w-5 h-5" />
             <span>Explore</span>
           </Button>
         </div>
