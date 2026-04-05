@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.get_voice_channel_meta_for_token TO service_role;
