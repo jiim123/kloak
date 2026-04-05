@@ -296,6 +296,7 @@ export const MessageItem = memo(function MessageItem({
   dmActions,
 }: MessageItemProps) {
   const isDM = !!dmActions;
+  const effectiveAuthorStyle = isDM ? undefined : authorStyleFallback;
   // Selectors - granular to prevent unnecessary re-renders
   const user = useAuthStore((state) => state.user);
   // Extract each message store function separately to avoid re-renders on unrelated changes
