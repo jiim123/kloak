@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Hash, Volume2, MessageSquare, Pin, Search, Lock, Megaphone, Film, Users, ClipboardList, Timer } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,7 +48,7 @@ export const ChannelHeader = ({
         <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
           <ChannelIcon className="w-4 h-4 text-[#d7d7d7]" />
         </div>
-        <span className="font-normal text-foreground truncate">{channel.name}</span>
+        <span className="font-normal text-foreground shrink-0">{channel.name}</span>
 
         {channel.is_private && (
           <Tooltip>
@@ -76,7 +77,16 @@ export const ChannelHeader = ({
         {channel.topic && (
           <>
             <Separator orientation="vertical" className="h-5 mx-2" />
-            <span className="text-muted-foreground text-sm truncate hidden lg:inline">{channel.topic}</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="text-muted-foreground text-sm truncate hidden lg:inline cursor-pointer hover:text-foreground transition-colors text-left min-w-0">
+                  {channel.topic}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 max-h-60 overflow-y-auto text-sm text-foreground whitespace-pre-wrap" align="start">
+                {channel.topic}
+              </PopoverContent>
+            </Popover>
           </>
         )}
 

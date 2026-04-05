@@ -24,3 +24,4 @@ export { PermissionDebugPanel } from './PermissionDebugPanel';
 export { ImportDiscordTemplateModal } from './ImportDiscordTemplateModal';
 export { ImportEmojiPackModal } from './ImportEmojiPackModal';
 export { SetStatusModal } from './SetStatusModal';
+export { ChannelInfoModal } from '../chat/ChannelInfoModal';

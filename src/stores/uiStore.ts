@@ -37,6 +37,7 @@ export type ModalType =
   | "import-discord-template"
   | "import-emoji-pack"
   | "set-status"
+  | "channel-info"
   | null;
 
 interface ModalData {

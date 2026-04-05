@@ -17,7 +17,7 @@ const safeAreaStyle = { paddingTop: "env(safe-area-inset-top, 0px)" } as const;
 export const MobileHeader = memo(({ isDMView, showFriends, showExplore }: MobileHeaderProps) => {
   const { currentServer, currentChannel } = useServerStore();
   const { currentConversation } = useDMStore();
-  const { setMobileSidebarOpen, isMemberSidebarOpen, setMemberSidebarOpen } = useUIStore();
+  const { setMobileSidebarOpen, isMemberSidebarOpen, setMemberSidebarOpen, openModal } = useUIStore();
 
   const title = useMemo(() => {
     if (isDMView) {
@@ -81,10 +81,20 @@ export const MobileHeader = memo(({ isDMView, showFriends, showExplore }: Mobile
         </Button>
 
         {/* Center: Current channel / view title */}
-        <div className="flex-1 flex items-center justify-center gap-1.5 min-w-0 px-2">
-          {channelIcon}
-          <h1 className="font-medium text-foreground truncate text-base leading-tight">{title}</h1>
-        </div>
+        {!isDMView && currentChannel ? (
+          <button
+            className="flex-1 flex items-center justify-center gap-1.5 min-w-0 px-2 active:opacity-70 transition-opacity"
+            onClick={() => openModal("channel-info")}
+          >
+            {channelIcon}
+            <h1 className="font-medium text-foreground truncate text-base leading-tight">{title}</h1>
+          </button>
+        ) : (
+          <div className="flex-1 flex items-center justify-center gap-1.5 min-w-0 px-2">
+            {channelIcon}
+            <h1 className="font-medium text-foreground truncate text-base leading-tight">{title}</h1>
+          </div>
+        )}
 
         {/* Right: Action buttons */}
         <div className="flex items-center gap-1 shrink-0">
