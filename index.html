@@ -17,12 +17,8 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <link rel="manifest" href="/site.webmanifest" />
 
-    <!-- Preload critical fonts for LCP (hero heading uses General Sans Medium) -->
-    <link rel="preload" href="/fonts/GeneralSans-Medium.otf" as="font" type="font/otf" crossorigin />
-    <link rel="preload" href="/fonts/GeneralSans-Regular.otf" as="font" type="font/otf" crossorigin />
-    <link rel="preload" href="/fonts/GeneralSans-Light.otf" as="font" type="font/otf" crossorigin />
-    <!-- Preload landing page mono font (largest font, breaks dependency chain) -->
-    <link rel="preload" href="/fonts/MonaspaceKrypton-Regular.otf" as="font" type="font/otf" crossorigin />
+    <!-- Preload Miranda Sans variable font from Bunny CDN -->
+    <link rel="preload" href="https://kloakweb.b-cdn.net/fonts/MirandaSans-VariableFont_wght.woff2" as="font" type="font/woff2" crossorigin />
 
     <!-- Google Fonts: async load to avoid render-blocking -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -46,7 +42,7 @@
       script-src 'self' https://hcaptcha.com https://*.hcaptcha.com;
       worker-src blob:;
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://hcaptcha.com https://*.hcaptcha.com;
-      font-src 'self' https://fonts.gstatic.com;
+      font-src 'self' https://fonts.gstatic.com https://kloakweb.b-cdn.net;
       img-src 'self' data: blob: https: http:;
       media-src 'self' blob: https:;
       connect-src 'self' http://ipc.localhost https://foquucurnwpqcvgqukpz.supabase.co https://*.supabase.co https://*.functions.supabase.co wss://*.supabase.co https://api.kibun.social wss://api.kibun.social https://livekit.kibun.social wss://livekit.kibun.social https://api.giphy.com https://media.giphy.com https://media0.giphy.com https://media1.giphy.com https://media2.giphy.com https://media3.giphy.com https://media4.giphy.com https://kloakcdn.b-cdn.net https://static.klipy.com https://hcaptcha.com https://*.hcaptcha.com https://sentry.hcaptcha.com;
@@ -84,10 +80,7 @@
     <!-- Critical inline styles to prevent FOUC while CSS loads via JS -->
     <style>
       /* Critical @font-face so browser can start fetching fonts before JS-injected CSS arrives */
-      @font-face { font-family: "General Sans"; src: url("/fonts/GeneralSans-Medium.otf") format("opentype"); font-weight: 500; font-style: normal; font-display: swap; }
-      @font-face { font-family: "General Sans"; src: url("/fonts/GeneralSans-Regular.otf") format("opentype"); font-weight: 400; font-style: normal; font-display: swap; }
-      @font-face { font-family: "General Sans"; src: url("/fonts/GeneralSans-Light.otf") format("opentype"); font-weight: 300; font-style: normal; font-display: swap; }
-      @font-face { font-family: "Monaspace Krypton"; src: url("/fonts/MonaspaceKrypton-Regular.otf") format("opentype"); font-weight: 400; font-style: normal; font-display: swap; }
+      @font-face { font-family: "General Sans"; src: url("https://kloakweb.b-cdn.net/fonts/MirandaSans-VariableFont_wght.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
       :root { --background: 0 0% 4%; --foreground: 60 9% 85%; }
       body { margin: 0; background-color: hsl(0, 0%, 4%); color: hsl(60, 9%, 85%); font-family: "General Sans", system-ui, -apple-system, sans-serif; }
       #root { min-height: 100vh; }
