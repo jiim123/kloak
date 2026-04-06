@@ -162,7 +162,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
         <div className="relative flex-shrink-0">
           <AvatarWithDecoration user={friend} className="w-10 h-10" freezeGifUntilHover />
           {(() => {
-            const presence = getEffectivePresence((friend.status as UserStatus) || "offline", friend.last_seen);
+            const presence = getEffectivePresence((friend.status as UserStatus) || "offline", friend.last_seen, friend.id);
             return (
               <div
                 className={cn(
