@@ -107,6 +107,8 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
     setPermissionStates(states);
   }, [channelPermissions, allRoles]);
 
+  const [confirmAction, setConfirmAction] = useState<{ type: 'deny' | 'allow' } | null>(null);
+
   const handlePermissionChange = (roleKey: string, permission: Permission, value: boolean | null) => {
     setPermissionStates((prev) => {
       const next = new Map(prev);
@@ -115,6 +117,32 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
       next.set(roleKey, rolePerms);
       return next;
     });
+  };
+
+  const handleBulkSet = (permissions: Permission[], value: boolean | null) => {
+    if (!selectedRoleKey) return;
+    setPermissionStates((prev) => {
+      const next = new Map(prev);
+      const rolePerms = new Map(next.get(selectedRoleKey) || []);
+      for (const perm of permissions) {
+        const meta = PERMISSION_META[perm];
+        if (meta.enabled) {
+          rolePerms.set(perm, value);
+        }
+      }
+      next.set(selectedRoleKey, rolePerms);
+      return next;
+    });
+  };
+
+  const allEnabledPermissions = PERMISSION_GROUPS.flatMap(g => g.permissions).filter(p => PERMISSION_META[p].enabled);
+
+  const handleGlobalBulkSet = (value: boolean | null) => {
+    if (value !== null) {
+      setConfirmAction({ type: value ? 'allow' : 'deny' });
+    } else {
+      handleBulkSet(allEnabledPermissions, null);
+    }
   };
 
   const getPermissionState = (roleKey: string, permission: Permission): boolean | null => {
