@@ -339,12 +339,6 @@ export const useRealtimeUsers = () => {
           presenceSigByUser.set(targetId, offlineSig);
           recentRealtimePresenceByUser.delete(targetId);
           patchUserAcrossStores({ id: targetId, status: 'offline' });
-          const currentServerId2 = useServerStore.getState().currentServer?.id;
-          if (currentServerId2) {
-            window.dispatchEvent(new CustomEvent('kloak-presence-change', {
-              detail: { serverId: currentServerId2, userId: targetId, status: 'offline' }
-            }));
-          }
           return;
         }
 
@@ -360,12 +354,6 @@ export const useRealtimeUsers = () => {
           custom_status: meta.custom_status ?? null,
           last_seen: meta.last_seen ?? null,
         });
-        const currentServerId = useServerStore.getState().currentServer?.id;
-        if (currentServerId) {
-          window.dispatchEvent(new CustomEvent('kloak-presence-change', {
-            detail: { serverId: currentServerId, userId: targetId, status }
-          }));
-        }
       });
     };
 

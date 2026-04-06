@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { useServerStore } from '@/stores/serverStore';
-import { toast } from 'sonner';
 import { acquireChannel, subscribeChannel, releaseChannel } from '@/lib/sharedChannel';
+
+const activeServerIds = new Set<string>();
 
 export const useRealtimeMembers = (serverId: string | null, opts?: { full?: boolean }) => {
   const useFull = opts?.full === true;
@@ -9,6 +10,9 @@ export const useRealtimeMembers = (serverId: string | null, opts?: { full?: bool
   // Use refs to avoid recreating subscription when store functions change
   const fetchMembersRef = useRef(useServerStore.getState().fetchMembers);
   const fetchRolesRef = useRef(useServerStore.getState().fetchRoles);
+
+  // Only one instance per server should run the broadcast listener and visibility handler
+  const isActiveInstanceRef = useRef(false);
 
   // Keep refs updated
   useEffect(() => {
@@ -18,6 +22,25 @@ export const useRealtimeMembers = (serverId: string | null, opts?: { full?: bool
     });
   }, []);
 
+  // Instance registration — first mount for a serverId wins
+  useEffect(() => {
+    if (!serverId) return;
+
+    if (activeServerIds.has(serverId)) {
+      isActiveInstanceRef.current = false;
+      return;
+    }
+
+    activeServerIds.add(serverId);
+    isActiveInstanceRef.current = true;
+
+    return () => {
+      if (isActiveInstanceRef.current) {
+        activeServerIds.delete(serverId);
+      }
+    };
+  }, [serverId]);
+
   // Re-fetch members when tab becomes visible (presence data goes stale in background)
   useEffect(() => {
     if (!serverId) return;
@@ -25,9 +48,10 @@ export const useRealtimeMembers = (serverId: string | null, opts?: { full?: bool
     let lastRefresh = Date.now();
 
     const handleVisibility = () => {
+      if (!isActiveInstanceRef.current) return;
       if (document.visibilityState !== 'visible') return;
       const now = Date.now();
-      if (now - lastRefresh < 30_000) return;
+      if (now - lastRefresh < 60_000) return;
       lastRefresh = now;
       fetchRolesRef.current(serverId);
       fetchMembersRef.current(serverId, { force: true, full: useFull });
@@ -37,12 +61,14 @@ export const useRealtimeMembers = (serverId: string | null, opts?: { full?: bool
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [serverId, useFull]);
 
+  // Broadcast listener for member/role changes
   useEffect(() => {
     if (!serverId) return;
 
     const topic = `server:${serverId}`;
     const channel = acquireChannel(topic);
     channel.on('broadcast', { event: 'server_surface' }, ({ payload }) => {
+      if (!isActiveInstanceRef.current) return;
       const event = payload as { table?: string } | null;
       if (!event?.table) return;
 
@@ -60,64 +86,5 @@ export const useRealtimeMembers = (serverId: string | null, opts?: { full?: bool
     return () => {
       releaseChannel(topic);
     };
-  }, [serverId, useFull]);
-
-  // Re-fetch members when presence system detects a user came online
-  // who isn't in the current members list (needs full profile data from DB).
-  // Do NOT refetch for users going offline — patchUserAcrossStores already
-  // updated their status, and refetching would overwrite it with stale DB data.
-  useEffect(() => {
-    if (!serverId) return;
-
-    let refetchTimer: ReturnType<typeof setTimeout> | null = null;
-
-    const handlePresenceChange = (event: Event) => {
-      const detail = (event as CustomEvent).detail;
-      if (!detail?.serverId || detail.serverId !== serverId) return;
-
-      const userId = detail.userId;
-      const newStatus = detail.status;
-
-      if (!userId) return;
-
-      const currentMembers = useServerStore.getState().members;
-      const currentMemberIds = new Set(currentMembers.map((m) => m.user_id));
-
-      const isInList = currentMemberIds.has(userId);
-      // Only refetch when a user comes online who isn't in the list
-      const isComingOnline = newStatus !== 'offline' && !isInList;
-
-      if (isComingOnline) {
-        if (refetchTimer) clearTimeout(refetchTimer);
-        refetchTimer = setTimeout(() => {
-          fetchMembersRef.current(serverId, { full: useFull });
-        }, 2000);
-      }
-    };
-
-    window.addEventListener('kloak-presence-change', handlePresenceChange);
-
-    return () => {
-      window.removeEventListener('kloak-presence-change', handlePresenceChange);
-      if (refetchTimer) clearTimeout(refetchTimer);
-    };
-  }, [serverId, useFull]);
-
-  // Reliable background poll to catch any missed presence changes.
-  // The event-driven kloak-presence-change handles most updates instantly,
-  // but this catches edge cases where events are missed during effect re-mounts.
-  useEffect(() => {
-    if (!serverId) return;
-
-    const MEMBER_POLL_INTERVAL_MS = 120_000; // 120 seconds — safety net only
-
-    const pollMembers = () => {
-      if (document.visibilityState !== 'visible') return;
-      fetchMembersRef.current(serverId, { full: useFull });
-    };
-
-    const intervalId = setInterval(pollMembers, MEMBER_POLL_INTERVAL_MS);
-
-    return () => clearInterval(intervalId);
   }, [serverId, useFull]);
 };
