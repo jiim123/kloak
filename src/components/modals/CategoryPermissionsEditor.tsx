@@ -318,6 +318,14 @@ export const CategoryPermissionsEditor = ({ categoryId, serverId, onClose }: Cat
       {/* Permissions list */}
       {selectedRole && (
         <div className="space-y-6">
+          {/* Global bulk set */}
+          <div className="pb-3 border-b border-border/50">
+            <BulkPermissionButtons
+              onSet={handleGlobalBulkSet}
+              label="Set all permissions:"
+            />
+          </div>
+
           {PERMISSION_GROUPS.map((group) => (
             <div key={group.label} className="space-y-1">
               <div className="mb-3">
@@ -326,6 +334,10 @@ export const CategoryPermissionsEditor = ({ categoryId, serverId, onClose }: Cat
                 </h4>
                 <p className="text-xs text-muted-foreground mt-0.5">{group.description}</p>
               </div>
+              <BulkPermissionButtons
+                onSet={(value) => handleBulkSet(group.permissions, value)}
+                className="mb-2"
+              />
               <div className="space-y-0.5">
                 {group.permissions.map((permission) => {
                   const meta = PERMISSION_META[permission];
