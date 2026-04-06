@@ -8,6 +8,17 @@ import { toast } from 'sonner';
 import type { Permission, ChannelPermission } from '@/types';
 import { cn } from '@/lib/utils';
 import { PERMISSION_META, PERMISSION_GROUPS } from '@/lib/permissionMeta';
+import { BulkPermissionButtons } from '@/components/permissions/BulkPermissionButtons';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface ChannelPermissionsEditorProps {
   channelId: string;
