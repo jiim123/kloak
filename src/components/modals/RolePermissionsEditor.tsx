@@ -10,6 +10,17 @@ import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { Permission, ServerRole, CustomServerRole } from '@/types';
+import { BulkPermissionButtons } from '@/components/permissions/BulkPermissionButtons';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface RolePermissionsEditorProps {
   role: CustomServerRole;
