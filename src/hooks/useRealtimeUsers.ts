@@ -354,12 +354,6 @@ export const useRealtimeUsers = () => {
           custom_status: meta.custom_status ?? null,
           last_seen: meta.last_seen ?? null,
         });
-        const currentServerId = useServerStore.getState().currentServer?.id;
-        if (currentServerId) {
-          window.dispatchEvent(new CustomEvent('kloak-presence-change', {
-            detail: { serverId: currentServerId, userId: targetId, status }
-          }));
-        }
       });
     };
 
