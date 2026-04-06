@@ -3277,7 +3277,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                                     <>
                                       <div className="text-sm">
                                         <MessageContent
-                                          content={msg.content}
+                                          content={msg.content.replace(/kloak-attachment:\/\/[^\s]*/g, '').trim()}
                                           currentUserId={user?.id}
                                           messageId={msg.id}
                                           messageUser={
@@ -3297,6 +3297,11 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                                           }
                                         />
                                       </div>
+                                      {/* Reply attachment gallery */}
+                                      <ThreadAttachmentGallery
+                                        content={msg.content}
+                                        onImageOpen={setThreadAttachmentLightboxUrl}
+                                      />
 
                                       {/* Reactions */}
                                       {msg.reactions && msg.reactions.length > 0 && (
