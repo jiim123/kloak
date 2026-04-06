@@ -517,12 +517,24 @@ const RolePermissionsEditorInline = ({ role, serverId }: { role: CustomServerRol
 
   return (
     <div className="space-y-6">
+      {/* Global bulk set */}
+      <div className="pb-3 border-b border-border/50">
+        <BulkPermissionButtons
+          onSet={handleGlobalBulkSet}
+          label="Set all permissions:"
+        />
+      </div>
+
       {PERMISSION_GROUPS.map((group) => (
         <div key={group.label} className="space-y-1">
           <div className="mb-3">
             <h4 className="text-xs font-mono tracking-tight text-muted-foreground">{group.label}</h4>
             <p className="text-xs text-muted-foreground mt-0.5">{group.description}</p>
           </div>
+          <BulkPermissionButtons
+            onSet={(value) => handleBulkSet(group.permissions, value)}
+            className="mb-1"
+          />
           <div className="space-y-0.5">
             {group.permissions.map((permission) => {
               const meta = PERMISSION_META[permission];
@@ -616,6 +628,34 @@ const RolePermissionsEditorInline = ({ role, serverId }: { role: CustomServerRol
           )}
         </Button>
       </div>
+
+      {/* Confirmation dialog for global Deny/Allow All */}
+      <AlertDialog open={!!confirmAction} onOpenChange={(open) => !open && setConfirmAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmAction?.type === 'deny' ? 'Deny All Permissions?' : 'Allow All Permissions?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to set ALL permissions to {confirmAction?.type === 'deny' ? 'Deny' : 'Allow'}? This will override any individual settings.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (confirmAction) {
+                  handleBulkSet(confirmAction.permissions, confirmAction.type === 'allow');
+                }
+                setConfirmAction(null);
+              }}
+              className={confirmAction?.type === 'deny' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
+            >
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
