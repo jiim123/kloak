@@ -117,6 +117,7 @@ export const UserSearchResults = ({ query }: UserSearchResultsProps) => {
         const presence = getEffectivePresence(
           (result.status as UserStatus) || "offline",
           result.last_seen,
+          result.id,
         );
 
         return (

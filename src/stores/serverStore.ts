@@ -1617,15 +1617,45 @@ export const useServerStore = create<ServerState>((set, get) => ({
           bulkSetUsersInCache(memberUsers as any);
         }
 
+        // Before setting members into state, preserve real-time presence status
+        // for users who have recent Presence channel data (prevents stale DB overwrites)
+        const existingMembers = get().members;
+        const existingStatusMap = new Map<string, { status: string; last_seen: string | null }>();
+        existingMembers.forEach((m) => {
+          if (m.user?.status) {
+            existingStatusMap.set(m.user_id, {
+              status: m.user.status as string,
+              last_seen: m.user.last_seen ?? null,
+            });
+          }
+        });
+
+        const mergedMembers = members.map((m) => {
+          if (hasRecentRealtimePresence(m.user_id)) {
+            const existing = existingStatusMap.get(m.user_id);
+            if (existing && m.user) {
+              return {
+                ...m,
+                user: {
+                  ...m.user,
+                  status: existing.status,
+                  last_seen: existing.last_seen ?? m.user.last_seen,
+                },
+              };
+            }
+          }
+          return m;
+        });
+
         const now = Date.now();
         membersCachedAt.set(modeCacheKey, now);
         if (mode === "full") {
           // Full roster is a strict superset of lightweight member data.
           membersCachedAt.set(getMembersCacheKey(serverId, "lite"), now);
-          setCachedMembers(serverId, "lite", userId, members, now);
+          setCachedMembers(serverId, "lite", userId, mergedMembers, now);
         }
-        setCachedMembers(serverId, mode, userId, members, now);
-        set({ members, isMembersLoading: false, membersServerId: serverId, membersFetchMode: mode });
+        setCachedMembers(serverId, mode, userId, mergedMembers, now);
+        set({ members: mergedMembers, isMembersLoading: false, membersServerId: serverId, membersFetchMode: mode });
       } catch (error) {
         console.error("Failed to fetch members:", error);
         // Set empty array on error to prevent stale data

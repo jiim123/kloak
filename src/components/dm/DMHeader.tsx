@@ -35,7 +35,8 @@ export const DMHeader = ({ otherUser }: DMHeaderProps) => {
 
   const otherPresence = getEffectivePresence(
     (otherUser?.status as UserStatus) || "offline",
-    otherUser?.last_seen
+    otherUser?.last_seen,
+    otherUser?.id,
   );
 
   const getStatusColor = (status: string) => {

@@ -262,6 +262,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
                             const presence = getEffectivePresence(
                               (conversation.other_user?.status as UserStatus) || "offline",
                               conversation.other_user?.last_seen,
+                              conversation.other_user?.id,
                             );
                             return (
                               <div

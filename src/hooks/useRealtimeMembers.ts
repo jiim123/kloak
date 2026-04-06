@@ -109,7 +109,7 @@ export const useRealtimeMembers = (serverId: string | null, opts?: { full?: bool
   useEffect(() => {
     if (!serverId) return;
 
-    const MEMBER_POLL_INTERVAL_MS = 60_000; // 60 seconds
+    const MEMBER_POLL_INTERVAL_MS = 120_000; // 120 seconds — safety net only
 
     const pollMembers = () => {
       if (document.visibilityState !== 'visible') return;

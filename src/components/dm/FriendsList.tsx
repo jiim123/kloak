@@ -182,7 +182,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
             <p className="text-sm text-muted-foreground truncate">{friend.custom_status}</p>
           ) : (
             (() => {
-              const presence = getEffectivePresence((friend.status as UserStatus) || "offline", friend.last_seen);
+              const presence = getEffectivePresence((friend.status as UserStatus) || "offline", friend.last_seen, friend.id);
               return <p className="text-sm text-muted-foreground capitalize">{presence.status || "offline"}</p>;
             })()
           )}
