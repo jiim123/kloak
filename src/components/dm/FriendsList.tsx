@@ -74,7 +74,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
   }, [user?.id, isFriendsRoute, fetchFriends]);
 
   const onlineFriends = friends.filter((f) => {
-    const presence = getEffectivePresence((f.status as UserStatus) || "offline", f.last_seen);
+    const presence = getEffectivePresence((f.status as UserStatus) || "offline", f.last_seen, f.id);
     return !presence.isOffline;
   });
   const allFriends = friends;
