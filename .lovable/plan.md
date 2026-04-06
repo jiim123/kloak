@@ -1,24 +1,49 @@
 
 
-## Fix: CSP Violations for Klipy and hCaptcha
+## Fix: Stop DB fetches from overwriting real-time presence data
 
-### Analysis
+Six targeted changes across 8 files. No database or edge function modifications.
 
-**Klipy domains found in codebase:**
-- `api.klipy.com` — used in the edge function (`klipy-proxy/index.ts`), never called directly from the browser. No CSP change needed.
-- `static.klipy.com` — serves GIF media files. Referenced in API response URLs, loaded by `<img>` tags in `GifPicker.tsx`. The `img-src` directive already includes `https:` which covers this. However, `connect-src` does NOT include it, so if the browser pre-fetches or if any `fetch()` call hits this domain, it gets blocked.
-- `klipy.com` — only used as an attribution link (`<a href>`), no CSP impact.
+### Fix 1: Merge Presence-patched status in `fetchMembers`
+**File:** `src/stores/serverStore.ts`
+- Add `import { hasRecentRealtimePresence } from '@/hooks/useRealtimeUsers'` at top
+- After line 1612 (where `members` array is built), before the `set()` call on line 1628, build a `mergedMembers` array that preserves existing Presence-patched status for users with `hasRecentRealtimePresence(userId) === true`
+- Use `mergedMembers` in the `set()` call and cache calls instead of `members`
 
-**hCaptcha:** The inline handler warning is cosmetic. hCaptcha loads in an iframe (`frame-src` already allows `https://hcaptcha.com https://*.hcaptcha.com`), and the captcha functions correctly. Adding `'unsafe-inline'` or `'unsafe-hashes'` is unnecessary and would weaken security.
+### Fix 2: Only trigger `fetchMembers` for new online users
+**File:** `src/hooks/useRealtimeMembers.ts`
+- In the `handlePresenceChange` handler (lines 72-94), remove the `isGoingOffline` branch. Only call `fetchMembers` when `isComingOnline` (user not in list and status !== 'offline'). Users going offline are already handled by `patchUserAcrossStores`.
 
-### Changes
+### Fix 3: Add `userId` param to `getEffectivePresence`
+**File:** `src/lib/presence.ts`
+- Add `import { hasRecentRealtimePresence } from '@/hooks/useRealtimeUsers'`
+- Add optional `userId?: string` parameter
+- If `userId` is provided and `hasRecentRealtimePresence(userId)` is true, trust the status as-is (skip last_seen heuristics)
 
-**1. `index.html`** (CSP meta tag, lines 40-53)
-- Add `https://static.klipy.com` to `connect-src`
-- Add a comment above the CSP meta tag explaining the hCaptcha inline handler warning is expected and harmless
+### Fix 4: Update all callers to pass `userId`
+**Files:** 7 files
+- `src/components/layout/MembersSidebar.tsx` — pass `member.user_id`
+- `src/components/dm/FriendsList.tsx` — pass `friend.id` (3 call sites)
+- `src/components/dm/DMSidebar.tsx` — pass `conversation.other_user?.id`
+- `src/components/dm/DMHeader.tsx` — pass `otherUser?.id`
+- `src/components/modals/UserProfilePopup.tsx` — pass `profileUser.id`
+- `src/components/dm/UserSearchResults.tsx` — pass `result.id`
+- `src/components/debug/PresenceDebugOverlay.tsx` — pass user id
 
-**2. `src-tauri/tauri.conf.json`** (CSP string, line 30)
-- Add `https://static.klipy.com` to `connect-src`
+### Fix 5: Increase background poll interval
+**File:** `src/hooks/useRealtimeMembers.ts`
+- Change `MEMBER_POLL_INTERVAL_MS` from `60_000` to `120_000`
 
-No JavaScript files modified. No existing CSP entries removed.
+### Fix 6: Fix `userCacheStore` status reactivity
+**File:** `src/stores/userCacheStore.ts`
+- In `patchUser`, change the non-visual (status/last_seen) branch to also create a new object reference and bump version, so components reading status from the cache re-render. The `useMessageUser` hook already uses per-user version tracking, so message components for *other* users won't be affected.
+
+### What is NOT changed
+- Presence channel subscription logic
+- Own-user status management (authStore)
+- `updateLastSeen` heartbeat
+- Presence channel track/untrack
+- `patchUserAcrossStores`
+- 30-second absent grace period
+- Any SQL/RPC functions
 
