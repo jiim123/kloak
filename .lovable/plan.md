@@ -1,42 +1,42 @@
 
 
-## Add Bulk Permission Controls
+## Fix: Member list refetch storm
 
-Add "Set All" buttons at the global level and per-group level across all three permission editors.
+Five changes to eliminate redundant `fetchMembers` triggers and prevent double-mount conflicts.
 
-### Shared Component
+### Change 1: Delete background poll effect
+**File:** `src/hooks/useRealtimeMembers.ts` — Remove lines 106-122 (the `MEMBER_POLL_INTERVAL_MS = 120_000` interval effect entirely).
 
-Create `src/components/permissions/BulkPermissionButtons.tsx` — a reusable row of Inherit/Deny/Allow buttons with the specified styling. Props: `onSet(value: boolean | null)`, `label?: string` (defaults to "Set all:"). This avoids duplicating the button markup across three editors.
+### Change 2: Delete kloak-presence-change listener effect
+**File:** `src/hooks/useRealtimeMembers.ts` — Remove lines 65-104 (the `handlePresenceChange` / `kloak-presence-change` listener effect entirely).
 
-### Changes per Editor
+### Change 3: Remove kloak-presence-change dispatches from useRealtimeUsers
+**File:** `src/hooks/useRealtimeUsers.ts`
+- Remove lines 342-347 (offline dispatch block: `const currentServerId2 = ...` through the closing `}`)
+- Remove lines 363-368 (online dispatch block: `const currentServerId = ...` through the closing `}`)
+- Keep the `useServerStore` import (still used by `patchUserAcrossStores` and other code in the file).
 
-**1. `src/components/modals/RolePermissionsEditor.tsx`**
-- Add `handleBulkSet(permissions: Permission[], value: boolean | null)` that loops over the array and calls `handlePermissionChange` for each
-- Add `handleGlobalBulkSet(value: boolean | null)` that collects all permissions from all groups
-- Add global "Set All Permissions" row inside the ScrollArea, above the first group (uses `BulkPermissionButtons`)
-- Add per-group `BulkPermissionButtons` row below each group label
-- For global Deny All and Allow All: wrap in `AlertDialog` confirmation ("Are you sure you want to set ALL permissions to Deny/Allow?")
-- No confirmation for per-group actions or Inherit All
+### Change 4: Increase visibility handler throttle
+**File:** `src/hooks/useRealtimeMembers.ts` — Line 30: change `30_000` to `60_000`.
 
-**2. `src/components/modals/ChannelPermissionsEditor.tsx`**
-- Same pattern: `handleBulkSet` loops `handlePermissionChange(selectedRoleKey!, perm, value)` for each permission
-- Global row above groups, per-group row below group label
-- AlertDialog for global Deny/Allow All
+### Change 5: Prevent double-mount conflict
+**File:** `src/hooks/useRealtimeMembers.ts`
+- Add module-level `const activeServerIds = new Set<string>()` before the hook export
+- Add `instanceIdRef` and `isActiveInstanceRef` refs, plus a registration effect that adds the serverId to `activeServerIds` if not already present (first mount wins)
+- Guard the visibility handler with `if (!isActiveInstanceRef.current) return`
+- Guard the broadcast handler with `if (!isActiveInstanceRef.current) return`
 
-**3. `src/components/modals/CategoryPermissionsEditor.tsx`**
-- Identical pattern to Channel editor (uses `selectedRoleKey`)
+### Final shape of useRealtimeMembers
+After all changes, the hook will have exactly **three** `useEffect` blocks:
+1. Store subscription (keeps refs updated) — unchanged
+2. Instance registration (activeServerIds dedup)
+3. Visibility handler (60s throttle, guarded by isActiveInstance)
+4. Broadcast listener (server_surface events, guarded by isActiveInstance)
 
-### Confirmation Dialog
+### Files changed
+- `src/hooks/useRealtimeMembers.ts` — rewrite (remove 2 effects, add dedup, adjust throttle)
+- `src/hooks/useRealtimeUsers.ts` — remove 2 dispatch blocks (6 lines each)
 
-Use the existing `AlertDialog` component from `src/components/ui/alert-dialog.tsx`. State: `confirmAction: { type: 'deny' | 'allow'; permissions: Permission[] } | null`. When user clicks global Deny/Allow All, set this state to show the dialog. On confirm, execute the bulk set and close.
-
-### Technical Details
-
-- Bulk actions only update local state (the `permissionStates` Map). Saving still requires clicking "Save Changes" / "Save Permissions" — no change to save logic.
-- Per-group buttons only affect enabled permissions (skip `!meta.enabled` in Channel/Category editors).
-- All permissions in `PERMISSION_GROUPS` are included for the global action.
-
-### Files Changed
-- **New:** `src/components/permissions/BulkPermissionButtons.tsx`
-- **Modified:** `RolePermissionsEditor.tsx`, `ChannelPermissionsEditor.tsx`, `CategoryPermissionsEditor.tsx`
+### What is NOT changed
+- `patchUserAcrossStores`, Presence channel logic, `fetchMembers`, `MembersSidebar`, `ServerSettingsPage`
 
