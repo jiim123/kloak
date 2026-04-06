@@ -436,12 +436,37 @@ const RolePermissionsEditorInline = ({ role, serverId }: { role: CustomServerRol
     setPermissionStates(states);
   }, [rolePermissions, role]);
 
+  const [confirmAction, setConfirmAction] = useState<{ type: 'deny' | 'allow'; permissions: Permission[] } | null>(null);
+
   const handlePermissionChange = (permission: Permission, value: boolean | null) => {
     setPermissionStates((prev) => {
       const next = new Map(prev);
       next.set(permission, value);
       return next;
     });
+  };
+
+  const handleBulkSet = (permissions: Permission[], value: boolean | null) => {
+    setPermissionStates((prev) => {
+      const next = new Map(prev);
+      for (const perm of permissions) {
+        const meta = PERMISSION_META[perm];
+        if (meta.enabled) {
+          next.set(perm, value);
+        }
+      }
+      return next;
+    });
+  };
+
+  const allPermissions = PERMISSION_GROUPS.flatMap(g => g.permissions);
+
+  const handleGlobalBulkSet = (value: boolean | null) => {
+    if (value !== null) {
+      setConfirmAction({ type: value ? 'allow' : 'deny', permissions: allPermissions });
+    } else {
+      handleBulkSet(allPermissions, null);
+    }
   };
 
   const handleSave = async () => {
