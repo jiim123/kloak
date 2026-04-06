@@ -6,6 +6,7 @@ import { deduplicatedFetch } from "@/lib/deduplicatedFetch";
 import { hydrateServerEmojis, type ServerEmoji } from "@/lib/serverEmojis";
 import { persistMemberCount } from "@/lib/serverMemberCount";
 import { bulkSetUsersInCache } from "@/stores/userCacheStore";
+import { hasRecentRealtimePresence } from "@/hooks/useRealtimeUsers";
 import { useAuthStore } from "./authStore";
 import { useFriendStore } from "./friendStore";
 import { useMessageStore } from "@/stores/messageStore";
