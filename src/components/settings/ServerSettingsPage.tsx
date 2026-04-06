@@ -68,6 +68,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { RolePermissionsEditor } from "../modals/RolePermissionsEditor";
+import { BulkPermissionButtons } from "@/components/permissions/BulkPermissionButtons";
 import { BannerCropModal } from "../modals/BannerCropModal";
 import { RoleColorPicker } from "../modals/RoleColorPicker";
 import { RoleIconPreview } from "@/components/ui/role-icon-preview";
@@ -435,12 +436,37 @@ const RolePermissionsEditorInline = ({ role, serverId }: { role: CustomServerRol
     setPermissionStates(states);
   }, [rolePermissions, role]);
 
+  const [confirmAction, setConfirmAction] = useState<{ type: 'deny' | 'allow'; permissions: Permission[] } | null>(null);
+
   const handlePermissionChange = (permission: Permission, value: boolean | null) => {
     setPermissionStates((prev) => {
       const next = new Map(prev);
       next.set(permission, value);
       return next;
     });
+  };
+
+  const handleBulkSet = (permissions: Permission[], value: boolean | null) => {
+    setPermissionStates((prev) => {
+      const next = new Map(prev);
+      for (const perm of permissions) {
+        const meta = PERMISSION_META[perm];
+        if (meta.enabled) {
+          next.set(perm, value);
+        }
+      }
+      return next;
+    });
+  };
+
+  const allPermissions = PERMISSION_GROUPS.flatMap(g => g.permissions);
+
+  const handleGlobalBulkSet = (value: boolean | null) => {
+    if (value !== null) {
+      setConfirmAction({ type: value ? 'allow' : 'deny', permissions: allPermissions });
+    } else {
+      handleBulkSet(allPermissions, null);
+    }
   };
 
   const handleSave = async () => {
@@ -491,12 +517,24 @@ const RolePermissionsEditorInline = ({ role, serverId }: { role: CustomServerRol
 
   return (
     <div className="space-y-6">
+      {/* Global bulk set */}
+      <div className="pb-3 border-b border-border/50">
+        <BulkPermissionButtons
+          onSet={handleGlobalBulkSet}
+          label="Set all permissions:"
+        />
+      </div>
+
       {PERMISSION_GROUPS.map((group) => (
         <div key={group.label} className="space-y-1">
           <div className="mb-3">
             <h4 className="text-xs font-mono tracking-tight text-muted-foreground">{group.label}</h4>
             <p className="text-xs text-muted-foreground mt-0.5">{group.description}</p>
           </div>
+          <BulkPermissionButtons
+            onSet={(value) => handleBulkSet(group.permissions, value)}
+            className="mb-1"
+          />
           <div className="space-y-0.5">
             {group.permissions.map((permission) => {
               const meta = PERMISSION_META[permission];
@@ -590,6 +628,34 @@ const RolePermissionsEditorInline = ({ role, serverId }: { role: CustomServerRol
           )}
         </Button>
       </div>
+
+      {/* Confirmation dialog for global Deny/Allow All */}
+      <AlertDialog open={!!confirmAction} onOpenChange={(open) => !open && setConfirmAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmAction?.type === 'deny' ? 'Deny All Permissions?' : 'Allow All Permissions?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to set ALL permissions to {confirmAction?.type === 'deny' ? 'Deny' : 'Allow'}? This will override any individual settings.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (confirmAction) {
+                  handleBulkSet(confirmAction.permissions, confirmAction.type === 'allow');
+                }
+                setConfirmAction(null);
+              }}
+              className={confirmAction?.type === 'deny' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
+            >
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
