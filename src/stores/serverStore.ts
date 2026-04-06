@@ -1639,7 +1639,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
                 ...m,
                 user: {
                   ...m.user,
-                  status: existing.status,
+                  status: existing.status as any,
                   last_seen: existing.last_seen ?? m.user.last_seen,
                 },
               };
