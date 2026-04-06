@@ -276,11 +276,23 @@ export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissio
 
       <ScrollArea className="h-[400px] pr-4">
         <div className="space-y-6">
+          {/* Global bulk set */}
+          <div className="pb-3 border-b border-border/50">
+            <BulkPermissionButtons
+              onSet={handleGlobalBulkSet}
+              label="Set all permissions:"
+            />
+          </div>
+
           {PERMISSION_GROUPS.map((group) => (
             <div key={group.label} className="space-y-3">
               <Label className="text-xs font-medium text-muted-foreground uppercase">
                 {group.label}
               </Label>
+              <BulkPermissionButtons
+                onSet={(value) => handleBulkSet(group.permissions, value)}
+                className="mb-1"
+              />
               <div className="space-y-2 pl-1">
                 {group.permissions.map((permission) => {
                   const state = permissionStates.get(permission);
