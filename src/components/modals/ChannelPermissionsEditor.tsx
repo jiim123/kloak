@@ -8,6 +8,17 @@ import { toast } from 'sonner';
 import type { Permission, ChannelPermission } from '@/types';
 import { cn } from '@/lib/utils';
 import { PERMISSION_META, PERMISSION_GROUPS } from '@/lib/permissionMeta';
+import { BulkPermissionButtons } from '@/components/permissions/BulkPermissionButtons';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface ChannelPermissionsEditorProps {
   channelId: string;
@@ -96,6 +107,8 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
     setPermissionStates(states);
   }, [channelPermissions, allRoles]);
 
+  const [confirmAction, setConfirmAction] = useState<{ type: 'deny' | 'allow' } | null>(null);
+
   const handlePermissionChange = (roleKey: string, permission: Permission, value: boolean | null) => {
     setPermissionStates((prev) => {
       const next = new Map(prev);
@@ -104,6 +117,32 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
       next.set(roleKey, rolePerms);
       return next;
     });
+  };
+
+  const handleBulkSet = (permissions: Permission[], value: boolean | null) => {
+    if (!selectedRoleKey) return;
+    setPermissionStates((prev) => {
+      const next = new Map(prev);
+      const rolePerms = new Map(next.get(selectedRoleKey) || []);
+      for (const perm of permissions) {
+        const meta = PERMISSION_META[perm];
+        if (meta.enabled) {
+          rolePerms.set(perm, value);
+        }
+      }
+      next.set(selectedRoleKey, rolePerms);
+      return next;
+    });
+  };
+
+  const allEnabledPermissions = PERMISSION_GROUPS.flatMap(g => g.permissions).filter(p => PERMISSION_META[p].enabled);
+
+  const handleGlobalBulkSet = (value: boolean | null) => {
+    if (value !== null) {
+      setConfirmAction({ type: value ? 'allow' : 'deny' });
+    } else {
+      handleBulkSet(allEnabledPermissions, null);
+    }
   };
 
   const getPermissionState = (roleKey: string, permission: Permission): boolean | null => {
@@ -223,6 +262,14 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
       {/* Permissions list */}
       {selectedRole && (
         <div className="space-y-6">
+          {/* Global bulk set */}
+          <div className="pb-3 border-b border-border/50">
+            <BulkPermissionButtons
+              onSet={handleGlobalBulkSet}
+              label="Set all permissions:"
+            />
+          </div>
+
           {PERMISSION_GROUPS.map((group) => (
             <div key={group.label} className="space-y-1">
               <div className="mb-3">
@@ -231,6 +278,10 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
                 </h4>
                 <p className="text-xs text-muted-foreground mt-0.5">{group.description}</p>
               </div>
+              <BulkPermissionButtons
+                onSet={(value) => handleBulkSet(group.permissions, value)}
+                className="mb-2"
+              />
               <div className="space-y-0.5">
                 {group.permissions.map((permission) => {
                   const meta = PERMISSION_META[permission];
@@ -327,6 +378,33 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
           </div>
         </div>
       )}
+      {/* Confirmation dialog for global Deny/Allow All */}
+      <AlertDialog open={!!confirmAction} onOpenChange={(open) => !open && setConfirmAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmAction?.type === 'deny' ? 'Deny All Permissions?' : 'Allow All Permissions?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to set ALL permissions to {confirmAction?.type === 'deny' ? 'Deny' : 'Allow'}? This will override any individual settings.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (confirmAction) {
+                  handleBulkSet(allEnabledPermissions, confirmAction.type === 'allow');
+                }
+                setConfirmAction(null);
+              }}
+              className={confirmAction?.type === 'deny' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
+            >
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
