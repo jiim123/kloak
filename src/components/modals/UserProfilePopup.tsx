@@ -667,7 +667,7 @@ export const UserProfilePopup = () => {
     const overlay = light ? "rgba(255,255,255,0.42)" : "rgba(0,0,0,0.28)";
     const bannerUrl = profileUser.banner_url;
     const hasProfileDecoration = Boolean(profileUser.avatar_decoration);
-    const presence = getEffectivePresence(profileUser.status || "offline", profileUser.last_seen);
+    const presence = getEffectivePresence(profileUser.status || "offline", profileUser.last_seen, profileUser.id);
     const effectSrc = profileUser.profile_effect ? getProfileEffectSrc(profileUser.profile_effect) : null;
     const displayEffectSrc =
       profileEffectAnimationEndedRef.current && profileEffectStillFrame ? profileEffectStillFrame : effectSrc;

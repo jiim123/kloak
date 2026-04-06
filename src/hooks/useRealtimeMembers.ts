@@ -63,7 +63,9 @@ export const useRealtimeMembers = (serverId: string | null, opts?: { full?: bool
   }, [serverId, useFull]);
 
   // Re-fetch members when presence system detects a user came online
-  // who isn't in the current members list, or a member went offline
+  // who isn't in the current members list (needs full profile data from DB).
+  // Do NOT refetch for users going offline — patchUserAcrossStores already
+  // updated their status, and refetching would overwrite it with stale DB data.
   useEffect(() => {
     if (!serverId) return;
 
@@ -78,15 +80,14 @@ export const useRealtimeMembers = (serverId: string | null, opts?: { full?: bool
 
       if (!userId) return;
 
-      // Always read current members from the store to avoid stale closure
       const currentMembers = useServerStore.getState().members;
       const currentMemberIds = new Set(currentMembers.map((m) => m.user_id));
 
       const isInList = currentMemberIds.has(userId);
+      // Only refetch when a user comes online who isn't in the list
       const isComingOnline = newStatus !== 'offline' && !isInList;
-      const isGoingOffline = newStatus === 'offline' && isInList;
 
-      if (isComingOnline || isGoingOffline) {
+      if (isComingOnline) {
         if (refetchTimer) clearTimeout(refetchTimer);
         refetchTimer = setTimeout(() => {
           fetchMembersRef.current(serverId, { full: useFull });
@@ -108,7 +109,7 @@ export const useRealtimeMembers = (serverId: string | null, opts?: { full?: bool
   useEffect(() => {
     if (!serverId) return;
 
-    const MEMBER_POLL_INTERVAL_MS = 60_000; // 60 seconds
+    const MEMBER_POLL_INTERVAL_MS = 120_000; // 120 seconds — safety net only
 
     const pollMembers = () => {
       if (document.visibilityState !== 'visible') return;

@@ -1,4 +1,5 @@
 import type { UserStatus } from '@/types';
+import { hasRecentRealtimePresence } from '@/hooks/useRealtimeUsers';
 
 // Keep this aligned with UX expectations in the app (Members list uses 5 minutes today).
 export const PRESENCE_OFFLINE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
@@ -16,21 +17,26 @@ export interface EffectivePresence {
 /**
  * Compute a reliable "effective" presence from (status, last_seen).
  *
- * Why:
- * - Realtime delivery can be lossy; status updates may be missed.
- * - last_seen heartbeats are more robust and should prevent "stuck offline while active".
- * - We still preserve manual "Invisible" (status === 'offline') by allowing callers
- *   to stop heartbeats while invisible.
+ * When a userId is provided and we have recent real-time Presence channel data
+ * for that user, we trust the status as-is and skip last_seen heuristics.
+ * This prevents stale DB data from overriding accurate Presence channel status.
  */
 export function getEffectivePresence(
   status: UserStatus,
   lastSeen: string | null | undefined,
-  nowMs: number = Date.now()
+  userId?: string,
 ): EffectivePresence {
+  // If we have recent real-time Presence data for this user,
+  // trust the status as-is without last_seen override
+  if (userId && hasRecentRealtimePresence(userId)) {
+    return { status, isStale: false, isOffline: status === 'offline' };
+  }
+
   if (!lastSeen) {
     return { status, isStale: false, isOffline: status === 'offline' };
   }
 
+  const nowMs = Date.now();
   const lastSeenMs = new Date(lastSeen).getTime();
   const isRecent = Number.isFinite(lastSeenMs) && nowMs - lastSeenMs <= PRESENCE_OFFLINE_THRESHOLD_MS;
 

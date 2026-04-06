@@ -114,7 +114,7 @@ const getMemberPresence = (member: ServerMember) => {
     return { status, isStale: false, isOffline: false };
   }
   const lastSeen = member.user?.last_seen;
-  return getEffectivePresence(status, lastSeen);
+  return getEffectivePresence(status, lastSeen, member.user_id);
 };
 
 // Memoized Status indicator component

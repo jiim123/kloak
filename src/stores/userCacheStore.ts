@@ -162,19 +162,17 @@ export const useUserCacheStore = create<UserCacheState>((set, get) => ({
     
     const isVisual = hasVisualChanges(patch, existing.user);
     
+    // Always create a new object reference so components reading status
+    // from the cache (e.g. MembersSidebar, FriendsList) detect changes.
+    // The useMessageUser hook uses per-user versioning, so message components
+    // for OTHER users won't re-render from status-only bumps.
+    const patchedUser = { ...existing.user, ...patch };
+    state._cache.set(id, { user: patchedUser, cachedAt: Date.now() });
+    
     if (isVisual) {
-      // Visual change: create new object reference so selectors pick it up
-      const patchedUser = { ...existing.user, ...patch };
-      state._cache.set(id, { user: patchedUser, cachedAt: Date.now() });
       bumpUserVersion(id);
-      set({ _version: state._version + 1 });
-    } else {
-      // Non-visual change (status/last_seen): mutate in place to preserve
-      // the same object reference. This prevents useMessageUser selectors
-      // from returning a "new" object when _version bumps for OTHER users.
-      Object.assign(existing.user, patch);
-      existing.cachedAt = Date.now();
     }
+    set({ _version: state._version + 1 });
   },
 
   invalidate: (id: string) => {

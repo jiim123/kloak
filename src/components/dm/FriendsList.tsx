@@ -74,7 +74,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
   }, [user?.id, isFriendsRoute, fetchFriends]);
 
   const onlineFriends = friends.filter((f) => {
-    const presence = getEffectivePresence((f.status as UserStatus) || "offline", f.last_seen);
+    const presence = getEffectivePresence((f.status as UserStatus) || "offline", f.last_seen, f.id);
     return !presence.isOffline;
   });
   const allFriends = friends;
@@ -162,7 +162,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
         <div className="relative flex-shrink-0">
           <AvatarWithDecoration user={friend} className="w-10 h-10" freezeGifUntilHover />
           {(() => {
-            const presence = getEffectivePresence((friend.status as UserStatus) || "offline", friend.last_seen);
+            const presence = getEffectivePresence((friend.status as UserStatus) || "offline", friend.last_seen, friend.id);
             return (
               <div
                 className={cn(
@@ -182,7 +182,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
             <p className="text-sm text-muted-foreground truncate">{friend.custom_status}</p>
           ) : (
             (() => {
-              const presence = getEffectivePresence((friend.status as UserStatus) || "offline", friend.last_seen);
+              const presence = getEffectivePresence((friend.status as UserStatus) || "offline", friend.last_seen, friend.id);
               return <p className="text-sm text-muted-foreground capitalize">{presence.status || "offline"}</p>;
             })()
           )}

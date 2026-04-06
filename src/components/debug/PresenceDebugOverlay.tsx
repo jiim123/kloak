@@ -77,8 +77,8 @@ export function PresenceDebugOverlay() {
   const effective = useMemo(() => {
     const status = ((serverUser?.status ?? user?.status) as UserStatus | undefined) ?? 'offline';
     const lastSeen = (serverUser?.last_seen ?? null) as string | null;
-    return getEffectivePresence(status, lastSeen);
-  }, [serverUser?.status, serverUser?.last_seen, user?.status]);
+    return getEffectivePresence(status, lastSeen, user?.id);
+  }, [serverUser?.status, serverUser?.last_seen, user?.status, user?.id]);
 
   if (!import.meta.env.DEV) return null;
   if (!isEnabled) return null;
