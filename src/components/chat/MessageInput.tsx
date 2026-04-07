@@ -712,6 +712,7 @@ export const MessageInput = ({
     }
   }, [
     isDM,
+    isForum,
     dmConfig,
     openChatNoticePopup,
     content,
