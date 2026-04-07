@@ -1,55 +1,67 @@
 
 
-## Fix: Broadcast requires subscription before send
+## Fix DM reaction broadcasts by reusing active channels
 
-### Root Cause
-All 5 broadcast `.send()` calls in `dmStore.ts` create a new channel via `supabase.channel(...)` and immediately call `.send()` without subscribing first. Supabase silently drops broadcasts from unsubscribed channels — `.send()` requires the channel to be in `SUBSCRIBED` state.
+### Problem
+`broadcastOnChannel` creates a temporary channel, subscribes, sends, then immediately tears it down. The WebSocket may not flush before teardown, causing reactions (and potentially messages) to be silently dropped.
 
 ### Solution
-Create a helper function that subscribes to the channel, waits for `SUBSCRIBED` status, sends the payload, then removes the channel. This ensures the broadcast actually goes through.
+Replace `broadcastOnChannel` with a channel registry pattern. The receiver-side hook (`useRealtimeDMs.ts`) already maintains a subscribed channel for the active conversation — register that channel in a module-level map so `dmStore.ts` can reuse it for sending.
 
 ### Changes
 
-**File: `src/stores/dmStore.ts`**
+**File 1: `src/stores/dmStore.ts`**
 
-1. **Add a broadcast helper** near the top of the file (after imports):
+1. Delete the `broadcastOnChannel` function (lines 8-35).
 
+2. Add a channel registry and `trySendBroadcast` helper in its place:
 ```typescript
-async function broadcastOnChannel(topic: string, event: string, payload: Record<string, unknown>): Promise<void> {
-  const channel = supabase.channel(topic);
+const activeDMChannels = new Map<string, ReturnType<typeof supabase.channel>>();
+
+export function registerDMChannel(conversationId: string, channel: ReturnType<typeof supabase.channel>) {
+  activeDMChannels.set(conversationId, channel);
+}
+
+export function unregisterDMChannel(conversationId: string) {
+  activeDMChannels.delete(conversationId);
+}
+
+function trySendBroadcast(conversationId: string, event: string, payload: Record<string, unknown>): void {
   try {
-    await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('subscribe timeout')), 3000);
-      channel.subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          clearTimeout(timeout);
-          resolve();
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          clearTimeout(timeout);
-          reject(new Error(status));
-        }
-      });
-    });
-    await channel.send({ type: 'broadcast', event, payload });
-  } finally {
-    supabase.removeChannel(channel);
-  }
+    const channel = activeDMChannels.get(conversationId);
+    if (channel) {
+      channel.send({ type: 'broadcast', event, payload }).catch(() => {});
+    }
+  } catch {}
 }
 ```
 
-2. **Replace all 5 raw `.send()` call sites** with `broadcastOnChannel(...)`:
+3. Replace all 5 `await broadcastOnChannel(...)` calls with synchronous `trySendBroadcast(...)`:
+   - `sendMessage` (~line 503): `trySendBroadcast(conversationId, 'new_message', { message: { ... } })`
+   - `editMessage` (~line 563): `trySendBroadcast(foundConversationId, 'message_updated', { message: { ... } })`
+   - `deleteMessage` (~line 610): `trySendBroadcast(foundConversationId, 'message_deleted', { message: { ... } })`
+   - `addReaction` (~line 674): `trySendBroadcast(foundConvId, 'reaction_added', { ... })`
+   - `removeReaction` (~line 735): `trySendBroadcast(foundConvId, 'reaction_removed', { ... })`
 
-- `sendMessage` (~line 474): Replace `const channel = supabase.channel(...); await channel.send(...)` with `await broadcastOnChannel(\`dm:\${conversationId}\`, 'new_message', { ... })`
-- `editMessage` (~line 539): Same pattern → `broadcastOnChannel(\`dm:\${foundConversationId}\`, 'message_updated', { ... })`
-- `deleteMessage` (~line 591): Same → `broadcastOnChannel(\`dm:\${foundConversationId}\`, 'message_deleted', { ... })`
-- `addReaction` (~line 660): Same → `broadcastOnChannel(\`dm:\${foundConvId}\`, 'reaction_added', { ... })`
-- `removeReaction` (~line 724): Same → `broadcastOnChannel(\`dm:\${foundConvId}\`, 'reaction_removed', { ... })`
+**File 2: `src/hooks/useRealtimeDMs.ts`**
 
-All calls remain wrapped in `try/catch {}` — broadcast is non-critical since data is persisted via RPC.
+4. Import `registerDMChannel` and `unregisterDMChannel` from `@/stores/dmStore`.
+
+5. In the active conversation broadcast effect (line 184), add registration after channel creation and unregistration in the cleanup:
+```typescript
+const channel = supabase.channel(`dm:${currentConversationId}`, { ... });
+registerDMChannel(currentConversationId, channel);
+// ... existing .on() handlers ...
+return () => {
+  unregisterDMChannel(currentConversationId);
+  supabase.removeChannel(channel);
+};
+```
 
 ### What stays unchanged
-- All handler functions in `useRealtimeDMs.ts`
-- The receiver-side broadcast subscriptions
-- The `dm_participants` subscription
-- The SQL trigger
+- All broadcast receiver handlers in `useRealtimeDMs.ts`
+- Channel subscription config (`{ broadcast: { self: false } }`)
+- Reaction/message RPC functions
+- dmStore state management
+- `dm_participants` subscription
 
