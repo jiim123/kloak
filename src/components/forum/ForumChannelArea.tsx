@@ -1826,146 +1826,101 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
     [user, selectedThreadId],
   );
 
+  const handleForumSend = useCallback(
+    async (threadId: string, finalContent: string, replyToId: string | null) => {
+      if (!user) return;
+
+      const targetThread = threads.find((thread) => thread.id === threadId);
+      if (targetThread?.is_closed && !canManageMessages) {
+        showWarning("Thread closed", "This topic is closed.");
+        return;
+      }
+
+      const { data: result, error } = await supabase.rpc("send_thread_message", {
+        _thread_id: threadId,
+        _user_id: user.id,
+        _content: finalContent,
+        _reply_to_id: replyToId,
+      });
+
+      if (error) throw error;
+
+      const messageData = typeof result === "string" ? JSON.parse(result) : result;
+
+      if (messageData && messageData.id) {
+        let replyToData = null;
+        if (replyToId && threadMessages[threadId]) {
+          const replyToMsg = threadMessages[threadId].find((m) => m.id === replyToId);
+          if (replyToMsg) {
+            replyToData = {
+              id: replyToMsg.id,
+              user_id: replyToMsg.user_id,
+              content: replyToMsg.content,
+            };
+          }
+        }
+
+        const newMessage: Message = {
+          id: messageData.id,
+          user_id: user.id,
+          content: finalContent,
+          reply_to_id: messageData.reply_to_id || null,
+          reply_to: replyToData,
+          edited_at: messageData.edited_at || null,
+          created_at: messageData.created_at || new Date().toISOString(),
+          channel_id: currentChannel?.id || "",
+          is_pinned: false,
+        };
+
+        setThreadMessages((prev) => {
+          const existing = prev[threadId] || [];
+          if (existing.some((m) => m.id === messageData.id)) return prev;
+          return { ...prev, [threadId]: [...existing, newMessage] };
+        });
+      }
+
+      setThreads((prev) =>
+        sortThreads(
+          prev.map((thread) => {
+            if (thread.id === threadId) {
+              return {
+                ...thread,
+                message_count: (thread.message_count || 0) + 1,
+                last_activity: messageData?.created_at || new Date().toISOString(),
+              };
+            }
+            return thread;
+          }),
+        ),
+      );
+      if (currentChannel?.id) {
+        void markAsRead(currentChannel.id);
+      }
+    },
+    [user, currentChannel, threads, canManageMessages, markAsRead, threadMessages],
+  );
+
   const renderThreadReplyComposer = (threadId: string) => {
     const thread = threads.find((item) => item.id === threadId);
     const isClosed = !!thread?.is_closed;
-    const canReply = !isClosed || canManageMessages;
     const replyToMsg = replyingToThread ? threadMessages[threadId]?.find((m) => m.id === replyingToThread) : null;
 
-    if (!canReply) {
-      return (
-        <div className="border-t border-border bg-background p-3">
-          <div className="flex items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-            <Lock className="h-4 w-4" />
-            <span>This topic is closed</span>
-          </div>
-        </div>
-      );
-    }
-
     return (
-      <div className="border-t border-border bg-background p-3">
-        {replyToMsg && (
-          <div className="mb-2 flex items-center gap-2 border border-border bg-muted/20 px-3 py-2 text-sm">
-            <CornerUpLeft className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-            <span className="text-muted-foreground">Replying to</span>
-            <span className="font-medium text-primary">
-              @{getUserFromCache(replyToMsg.user_id)?.username || "unknown"}
-            </span>
-            <span className="truncate text-muted-foreground opacity-75 max-w-[120px]">
-              {(() => {
-                const cleaned = replyToMsg.content?.replace(/kloak-attachment:\/\/[^\s]*/g, '').trim() || '';
-                if (!cleaned) return <span className="italic flex items-center gap-1"><Paperclip className="w-3 h-3" />attachment</span>;
-                const preview = cleaned.slice(0, 30);
-                return preview + (cleaned.length > 30 ? "..." : "");
-              })()}
-            </span>
-            <button
-              type="button"
-              className="ml-auto p-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-              onClick={() => setReplyingToThread(null)}
-              aria-label="Cancel reply"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
-        <div
-          className={`border bg-background transition-all ${
-            threadComposerFocused ? "border-primary/40" : "border-border"
-          }`}
-        >
-          {replyPendingAttachments.length > 0 && (
-            <AttachmentPreviewBar
-              attachments={replyPendingAttachments}
-              onRemove={(index) =>
-                setReplyPendingAttachments((prev) => {
-                  const next = [...prev];
-                  const [removed] = next.splice(index, 1);
-                  if (removed) URL.revokeObjectURL(removed.preview);
-                  return next;
-                })
-              }
-              onAddMore={() => {
-                openAttachmentPicker("reply");
-              }}
-              disabled={isSendingReply}
-            />
-          )}
-
-          <div className="flex items-end gap-2 p-2 sm:p-3">
-            <textarea
-              ref={replyTextareaRef}
-              value={replyContent}
-              onChange={(e) => setReplyContent(e.target.value)}
-              onFocus={() => setThreadComposerFocused(true)}
-              onBlur={() => setThreadComposerFocused(false)}
-              placeholder={replyingToThread ? "Write a reply..." : "Reply to thread..."}
-              className="flex-1 bg-transparent resize-none outline-none py-2 px-1 min-h-[40px] max-h-[160px] text-[15px]"
-              rows={1}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  void handleReplyToThread(threadId);
-                }
-              }}
-            />
-
-            <div className="flex items-center gap-1 mb-0.5 relative">
-                <button
-                  type="button"
-                  onClick={() => {
-                    openAttachmentPicker("reply");
-                  }}
-                className="p-2 rounded-xl text-muted-foreground hover:bg-muted/50 transition-colors"
-                aria-label="Attach image"
-                title="Attach image"
-              >
-                <Paperclip className="w-5 h-5" />
-              </button>
-
-              <EmojiGifPicker
-                onEmojiSelect={(emoji) => insertIntoReplyComposer(emoji)}
-                onGifSelect={() => {}}
-                open={threadComposerEmojiOpen}
-                onOpenChange={setThreadComposerEmojiOpen}
-                disableGif
-                serverId={currentServer?.id}
-                serverName={currentServer?.name}
-              >
-                <button
-                  type="button"
-                  className="p-2 rounded-xl text-muted-foreground hover:bg-muted/50 transition-colors"
-                  aria-label="Add emoji"
-                  title="Add emoji"
-                  disabled={!currentServer?.id}
-                >
-                  <Smile className="w-5 h-5" />
-                </button>
-              </EmojiGifPicker>
-
-              <button
-                type="button"
-                onClick={() => void handleReplyToThread(threadId)}
-                disabled={(!replyContent.trim() && replyPendingAttachments.length === 0) || isSendingReply}
-                className={`p-2 rounded-xl transition-all ${
-                  (replyContent.trim() || replyPendingAttachments.length > 0) && !isSendingReply
-                    ? "bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95"
-                    : "bg-muted/50 text-muted-foreground/50 cursor-not-allowed"
-                }`}
-                aria-label="Send"
-                title="Send"
-              >
-                {isSendingReply ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Send className="w-5 h-5" />
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
+      <div className="border-t border-border bg-background">
+        <MessageInput
+          channelId={currentChannel?.id}
+          channelName={currentChannel?.name}
+          forumConfig={{
+            threadId,
+            onSend: (content, replyToId) => handleForumSend(threadId, content, replyToId),
+            replyingTo: replyToMsg
+              ? { id: replyToMsg.id, user_id: replyToMsg.user_id, content: replyToMsg.content }
+              : null,
+            onCancelReply: () => setReplyingToThread(null),
+            isClosed,
+            placeholder: replyingToThread ? "Write a reply..." : "Reply to thread...",
+          }}
+        />
       </div>
     );
   };
