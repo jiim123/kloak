@@ -261,9 +261,11 @@ export const MessageInput = ({
   onStopTyping,
   onSlowmodeStatusChange,
   dmConfig,
+  forumConfig,
 }: MessageInputProps) => {
-  const isDM = !!dmConfig;
-  const targetId = isDM ? dmConfig!.conversationId : channelId!;
+  const isForum = !!forumConfig;
+  const isDM = !isForum && !!dmConfig;
+  const targetId = isForum ? forumConfig!.threadId : isDM ? dmConfig!.conversationId : channelId!;
   const { user } = useAuthStore();
   const { replyingTo: channelReplyingTo, setReplyingTo: channelSetReplyingTo, sendMessage: channelSendMessage } = useMessageStore();
   const { sendMessage: dmSendMessage } = useDMStore();
@@ -271,10 +273,12 @@ export const MessageInput = ({
   const { getQueuedForChannel } = useOfflineQueueStore();
   const isMobile = useIsMobile();
 
-  // Unified reply state — in DM mode use dmConfig, in channel mode use store
-  const replyingTo = isDM ? dmConfig?.replyingTo : channelReplyingTo;
-  const setReplyingTo = isDM ? ((_: any) => {}) : channelSetReplyingTo;
+  // Unified reply state
+  const replyingTo = isForum ? forumConfig?.replyingTo : isDM ? dmConfig?.replyingTo : channelReplyingTo;
+  const setReplyingTo = isForum ? ((_: any) => {}) : isDM ? ((_: any) => {}) : channelSetReplyingTo;
   const sendMessage = isDM ? dmSendMessage : channelSendMessage;
+  const forumConfigRef = useRef(forumConfig);
+  forumConfigRef.current = forumConfig;
 
   const [content, setContent] = useState("");
   const [isFocused, setIsFocused] = useState(false);
