@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 
 const DISMISSED_KEY = "kloak-alpha-notice-dismissed";
 
@@ -26,26 +25,18 @@ export const AlphaNoticeBanner = () => {
         <span>Kloak Alpha Notice</span>
         {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
       </button>
-      <AnimatePresence>
-        {isExpanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
-          >
-            <div className="px-6 pb-3 text-xs text-muted-foreground leading-relaxed space-y-2 max-w-4xl mx-auto text-center">
-              <p>
-                Kloak is currently in very early alpha. Things are being built, broken, and improved daily — you may encounter incomplete features, unexpected behavior, or the odd bugs along the way. We appreciate your patience and your feedback!
-              </p>
-              <p>
-                As a reminder, please don't share personal information such as your real name, address, phone number, email, or financial details in any server or chat. Alpha platforms are not yet hardened for sensitive data, and the safest information is the kind that was never shared in the first place. Stay smart, stay private.
-              </p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {isExpanded && (
+        <div className="overflow-hidden">
+          <div className="px-6 pb-3 text-xs text-muted-foreground leading-relaxed space-y-2 max-w-4xl mx-auto text-center">
+            <p>
+              Kloak is currently in very early alpha. Things are being built, broken, and improved daily — you may encounter incomplete features, unexpected behavior, or the odd bugs along the way. We appreciate your patience and your feedback!
+            </p>
+            <p>
+              As a reminder, please don't share personal information such as your real name, address, phone number, email, or financial details in any server or chat. Alpha platforms are not yet hardened for sensitive data, and the safest information is the kind that was never shared in the first place. Stay smart, stay private.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

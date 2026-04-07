@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Plus, Users, Compass, Heart } from "lucide-react";
 import { useUIStore, useAuthStore } from "@/stores";
@@ -36,34 +35,13 @@ export const HomeLanding = () => {
   };
 
   const greeting = getTimeGreeting();
-  const displayName = user?.display_name || user?.username || "there";
-
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
-  };
-
-  const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0 },
-  };
 
   return (
     <div className="flex-1 h-full bg-layout-members overflow-y-auto w-full flex items-center justify-center relative min-h-0 py-3 sm:py-0">
       <div className="max-w-xl sm:max-w-2xl mx-auto px-4 sm:px-6 py-3 sm:py-5 md:py-8 relative z-10 w-full">
-        <motion.div
-          variants={container}
-          initial="hidden"
-          animate="show"
-          className="space-y-6 sm:space-y-8 md:space-y-10"
-        >
+        <div className="space-y-6 sm:space-y-8 md:space-y-10">
           {/* Greeting Section */}
-          <motion.div variants={item} className="flex items-center justify-between gap-6 sm:gap-8 md:gap-12">
+          <div className="flex items-center justify-between gap-6 sm:gap-8 md:gap-12">
             <div className="space-y-3 sm:space-y-4 text-left min-w-0 flex-1">
               <p className="text-base sm:text-lg md:text-xl text-muted-foreground font-medium">
                 {greeting.text}
@@ -78,13 +56,10 @@ export const HomeLanding = () => {
             <div className="shrink-0 text-6xl sm:text-7xl md:text-8xl lg:text-9xl select-none" aria-hidden="true">
               {greeting.emoji}
             </div>
-          </motion.div>
+          </div>
 
-          {/* Action Boxes - Hierarchical layout */}
-          <motion.div
-            variants={item}
-            className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 md:gap-4 px-1 sm:px-2 md:px-0"
-          >
+          {/* Action Boxes */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 md:gap-4 px-1 sm:px-2 md:px-0">
             {/* Create Server */}
             <button
               onClick={() => openModal("create-server")}
@@ -139,8 +114,8 @@ export const HomeLanding = () => {
             <div className="sm:hidden">
               <SupportUsBox />
             </div>
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
       </div>
     </div>
   );
