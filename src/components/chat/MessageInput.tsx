@@ -51,6 +51,15 @@ export interface DMInputConfig {
   onCancelReply?: () => void;
 }
 
+export interface ForumThreadInputConfig {
+  threadId: string;
+  onSend: (content: string, replyToId: string | null) => Promise<void>;
+  replyingTo?: { id: string; user_id: string; content: string } | null;
+  onCancelReply?: () => void;
+  isClosed?: boolean;
+  placeholder?: string;
+}
+
 interface MessageInputProps {
   channelId?: string;
   channelName?: string;
@@ -63,6 +72,7 @@ interface MessageInputProps {
     remainingSeconds: number;
   }) => void;
   dmConfig?: DMInputConfig;
+  forumConfig?: ForumThreadInputConfig;
 }
 
 interface MentionMapping {
