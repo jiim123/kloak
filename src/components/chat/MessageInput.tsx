@@ -51,6 +51,15 @@ export interface DMInputConfig {
   onCancelReply?: () => void;
 }
 
+export interface ForumThreadInputConfig {
+  threadId: string;
+  onSend: (content: string, replyToId: string | null) => Promise<void>;
+  replyingTo?: { id: string; user_id: string; content: string } | null;
+  onCancelReply?: () => void;
+  isClosed?: boolean;
+  placeholder?: string;
+}
+
 interface MessageInputProps {
   channelId?: string;
   channelName?: string;
@@ -63,6 +72,7 @@ interface MessageInputProps {
     remainingSeconds: number;
   }) => void;
   dmConfig?: DMInputConfig;
+  forumConfig?: ForumThreadInputConfig;
 }
 
 interface MentionMapping {
@@ -251,9 +261,11 @@ export const MessageInput = ({
   onStopTyping,
   onSlowmodeStatusChange,
   dmConfig,
+  forumConfig,
 }: MessageInputProps) => {
-  const isDM = !!dmConfig;
-  const targetId = isDM ? dmConfig!.conversationId : channelId!;
+  const isForum = !!forumConfig;
+  const isDM = !isForum && !!dmConfig;
+  const targetId = isForum ? forumConfig!.threadId : isDM ? dmConfig!.conversationId : channelId!;
   const { user } = useAuthStore();
   const { replyingTo: channelReplyingTo, setReplyingTo: channelSetReplyingTo, sendMessage: channelSendMessage } = useMessageStore();
   const { sendMessage: dmSendMessage } = useDMStore();
@@ -261,10 +273,12 @@ export const MessageInput = ({
   const { getQueuedForChannel } = useOfflineQueueStore();
   const isMobile = useIsMobile();
 
-  // Unified reply state — in DM mode use dmConfig, in channel mode use store
-  const replyingTo = isDM ? dmConfig?.replyingTo : channelReplyingTo;
-  const setReplyingTo = isDM ? ((_: any) => {}) : channelSetReplyingTo;
+  // Unified reply state
+  const replyingTo = isForum ? forumConfig?.replyingTo : isDM ? dmConfig?.replyingTo : channelReplyingTo;
+  const setReplyingTo = isForum ? ((_: any) => {}) : isDM ? ((_: any) => {}) : channelSetReplyingTo;
   const sendMessage = isDM ? dmSendMessage : channelSendMessage;
+  const forumConfigRef = useRef(forumConfig);
+  forumConfigRef.current = forumConfig;
 
   const [content, setContent] = useState("");
   const [isFocused, setIsFocused] = useState(false);
@@ -294,7 +308,7 @@ export const MessageInput = ({
   const draftSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const draftKey = isDM ? `dm-${targetId}` : targetId;
+    const draftKey = isForum ? `forum-${targetId}` : isDM ? `dm-${targetId}` : targetId;
     if (draftKey) {
       setContent(getDraft(draftKey));
     }
@@ -350,7 +364,7 @@ export const MessageInput = ({
   );
   const isReadOnlyChannel = isDM ? false : (activeChannel?.is_read_only || false);
   const isGhostMode = isDM ? false : (activeChannel?.ghost_mode || false);
-  const slowmodeSeconds = isDM ? 0 : Math.max(0, Number(activeChannel?.slowmode_seconds) || 0);
+  const slowmodeSeconds = isDM || isForum ? 0 : Math.max(0, Number(activeChannel?.slowmode_seconds) || 0);
   const canSendMessagesPermission = isDM ? true : hasPermission("send_messages");
   const canSendInReadOnly = isDM ? true : (isReadOnlyChannel ? hasPermission("manage_messages") : true);
   const canSendMessage = isDM ? true : (!isMuted && canSendMessagesPermission && canSendInReadOnly);
@@ -370,8 +384,8 @@ export const MessageInput = ({
   const slowmodeRemainingSeconds = Math.max(0, Math.ceil((slowmodeCooldownUntil - slowmodeNowMs) / 1000));
   const isSlowmodeBlocked = isSlowmodeEnabled && !isSlowmodeExempt && slowmodeRemainingSeconds > 0;
   const canSubmitMessage = canSendMessage && !isSlowmodeBlocked;
-  const activeChatNotice = isDM ? "" : (activeChannel?.chat_notice ?? "").trim();
-  const requiresChatNoticeAck = !isDM && activeChatNotice.length > 0 && !chatNoticeSeenAt;
+  const activeChatNotice = isDM || isForum ? "" : (activeChannel?.chat_notice ?? "").trim();
+  const requiresChatNoticeAck = !isDM && !isForum && activeChatNotice.length > 0 && !chatNoticeSeenAt;
   const isComposerLockedByNotice = requiresChatNoticeAck;
   // In DM mode the reply shape has no user_id — extract it safely
   const replyUserId = isDM ? undefined : (replyingTo as any)?.user_id;
@@ -467,12 +481,12 @@ export const MessageInput = ({
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    if (!isDM && openChatNoticePopup()) return;
+    if (!isDM && !isForum && openChatNoticePopup()) return;
     const val = e.target.value;
     if (val.length > MAX_LENGTH) return;
     setContent(val);
     resizeTextarea();
-    if (!isDM && onTyping) {
+    if (!isDM && !isForum && onTyping) {
       onTyping();
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(onStopTyping!, TYPING_STOP_DELAY);
@@ -480,7 +494,7 @@ export const MessageInput = ({
     if (!isDM) {
       detectAutocomplete(val, e.target.selectionStart);
     }
-    const draftKey = isDM ? `dm-${targetId}` : targetId;
+    const draftKey = isForum ? `forum-${targetId}` : isDM ? `dm-${targetId}` : targetId;
     saveDraft(draftKey, val);
   };
 
@@ -499,8 +513,8 @@ export const MessageInput = ({
   }, []);
 
   const handleSubmit = useCallback(async () => {
-    // Channel-only checks
-    if (!isDM) {
+    // Channel-only checks (skip for forum and DM)
+    if (!isDM && !isForum) {
       if (openChatNoticePopup()) return;
       if (!canSendMessage) return;
       if (isSlowmodeBlocked) return;
@@ -509,6 +523,8 @@ export const MessageInput = ({
         return;
       }
     }
+    // Forum: check send permission
+    if (isForum && !canSendMessage) return;
 
     const trimmedContent = content.trim();
 
@@ -595,75 +611,83 @@ export const MessageInput = ({
         finalContent = finalContent ? `${finalContent}\n${urlBlock}` : urlBlock;
       }
 
-      // Send the message
-      const replyToId = isDM ? dmConfig?.replyingTo?.id : channelReplyingTo?.id;
-      const sentMessage = await sendMessage(targetId, user.id, finalContent, replyToId);
+      if (isForum) {
+        // Forum mode: delegate to forumConfig.onSend
+        const replyToId = forumConfigRef.current?.replyingTo?.id || null;
+        await forumConfigRef.current!.onSend(finalContent, replyToId);
+      } else {
+        // Channel / DM mode
+        const replyToId = isDM ? dmConfig?.replyingTo?.id : channelReplyingTo?.id;
+        const sentMessage = await sendMessage(targetId, user.id, finalContent, replyToId);
 
-      // Backend mention suppression kept as silent safety net (no toast — handled pre-send)
-
-      // Insert attachment records
-      const fileUploadedUrls = uploadedUrls.slice(0, fileAttachments.length);
-      if (sentMessage && fileUploadedUrls.length > 0) {
-        const attachmentRows = fileUploadedUrls.map((url, i) => ({
-          message_id: sentMessage.id,
-          file_url: url,
-          file_name: savedAttachmentMeta[i]?.name || "attachment",
-          file_type: savedAttachmentMeta[i]?.type || null,
-          file_size: savedAttachmentMeta[i]?.size || null,
-        }));
-
-        const tableName = isDM ? "dm_attachments" : "message_attachments";
-        const { data: insertedAttachments, error: attachError } = await supabase
-          .from(tableName)
-          .insert(attachmentRows)
-          .select();
-
-        if (attachError) {
-          console.error("[MessageInput] Attachment insert error:", attachError);
-        }
-
-        if (insertedAttachments && insertedAttachments.length > 0) {
-          const formattedAttachments = insertedAttachments.map((a: any) => ({
-            id: a.id,
-            message_id: a.message_id,
-            file_url: a.file_url,
-            file_name: a.file_name,
-            file_type: a.file_type,
-            file_size: a.file_size,
-            width: a.width,
-            height: a.height,
+        // Insert attachment records
+        const fileUploadedUrls = uploadedUrls.slice(0, fileAttachments.length);
+        if (sentMessage && fileUploadedUrls.length > 0) {
+          const attachmentRows = fileUploadedUrls.map((url, i) => ({
+            message_id: sentMessage.id,
+            file_url: url,
+            file_name: savedAttachmentMeta[i]?.name || "attachment",
+            file_type: savedAttachmentMeta[i]?.type || null,
+            file_size: savedAttachmentMeta[i]?.size || null,
           }));
 
-          if (isDM) {
-            useDMStore.getState().updateMessage(targetId, sentMessage.id, {
-              attachments: formattedAttachments,
-            });
-          } else {
-            useMessageStore.getState().updateMessage(sentMessage.id, {
-              channel_id: targetId,
-              attachments: formattedAttachments,
-            } as any);
+          const tableName = isDM ? "dm_attachments" : "message_attachments";
+          const { data: insertedAttachments, error: attachError } = await supabase
+            .from(tableName)
+            .insert(attachmentRows)
+            .select();
+
+          if (attachError) {
+            console.error("[MessageInput] Attachment insert error:", attachError);
+          }
+
+          if (insertedAttachments && insertedAttachments.length > 0) {
+            const formattedAttachments = insertedAttachments.map((a: any) => ({
+              id: a.id,
+              message_id: a.message_id,
+              file_url: a.file_url,
+              file_name: a.file_name,
+              file_type: a.file_type,
+              file_size: a.file_size,
+              width: a.width,
+              height: a.height,
+            }));
+
+            if (isDM) {
+              useDMStore.getState().updateMessage(targetId, sentMessage.id, {
+                attachments: formattedAttachments,
+              });
+            } else {
+              useMessageStore.getState().updateMessage(sentMessage.id, {
+                channel_id: targetId,
+                attachments: formattedAttachments,
+              } as any);
+            }
           }
         }
-      }
 
-      // DM: update presence after send
-      if (isDM && sentMessage) {
-        const auth = useAuthStore.getState();
-        if (auth.manualStatus !== "offline") auth.updateLastSeen();
-        if (auth.manualStatus !== "offline" && auth.manualStatus !== "dnd") {
-          auth.updateStatus("online", { source: "auto" });
+        // DM: update presence after send
+        if (isDM && sentMessage) {
+          const auth = useAuthStore.getState();
+          if (auth.manualStatus !== "offline") auth.updateLastSeen();
+          if (auth.manualStatus !== "offline" && auth.manualStatus !== "dnd") {
+            auth.updateStatus("online", { source: "auto" });
+          }
         }
       }
 
       // Common cleanup
       setContent("");
       setPendingAttachments([]);
-      const draftKey = isDM ? `dm-${targetId}` : targetId;
+      const draftKey = isForum ? `forum-${targetId}` : isDM ? `dm-${targetId}` : targetId;
       clearDraft(draftKey);
       if (textareaRef.current) textareaRef.current.style.height = `${MIN_TEXTAREA_HEIGHT}px`;
 
-      if (isDM) {
+      if (isForum) {
+        forumConfigRef.current?.onCancelReply?.();
+        mentionMappingsRef.current = [];
+        channelMappingsRef.current = [];
+      } else if (isDM) {
         dmConfig?.onCancelReply?.();
       } else {
         channelSetReplyingTo(null);
@@ -688,6 +712,7 @@ export const MessageInput = ({
     }
   }, [
     isDM,
+    isForum,
     dmConfig,
     openChatNoticePopup,
     content,
@@ -768,7 +793,7 @@ export const MessageInput = ({
       }
 
       // Restore Discord-like "edit your last message" shortcut (channel only).
-      if (!isDM && e.key === "ArrowUp" && !isMobile && !content.trim() && pendingAttachments.length === 0 && user?.id) {
+      if (!isDM && !isForum && e.key === "ArrowUp" && !isMobile && !content.trim() && pendingAttachments.length === 0 && user?.id) {
         e.preventDefault();
         window.dispatchEvent(
           new CustomEvent("editLastMessage", {
@@ -811,7 +836,18 @@ export const MessageInput = ({
     ],
   );
 
-  if (!isDM && (isMuted || (!canSendInReadOnly && isReadOnlyChannel))) {
+  if (isForum && forumConfig?.isClosed) {
+    return (
+      <div className="px-4 pb-6">
+        <div className="flex items-center justify-center py-4 bg-muted/30 rounded-2xl border border-border/50">
+          <Lock className="w-4 h-4 mr-2 text-muted-foreground" />
+          <span className="text-muted-foreground">This topic is closed</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isDM && !isForum && (isMuted || (!canSendInReadOnly && isReadOnlyChannel))) {
     return (
       <div className="px-4 pb-6">
         <div className="flex items-center justify-center py-4 bg-muted/30 rounded-2xl border border-border/50">
@@ -940,7 +976,7 @@ export const MessageInput = ({
                   <span className="text-primary italic">Anonymous</span>
                 )}
               </span>
-              <button onClick={() => isDM ? dmConfig?.onCancelReply?.() : channelSetReplyingTo(null)} className="ml-auto p-1">
+              <button onClick={() => isForum ? forumConfig?.onCancelReply?.() : isDM ? dmConfig?.onCancelReply?.() : channelSetReplyingTo(null)} className="ml-auto p-1">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -955,8 +991,9 @@ export const MessageInput = ({
         canSendMessage={canSendMessage}
         canSubmitMessage={canSubmitMessage}
         isLockedByNotice={isComposerLockedByNotice}
-        channelName={isDM ? undefined : channelName}
+        channelName={isDM || isForum ? undefined : channelName}
         dmPlaceholder={isDM ? dmConfig?.otherUsername : undefined}
+        forumPlaceholder={isForum ? (forumConfig?.placeholder || "Reply to thread...") : undefined}
         textareaRef={textareaRef}
         handleChange={handleChange}
         setIsFocused={setIsFocused}
@@ -972,12 +1009,12 @@ export const MessageInput = ({
             e.target.blur();
           }
         }}
-        showCreatePoll={isDM || !effectiveCanCreatePoll ? undefined : showCreatePoll}
-        setShowCreatePoll={isDM || !effectiveCanCreatePoll ? undefined : setShowCreatePoll}
+        showCreatePoll={isDM || isForum || !effectiveCanCreatePoll ? undefined : showCreatePoll}
+        setShowCreatePoll={isDM || isForum || !effectiveCanCreatePoll ? undefined : setShowCreatePoll}
         showEmojiPicker={showEmojiPicker}
         setShowEmojiPicker={setShowEmojiPicker}
-        showGifPicker={isDM ? undefined : showGifPicker}
-        setShowGifPicker={isDM ? undefined : setShowGifPicker}
+        showGifPicker={isDM || isForum ? undefined : showGifPicker}
+        setShowGifPicker={isDM || isForum ? undefined : setShowGifPicker}
         isSending={isSending}
         handleSubmit={handleSubmit}
         handleEmojiSelect={(emoji: string) => {
@@ -1051,7 +1088,7 @@ export const MessageInput = ({
           </motion.div>
         )}
       </AnimatePresence>
-      {!isDM && <CreatePollModal open={showCreatePoll} onOpenChange={setShowCreatePoll} channelId={targetId} />}
+      {!isDM && !isForum && <CreatePollModal open={showCreatePoll} onOpenChange={setShowCreatePoll} channelId={targetId} />}
     </div>
   );
 };
@@ -1066,6 +1103,7 @@ const MobileOptimizedInput = memo(
     isLockedByNotice,
     channelName,
     dmPlaceholder,
+    forumPlaceholder,
     textareaRef,
     handleChange,
     setIsFocused,
@@ -1138,7 +1176,7 @@ const MobileOptimizedInput = memo(
             onMouseDown={onInputMouseDown}
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
-            placeholder={dmPlaceholder ? (hasAttachments ? "Add a comment..." : `Message @${dmPlaceholder.length > (isMobile ? 12 : 17) ? dmPlaceholder.slice(0, isMobile ? 12 : 17) + "…" : dmPlaceholder}`) : (isLockedByNotice ? "Write a message..." : canSendMessage ? "Write a message..." : "Locked")}
+            placeholder={forumPlaceholder || (dmPlaceholder ? (hasAttachments ? "Add a comment..." : `Message @${dmPlaceholder.length > (isMobile ? 12 : 17) ? dmPlaceholder.slice(0, isMobile ? 12 : 17) + "…" : dmPlaceholder}`) : (isLockedByNotice ? "Write a message..." : canSendMessage ? "Write a message..." : "Locked"))}
             disabled={!canSendMessage}
             rows={1}
             className="message-input-textarea w-full bg-transparent resize-none outline-none py-1 min-h-[36px] max-h-[160px] overflow-y-auto text-foreground placeholder:text-muted-foreground/60 font-[Inter,system-ui,sans-serif]"
