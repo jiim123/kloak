@@ -384,8 +384,8 @@ export const MessageInput = ({
   const slowmodeRemainingSeconds = Math.max(0, Math.ceil((slowmodeCooldownUntil - slowmodeNowMs) / 1000));
   const isSlowmodeBlocked = isSlowmodeEnabled && !isSlowmodeExempt && slowmodeRemainingSeconds > 0;
   const canSubmitMessage = canSendMessage && !isSlowmodeBlocked;
-  const activeChatNotice = isDM ? "" : (activeChannel?.chat_notice ?? "").trim();
-  const requiresChatNoticeAck = !isDM && activeChatNotice.length > 0 && !chatNoticeSeenAt;
+  const activeChatNotice = isDM || isForum ? "" : (activeChannel?.chat_notice ?? "").trim();
+  const requiresChatNoticeAck = !isDM && !isForum && activeChatNotice.length > 0 && !chatNoticeSeenAt;
   const isComposerLockedByNotice = requiresChatNoticeAck;
   // In DM mode the reply shape has no user_id — extract it safely
   const replyUserId = isDM ? undefined : (replyingTo as any)?.user_id;
