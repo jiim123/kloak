@@ -5,33 +5,24 @@ import { useUserCacheStore, bulkSetUsersInCache, fetchAndCacheUser } from "@/sto
 import { resolveSignedUrls, isSupabaseAttachmentUrl } from "@/lib/signedUrl";
 import type { DMConversation, DirectMessage, User, ReactionGroup } from "@/types";
 
-/**
- * Subscribe to a broadcast channel, send a single event, then clean up.
- * Supabase requires channels to be in SUBSCRIBED state before .send() works.
- */
-async function broadcastOnChannel(
-  topic: string,
-  event: string,
-  payload: Record<string, unknown>,
-): Promise<void> {
-  const channel = supabase.channel(topic);
+/** Registry of active DM broadcast channels keyed by conversationId */
+const activeDMChannels = new Map<string, ReturnType<typeof supabase.channel>>();
+
+export function registerDMChannel(conversationId: string, channel: ReturnType<typeof supabase.channel>) {
+  activeDMChannels.set(conversationId, channel);
+}
+
+export function unregisterDMChannel(conversationId: string) {
+  activeDMChannels.delete(conversationId);
+}
+
+function trySendBroadcast(conversationId: string, event: string, payload: Record<string, unknown>): void {
   try {
-    await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('subscribe timeout')), 3000);
-      channel.subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          clearTimeout(timeout);
-          resolve();
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          clearTimeout(timeout);
-          reject(new Error(status));
-        }
-      });
-    });
-    await channel.send({ type: 'broadcast', event, payload });
-  } finally {
-    supabase.removeChannel(channel);
-  }
+    const channel = activeDMChannels.get(conversationId);
+    if (channel) {
+      channel.send({ type: 'broadcast', event, payload }).catch(() => {});
+    }
+  } catch {}
 }
 
 interface DMState {
@@ -499,22 +490,18 @@ export const useDMStore = create<DMState>((set, get) => ({
       get().addMessage(conversationId, message);
 
       // Broadcast to the conversation channel so other participants receive it instantly
-      try {
-        await broadcastOnChannel(`dm:${conversationId}`, 'new_message', {
-          op: 'INSERT',
-          message: {
-            id: msgData.id,
-            conversation_id: msgData.conversation_id,
-            sender_id: msgData.sender_id,
-            content: msgData.content,
-            reply_to_id: msgData.reply_to_id,
-            edited_at: msgData.edited_at,
-            created_at: msgData.created_at,
-          },
-        });
-      } catch {
-        // Non-critical: message is saved in DB, other user will see it on next fetch
-      }
+      trySendBroadcast(conversationId, 'new_message', {
+        op: 'INSERT',
+        message: {
+          id: msgData.id,
+          conversation_id: msgData.conversation_id,
+          sender_id: msgData.sender_id,
+          content: msgData.content,
+          reply_to_id: msgData.reply_to_id,
+          edited_at: msgData.edited_at,
+          created_at: msgData.created_at,
+        },
+      });
 
       return message;
     } catch (error) {
@@ -559,14 +546,10 @@ export const useDMStore = create<DMState>((set, get) => ({
 
       // Broadcast edit to other participants
       if (foundConversationId) {
-        try {
-          await broadcastOnChannel(`dm:${foundConversationId}`, 'message_updated', {
-            op: 'UPDATE',
-            message: { id: messageId, conversation_id: foundConversationId, content: editedData.content, edited_at: editedData.edited_at },
-          });
-        } catch {
-          // Non-critical
-        }
+        trySendBroadcast(foundConversationId, 'message_updated', {
+          op: 'UPDATE',
+          message: { id: messageId, conversation_id: foundConversationId, content: editedData.content, edited_at: editedData.edited_at },
+        });
       }
     } catch (error) {
       console.error("Failed to edit DM:", error);
@@ -606,14 +589,10 @@ export const useDMStore = create<DMState>((set, get) => ({
 
       // Broadcast delete to other participants
       if (foundConversationId) {
-        try {
-          await broadcastOnChannel(`dm:${foundConversationId}`, 'message_deleted', {
-            op: 'DELETE',
-            message: { id: messageId, conversation_id: foundConversationId },
-          });
-        } catch {
-          // Non-critical
-        }
+        trySendBroadcast(foundConversationId, 'message_deleted', {
+          op: 'DELETE',
+          message: { id: messageId, conversation_id: foundConversationId },
+        });
       }
     } catch (error) {
       console.error("Failed to delete DM:", error);
@@ -670,11 +649,9 @@ export const useDMStore = create<DMState>((set, get) => ({
         }
       }
       if (foundConvId) {
-        try {
-          await broadcastOnChannel(`dm:${foundConvId}`, 'reaction_added', {
-            message_id: messageId, conversation_id: foundConvId, user_id: userId, emoji,
-          });
-        } catch {}
+        trySendBroadcast(foundConvId, 'reaction_added', {
+          message_id: messageId, conversation_id: foundConvId, user_id: userId, emoji,
+        });
       }
     } catch (error) {
       console.error("Failed to add reaction:", error);
@@ -731,11 +708,9 @@ export const useDMStore = create<DMState>((set, get) => ({
         }
       }
       if (foundConvId) {
-        try {
-          await broadcastOnChannel(`dm:${foundConvId}`, 'reaction_removed', {
-            message_id: messageId, conversation_id: foundConvId, user_id: userId, emoji,
-          });
-        } catch {}
+        trySendBroadcast(foundConvId, 'reaction_removed', {
+          message_id: messageId, conversation_id: foundConvId, user_id: userId, emoji,
+        });
       }
     } catch (error) {
       console.error("Failed to remove reaction:", error);
