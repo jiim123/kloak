@@ -13,8 +13,6 @@ interface UseRealtimeDMsOptions {
   onNewMessage?: (message: DirectMessage, conversationId: string) => void;
 }
 
-type BroadcastMutationOp = 'INSERT' | 'UPDATE' | 'DELETE';
-
 type DirectMessageRealtimeRow = {
   id?: string;
   conversation_id?: string;
@@ -23,12 +21,6 @@ type DirectMessageRealtimeRow = {
   created_at?: string;
   edited_at?: string | null;
   reply_to_id?: string | null;
-};
-
-type BroadcastMutationPayload<T> = {
-  op?: BroadcastMutationOp;
-  new?: T;
-  old?: T;
 };
 
 const groupReactions = (reactions: any[], currentUserId?: string): ReactionGroup[] => {
@@ -209,56 +201,96 @@ export const useRealtimeDMs = ({
     [removeMessage],
   );
 
-  // DM message changes via dedicated postgres_changes channel
+  // Subscribe to the active conversation's broadcast channel
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !currentConversationId) return;
 
-    const channel = supabase
-      .channel(`dm-realtime:${userId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'direct_messages',
-        },
-        (payload) => {
-          const convId = payload.new?.conversation_id as string | undefined;
-          if (!convId) return;
-          if (conversationIdsRef.current.size > 0 && !conversationIdsRef.current.has(convId)) return;
-          void handleNewMessage(payload);
-        },
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'direct_messages',
-        },
-        handleMessageUpdate,
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'direct_messages',
-        },
-        handleMessageDelete,
-      )
-      .subscribe((status, err) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('[DM Realtime] Connected via postgres_changes');
-        } else {
-          console.warn('[DM Realtime] Status:', status, err);
-        }
-      });
+    const channel = supabase.channel(`dm:${currentConversationId}`, {
+      config: { broadcast: { self: false } },
+    });
+
+    channel.on('broadcast', { event: 'new_message' }, ({ payload }) => {
+      if (!payload?.message) return;
+      if (payload.message.sender_id === userId) return;
+      void handleNewMessage({ new: payload.message });
+    });
+
+    channel.on('broadcast', { event: 'message_updated' }, ({ payload }) => {
+      if (!payload?.message) return;
+      handleMessageUpdate({ new: payload.message });
+    });
+
+    channel.on('broadcast', { event: 'message_deleted' }, ({ payload }) => {
+      if (!payload?.message) return;
+      handleMessageDelete({ old: payload.message });
+    });
+
+    channel.subscribe((status, err) => {
+      if (status === 'SUBSCRIBED') {
+        console.log(`[DM] Listening on dm:${currentConversationId}`);
+      } else {
+        console.warn('[DM] Channel status:', status, err);
+      }
+    });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, handleNewMessage, handleMessageUpdate, handleMessageDelete]);
+  }, [userId, currentConversationId, handleNewMessage, handleMessageUpdate, handleMessageDelete]);
+
+  // Subscribe to background conversations for unread indicators (up to 10 most recent)
+  useEffect(() => {
+    if (!userId) return;
+
+    const convIds = Array.from(conversationIdsRef.current);
+    if (convIds.length === 0) return;
+
+    // Only subscribe to non-active conversations, limit to 10
+    const backgroundIds = convIds
+      .filter((id) => id !== currentConversationId)
+      .slice(0, 10);
+
+    if (backgroundIds.length === 0) return;
+
+    const channels: ReturnType<typeof supabase.channel>[] = [];
+
+    for (const convId of backgroundIds) {
+      const ch = supabase.channel(`dm-notify:${convId}`, {
+        config: { broadcast: { self: false } },
+      });
+
+      ch.on('broadcast', { event: 'new_message' }, ({ payload }) => {
+        if (!payload?.message) return;
+        if (payload.message.sender_id === userId) return;
+
+        const message: DirectMessage = {
+          id: payload.message.id,
+          conversation_id: payload.message.conversation_id,
+          sender_id: payload.message.sender_id,
+          content: payload.message.content,
+          created_at: payload.message.created_at,
+          edited_at: payload.message.edited_at ?? null,
+          reply_to_id: payload.message.reply_to_id ?? null,
+          reply_to: null,
+          attachments: [],
+          reactions: [],
+        };
+
+        updateConversation(convId, { last_message: message });
+
+        if (onNewMessageRef.current) {
+          onNewMessageRef.current(message, convId);
+        }
+      });
+
+      ch.subscribe();
+      channels.push(ch);
+    }
+
+    return () => {
+      channels.forEach((ch) => supabase.removeChannel(ch));
+    };
+  }, [userId, currentConversationId, conversations.length, updateConversation]);
 
   // Handle reaction changes
   const handleReactionChange = useCallback(

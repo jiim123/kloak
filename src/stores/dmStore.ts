@@ -469,6 +469,29 @@ export const useDMStore = create<DMState>((set, get) => ({
       // This ensures the sender sees their message even if Realtime is delayed
       get().addMessage(conversationId, message);
 
+      // Broadcast to the conversation channel so other participants receive it instantly
+      try {
+        const channel = supabase.channel(`dm:${conversationId}`);
+        await channel.send({
+          type: 'broadcast',
+          event: 'new_message',
+          payload: {
+            op: 'INSERT',
+            message: {
+              id: msgData.id,
+              conversation_id: msgData.conversation_id,
+              sender_id: msgData.sender_id,
+              content: msgData.content,
+              reply_to_id: msgData.reply_to_id,
+              edited_at: msgData.edited_at,
+              created_at: msgData.created_at,
+            },
+          },
+        });
+      } catch {
+        // Non-critical: message is saved in DB, other user will see it on next fetch
+      }
+
       return message;
     } catch (error) {
       console.error("Failed to send DM:", error);
@@ -489,6 +512,16 @@ export const useDMStore = create<DMState>((set, get) => ({
 
       const editedData = data as { content: string; edited_at: string };
 
+      // Find conversationId before updating state
+      let foundConversationId: string | null = null;
+      const currentMessages = get().messagesByConversation;
+      for (const convId in currentMessages) {
+        if (currentMessages[convId].some((m) => m.id === messageId)) {
+          foundConversationId = convId;
+          break;
+        }
+      }
+
       // Update local state
       set((state) => {
         const newMessagesByConversation = { ...state.messagesByConversation };
@@ -499,6 +532,23 @@ export const useDMStore = create<DMState>((set, get) => ({
         }
         return { messagesByConversation: newMessagesByConversation };
       });
+
+      // Broadcast edit to other participants
+      if (foundConversationId) {
+        try {
+          const channel = supabase.channel(`dm:${foundConversationId}`);
+          await channel.send({
+            type: 'broadcast',
+            event: 'message_updated',
+            payload: {
+              op: 'UPDATE',
+              message: { id: messageId, conversation_id: foundConversationId, content: editedData.content, edited_at: editedData.edited_at },
+            },
+          });
+        } catch {
+          // Non-critical
+        }
+      }
     } catch (error) {
       console.error("Failed to edit DM:", error);
     }
@@ -514,6 +564,16 @@ export const useDMStore = create<DMState>((set, get) => ({
 
       if (error) throw error;
 
+      // Find conversationId before updating state
+      let foundConversationId: string | null = null;
+      const currentMessages = get().messagesByConversation;
+      for (const convId in currentMessages) {
+        if (currentMessages[convId].some((m) => m.id === messageId)) {
+          foundConversationId = convId;
+          break;
+        }
+      }
+
       // Update local state
       set((state) => {
         const newMessagesByConversation = { ...state.messagesByConversation };
@@ -524,6 +584,23 @@ export const useDMStore = create<DMState>((set, get) => ({
         }
         return { messagesByConversation: newMessagesByConversation };
       });
+
+      // Broadcast delete to other participants
+      if (foundConversationId) {
+        try {
+          const channel = supabase.channel(`dm:${foundConversationId}`);
+          await channel.send({
+            type: 'broadcast',
+            event: 'message_deleted',
+            payload: {
+              op: 'DELETE',
+              message: { id: messageId, conversation_id: foundConversationId },
+            },
+          });
+        } catch {
+          // Non-critical
+        }
+      }
     } catch (error) {
       console.error("Failed to delete DM:", error);
     }
