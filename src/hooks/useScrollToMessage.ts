@@ -91,6 +91,7 @@ export const useScrollToMessage = ({ messages, isLoading, virtuosoRef, container
   // Fetch older messages if target isn't loaded
   useEffect(() => {
     if (!targetMessageId || isLoading || hasScrolledRef.current || isFetchingRef.current) return;
+    if (messages.length === 0) return; // Wait for initial message load
     if (!currentChannelId) return;
 
     const messageExists = messages.some(m => m.id === targetMessageId);
