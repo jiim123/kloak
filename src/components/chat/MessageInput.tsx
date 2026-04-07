@@ -481,12 +481,12 @@ export const MessageInput = ({
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    if (!isDM && openChatNoticePopup()) return;
+    if (!isDM && !isForum && openChatNoticePopup()) return;
     const val = e.target.value;
     if (val.length > MAX_LENGTH) return;
     setContent(val);
     resizeTextarea();
-    if (!isDM && onTyping) {
+    if (!isDM && !isForum && onTyping) {
       onTyping();
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(onStopTyping!, TYPING_STOP_DELAY);
@@ -494,7 +494,7 @@ export const MessageInput = ({
     if (!isDM) {
       detectAutocomplete(val, e.target.selectionStart);
     }
-    const draftKey = isDM ? `dm-${targetId}` : targetId;
+    const draftKey = isForum ? `forum-${targetId}` : isDM ? `dm-${targetId}` : targetId;
     saveDraft(draftKey, val);
   };
 
