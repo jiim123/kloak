@@ -3289,7 +3289,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                                     <>
                                       <div className="text-sm">
                                         <MessageContent
-                                          content={msg.content.replace(/kloak-attachment:\/\/[^\s]*/g, '').trim()}
+                                          content={stripAttachmentUrls(msg.content)}
                                           currentUserId={user?.id}
                                           messageId={msg.id}
                                           messageUser={
