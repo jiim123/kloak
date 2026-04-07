@@ -836,7 +836,18 @@ export const MessageInput = ({
     ],
   );
 
-  if (!isDM && (isMuted || (!canSendInReadOnly && isReadOnlyChannel))) {
+  if (isForum && forumConfig?.isClosed) {
+    return (
+      <div className="px-4 pb-6">
+        <div className="flex items-center justify-center py-4 bg-muted/30 rounded-2xl border border-border/50">
+          <Lock className="w-4 h-4 mr-2 text-muted-foreground" />
+          <span className="text-muted-foreground">This topic is closed</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isDM && !isForum && (isMuted || (!canSendInReadOnly && isReadOnlyChannel))) {
     return (
       <div className="px-4 pb-6">
         <div className="flex items-center justify-center py-4 bg-muted/30 rounded-2xl border border-border/50">
