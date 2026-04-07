@@ -176,6 +176,13 @@ const ThreadAttachmentGalleryItem = ({ path, onClick }: { path: string; onClick:
   );
 };
 
+/** Regex that matches both kloak-attachment:// and CDN attachment URLs */
+const ATTACHMENT_URL_REGEX = /(?:kloak-attachment:\/\/|https?:\/\/kloakcdn\.b-cdn\.net\/attachments\/)([^\s]+)/g;
+
+/** Strip all attachment URLs (both formats) from content for display */
+export const stripAttachmentUrls = (text: string) =>
+  text.replace(ATTACHMENT_URL_REGEX, '').trim();
+
 const ThreadAttachmentGallery = ({
   content,
   onImageOpen,
@@ -183,9 +190,13 @@ const ThreadAttachmentGallery = ({
   content: string;
   onImageOpen: (url: string) => void;
 }) => {
-  const matches = content.match(/kloak-attachment:\/\/([^\s]+)/g);
-  if (!matches || matches.length === 0) return null;
-  const paths = matches.map((m) => m.replace("kloak-attachment://", ""));
+  const paths: string[] = [];
+  let m: RegExpExecArray | null;
+  const re = new RegExp(ATTACHMENT_URL_REGEX.source, 'g');
+  while ((m = re.exec(content)) !== null) {
+    paths.push(m[1]);
+  }
+  if (paths.length === 0) return null;
   return (
     <div className="rounded-lg border border-border bg-muted/20 p-3">
       <div className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
@@ -2132,9 +2143,10 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                     ? parts.slice(1).join("\n\n").trim()
                     : messageContent.split("\n").slice(1).join("\n").trim();
                 // Strip kloak-attachment:// URLs from preview
-                const threadPreview = rawPreview.replace(/kloak-attachment:\/\/[^\s]*/g, '').trim();
+                const threadPreview = stripAttachmentUrls(rawPreview);
                 // Extract first attachment image URL for thumbnail
-                const attachmentMatch = messageContent.match(/kloak-attachment:\/\/([^\s]+)/);
+                const attachmentRe = new RegExp(ATTACHMENT_URL_REGEX.source);
+                const attachmentMatch = messageContent.match(attachmentRe);
                 const firstAttachmentPath = attachmentMatch ? attachmentMatch[1] : null;
                 const replyCount = Math.max(0, Number(thread.message_count ?? 0));
                 const opUser = thread.message?.user;
@@ -2574,7 +2586,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                               ) : (
                                 <div className="text-sm text-foreground min-w-0 max-w-full overflow-hidden [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_.relative.group]:max-w-full [&_.relative.group]:overflow-hidden">
                                   <MessageContent
-                                    content={threadDescription.replace(/kloak-attachment:\/\/[^\s]*/g, '').trim()}
+                                    content={stripAttachmentUrls(threadDescription)}
                                     currentUserId={user?.id}
                                     messageId={selectedThread?.message?.id}
                                     messageUser={
@@ -3129,7 +3141,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                               ) : (
                                 <div className="text-sm text-foreground min-w-0 max-w-full overflow-hidden [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_.relative.group]:max-w-full [&_.relative.group]:overflow-hidden">
                                   <MessageContent
-                                    content={threadDescription.replace(/kloak-attachment:\/\/[^\s]*/g, '').trim()}
+                                    content={stripAttachmentUrls(threadDescription)}
                                     currentUserId={user?.id}
                                     messageId={selectedThread?.message?.id}
                                     messageUser={
@@ -3277,7 +3289,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                                     <>
                                       <div className="text-sm">
                                         <MessageContent
-                                          content={msg.content.replace(/kloak-attachment:\/\/[^\s]*/g, '').trim()}
+                                          content={stripAttachmentUrls(msg.content)}
                                           currentUserId={user?.id}
                                           messageId={msg.id}
                                           messageUser={
