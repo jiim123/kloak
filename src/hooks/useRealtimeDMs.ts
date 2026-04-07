@@ -5,7 +5,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { resolveSignedUrls, isSupabaseAttachmentUrl } from '@/lib/signedUrl';
 import type { DirectMessage, ReactionGroup } from '@/types';
 import { getOrFetchUser, useUserCacheStore } from '@/stores/userCacheStore';
-import { acquireChannel, subscribeChannel, releaseChannel } from '@/lib/sharedChannel';
+
 
 interface UseRealtimeDMsOptions {
   userId: string | null;
@@ -209,38 +209,54 @@ export const useRealtimeDMs = ({
     [removeMessage],
   );
 
-  // Broadcast events on user-scoped topic.
+  // DM message changes via dedicated postgres_changes channel
   useEffect(() => {
     if (!userId) return;
 
-    const topic = `user:${userId}`;
-    const channel = acquireChannel(topic);
-
-    channel.on(
-      'broadcast',
-      { event: 'direct_messages' },
-      ({ payload }) => {
-        const eventPayload = payload as BroadcastMutationPayload<DirectMessageRealtimeRow>;
-        const op = eventPayload?.op;
-        if (!op) return;
-
-        if (op === 'INSERT' && eventPayload.new) {
-          void handleNewMessage({ new: eventPayload.new });
-          return;
+    const channel = supabase
+      .channel(`dm-realtime:${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'direct_messages',
+        },
+        (payload) => {
+          const convId = payload.new?.conversation_id as string | undefined;
+          if (!convId) return;
+          if (conversationIdsRef.current.size > 0 && !conversationIdsRef.current.has(convId)) return;
+          void handleNewMessage(payload);
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'direct_messages',
+        },
+        handleMessageUpdate,
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'direct_messages',
+        },
+        handleMessageDelete,
+      )
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('[DM Realtime] Connected via postgres_changes');
+        } else {
+          console.warn('[DM Realtime] Status:', status, err);
         }
-        if (op === 'UPDATE' && eventPayload.new) {
-          handleMessageUpdate({ new: eventPayload.new });
-          return;
-        }
-        if (op === 'DELETE' && eventPayload.old) {
-          handleMessageDelete({ old: eventPayload.old });
-        }
-      },
-    );
-    subscribeChannel(topic);
+      });
 
     return () => {
-      releaseChannel(topic);
+      supabase.removeChannel(channel);
     };
   }, [userId, handleNewMessage, handleMessageUpdate, handleMessageDelete]);
 
