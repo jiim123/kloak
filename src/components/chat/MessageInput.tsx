@@ -1103,6 +1103,7 @@ const MobileOptimizedInput = memo(
     isLockedByNotice,
     channelName,
     dmPlaceholder,
+    forumPlaceholder,
     textareaRef,
     handleChange,
     setIsFocused,
