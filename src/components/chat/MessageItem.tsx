@@ -1757,6 +1757,29 @@ export const MessageItem = memo(function MessageItem({
                 </ContextMenuItem>
               </>
             )}
+            {hasModActions && (
+              <>
+                <ContextMenuSeparator />
+                {canKickUser && (
+                  <ContextMenuItem
+                    onClick={handleKickUser}
+                    className="text-orange-400 focus:text-orange-400"
+                  >
+                    <UserX className="w-4 h-4" />
+                    Kick {displayName}
+                  </ContextMenuItem>
+                )}
+                {canBanUser && (
+                  <ContextMenuItem
+                    onClick={handleBanUser}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Ban className="w-4 h-4" />
+                    Ban {displayName}
+                  </ContextMenuItem>
+                )}
+              </>
+            )}
           </ContextMenuContent>
         </ContextMenu>
 
