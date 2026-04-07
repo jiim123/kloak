@@ -1008,12 +1008,12 @@ export const MessageInput = ({
             e.target.blur();
           }
         }}
-        showCreatePoll={isDM || !effectiveCanCreatePoll ? undefined : showCreatePoll}
-        setShowCreatePoll={isDM || !effectiveCanCreatePoll ? undefined : setShowCreatePoll}
+        showCreatePoll={isDM || isForum || !effectiveCanCreatePoll ? undefined : showCreatePoll}
+        setShowCreatePoll={isDM || isForum || !effectiveCanCreatePoll ? undefined : setShowCreatePoll}
         showEmojiPicker={showEmojiPicker}
         setShowEmojiPicker={setShowEmojiPicker}
-        showGifPicker={isDM ? undefined : showGifPicker}
-        setShowGifPicker={isDM ? undefined : setShowGifPicker}
+        showGifPicker={isDM || isForum ? undefined : showGifPicker}
+        setShowGifPicker={isDM || isForum ? undefined : setShowGifPicker}
         isSending={isSending}
         handleSubmit={handleSubmit}
         handleEmojiSelect={(emoji: string) => {
