@@ -1761,9 +1761,9 @@ export const MessageItem = memo(function MessageItem({
         </ContextMenu>
 
         {/* Reactions - rendered outside ContextMenu to avoid interfering with message actions */}
-        {!message.is_system_message && message.reactions && message.reactions.length > 0 && (
-          <div className={cn("flex flex-wrap gap-2 px-4", compactMode ? "pl-4" : "pl-[68px]")}>
-            {message.reactions.map((reaction) => (
+        {!message.is_system_message && (
+          <div className={cn("flex flex-wrap items-center gap-3 px-4", compactMode ? "pl-4" : "pl-[68px]", message.reactions && message.reactions.length > 0 ? "" : "")}>
+            {message.reactions && message.reactions.length > 0 && message.reactions.map((reaction) => (
               <HoverCard key={reaction.emoji} openDelay={200}>
                 <HoverCardTrigger asChild>
                   <span className="inline-flex">
@@ -1791,14 +1791,14 @@ export const MessageItem = memo(function MessageItem({
                         }
                       }}
                       disabled={!effectiveCanAddReactions}
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-full border ${
+                      className={`flex items-center gap-1 bg-transparent border-none cursor-pointer transition-opacity duration-150 ${
                         reaction.hasReacted
-                          ? "bg-primary/20 border-primary text-primary"
-                          : "bg-secondary/80 border-transparent hover:border-border hover:bg-secondary"
+                          ? "text-foreground opacity-100"
+                          : "text-muted-foreground opacity-60 hover:opacity-100"
                       } ${!effectiveCanAddReactions ? "opacity-50 cursor-not-allowed" : ""}`}
                     >
                       {reactionEmojiNode(reaction.emoji)}
-                      <span className="text-sm font-medium">{reaction.count}</span>
+                      <span className="text-[11px] font-semibold font-mono">{reaction.count}</span>
                     </button>
                   </span>
                 </HoverCardTrigger>
@@ -1850,6 +1850,26 @@ export const MessageItem = memo(function MessageItem({
                 </HoverCardContent>
               </HoverCard>
             ))}
+            {/* Ghost emoji suggestions on hover */}
+            {effectiveCanAddReactions && !isBlockedUser && (
+              <div className={cn(
+                "hidden md:flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-150",
+              )}>
+                {["👍", "❤️", "🔥"].map((emoji) => {
+                  const alreadyReacted = message.reactions?.some((r) => r.emoji === emoji);
+                  if (alreadyReacted) return null;
+                  return (
+                    <button
+                      key={`ghost-${emoji}`}
+                      onClick={() => handleReactionClick(emoji, false)}
+                      className="flex items-center gap-1 bg-transparent border-none cursor-pointer opacity-30 hover:opacity-100 transition-opacity duration-150 text-muted-foreground"
+                    >
+                      {reactionEmojiNode(emoji)}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
