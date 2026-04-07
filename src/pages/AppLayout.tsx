@@ -476,8 +476,14 @@ const AppLayout = () => {
   // Only full-screen block when we truly don't have a user yet.
   if (isLoading && !user) {
     return (
-      <div className="h-screen bg-layout-chat flex items-center justify-center">
-        <KloakDrawLoader />
+      <div className="h-screen flex flex-col overflow-hidden app-layout-font">
+        <div className="flex-1 flex overflow-hidden">
+          {!isMobileRaw && <div className="w-[72px] shrink-0 bg-layout-sidebar" />}
+          {!isMobileRaw && <div className="w-[278px] shrink-0 bg-[hsl(var(--layout-channels))]" />}
+          <div className="flex-1 bg-layout-chat flex items-center justify-center">
+            <KloakDrawLoader />
+          </div>
+        </div>
       </div>
     );
   }
