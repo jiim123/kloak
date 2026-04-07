@@ -513,8 +513,8 @@ export const MessageInput = ({
   }, []);
 
   const handleSubmit = useCallback(async () => {
-    // Channel-only checks
-    if (!isDM) {
+    // Channel-only checks (skip for forum and DM)
+    if (!isDM && !isForum) {
       if (openChatNoticePopup()) return;
       if (!canSendMessage) return;
       if (isSlowmodeBlocked) return;
@@ -523,6 +523,8 @@ export const MessageInput = ({
         return;
       }
     }
+    // Forum: check send permission
+    if (isForum && !canSendMessage) return;
 
     const trimmedContent = content.trim();
 
