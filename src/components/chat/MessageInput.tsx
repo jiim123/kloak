@@ -364,7 +364,7 @@ export const MessageInput = ({
   );
   const isReadOnlyChannel = isDM ? false : (activeChannel?.is_read_only || false);
   const isGhostMode = isDM ? false : (activeChannel?.ghost_mode || false);
-  const slowmodeSeconds = isDM ? 0 : Math.max(0, Number(activeChannel?.slowmode_seconds) || 0);
+  const slowmodeSeconds = isDM || isForum ? 0 : Math.max(0, Number(activeChannel?.slowmode_seconds) || 0);
   const canSendMessagesPermission = isDM ? true : hasPermission("send_messages");
   const canSendInReadOnly = isDM ? true : (isReadOnlyChannel ? hasPermission("manage_messages") : true);
   const canSendMessage = isDM ? true : (!isMuted && canSendMessagesPermission && canSendInReadOnly);
