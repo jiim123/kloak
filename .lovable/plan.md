@@ -1,118 +1,39 @@
 
 
-## Fix @mention notification click-to-message + add server name
+## Fix app freeze caused by rapid userCacheStore version bumps
 
-### Change 1: Remove fixed timeout in NotificationBell click handler
-**File:** `src/components/notifications/NotificationBell.tsx` (lines 184-198)
+### Problem
+When a Presence sync fires with N users, `patchUserAcrossStores` is called N times in rapid succession. Each call triggers:
+1. `userCacheStore.patchUser` → `set({ _version: +1 })` — N Zustand state updates
+2. `useServerStore.setState` — N new members arrays
+3. `useFriendStore.setState` — N friend list rebuilds
+4. `useDMStore.setState` — N conversation rebuilds
 
-Remove the inner `setTimeout` that dispatches the `scrollToMessage` custom event after 500ms. The `?message=` URL param already triggers `useScrollToMessage` via `useSearchParams` — the custom event is redundant and introduces a timing race.
+This causes N × 4 store updates and cascading re-renders, freezing the UI.
 
-Replace:
-```typescript
-if (notificationType === "mention" && serverId && channelId) {
-  const path = `/app/servers/${serverId}/channels/${channelId}`;
-  const params = messageId ? `?message=${messageId}` : '';
-  setIsOpen(false);
-  setTimeout(() => {
-    navigate(path + params);
-    if (messageId) {
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent("scrollToMessage", { detail: { messageId } }));
-      }, 500);
-    }
-  }, 100);
-  return;
-}
-```
+### Changes
 
-With:
-```typescript
-if (notificationType === "mention" && serverId && channelId) {
-  setIsOpen(false);
-  const path = `/app/servers/${serverId}/channels/${channelId}`;
-  const params = messageId ? `?message=${messageId}` : '';
-  setTimeout(() => navigate(path + params), 50);
-  return;
-}
-```
+**File 1: `src/stores/userCacheStore.ts`**
+- Add module-level `pendingVersionBump` flag and `scheduleBatchedVersionBump()` using `queueMicrotask`
+- In `patchUser`: replace `set({ _version: state._version + 1 })` with `scheduleBatchedVersionBump()` — cache is still mutated immediately, but the version bump (which triggers React re-renders) is deferred and deduplicated within the same microtask
 
-### Change 2: Guard empty messages in useScrollToMessage
-**File:** `src/hooks/useScrollToMessage.ts` (lines 92-109)
+**File 2: `src/hooks/useRealtimeUsers.ts`**
+- Add three module-level batch systems for member, friend, and DM patches:
+  - `pendingMemberPatches` Map + `flushMemberPatches()` via `setTimeout(fn, 0)`
+  - `pendingFriendPatches` Map + `flushFriendPatches()` via `setTimeout(fn, 0)`
+  - `pendingDMPatches` Map + `flushDMPatches()` via `setTimeout(fn, 0)`
+- In `patchUserAcrossStores`: replace the three inline `setState` blocks with batch collection calls — patches accumulate during the loop, then flush as a single `setState` per store
 
-The fetch-older-messages effect (line 100-101) bails when `messages[0]` is undefined (empty array), silently failing. Add an early return at line 93 so the effect simply waits for messages to populate:
+### What stays the same
+- Presence channel subscription logic unchanged
+- `applyPresenceSnapshot` still calls `patchUserAcrossStores` per user — batching happens inside
+- `fetchMembers` merge logic unchanged
+- `useRealtimeMembers` unchanged
+- `patchUserAcrossStores` signature and exports unchanged
+- `upsertUsers` already batches correctly (single `set()` at end)
 
-```typescript
-// Existing guards...
-if (!targetMessageId || isLoading || hasScrolledRef.current || isFetchingRef.current) return;
-if (!currentChannelId) return;
-if (messages.length === 0) return; // NEW: wait for initial load
-```
-
-This lets the effect re-trigger naturally when `messages` populates (it's in the dependency array).
-
-### Change 3: Replace rAF retry loop with setTimeout + increasing delay
-**File:** `src/hooks/useScrollToMessage.ts` (lines 127-143)
-
-The current `centerWithRetry` uses double-`requestAnimationFrame` which fires too fast (~32ms) and gives up quickly. Replace with `setTimeout` using increasing delays (100ms, 200ms, ... up to 500ms cap), giving the virtual list more time to render:
-
-```typescript
-const centerWithRetry = useCallback((targetId: string, attempt = 0) => {
-  const maxAttempts = 15;
-  const found = centerMessageInView(targetId, attempt > 0);
-  if (found) {
-    applyHighlight(targetId);
-    return;
-  }
-  if (attempt < maxAttempts) {
-    const delay = Math.min(100 * (attempt + 1), 500);
-    rafRef.current = window.setTimeout(() => {
-      centerWithRetry(targetId, attempt + 1);
-    }, delay) as unknown as number;
-  }
-}, [applyHighlight]);
-```
-
-Also update cleanup to use `clearTimeout` instead of `cancelAnimationFrame` for `rafRef`.
-
-### Change 4: Add server name to mention notification rendering
-**File:** `src/components/notifications/NotificationBell.tsx` (lines 388-427)
-
-Add a helper function that extracts the server name from the notification's `link` field using `useServerStore`:
-
-```typescript
-const getServerNameFromLink = (link: string | null): string | null => {
-  if (!link) return null;
-  try {
-    const url = new URL(link, window.location.origin);
-    const serverId = url.searchParams.get('server');
-    if (!serverId) return null;
-    return useServerStore.getState().servers.find(s => s.id === serverId)?.name || null;
-  } catch { return null; }
-};
-```
-
-Then in the notification content area (line 389-391), for mention type notifications, prepend the server name before the title:
-
-```tsx
-<p className={cn("text-sm line-clamp-2 break-words", isUnread && "font-medium")}>
-  {notification.type === 'mention' && (() => {
-    const serverName = getServerNameFromLink(notification.link);
-    return serverName ? (
-      <span className="text-xs text-muted-foreground font-normal mr-1.5">{serverName} ·</span>
-    ) : null;
-  })()}
-  {notification.title}
-</p>
-```
-
-### Files changed
-- `src/components/notifications/NotificationBell.tsx` — simplify click handler, add server name display
-- `src/hooks/useScrollToMessage.ts` — empty-messages guard, robust retry timing
-
-### What is NOT changed
-- Notification table schema, triggers, or RPC functions
-- DM/friend request notification behavior
-- Bell icon, badge count, realtime delivery
-- `fetchMessages` in messageStore
-- The `?message=` URL param mechanism (kept as primary)
+### Technical detail
+- `queueMicrotask` for userCacheStore: runs after all synchronous `patchUser` calls complete but before the browser paints — single version bump per tick
+- `setTimeout(fn, 0)` for cross-store patches: runs after the current task completes — collects all patches from the presence loop, applies once per store
+- Result: 50 presence updates → 1 userCacheStore re-render + 1 serverStore re-render + 1 friendStore re-render + 1 dmStore re-render (instead of 50 × 4 = 200)
 
