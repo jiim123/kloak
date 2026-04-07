@@ -21,50 +21,64 @@ const isStatusOnlyUpdate = (updatedUser: Partial<User> & { id: string }): boolea
   return keys.length > 0 && keys.every((k) => k === 'status' || k === 'last_seen' || k === 'custom_status');
 };
 
-export const patchUserAcrossStores = (updatedUser: Partial<User> & { id: string }) => {
-  const skipMessages = isStatusOnlyUpdate(updatedUser);
+// ---------------------------------------------------------------------------
+// Batched cross-store patching
+// ---------------------------------------------------------------------------
+// When Presence sync fires with N users, patchUserAcrossStores is called N
+// times synchronously. Instead of calling setState on serverStore/friendStore/
+// dmStore each time (N × 3 re-renders), we collect patches into Maps and flush
+// once per macrotask via setTimeout(fn, 0).
 
-  // Phase 1: Always update the centralized user cache
-  useUserCacheStore.getState().patchUser(updatedUser.id, updatedUser);
+let pendingMemberPatches = new Map<string, Partial<User>>();
+let memberPatchTimer: ReturnType<typeof setTimeout> | null = null;
 
-  // Patch current server members in-place
-  // Patch current server members in-place
+const flushMemberPatches = () => {
+  memberPatchTimer = null;
+  const patches = pendingMemberPatches;
+  pendingMemberPatches = new Map();
+  if (patches.size === 0) return;
+
   useServerStore.setState((state) => {
     if (!state.currentServer || state.members.length === 0) return {};
     let changed = false;
     const members = state.members.map((m) => {
-      if (m.user_id !== updatedUser.id) return m;
+      const patch = patches.get(m.user_id);
+      if (!patch) return m;
       changed = true;
-      return {
-        ...m,
-        user: m.user ? { ...m.user, ...updatedUser } : (updatedUser as User),
-      };
+      return { ...m, user: m.user ? { ...m.user, ...patch } : (patch as User) };
     });
     return changed ? { members } : {};
   });
+};
 
-  // Patch friend lists
+let pendingFriendPatches = new Map<string, Partial<User>>();
+let friendPatchTimer: ReturnType<typeof setTimeout> | null = null;
+
+const flushFriendPatches = () => {
+  friendPatchTimer = null;
+  const patches = pendingFriendPatches;
+  pendingFriendPatches = new Map();
+  if (patches.size === 0) return;
+
   useFriendStore.setState((state) => {
     type HasId = { id: string };
-    const patch = <T extends HasId>(list: T[]): { list: T[]; changed: boolean } => {
+    const patchList = <T extends HasId>(list: T[]): { list: T[]; changed: boolean } => {
       let changed = false;
       const next = list.map((item) => {
-        if (item.id !== updatedUser.id) return item;
+        const p = patches.get(item.id);
+        if (!p) return item;
         changed = true;
-        return { ...item, ...updatedUser } as T;
+        return { ...item, ...p } as T;
       });
       return changed ? { list: next, changed } : { list, changed: false };
     };
 
-    const friends = patch(state.friends);
-    const pendingRequests = patch(state.pendingRequests);
-    const outgoingRequests = patch(state.outgoingRequests);
-    const blockedUsers = patch(state.blockedUsers);
+    const friends = patchList(state.friends);
+    const pendingRequests = patchList(state.pendingRequests);
+    const outgoingRequests = patchList(state.outgoingRequests);
+    const blockedUsers = patchList(state.blockedUsers);
 
-    if (!friends.changed && !pendingRequests.changed && !outgoingRequests.changed && !blockedUsers.changed) {
-      return {};
-    }
-
+    if (!friends.changed && !pendingRequests.changed && !outgoingRequests.changed && !blockedUsers.changed) return {};
     return {
       friends: friends.list,
       pendingRequests: pendingRequests.list,
@@ -72,27 +86,38 @@ export const patchUserAcrossStores = (updatedUser: Partial<User> & { id: string 
       blockedUsers: blockedUsers.list,
     };
   });
+};
 
-  // Patch DM conversations
+let pendingDMPatches = new Map<string, Partial<User>>();
+let dmPatchTimer: ReturnType<typeof setTimeout> | null = null;
+
+const flushDMPatches = () => {
+  dmPatchTimer = null;
+  const patches = pendingDMPatches;
+  pendingDMPatches = new Map();
+  if (patches.size === 0) return;
+
   useDMStore.setState((state) => {
     if (!state.currentConversation && state.conversations.length === 0) return {};
-
     let changed = false;
+
     const conversations = state.conversations.map((c) => {
       let conversationChanged = false;
       let nextConversation = c;
 
-      if (c.other_user?.id === updatedUser.id) {
+      const otherPatch = c.other_user?.id ? patches.get(c.other_user.id) : undefined;
+      if (otherPatch) {
         conversationChanged = true;
-        nextConversation = { ...nextConversation, other_user: { ...c.other_user, ...updatedUser } };
+        nextConversation = { ...nextConversation, other_user: { ...c.other_user, ...otherPatch } };
       }
 
       if (Array.isArray(c.participants) && c.participants.length > 0) {
         let participantsChanged = false;
-        const participants = c.participants.map((participant) => {
-          if (participant.user_id !== updatedUser.id || !participant.user) return participant;
+        const participants = c.participants.map((p) => {
+          const pPatch = p.user_id ? patches.get(p.user_id) : undefined;
+          if (!pPatch || !p.user) return p;
           participantsChanged = true;
-          return { ...participant, user: { ...participant.user, ...updatedUser } };
+          return { ...p, user: { ...p.user, ...pPatch } };
         });
         if (participantsChanged) {
           conversationChanged = true;
@@ -100,12 +125,7 @@ export const patchUserAcrossStores = (updatedUser: Partial<User> & { id: string 
         }
       }
 
-      // last_message sender data lives in userCacheStore — no need to patch here
-
-      if (conversationChanged) {
-        changed = true;
-      }
-
+      if (conversationChanged) changed = true;
       return nextConversation;
     });
 
@@ -114,28 +134,27 @@ export const patchUserAcrossStores = (updatedUser: Partial<User> & { id: string 
       let currentChanged = false;
       let nextCurrent = state.currentConversation;
 
-      if (state.currentConversation.other_user?.id === updatedUser.id) {
+      const otherPatch = state.currentConversation.other_user?.id
+        ? patches.get(state.currentConversation.other_user.id)
+        : undefined;
+      if (otherPatch) {
         currentChanged = true;
-        nextCurrent = {
-          ...nextCurrent,
-          other_user: { ...state.currentConversation.other_user, ...updatedUser },
-        };
+        nextCurrent = { ...nextCurrent, other_user: { ...state.currentConversation.other_user, ...otherPatch } };
       }
 
-      if (Array.isArray(state.currentConversation.participants) && state.currentConversation.participants.length > 0) {
+      if (Array.isArray(state.currentConversation.participants)) {
         let participantsChanged = false;
-        const participants = state.currentConversation.participants.map((participant) => {
-          if (participant.user_id !== updatedUser.id || !participant.user) return participant;
+        const participants = state.currentConversation.participants.map((p) => {
+          const pPatch = p.user_id ? patches.get(p.user_id) : undefined;
+          if (!pPatch || !p.user) return p;
           participantsChanged = true;
-          return { ...participant, user: { ...participant.user, ...updatedUser } };
+          return { ...p, user: { ...p.user, ...pPatch } };
         });
         if (participantsChanged) {
           currentChanged = true;
           nextCurrent = { ...nextCurrent, participants };
         }
       }
-
-      // last_message sender data lives in userCacheStore — no need to patch here
 
       if (currentChanged) {
         changed = true;
@@ -147,13 +166,31 @@ export const patchUserAcrossStores = (updatedUser: Partial<User> & { id: string 
       ? { conversations, currentConversation }
       : {};
   });
+};
 
-  // Phase 1: User data is no longer embedded on messages — it lives in useUserCacheStore.
-  // The expensive O(N) message iteration is no longer needed.
-  // Components read user data reactively via useMessageUser(userId).
+// ---------------------------------------------------------------------------
 
-  // Phase 2: DM message sender data now lives in useUserCacheStore.
-  // No need to iterate O(N) DM messages — components use useMessageUser(sender_id).
+export const patchUserAcrossStores = (updatedUser: Partial<User> & { id: string }) => {
+  // Always update the centralized user cache immediately (version bump is batched internally)
+  useUserCacheStore.getState().patchUser(updatedUser.id, updatedUser);
+
+  // Batch server member patches — flushed once after all patches in this tick
+  pendingMemberPatches.set(updatedUser.id, updatedUser);
+  if (!memberPatchTimer) {
+    memberPatchTimer = setTimeout(flushMemberPatches, 0);
+  }
+
+  // Batch friend patches
+  pendingFriendPatches.set(updatedUser.id, updatedUser);
+  if (!friendPatchTimer) {
+    friendPatchTimer = setTimeout(flushFriendPatches, 0);
+  }
+
+  // Batch DM patches
+  pendingDMPatches.set(updatedUser.id, updatedUser);
+  if (!dmPatchTimer) {
+    dmPatchTimer = setTimeout(flushDMPatches, 0);
+  }
 };
 
 type PresenceRow = {

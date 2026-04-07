@@ -42,6 +42,21 @@ function bumpUserVersion(id: string): void {
   userVersions.set(id, (userVersions.get(id) ?? 0) + 1);
 }
 
+/**
+ * Batched version bump — collapses multiple patchUser calls within the same
+ * microtask into a single Zustand setState (and therefore a single React re-render).
+ */
+let pendingVersionBump = false;
+const scheduleBatchedVersionBump = () => {
+  if (pendingVersionBump) return;
+  pendingVersionBump = true;
+  queueMicrotask(() => {
+    pendingVersionBump = false;
+    const s = useUserCacheStore.getState();
+    useUserCacheStore.setState({ _version: s._version + 1 });
+  });
+};
+
 interface UserCacheState {
   /** Internal cache map - keyed by user ID. Mutated in place for status-only updates. */
   _cache: Map<string, CachedEntry>;
@@ -162,17 +177,17 @@ export const useUserCacheStore = create<UserCacheState>((set, get) => ({
     
     const isVisual = hasVisualChanges(patch, existing.user);
     
-    // Always create a new object reference so components reading status
-    // from the cache (e.g. MembersSidebar, FriendsList) detect changes.
-    // The useMessageUser hook uses per-user versioning, so message components
-    // for OTHER users won't re-render from status-only bumps.
+    // Mutate cache immediately so reads are up-to-date
     const patchedUser = { ...existing.user, ...patch };
     state._cache.set(id, { user: patchedUser, cachedAt: Date.now() });
     
     if (isVisual) {
       bumpUserVersion(id);
     }
-    set({ _version: state._version + 1 });
+    
+    // Batch the version bump — multiple patchUser calls within the same
+    // microtask (e.g. Presence sync with 50 users) produce a single re-render.
+    scheduleBatchedVersionBump();
   },
 
   invalidate: (id: string) => {
