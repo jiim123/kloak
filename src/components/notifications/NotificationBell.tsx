@@ -180,21 +180,12 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
     const messageId = url.searchParams.get("message");
     const conversationId = url.searchParams.get("conversation");
 
-    // Mention: navigate to channel with message highlight
+    // Mention: navigate to channel with message param — useScrollToMessage reads ?message= from URL
     if (notificationType === "mention" && serverId && channelId) {
+      setIsOpen(false);
       const path = `/app/servers/${serverId}/channels/${channelId}`;
       const params = messageId ? `?message=${messageId}` : '';
-      setIsOpen(false);
-      setTimeout(() => {
-        navigate(path + params);
-        if (messageId) {
-          setTimeout(() => {
-            window.dispatchEvent(
-              new CustomEvent("scrollToMessage", { detail: { messageId } })
-            );
-          }, 500);
-        }
-      }, 100);
+      setTimeout(() => navigate(path + params), 50);
       return;
     }
 
@@ -387,6 +378,18 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
                       {/* Content */}
                       <div className="flex-1 min-w-0 pt-0.5 overflow-hidden">
                         <p className={cn("text-sm line-clamp-2 break-words", isUnread && "font-medium")}>
+                          {notification.type === 'mention' && (() => {
+                            if (!notification.link) return null;
+                            try {
+                              const u = new URL(notification.link, window.location.origin);
+                              const sid = u.searchParams.get('server');
+                              if (!sid) return null;
+                              const sName = useServerStore.getState().servers.find(s => s.id === sid)?.name;
+                              return sName ? (
+                                <span className="text-xs text-muted-foreground font-normal mr-1.5">{sName} ·</span>
+                              ) : null;
+                            } catch { return null; }
+                          })()}
                           {notification.title}
                         </p>
                         {notification.body && (

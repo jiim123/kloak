@@ -68,7 +68,7 @@ export const useScrollToMessage = ({ messages, isLoading, virtuosoRef, container
         highlightTimeoutRef.current = null;
       }
       if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
+        clearTimeout(rafRef.current);
         rafRef.current = null;
       }
       setEventTargetId(e.detail.messageId);
@@ -91,6 +91,7 @@ export const useScrollToMessage = ({ messages, isLoading, virtuosoRef, container
   // Fetch older messages if target isn't loaded
   useEffect(() => {
     if (!targetMessageId || isLoading || hasScrolledRef.current || isFetchingRef.current) return;
+    if (messages.length === 0) return; // Wait for initial message load
     if (!currentChannelId) return;
 
     const messageExists = messages.some(m => m.id === targetMessageId);
@@ -135,11 +136,10 @@ export const useScrollToMessage = ({ messages, isLoading, virtuosoRef, container
     }
 
     if (attempt < maxAttempts) {
-      rafRef.current = requestAnimationFrame(() => {
-        rafRef.current = requestAnimationFrame(() => {
-          centerWithRetry(targetId, attempt + 1);
-        });
-      });
+      const delay = Math.min(100 * (attempt + 1), 500);
+      rafRef.current = window.setTimeout(() => {
+        centerWithRetry(targetId, attempt + 1);
+      }, delay) as unknown as number;
     }
   }, [applyHighlight]);
 
@@ -183,7 +183,7 @@ export const useScrollToMessage = ({ messages, isLoading, virtuosoRef, container
   useEffect(() => {
     return () => {
       if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (rafRef.current) clearTimeout(rafRef.current);
     };
   }, []);
 
