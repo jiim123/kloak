@@ -136,11 +136,10 @@ export const useScrollToMessage = ({ messages, isLoading, virtuosoRef, container
     }
 
     if (attempt < maxAttempts) {
-      rafRef.current = requestAnimationFrame(() => {
-        rafRef.current = requestAnimationFrame(() => {
-          centerWithRetry(targetId, attempt + 1);
-        });
-      });
+      const delay = Math.min(100 * (attempt + 1), 500);
+      rafRef.current = window.setTimeout(() => {
+        centerWithRetry(targetId, attempt + 1);
+      }, delay) as unknown as number;
     }
   }, [applyHighlight]);
 
