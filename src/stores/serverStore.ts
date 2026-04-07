@@ -853,20 +853,32 @@ export const useServerStore = create<ServerState>((set, get) => ({
     // Only clear channel state when switching TO a different server (not when going to null/DM)
     // This prevents losing state and ensures proper isolation
     if (server) {
+      // Try to restore cached members/roles for the target server
+      const userId = useAuthStore.getState().user?.id ?? null;
+      const cachedMembers = getCachedMembers(server.id, 'lite', userId)
+        ?? getCachedMembers(server.id, 'full', userId);
+
+      // Restore roles from serverRolesCache if available
+      const scopedRolesKey = getScopedServerCacheKey(server.id, userId);
+      const cachedRoles = serverRolesCache.get(scopedRolesKey);
+      const hasFreshRoles = cachedRoles && Date.now() - cachedRoles.cachedAt < SERVER_ROLES_TTL_MS;
+
       set({
         currentServer: server,
         // Clear channel state when switching servers to ensure proper isolation
         currentChannel: null,
         channels: [],
         categories: [],
-        members: [],
-        membersServerId: null,
-        membersFetchMode: null,
-        roles: [],
+        // Restore cached members instead of clearing to []
+        members: cachedMembers ? cachedMembers.members : [],
+        membersServerId: cachedMembers ? server.id : null,
+        membersFetchMode: cachedMembers ? 'lite' : null,
+        // Restore cached roles instead of clearing to []
+        roles: hasFreshRoles ? cachedRoles.roles : [],
         rolePermissions: [],
         channelPermissions: [],
         categoryPermissions: [],
-        isMembersLoading: true,
+        isMembersLoading: !cachedMembers,
       });
     } else {
       // Going to DM view - just set server to null, keep channel data for when we return

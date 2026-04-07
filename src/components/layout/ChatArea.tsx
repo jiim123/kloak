@@ -48,39 +48,24 @@ const NoChannelPlaceholder = () => (
   <div className="h-full flex flex-col items-center justify-center text-center px-4 bg-layout-members relative overflow-hidden">
     <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent" />
 
-    <motion.div
-      initial={{ scale: 0.8, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      transition={{ duration: 0.5, ease: "easeOut" }}
-      className="relative mb-6"
-    >
+    <div className="relative mb-6">
       <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 blur-xl" />
       <div className="relative w-24 h-24 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/10 flex items-center justify-center shadow-lg">
         <MessageSquare className="w-10 h-10 text-primary/70" />
       </div>
-    </motion.div>
+    </div>
 
-    <motion.div
-      initial={{ y: 20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.5, delay: 0.1 }}
-      className="space-y-3"
-    >
+    <div className="space-y-3">
       <h2 className="text-2xl font-medium text-foreground">No Channel Selected</h2>
       <p className="text-muted-foreground max-w-md text-sm leading-relaxed">
         Choose a channel from the sidebar to start conversations with your community
       </p>
-    </motion.div>
+    </div>
 
-    <motion.div
-      initial={{ y: 20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.5, delay: 0.2 }}
-      className="mt-8 flex items-center gap-2 text-xs text-muted-foreground/60"
-    >
+    <div className="mt-8 flex items-center gap-2 text-xs text-muted-foreground/60">
       <Hash className="w-3.5 h-3.5" />
       <span>Select any channel to get started</span>
-    </motion.div>
+    </div>
   </div>
 );
 

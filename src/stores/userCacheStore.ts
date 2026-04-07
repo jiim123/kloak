@@ -205,16 +205,41 @@ export const useUserCacheStore = create<UserCacheState>((set, get) => ({
 }));
 
 /**
- * Set of user IDs currently being fetched by useMessageUser to avoid duplicate requests.
+ * Batch-fetch queue: collects missing user IDs over a 16ms window
+ * and fires a single `get_users_by_ids` RPC instead of N individual calls.
  */
-const autoFetchingIds = new Set<string>();
+const pendingBatchIds = new Set<string>();
+let batchTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleBatchFetch(userId: string) {
+  pendingBatchIds.add(userId);
+  if (batchTimer) return;
+  batchTimer = setTimeout(async () => {
+    const ids = [...pendingBatchIds];
+    pendingBatchIds.clear();
+    batchTimer = null;
+    if (ids.length === 0) return;
+    try {
+      const { data } = await supabase.rpc('get_users_by_ids', { _user_ids: ids });
+      if (Array.isArray(data) && data.length > 0) {
+        bulkSetUsersInCache(data as unknown as User[]);
+      }
+    } catch (err) {
+      console.error('[userCacheStore] batch fetch failed, falling back to individual:', err);
+      // Fallback: fetch individually for deployments without the RPC
+      for (const id of ids) {
+        fetchAndCacheUser(id).catch(() => {});
+      }
+    }
+  }, 16);
+}
 
 /**
  * Hook to subscribe to a specific user from the cache.
  * Uses per-user versioning so status-only updates to OTHER users
  * don't cause this component to re-render.
  * 
- * If the user is not in cache, triggers a background fetch automatically.
+ * If the user is not in cache, triggers a background batch fetch automatically.
  */
 export function useMessageUser(userId: string | undefined | null): User | undefined {
   const user = useUserCacheStore((state) => {
@@ -223,12 +248,12 @@ export function useMessageUser(userId: string | undefined | null): User | undefi
     return state._cache.get(userId)?.user;
   });
 
-  // Auto-fetch missing users so avatars/names appear after server switch
-  if (userId && !user && !autoFetchingIds.has(userId) && isValidUuid(userId)) {
-    autoFetchingIds.add(userId);
-    fetchAndCacheUser(userId).finally(() => {
-      autoFetchingIds.delete(userId);
-    });
+  // Auto-fetch missing users via batched RPC
+  if (userId && !user && !pendingBatchIds.has(userId) && isValidUuid(userId)) {
+    // Skip if already in-flight from a previous batch or individual fetch
+    if (!inflightFetches.has(userId)) {
+      scheduleBatchFetch(userId);
+    }
   }
 
   return user;
