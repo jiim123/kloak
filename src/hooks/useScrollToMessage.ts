@@ -183,7 +183,7 @@ export const useScrollToMessage = ({ messages, isLoading, virtuosoRef, container
   useEffect(() => {
     return () => {
       if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (rafRef.current) clearTimeout(rafRef.current);
     };
   }, []);
 
