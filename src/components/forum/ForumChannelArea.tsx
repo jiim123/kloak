@@ -176,6 +176,13 @@ const ThreadAttachmentGalleryItem = ({ path, onClick }: { path: string; onClick:
   );
 };
 
+/** Regex that matches both kloak-attachment:// and CDN attachment URLs */
+const ATTACHMENT_URL_REGEX = /(?:kloak-attachment:\/\/|https?:\/\/kloakcdn\.b-cdn\.net\/attachments\/)([^\s]+)/g;
+
+/** Strip all attachment URLs (both formats) from content for display */
+export const stripAttachmentUrls = (text: string) =>
+  text.replace(ATTACHMENT_URL_REGEX, '').trim();
+
 const ThreadAttachmentGallery = ({
   content,
   onImageOpen,
@@ -183,9 +190,13 @@ const ThreadAttachmentGallery = ({
   content: string;
   onImageOpen: (url: string) => void;
 }) => {
-  const matches = content.match(/kloak-attachment:\/\/([^\s]+)/g);
-  if (!matches || matches.length === 0) return null;
-  const paths = matches.map((m) => m.replace("kloak-attachment://", ""));
+  const paths: string[] = [];
+  let m: RegExpExecArray | null;
+  const re = new RegExp(ATTACHMENT_URL_REGEX.source, 'g');
+  while ((m = re.exec(content)) !== null) {
+    paths.push(m[1]);
+  }
+  if (paths.length === 0) return null;
   return (
     <div className="rounded-lg border border-border bg-muted/20 p-3">
       <div className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
