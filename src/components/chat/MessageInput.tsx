@@ -793,7 +793,7 @@ export const MessageInput = ({
       }
 
       // Restore Discord-like "edit your last message" shortcut (channel only).
-      if (!isDM && e.key === "ArrowUp" && !isMobile && !content.trim() && pendingAttachments.length === 0 && user?.id) {
+      if (!isDM && !isForum && e.key === "ArrowUp" && !isMobile && !content.trim() && pendingAttachments.length === 0 && user?.id) {
         e.preventDefault();
         window.dispatchEvent(
           new CustomEvent("editLastMessage", {
