@@ -220,11 +220,25 @@ const getCachedMembers = (serverId: string, mode: MembersFetchMode, userId: stri
   return persisted;
 };
 
+const MAX_MEMBERS_CACHE_SERVERS = 5;
+
 const setCachedMembers = (serverId: string, mode: MembersFetchMode, userId: string | null, members: ServerMember[], cachedAt: number) => {
   const scopedKey = getScopedMembersCacheKey(serverId, mode, userId);
   const nextValue = { members: [...members], cachedAt };
   membersCache.set(scopedKey, nextValue);
   writeSessionCache(scopedKey, nextValue);
+
+  // Cap cache: keep only the most recent MAX_MEMBERS_CACHE_SERVERS servers
+  // Each server can have up to 2 keys (lite + full), so max entries = MAX * 2
+  const maxEntries = MAX_MEMBERS_CACHE_SERVERS * 2;
+  if (membersCache.size > maxEntries) {
+    // Evict oldest entries by cachedAt
+    const entries = [...membersCache.entries()].sort((a, b) => a[1].cachedAt - b[1].cachedAt);
+    while (entries.length > maxEntries) {
+      const [key] = entries.shift()!;
+      membersCache.delete(key);
+    }
+  }
 };
 
 const normalizeChannelPermissionsRows = (rows: any[]): ChannelPermission[] => {
