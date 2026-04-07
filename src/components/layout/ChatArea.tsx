@@ -20,7 +20,7 @@ import { fetchServerEmojis } from "@/lib/serverEmojis";
 import { useUserCacheStore } from "@/stores/userCacheStore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { motion } from "framer-motion"; // kept for PinnedMessageBar or future use
+
 import type { Message } from "@/types";
 
 // ── Granular Zustand selectors (stable references, minimal re-renders) ──
