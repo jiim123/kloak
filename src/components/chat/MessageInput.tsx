@@ -976,7 +976,7 @@ export const MessageInput = ({
                   <span className="text-primary italic">Anonymous</span>
                 )}
               </span>
-              <button onClick={() => isDM ? dmConfig?.onCancelReply?.() : channelSetReplyingTo(null)} className="ml-auto p-1">
+              <button onClick={() => isForum ? forumConfig?.onCancelReply?.() : isDM ? dmConfig?.onCancelReply?.() : channelSetReplyingTo(null)} className="ml-auto p-1">
                 <X className="w-4 h-4" />
               </button>
             </div>
