@@ -209,16 +209,16 @@ export const useRealtimeDMs = ({
     [removeMessage],
   );
 
-  // Preferred path: broadcast events on user-scoped topic.
+  // Broadcast events on user-scoped topic.
   useEffect(() => {
     if (!userId) return;
 
     const topic = `user:${userId}`;
-    const filter = { event: 'direct_messages', scope: `dms-${userId}` };
     const channel = acquireChannel(topic);
+
     channel.on(
       'broadcast',
-      filter as { event: string },
+      { event: 'direct_messages' },
       ({ payload }) => {
         const eventPayload = payload as BroadcastMutationPayload<DirectMessageRealtimeRow>;
         const op = eventPayload?.op;
@@ -243,58 +243,6 @@ export const useRealtimeDMs = ({
       releaseChannel(topic);
     };
   }, [userId, handleNewMessage, handleMessageUpdate, handleMessageDelete]);
-
-  // Fallback path: Postgres Changes for compatibility until broadcast trigger is deployed.
-  useEffect(() => {
-    if (!userId) return;
-
-    const channel = supabase
-      .channel(`all-dms:${userId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'direct_messages',
-        },
-        (payload) => {
-          const convId = payload.new?.conversation_id as string | undefined;
-          if (!convId) return;
-          if (conversationIdsRef.current.size > 0 && !conversationIdsRef.current.has(convId)) return;
-          void handleNewMessage(payload);
-        },
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'direct_messages',
-        },
-        handleMessageUpdate,
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'direct_messages',
-        },
-        handleMessageDelete,
-      )
-      .subscribe((status, err) => {
-        if (status !== 'SUBSCRIBED') {
-          console.log('[Realtime] DM subscription status:', { status, userId, err });
-        }
-        if (err) {
-          console.error('[Realtime] DM subscription error:', err);
-        }
-      });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [userId, handleNewMessage, handleMessageUpdate, handleMessageDelete, currentConversationId]);
 
   // Handle reaction changes
   const handleReactionChange = useCallback(
