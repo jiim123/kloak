@@ -68,7 +68,7 @@ export const useScrollToMessage = ({ messages, isLoading, virtuosoRef, container
         highlightTimeoutRef.current = null;
       }
       if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
+        clearTimeout(rafRef.current);
         rafRef.current = null;
       }
       setEventTargetId(e.detail.messageId);
