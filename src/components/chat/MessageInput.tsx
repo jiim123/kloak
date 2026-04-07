@@ -611,75 +611,83 @@ export const MessageInput = ({
         finalContent = finalContent ? `${finalContent}\n${urlBlock}` : urlBlock;
       }
 
-      // Send the message
-      const replyToId = isDM ? dmConfig?.replyingTo?.id : channelReplyingTo?.id;
-      const sentMessage = await sendMessage(targetId, user.id, finalContent, replyToId);
+      if (isForum) {
+        // Forum mode: delegate to forumConfig.onSend
+        const replyToId = forumConfigRef.current?.replyingTo?.id || null;
+        await forumConfigRef.current!.onSend(finalContent, replyToId);
+      } else {
+        // Channel / DM mode
+        const replyToId = isDM ? dmConfig?.replyingTo?.id : channelReplyingTo?.id;
+        const sentMessage = await sendMessage(targetId, user.id, finalContent, replyToId);
 
-      // Backend mention suppression kept as silent safety net (no toast — handled pre-send)
-
-      // Insert attachment records
-      const fileUploadedUrls = uploadedUrls.slice(0, fileAttachments.length);
-      if (sentMessage && fileUploadedUrls.length > 0) {
-        const attachmentRows = fileUploadedUrls.map((url, i) => ({
-          message_id: sentMessage.id,
-          file_url: url,
-          file_name: savedAttachmentMeta[i]?.name || "attachment",
-          file_type: savedAttachmentMeta[i]?.type || null,
-          file_size: savedAttachmentMeta[i]?.size || null,
-        }));
-
-        const tableName = isDM ? "dm_attachments" : "message_attachments";
-        const { data: insertedAttachments, error: attachError } = await supabase
-          .from(tableName)
-          .insert(attachmentRows)
-          .select();
-
-        if (attachError) {
-          console.error("[MessageInput] Attachment insert error:", attachError);
-        }
-
-        if (insertedAttachments && insertedAttachments.length > 0) {
-          const formattedAttachments = insertedAttachments.map((a: any) => ({
-            id: a.id,
-            message_id: a.message_id,
-            file_url: a.file_url,
-            file_name: a.file_name,
-            file_type: a.file_type,
-            file_size: a.file_size,
-            width: a.width,
-            height: a.height,
+        // Insert attachment records
+        const fileUploadedUrls = uploadedUrls.slice(0, fileAttachments.length);
+        if (sentMessage && fileUploadedUrls.length > 0) {
+          const attachmentRows = fileUploadedUrls.map((url, i) => ({
+            message_id: sentMessage.id,
+            file_url: url,
+            file_name: savedAttachmentMeta[i]?.name || "attachment",
+            file_type: savedAttachmentMeta[i]?.type || null,
+            file_size: savedAttachmentMeta[i]?.size || null,
           }));
 
-          if (isDM) {
-            useDMStore.getState().updateMessage(targetId, sentMessage.id, {
-              attachments: formattedAttachments,
-            });
-          } else {
-            useMessageStore.getState().updateMessage(sentMessage.id, {
-              channel_id: targetId,
-              attachments: formattedAttachments,
-            } as any);
+          const tableName = isDM ? "dm_attachments" : "message_attachments";
+          const { data: insertedAttachments, error: attachError } = await supabase
+            .from(tableName)
+            .insert(attachmentRows)
+            .select();
+
+          if (attachError) {
+            console.error("[MessageInput] Attachment insert error:", attachError);
+          }
+
+          if (insertedAttachments && insertedAttachments.length > 0) {
+            const formattedAttachments = insertedAttachments.map((a: any) => ({
+              id: a.id,
+              message_id: a.message_id,
+              file_url: a.file_url,
+              file_name: a.file_name,
+              file_type: a.file_type,
+              file_size: a.file_size,
+              width: a.width,
+              height: a.height,
+            }));
+
+            if (isDM) {
+              useDMStore.getState().updateMessage(targetId, sentMessage.id, {
+                attachments: formattedAttachments,
+              });
+            } else {
+              useMessageStore.getState().updateMessage(sentMessage.id, {
+                channel_id: targetId,
+                attachments: formattedAttachments,
+              } as any);
+            }
           }
         }
-      }
 
-      // DM: update presence after send
-      if (isDM && sentMessage) {
-        const auth = useAuthStore.getState();
-        if (auth.manualStatus !== "offline") auth.updateLastSeen();
-        if (auth.manualStatus !== "offline" && auth.manualStatus !== "dnd") {
-          auth.updateStatus("online", { source: "auto" });
+        // DM: update presence after send
+        if (isDM && sentMessage) {
+          const auth = useAuthStore.getState();
+          if (auth.manualStatus !== "offline") auth.updateLastSeen();
+          if (auth.manualStatus !== "offline" && auth.manualStatus !== "dnd") {
+            auth.updateStatus("online", { source: "auto" });
+          }
         }
       }
 
       // Common cleanup
       setContent("");
       setPendingAttachments([]);
-      const draftKey = isDM ? `dm-${targetId}` : targetId;
+      const draftKey = isForum ? `forum-${targetId}` : isDM ? `dm-${targetId}` : targetId;
       clearDraft(draftKey);
       if (textareaRef.current) textareaRef.current.style.height = `${MIN_TEXTAREA_HEIGHT}px`;
 
-      if (isDM) {
+      if (isForum) {
+        forumConfigRef.current?.onCancelReply?.();
+        mentionMappingsRef.current = [];
+        channelMappingsRef.current = [];
+      } else if (isDM) {
         dmConfig?.onCancelReply?.();
       } else {
         channelSetReplyingTo(null);
