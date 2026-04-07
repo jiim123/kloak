@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useDMStore } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
 import { resolveSignedUrls, isSupabaseAttachmentUrl } from '@/lib/signedUrl';
-import type { DirectMessage, ReactionGroup } from '@/types';
+import type { DirectMessage } from '@/types';
 import { getOrFetchUser, useUserCacheStore } from '@/stores/userCacheStore';
 
 
@@ -23,27 +23,6 @@ type DirectMessageRealtimeRow = {
   reply_to_id?: string | null;
 };
 
-const groupReactions = (reactions: any[], currentUserId?: string): ReactionGroup[] => {
-  const groups: Record<string, ReactionGroup> = {};
-
-  reactions.forEach((reaction) => {
-    if (!groups[reaction.emoji]) {
-      groups[reaction.emoji] = {
-        emoji: reaction.emoji,
-        count: 0,
-        users: [],
-        hasReacted: false,
-      };
-    }
-    groups[reaction.emoji].count++;
-    groups[reaction.emoji].users.push(reaction.user_id);
-    if (reaction.user_id === currentUserId) {
-      groups[reaction.emoji].hasReacted = true;
-    }
-  });
-
-  return Object.values(groups);
-};
 
 export const useRealtimeDMs = ({
   userId,
