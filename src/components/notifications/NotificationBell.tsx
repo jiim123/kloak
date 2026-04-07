@@ -180,21 +180,12 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
     const messageId = url.searchParams.get("message");
     const conversationId = url.searchParams.get("conversation");
 
-    // Mention: navigate to channel with message highlight
+    // Mention: navigate to channel with message param — useScrollToMessage reads ?message= from URL
     if (notificationType === "mention" && serverId && channelId) {
+      setIsOpen(false);
       const path = `/app/servers/${serverId}/channels/${channelId}`;
       const params = messageId ? `?message=${messageId}` : '';
-      setIsOpen(false);
-      setTimeout(() => {
-        navigate(path + params);
-        if (messageId) {
-          setTimeout(() => {
-            window.dispatchEvent(
-              new CustomEvent("scrollToMessage", { detail: { messageId } })
-            );
-          }, 500);
-        }
-      }, 100);
+      setTimeout(() => navigate(path + params), 50);
       return;
     }
 
