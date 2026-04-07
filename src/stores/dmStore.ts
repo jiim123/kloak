@@ -5,6 +5,35 @@ import { useUserCacheStore, bulkSetUsersInCache, fetchAndCacheUser } from "@/sto
 import { resolveSignedUrls, isSupabaseAttachmentUrl } from "@/lib/signedUrl";
 import type { DMConversation, DirectMessage, User, ReactionGroup } from "@/types";
 
+/**
+ * Subscribe to a broadcast channel, send a single event, then clean up.
+ * Supabase requires channels to be in SUBSCRIBED state before .send() works.
+ */
+async function broadcastOnChannel(
+  topic: string,
+  event: string,
+  payload: Record<string, unknown>,
+): Promise<void> {
+  const channel = supabase.channel(topic);
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('subscribe timeout')), 3000);
+      channel.subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          clearTimeout(timeout);
+          resolve();
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          clearTimeout(timeout);
+          reject(new Error(status));
+        }
+      });
+    });
+    await channel.send({ type: 'broadcast', event, payload });
+  } finally {
+    supabase.removeChannel(channel);
+  }
+}
+
 interface DMState {
   conversations: DMConversation[];
   currentConversation: DMConversation | null;
@@ -471,21 +500,16 @@ export const useDMStore = create<DMState>((set, get) => ({
 
       // Broadcast to the conversation channel so other participants receive it instantly
       try {
-        const channel = supabase.channel(`dm:${conversationId}`);
-        await channel.send({
-          type: 'broadcast',
-          event: 'new_message',
-          payload: {
-            op: 'INSERT',
-            message: {
-              id: msgData.id,
-              conversation_id: msgData.conversation_id,
-              sender_id: msgData.sender_id,
-              content: msgData.content,
-              reply_to_id: msgData.reply_to_id,
-              edited_at: msgData.edited_at,
-              created_at: msgData.created_at,
-            },
+        await broadcastOnChannel(`dm:${conversationId}`, 'new_message', {
+          op: 'INSERT',
+          message: {
+            id: msgData.id,
+            conversation_id: msgData.conversation_id,
+            sender_id: msgData.sender_id,
+            content: msgData.content,
+            reply_to_id: msgData.reply_to_id,
+            edited_at: msgData.edited_at,
+            created_at: msgData.created_at,
           },
         });
       } catch {
@@ -536,14 +560,9 @@ export const useDMStore = create<DMState>((set, get) => ({
       // Broadcast edit to other participants
       if (foundConversationId) {
         try {
-          const channel = supabase.channel(`dm:${foundConversationId}`);
-          await channel.send({
-            type: 'broadcast',
-            event: 'message_updated',
-            payload: {
-              op: 'UPDATE',
-              message: { id: messageId, conversation_id: foundConversationId, content: editedData.content, edited_at: editedData.edited_at },
-            },
+          await broadcastOnChannel(`dm:${foundConversationId}`, 'message_updated', {
+            op: 'UPDATE',
+            message: { id: messageId, conversation_id: foundConversationId, content: editedData.content, edited_at: editedData.edited_at },
           });
         } catch {
           // Non-critical
@@ -588,14 +607,9 @@ export const useDMStore = create<DMState>((set, get) => ({
       // Broadcast delete to other participants
       if (foundConversationId) {
         try {
-          const channel = supabase.channel(`dm:${foundConversationId}`);
-          await channel.send({
-            type: 'broadcast',
-            event: 'message_deleted',
-            payload: {
-              op: 'DELETE',
-              message: { id: messageId, conversation_id: foundConversationId },
-            },
+          await broadcastOnChannel(`dm:${foundConversationId}`, 'message_deleted', {
+            op: 'DELETE',
+            message: { id: messageId, conversation_id: foundConversationId },
           });
         } catch {
           // Non-critical
@@ -657,11 +671,8 @@ export const useDMStore = create<DMState>((set, get) => ({
       }
       if (foundConvId) {
         try {
-          const channel = supabase.channel(`dm:${foundConvId}`);
-          await channel.send({
-            type: 'broadcast',
-            event: 'reaction_added',
-            payload: { message_id: messageId, conversation_id: foundConvId, user_id: userId, emoji },
+          await broadcastOnChannel(`dm:${foundConvId}`, 'reaction_added', {
+            message_id: messageId, conversation_id: foundConvId, user_id: userId, emoji,
           });
         } catch {}
       }
@@ -721,11 +732,8 @@ export const useDMStore = create<DMState>((set, get) => ({
       }
       if (foundConvId) {
         try {
-          const channel = supabase.channel(`dm:${foundConvId}`);
-          await channel.send({
-            type: 'broadcast',
-            event: 'reaction_removed',
-            payload: { message_id: messageId, conversation_id: foundConvId, user_id: userId, emoji },
+          await broadcastOnChannel(`dm:${foundConvId}`, 'reaction_removed', {
+            message_id: messageId, conversation_id: foundConvId, user_id: userId, emoji,
           });
         } catch {}
       }
