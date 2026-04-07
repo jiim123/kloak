@@ -1087,7 +1087,7 @@ export const MessageInput = ({
           </motion.div>
         )}
       </AnimatePresence>
-      {!isDM && <CreatePollModal open={showCreatePoll} onOpenChange={setShowCreatePoll} channelId={targetId} />}
+      {!isDM && !isForum && <CreatePollModal open={showCreatePoll} onOpenChange={setShowCreatePoll} channelId={targetId} />}
     </div>
   );
 };
