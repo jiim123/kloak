@@ -3912,6 +3912,7 @@ export type Database = {
         Args: { _target_user_ids: string[]; _user_id: string }
         Returns: Json
       }
+      get_users_by_ids: { Args: { _user_ids: string[] }; Returns: Json }
       get_users_presence_secure: {
         Args: { _target_user_ids: string[]; _user_id: string }
         Returns: Json
