@@ -1,67 +1,72 @@
 
 
-## Fix DM reaction broadcasts by reusing active channels
+## Fix layout shift / element jump on AppLayout reload
 
 ### Problem
-`broadcastOnChannel` creates a temporary channel, subscribes, sends, then immediately tears it down. The WebSocket may not flush before teardown, causing reactions (and potentially messages) to be silently dropped.
+When the app reloads at `/app`, elements jump into position because:
 
-### Solution
-Replace `broadcastOnChannel` with a channel registry pattern. The receiver-side hook (`useRealtimeDMs.ts`) already maintains a subscribed channel for the active conversation — register that channel in a module-level map so `dmStore.ts` can reuse it for sending.
+1. **Loading → layout snap**: The full-screen `KloakDrawLoader` (centered spinner) transitions instantly to the multi-column layout (server sidebar + channel sidebar + content area) with no visual continuity.
+2. **Framer Motion stagger animations in HomeLanding**: Elements animate from `opacity: 0, y: 20` → `opacity: 1, y: 0` with staggered delays, causing content to visibly pop into place. Despite `<MotionConfig reducedMotion="always">` wrapping the layout, Framer Motion's `reducedMotion="always"` only removes duration from animations — it doesn't prevent the initial/animate state diff from causing a single-frame jump.
+3. **AlphaNoticeBanner conditional height**: Uses `AnimatePresence` with `height: 0 → auto` animation, which shifts everything below it when it expands on mount.
+4. **ConnectionStatus conditional render**: Can insert a banner at the top that pushes content down after initial render.
 
 ### Changes
 
-**File 1: `src/stores/dmStore.ts`**
+**File 1: `src/components/home/HomeLanding.tsx`**
+- Remove Framer Motion stagger animations. Replace `motion.div` with plain `div` elements and set content to be immediately visible (no `initial="hidden"`, no `animate="show"`, no `variants`).
+- This eliminates the staggered pop-in effect that causes the most visible layout shift.
 
-1. Delete the `broadcastOnChannel` function (lines 8-35).
+**File 2: `src/components/layout/AlphaNoticeBanner.tsx`**
+- Replace `AnimatePresence` + `motion.div` height animation with a simple conditional render using CSS `max-height` transition or direct show/hide. Since `app-no-motion` already kills CSS transitions inside `/app`, this will render instantly without layout shift.
+- Alternatively, remove the animation entirely and use a simple `{isExpanded && <div>...</div>}` pattern.
 
-2. Add a channel registry and `trySendBroadcast` helper in its place:
-```typescript
-const activeDMChannels = new Map<string, ReturnType<typeof supabase.channel>>();
+**File 3: `src/pages/AppLayout.tsx`**
+- Make the loading state layout match the final layout structure. Instead of a centered full-screen spinner, render the loading state *within* the same flex container structure (server sidebar placeholder + content area with centered spinner). This prevents the layout from jumping when auth completes.
 
-export function registerDMChannel(conversationId: string, channel: ReturnType<typeof supabase.channel>) {
-  activeDMChannels.set(conversationId, channel);
-}
+### Technical details
 
-export function unregisterDMChannel(conversationId: string) {
-  activeDMChannels.delete(conversationId);
-}
+**HomeLanding change** — Replace:
+```tsx
+<motion.div variants={container} initial="hidden" animate="show">
+  <motion.div variants={item}>...</motion.div>
+</motion.div>
+```
+With plain `<div>` elements (no animation).
 
-function trySendBroadcast(conversationId: string, event: string, payload: Record<string, unknown>): void {
-  try {
-    const channel = activeDMChannels.get(conversationId);
-    if (channel) {
-      channel.send({ type: 'broadcast', event, payload }).catch(() => {});
-    }
-  } catch {}
-}
+**AlphaNoticeBanner change** — Replace AnimatePresence/motion.div with:
+```tsx
+{isExpanded && (
+  <div className="overflow-hidden">
+    <div className="px-6 pb-3 ...">...</div>
+  </div>
+)}
 ```
 
-3. Replace all 5 `await broadcastOnChannel(...)` calls with synchronous `trySendBroadcast(...)`:
-   - `sendMessage` (~line 503): `trySendBroadcast(conversationId, 'new_message', { message: { ... } })`
-   - `editMessage` (~line 563): `trySendBroadcast(foundConversationId, 'message_updated', { message: { ... } })`
-   - `deleteMessage` (~line 610): `trySendBroadcast(foundConversationId, 'message_deleted', { message: { ... } })`
-   - `addReaction` (~line 674): `trySendBroadcast(foundConvId, 'reaction_added', { ... })`
-   - `removeReaction` (~line 735): `trySendBroadcast(foundConvId, 'reaction_removed', { ... })`
-
-**File 2: `src/hooks/useRealtimeDMs.ts`**
-
-4. Import `registerDMChannel` and `unregisterDMChannel` from `@/stores/dmStore`.
-
-5. In the active conversation broadcast effect (line 184), add registration after channel creation and unregistration in the cleanup:
-```typescript
-const channel = supabase.channel(`dm:${currentConversationId}`, { ... });
-registerDMChannel(currentConversationId, channel);
-// ... existing .on() handlers ...
-return () => {
-  unregisterDMChannel(currentConversationId);
-  supabase.removeChannel(channel);
-};
+**AppLayout loading state change** — Replace the current loading block (lines 477-483):
+```tsx
+if (isLoading && !user) {
+  return (
+    <div className="h-screen bg-layout-chat flex items-center justify-center">
+      <KloakDrawLoader />
+    </div>
+  );
+}
 ```
-
-### What stays unchanged
-- All broadcast receiver handlers in `useRealtimeDMs.ts`
-- Channel subscription config (`{ broadcast: { self: false } }`)
-- Reaction/message RPC functions
-- dmStore state management
-- `dm_participants` subscription
+With a skeleton that matches the final layout shape:
+```tsx
+if (isLoading && !user) {
+  return (
+    <div className="h-screen flex flex-col overflow-hidden app-layout-font">
+      <div className="flex-1 flex overflow-hidden">
+        {/* Placeholder matching sidebar width */}
+        {!isMobileRaw && <div className="w-[72px] shrink-0 bg-layout-sidebar" />}
+        {!isMobileRaw && <div className="w-[278px] shrink-0 bg-[#111111]" />}
+        <div className="flex-1 bg-layout-chat flex items-center justify-center">
+          <KloakDrawLoader />
+        </div>
+      </div>
+    </div>
+  );
+}
+```
 
