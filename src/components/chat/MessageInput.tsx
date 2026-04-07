@@ -308,7 +308,7 @@ export const MessageInput = ({
   const draftSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const draftKey = isDM ? `dm-${targetId}` : targetId;
+    const draftKey = isForum ? `forum-${targetId}` : isDM ? `dm-${targetId}` : targetId;
     if (draftKey) {
       setContent(getDraft(draftKey));
     }
