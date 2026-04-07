@@ -1761,9 +1761,9 @@ export const MessageItem = memo(function MessageItem({
         </ContextMenu>
 
         {/* Reactions - rendered outside ContextMenu to avoid interfering with message actions */}
-        {!message.is_system_message && (
-          <div className={cn("flex flex-wrap items-center gap-3 px-4", compactMode ? "pl-4" : "pl-[68px]", message.reactions && message.reactions.length > 0 ? "" : "")}>
-            {message.reactions && message.reactions.length > 0 && message.reactions.map((reaction) => (
+        {!message.is_system_message && message.reactions && message.reactions.length > 0 && (
+          <div className={cn("flex flex-wrap items-center gap-3 px-4", compactMode ? "pl-4" : "pl-[68px]")}>
+            {message.reactions.map((reaction) => (
               <HoverCard key={reaction.emoji} openDelay={200}>
                 <HoverCardTrigger asChild>
                   <span className="inline-flex">
@@ -1850,11 +1850,9 @@ export const MessageItem = memo(function MessageItem({
                 </HoverCardContent>
               </HoverCard>
             ))}
-            {/* Ghost emoji suggestions on hover */}
+            {/* Ghost emoji suggestions appended after existing reactions */}
             {effectiveCanAddReactions && !isBlockedUser && (
-              <div className={cn(
-                "hidden md:flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-150",
-              )}>
+              <div className="hidden md:flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                 {["👍", "❤️", "🔥"].map((emoji) => {
                   const alreadyReacted = message.reactions?.some((r) => r.emoji === emoji);
                   if (alreadyReacted) return null;
