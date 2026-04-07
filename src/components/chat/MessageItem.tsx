@@ -2065,10 +2065,10 @@ export const MessageItem = memo(function MessageItem({
                     onClick={() => {
                       handleReactionClick(reaction.emoji, reaction.hasReacted);
                     }}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-colors ${
+                    className={`flex items-center gap-1 bg-transparent border-none cursor-pointer transition-opacity duration-150 ${
                       reaction.hasReacted
-                        ? "bg-primary/20 border-primary text-primary"
-                        : "bg-secondary/80 border-transparent hover:border-border hover:bg-secondary"
+                        ? "text-foreground opacity-100"
+                        : "text-muted-foreground opacity-60"
                     }`}
                   >
                     {reactionEmojiNode(reaction.emoji)}
