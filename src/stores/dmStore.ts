@@ -645,6 +645,26 @@ export const useDMStore = create<DMState>((set, get) => ({
         }
         return { messagesByConversation: newMessagesByConversation };
       });
+
+      // Broadcast reaction to other participants
+      const { messagesByConversation } = get();
+      let foundConvId: string | null = null;
+      for (const convId in messagesByConversation) {
+        if (messagesByConversation[convId].some((m) => m.id === messageId)) {
+          foundConvId = convId;
+          break;
+        }
+      }
+      if (foundConvId) {
+        try {
+          const channel = supabase.channel(`dm:${foundConvId}`);
+          await channel.send({
+            type: 'broadcast',
+            event: 'reaction_added',
+            payload: { message_id: messageId, conversation_id: foundConvId, user_id: userId, emoji },
+          });
+        } catch {}
+      }
     } catch (error) {
       console.error("Failed to add reaction:", error);
     }
@@ -689,6 +709,26 @@ export const useDMStore = create<DMState>((set, get) => ({
         }
         return { messagesByConversation: newMessagesByConversation };
       });
+
+      // Broadcast reaction removal to other participants
+      const { messagesByConversation } = get();
+      let foundConvId: string | null = null;
+      for (const convId in messagesByConversation) {
+        if (messagesByConversation[convId].some((m) => m.id === messageId)) {
+          foundConvId = convId;
+          break;
+        }
+      }
+      if (foundConvId) {
+        try {
+          const channel = supabase.channel(`dm:${foundConvId}`);
+          await channel.send({
+            type: 'broadcast',
+            event: 'reaction_removed',
+            payload: { message_id: messageId, conversation_id: foundConvId, user_id: userId, emoji },
+          });
+        } catch {}
+      }
     } catch (error) {
       console.error("Failed to remove reaction:", error);
     }

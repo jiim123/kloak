@@ -225,6 +225,49 @@ export const useRealtimeDMs = ({
       handleMessageDelete({ old: payload.message });
     });
 
+    channel.on('broadcast', { event: 'reaction_added' }, ({ payload }) => {
+      if (!payload?.message_id || !payload?.conversation_id) return;
+      if (payload.user_id === userId) return;
+      // Add reaction to local state
+      const { messagesByConversation } = useDMStore.getState();
+      const messages = messagesByConversation[payload.conversation_id] || [];
+      const msg = messages.find((m: any) => m.id === payload.message_id);
+      if (!msg) return;
+      const reactions = [...(msg.reactions || [])];
+      const existing = reactions.find((r: any) => r.emoji === payload.emoji);
+      if (existing) {
+        if (!existing.users.includes(payload.user_id)) {
+          existing.count += 1;
+          existing.users.push(payload.user_id);
+        }
+      } else {
+        reactions.push({ emoji: payload.emoji, count: 1, users: [payload.user_id], hasReacted: false });
+      }
+      updateMessage(payload.conversation_id, payload.message_id, { reactions });
+    });
+
+    channel.on('broadcast', { event: 'reaction_removed' }, ({ payload }) => {
+      if (!payload?.message_id || !payload?.conversation_id) return;
+      if (payload.user_id === userId) return;
+      const { messagesByConversation } = useDMStore.getState();
+      const messages = messagesByConversation[payload.conversation_id] || [];
+      const msg = messages.find((m: any) => m.id === payload.message_id);
+      if (!msg) return;
+      const reactions = (msg.reactions || [])
+        .map((r: any) => {
+          if (r.emoji === payload.emoji) {
+            return {
+              ...r,
+              count: r.count - 1,
+              users: r.users.filter((u: string) => u !== payload.user_id),
+            };
+          }
+          return r;
+        })
+        .filter((r: any) => r.count > 0);
+      updateMessage(payload.conversation_id, payload.message_id, { reactions });
+    });
+
     channel.subscribe((status, err) => {
       if (status === 'SUBSCRIBED') {
         console.log(`[DM] Listening on dm:${currentConversationId}`);
@@ -292,74 +335,6 @@ export const useRealtimeDMs = ({
     };
   }, [userId, currentConversationId, conversations.length, updateConversation]);
 
-  // Handle reaction changes
-  const handleReactionChange = useCallback(
-    async (payload: any) => {
-      const messageId = payload.new?.message_id || payload.old?.message_id;
-      if (!messageId) return;
-
-      // Try to find the conversation_id from local state first (avoid DB query)
-      const { messagesByConversation } = useDMStore.getState();
-      let conversationId: string | null = null;
-      for (const [convId, messages] of Object.entries(messagesByConversation)) {
-        if ((messages as any[]).some((m: any) => m.id === messageId)) {
-          conversationId = convId;
-          break;
-        }
-      }
-
-      // Only fetch from DB if not found locally
-      if (!conversationId) {
-        const { data: resolvedConversationId } = await supabase.rpc('get_dm_message_conversation_secure', {
-          _message_id: messageId,
-          _user_id: userId,
-        });
-        if (!resolvedConversationId) return;
-        conversationId = resolvedConversationId;
-      }
-
-      // Fetch updated reactions for this message
-      const { data: reactionsData } = await supabase
-        .from('dm_reactions')
-        .select('id, message_id, user_id, emoji')
-        .eq('message_id', messageId);
-
-      const reactions = groupReactions(reactionsData || [], userId || undefined);
-      updateMessage(conversationId!, messageId, { reactions });
-    },
-    [userId, updateMessage],
-  );
-
-  // Subscribe to DM reactions
-  useEffect(() => {
-    if (!userId) return;
-
-    const channel = supabase
-      .channel(`dm-reactions:${userId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'dm_reactions',
-        },
-        handleReactionChange,
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'dm_reactions',
-        },
-        handleReactionChange,
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [userId, handleReactionChange]);
 
   // Debounced fetchConversations to batch rapid dm_participants events
   const fetchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
