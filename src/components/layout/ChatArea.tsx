@@ -1,14 +1,35 @@
-import React, { useState, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useCallback, useEffect, useMemo, Suspense } from "react";
 import { ChannelHeader } from "@/components/chat/ChannelHeader";
 import { MessageList } from "@/components/chat/MessageList";
 import { MessageInput } from "@/components/chat/MessageInput";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
-import { ForumChannelArea } from "@/components/forum/ForumChannelArea";
-import { MediaChannelArea } from "@/components/media/MediaChannelArea";
-import { TasksChannelArea } from "@/components/tasks/TasksChannelArea";
-import { AnnouncementChatArea } from "@/components/announcement/AnnouncementChatArea";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const ForumChannelArea = React.lazy(() => import("@/components/forum/ForumChannelArea").then(m => ({ default: m.ForumChannelArea })));
+const MediaChannelArea = React.lazy(() => import("@/components/media/MediaChannelArea").then(m => ({ default: m.MediaChannelArea })));
+const TasksChannelArea = React.lazy(() => import("@/components/tasks/TasksChannelArea").then(m => ({ default: m.TasksChannelArea })));
+const AnnouncementChatArea = React.lazy(() => import("@/components/announcement/AnnouncementChatArea").then(m => ({ default: m.AnnouncementChatArea })));
+
+const ChannelLoadingSkeleton = () => (
+  <div className="h-full flex flex-col bg-layout-members">
+    <div className="h-12 border-b border-border flex items-center px-4 gap-2 shrink-0">
+      <Skeleton className="h-5 w-32" />
+    </div>
+    <div className="flex-1 p-4 space-y-4">
+      {[...Array(5)].map((_, i) => (
+        <div key={i} className="flex items-start gap-3">
+          <Skeleton className="h-9 w-9 rounded-full shrink-0" />
+          <div className="space-y-2 flex-1">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-full max-w-md" />
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
 import { useMessageStore } from "@/stores/messageStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useTyping } from "@/hooks/useTyping";
