@@ -1,6 +1,6 @@
 import { lazy, Suspense, useRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Shield, Key, MessageCircle, Users, Zap, Lock, Check, Headphones, Palette } from "lucide-react";
+import { Shield, Key, MessageCircle, Users, Zap, Lock, Headphones, MessagesSquare, Megaphone, ListChecks, Images } from "lucide-react";
 import { Footer } from "@/components/ui/footer-section";
 import { NavigationMenu } from "@/components/layout/NavigationMenu";
 import HeroAscii from "@/components/landing/HeroAscii";
@@ -87,25 +87,25 @@ const Index = () => {
       description: "Talk in real-time with voice and video. Low-latency WebRTC connections, always ready when you are.",
     },
     {
-      icon: MessageCircle,
+      icon: MessagesSquare,
       title: "Forum",
       description:
         "Organize long-running conversations into dedicated posts. Each post has its own reply thread, perfect for Q&A and feedback.",
     },
     {
-      icon: Shield,
+      icon: Megaphone,
       title: "Announcements",
       description:
         "Share one-way updates from admins and moderators with the whole server. Members can react and comment without cluttering the feed.",
     },
     {
-      icon: Check,
+      icon: ListChecks,
       title: "Tasks",
       description:
         "Create tasks, assign them to members, and track progress. Keep your team aligned without leaving the platform.",
     },
     {
-      icon: Palette,
+      icon: Images,
       title: "Media",
       description:
         "A dedicated space for sharing images, videos, and visual inspiration. Gallery view with comments and reactions.",
