@@ -264,19 +264,19 @@ export const ChatArea = ({ showHeader = true }: ChatAreaProps) => {
   }
 
   if (channelType === "announcement") {
-    return <AnnouncementChatArea showHeader={showHeader} />;
+    return <Suspense fallback={<ChannelLoadingSkeleton />}><AnnouncementChatArea showHeader={showHeader} /></Suspense>;
   }
 
   if (channelType === "forum") {
-    return <ForumChannelArea showHeader={showHeader} />;
+    return <Suspense fallback={<ChannelLoadingSkeleton />}><ForumChannelArea showHeader={showHeader} /></Suspense>;
   }
 
   if (channelType === "media") {
-    return <MediaChannelArea showHeader={showHeader} />;
+    return <Suspense fallback={<ChannelLoadingSkeleton />}><MediaChannelArea showHeader={showHeader} /></Suspense>;
   }
 
   if (channelType === "tasks") {
-    return <TasksChannelArea showHeader={showHeader} />;
+    return <Suspense fallback={<ChannelLoadingSkeleton />}><TasksChannelArea showHeader={showHeader} /></Suspense>;
   }
 
   return (
