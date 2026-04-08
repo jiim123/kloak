@@ -686,27 +686,29 @@ const AppLayout = () => {
         {/* Mobile members drawer — always mounted so Sheet close animation works */}
         {!isDMView && !isServerSpecialView && isMobile && <MembersSidebar />}
 
-        {/* Modals */}
-        <CreateServerModal />
-        <JoinServerModal />
-        <InviteModal />
-        <CreateChannelModal />
-        <EditChannelModal />
-        <ServerSettingsModal />
-        <UserSettingsModal />
-        <UserProfilePopup />
-        <PinnedMessagesPanel />
-        <SearchModal />
-        <QuickSwitcherModal />
-        <KeyboardShortcutsModal />
-        <ConfirmActionModal />
-        <ChangeNicknameModal />
-        <ExternalLinkWarningModal />
-        <PermissionDebugPanel />
-        <ImportDiscordTemplateModal />
-        <ImportEmojiPackModal />
-        <SetStatusModal />
-        <ChannelInfoModal />
+        {/* Always-mounted modals (preserve internal form state, lazy for code splitting) */}
+        <Suspense fallback={null}><ServerSettingsModal /></Suspense>
+        <Suspense fallback={null}><UserSettingsModal /></Suspense>
+
+        {/* Conditionally-rendered modals (reset state on each open) */}
+        {activeModal === 'create-server' && <Suspense fallback={null}><CreateServerModal /></Suspense>}
+        {activeModal === 'join-server' && <Suspense fallback={null}><JoinServerModal /></Suspense>}
+        {activeModal === 'invite' && <Suspense fallback={null}><InviteModal /></Suspense>}
+        {activeModal === 'create-channel' && <Suspense fallback={null}><CreateChannelModal /></Suspense>}
+        {activeModal === 'edit-channel' && <Suspense fallback={null}><EditChannelModal /></Suspense>}
+        {activeModal === 'userProfile' && <Suspense fallback={null}><UserProfilePopup /></Suspense>}
+        {activeModal === 'pinned-messages' && <Suspense fallback={null}><PinnedMessagesPanel /></Suspense>}
+        {activeModal === 'search' && <Suspense fallback={null}><SearchModal /></Suspense>}
+        {activeModal === 'quickSwitcher' && <Suspense fallback={null}><QuickSwitcherModal /></Suspense>}
+        {activeModal === 'shortcuts' && <Suspense fallback={null}><KeyboardShortcutsModal /></Suspense>}
+        {activeModal === 'confirmAction' && <Suspense fallback={null}><ConfirmActionModal /></Suspense>}
+        {activeModal === 'changeNickname' && <Suspense fallback={null}><ChangeNicknameModal /></Suspense>}
+        {activeModal === 'external-link-warning' && <Suspense fallback={null}><ExternalLinkWarningModal /></Suspense>}
+        {activeModal === 'permission-debug' && <Suspense fallback={null}><PermissionDebugPanel /></Suspense>}
+        {activeModal === 'import-discord-template' && <Suspense fallback={null}><ImportDiscordTemplateModal /></Suspense>}
+        {activeModal === 'import-emoji-pack' && <Suspense fallback={null}><ImportEmojiPackModal /></Suspense>}
+        {activeModal === 'set-status' && <Suspense fallback={null}><SetStatusModal /></Suspense>}
+        {activeModal === 'channel-info' && <Suspense fallback={null}><ChannelInfoModal /></Suspense>}
 
         {/* Persistent embed container for Twitch/Kick streams */}
         <PersistentEmbedContainer />
