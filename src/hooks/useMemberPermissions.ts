@@ -15,7 +15,11 @@ import type { Permission, CustomServerRole, ServerRole } from "@/types";
  */
 export const useMemberPermissions = (channelId?: string) => {
   const { user } = useAuthStore();
-  const { members, currentServer, rolePermissions, channelPermissions, roles } = useServerStore();
+  const members = useServerStore((s) => s.members);
+  const currentServer = useServerStore((s) => s.currentServer);
+  const rolePermissions = useServerStore((s) => s.rolePermissions);
+  const channelPermissions = useServerStore((s) => s.channelPermissions);
+  const roles = useServerStore((s) => s.roles);
 
   const currentMember = useMemo(() => {
     if (!user || !currentServer) return null;

@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { motion } from "motion/react";
+import { motion } from "framer-motion";
 import { type CSSProperties, type ReactNode, useMemo } from "react";
 import type { TypingUser } from "@/types";
 

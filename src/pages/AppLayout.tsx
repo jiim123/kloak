@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef, Suspense, lazy } from "react";
 import { useNavigate, useSearchParams, useLocation, useParams, Outlet } from "react-router-dom";
 import { MotionConfig } from "framer-motion";
 import { useAuthStore, initializeAuth } from "@/stores/authStore";
@@ -22,29 +22,32 @@ import { ConnectionStatus } from "@/components/ui/ConnectionStatus";
 import KloakDrawLoader from "@/components/ui/KloakDrawLoader";
 import { DMSidebar, FriendsList, DMChatArea } from "@/components/dm";
 import { ServerSettingsPage, ChannelSettingsPage } from "@/components/settings";
-import {
-  CreateServerModal,
-  JoinServerModal,
-  InviteModal,
-  CreateChannelModal,
-  EditChannelModal,
-  ServerSettingsModal,
-  UserSettingsModal,
-  UserSettingsPage,
-  UserProfilePopup,
-  PinnedMessagesPanel,
-  SearchModal,
-  QuickSwitcherModal,
-  KeyboardShortcutsModal,
-  ConfirmActionModal,
-  ChangeNicknameModal,
-  ExternalLinkWarningModal,
-  PermissionDebugPanel,
-  ImportDiscordTemplateModal,
-  ImportEmojiPackModal,
-  SetStatusModal,
-  ChannelInfoModal,
-} from "@/components/modals";
+
+import { UserSettingsPage } from "@/components/modals/UserSettingsModal";
+
+// Always-mounted modals (have internal form state — lazy for code splitting only)
+const ServerSettingsModal = lazy(() => import("@/components/modals/ServerSettingsModal").then(m => ({ default: m.ServerSettingsModal })));
+const UserSettingsModal = lazy(() => import("@/components/modals/UserSettingsModal").then(m => ({ default: m.UserSettingsModal })));
+
+// Conditionally-rendered modals (reset state on each open)
+const CreateServerModal = lazy(() => import("@/components/modals/CreateServerModal").then(m => ({ default: m.CreateServerModal })));
+const JoinServerModal = lazy(() => import("@/components/modals/JoinServerModal").then(m => ({ default: m.JoinServerModal })));
+const InviteModal = lazy(() => import("@/components/modals/InviteModal").then(m => ({ default: m.InviteModal })));
+const CreateChannelModal = lazy(() => import("@/components/modals/CreateChannelModal").then(m => ({ default: m.CreateChannelModal })));
+const EditChannelModal = lazy(() => import("@/components/modals/EditChannelModal").then(m => ({ default: m.EditChannelModal })));
+const UserProfilePopup = lazy(() => import("@/components/modals/UserProfilePopup").then(m => ({ default: m.UserProfilePopup })));
+const PinnedMessagesPanel = lazy(() => import("@/components/modals/PinnedMessagesPanel").then(m => ({ default: m.PinnedMessagesPanel })));
+const SearchModal = lazy(() => import("@/components/modals/SearchModal").then(m => ({ default: m.SearchModal })));
+const QuickSwitcherModal = lazy(() => import("@/components/modals/QuickSwitcherModal").then(m => ({ default: m.QuickSwitcherModal })));
+const KeyboardShortcutsModal = lazy(() => import("@/components/modals/KeyboardShortcutsModal").then(m => ({ default: m.KeyboardShortcutsModal })));
+const ConfirmActionModal = lazy(() => import("@/components/modals/ConfirmActionModal").then(m => ({ default: m.ConfirmActionModal })));
+const ChangeNicknameModal = lazy(() => import("@/components/modals/ConfirmActionModal").then(m => ({ default: m.ChangeNicknameModal })));
+const ExternalLinkWarningModal = lazy(() => import("@/components/modals/ExternalLinkWarningModal").then(m => ({ default: m.ExternalLinkWarningModal })));
+const PermissionDebugPanel = lazy(() => import("@/components/modals/PermissionDebugPanel").then(m => ({ default: m.PermissionDebugPanel })));
+const ImportDiscordTemplateModal = lazy(() => import("@/components/modals/ImportDiscordTemplateModal").then(m => ({ default: m.ImportDiscordTemplateModal })));
+const ImportEmojiPackModal = lazy(() => import("@/components/modals/ImportEmojiPackModal").then(m => ({ default: m.ImportEmojiPackModal })));
+const SetStatusModal = lazy(() => import("@/components/modals/SetStatusModal").then(m => ({ default: m.SetStatusModal })));
+const ChannelInfoModal = lazy(() => import("@/components/chat/ChannelInfoModal").then(m => ({ default: m.ChannelInfoModal })));
 import { PersistentEmbedContainer } from "@/components/chat/PersistentEmbedContainer";
 import { DesktopTitleBar } from "@/components/layout/DesktopTitleBar";
 import { VoicePersistentHost } from "@/components/voice/VoicePersistentHost";
@@ -85,20 +88,25 @@ const AppLayout = () => {
   const location = useLocation();
   const params = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, isLoading } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
+  const isLoading = useAuthStore((s) => s.isLoading);
   const { loadSettings: loadVoiceSettings } = useVoiceSettingsStore();
-  const { isMemberSidebarOpen, isServerSettingsOpen, closeMobileSidebars, activeModal } = useUIStore();
-  const {
-    currentServer,
-    currentChannel,
-    setCurrentChannel,
-    setCurrentServer,
-    fetchChannels,
-    servers,
-    channels,
-  } = useServerStore();
-  const { conversations, currentConversation, setCurrentConversation, fetchConversations } = useDMStore();
-  const { fetchFriends } = useFriendStore();
+  const isMemberSidebarOpen = useUIStore((s) => s.isMemberSidebarOpen);
+  const isServerSettingsOpen = useUIStore((s) => s.isServerSettingsOpen);
+  const closeMobileSidebars = useUIStore((s) => s.closeMobileSidebars);
+  const activeModal = useUIStore((s) => s.activeModal);
+  const currentServer = useServerStore((s) => s.currentServer);
+  const currentChannel = useServerStore((s) => s.currentChannel);
+  const setCurrentChannel = useServerStore((s) => s.setCurrentChannel);
+  const setCurrentServer = useServerStore((s) => s.setCurrentServer);
+  const fetchChannels = useServerStore((s) => s.fetchChannels);
+  const servers = useServerStore((s) => s.servers);
+  const channels = useServerStore((s) => s.channels);
+  const conversations = useDMStore((s) => s.conversations);
+  const currentConversation = useDMStore((s) => s.currentConversation);
+  const setCurrentConversation = useDMStore((s) => s.setCurrentConversation);
+  const fetchConversations = useDMStore((s) => s.fetchConversations);
+  const fetchFriends = useFriendStore((s) => s.fetchFriends);
   const isMobileRaw = useIsMobile();
   const joinedVoiceChannelId = useVoiceStore((s) => s.joinedChannelId);
   const authEntryPath = getAuthEntryPath();
@@ -507,7 +515,7 @@ const AppLayout = () => {
     !isMobile && (isServerSettingsOpen || activeModal === "user-settings" || activeModal === "edit-channel");
 
   return (
-    <MotionConfig reducedMotion="always">
+    <MotionConfig>
       <UnreadDMsContext.Provider value={unreadDMsContextValue}>
         <UnreadChannelsContext.Provider value={unreadChannelsContextValue}>
         <SEO title={desktopTitle} noIndex />
@@ -683,27 +691,29 @@ const AppLayout = () => {
         {/* Mobile members drawer — always mounted so Sheet close animation works */}
         {!isDMView && !isServerSpecialView && isMobile && <MembersSidebar />}
 
-        {/* Modals */}
-        <CreateServerModal />
-        <JoinServerModal />
-        <InviteModal />
-        <CreateChannelModal />
-        <EditChannelModal />
-        <ServerSettingsModal />
-        <UserSettingsModal />
-        <UserProfilePopup />
-        <PinnedMessagesPanel />
-        <SearchModal />
-        <QuickSwitcherModal />
-        <KeyboardShortcutsModal />
-        <ConfirmActionModal />
-        <ChangeNicknameModal />
-        <ExternalLinkWarningModal />
-        <PermissionDebugPanel />
-        <ImportDiscordTemplateModal />
-        <ImportEmojiPackModal />
-        <SetStatusModal />
-        <ChannelInfoModal />
+        {/* Always-mounted modals (preserve internal form state, lazy for code splitting) */}
+        <Suspense fallback={null}><ServerSettingsModal /></Suspense>
+        <Suspense fallback={null}><UserSettingsModal /></Suspense>
+
+        {/* Conditionally-rendered modals (reset state on each open) */}
+        {activeModal === 'create-server' && <Suspense fallback={null}><CreateServerModal /></Suspense>}
+        {activeModal === 'join-server' && <Suspense fallback={null}><JoinServerModal /></Suspense>}
+        {activeModal === 'invite' && <Suspense fallback={null}><InviteModal /></Suspense>}
+        {activeModal === 'create-channel' && <Suspense fallback={null}><CreateChannelModal /></Suspense>}
+        {activeModal === 'edit-channel' && <Suspense fallback={null}><EditChannelModal /></Suspense>}
+        {activeModal === 'userProfile' && <Suspense fallback={null}><UserProfilePopup /></Suspense>}
+        {activeModal === 'pinned-messages' && <Suspense fallback={null}><PinnedMessagesPanel /></Suspense>}
+        {activeModal === 'search' && <Suspense fallback={null}><SearchModal /></Suspense>}
+        {activeModal === 'quickSwitcher' && <Suspense fallback={null}><QuickSwitcherModal /></Suspense>}
+        {activeModal === 'shortcuts' && <Suspense fallback={null}><KeyboardShortcutsModal /></Suspense>}
+        {activeModal === 'confirmAction' && <Suspense fallback={null}><ConfirmActionModal /></Suspense>}
+        {activeModal === 'changeNickname' && <Suspense fallback={null}><ChangeNicknameModal /></Suspense>}
+        {activeModal === 'external-link-warning' && <Suspense fallback={null}><ExternalLinkWarningModal /></Suspense>}
+        {activeModal === 'permission-debug' && <Suspense fallback={null}><PermissionDebugPanel /></Suspense>}
+        {activeModal === 'import-discord-template' && <Suspense fallback={null}><ImportDiscordTemplateModal /></Suspense>}
+        {activeModal === 'import-emoji-pack' && <Suspense fallback={null}><ImportEmojiPackModal /></Suspense>}
+        {activeModal === 'set-status' && <Suspense fallback={null}><SetStatusModal /></Suspense>}
+        {activeModal === 'channel-info' && <Suspense fallback={null}><ChannelInfoModal /></Suspense>}
 
         {/* Persistent embed container for Twitch/Kick streams */}
         <PersistentEmbedContainer />
