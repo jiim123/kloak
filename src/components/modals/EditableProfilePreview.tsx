@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { getProfileEffectSrc } from "@/lib/profileEffects";
+import { sanitizeDisplayName } from "@/lib/displayNameValidation";
 import type { User } from "@/types";
 
 const BIO_MAX_LENGTH = 400;

@@ -69,6 +69,7 @@ import { getAuthEntryPath, isTauri } from "@/lib/tauriRuntime";
 import { VoiceSettingsPanel } from "@/components/voice/VoiceSettingsPanel";
 import type { User as UserType } from "@/types";
 import { useAppUpdater } from "@/hooks/useAppUpdater";
+import { sanitizeDisplayName, validateDisplayName } from "@/lib/displayNameValidation";
 
 // Theme preview colors for the selector
 const THEME_PREVIEWS: Record<Theme, { bg: string; sidebar: string; accent: string }> = {
