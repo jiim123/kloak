@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
-import type { ReactNode } from "react";
+import { motion } from "motion/react";
+import { type CSSProperties, type ReactNode, useMemo } from "react";
 import type { TypingUser } from "@/types";
 
 interface TypingIndicatorProps {
@@ -9,6 +10,22 @@ interface TypingIndicatorProps {
   className?: string;
   rightContent?: ReactNode;
 }
+
+const ShimmerText = ({ children, duration = 2, spread = 2 }: { children: string; duration?: number; spread?: number }) => {
+  const dynamicSpread = useMemo(() => children.length * spread, [children, spread]);
+
+  return (
+    <motion.span
+      className="text-xs font-medium truncate [--base-color:#666666] [--base-gradient-color:#999999] bg-clip-text text-transparent bg-[length:250%_100%,auto] bg-[linear-gradient(90deg,var(--base-color)_calc(50%-var(--spread)),var(--base-gradient-color)_50%,var(--base-color)_calc(50%+var(--spread)))] [background-repeat:no-repeat,padding-box]"
+      initial={{ backgroundPosition: "100% center" }}
+      animate={{ backgroundPosition: "0% center" }}
+      transition={{ repeat: Infinity, duration, ease: "linear" }}
+      style={{ "--spread": `${dynamicSpread}px` } as CSSProperties}
+    >
+      {children}
+    </motion.span>
+  );
+};
 
 export const TypingIndicator = ({
   typingUsers,
@@ -64,7 +81,7 @@ export const TypingIndicator = ({
         <div className="h-8 rounded-t-xl bg-gradient-to-t from-background via-background/90 to-transparent" />
         <div className="absolute bottom-1 left-2 inline-flex max-w-[calc(100%-1rem)] items-center gap-2 text-xs text-muted-foreground">
           {dots}
-          <span className="truncate">{typingText}</span>
+          <ShimmerText>{typingText}</ShimmerText>
         </div>
       </div>
     );
@@ -72,14 +89,9 @@ export const TypingIndicator = ({
 
   return (
     <div className="min-w-0 px-4 flex items-center justify-between gap-2 shrink-0 overflow-hidden h-6">
-      <div
-        className="inline-flex items-center gap-2 px-3 py-1 rounded-full"
-        style={{
-          color: "#666666",
-        }}
-      >
+      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full">
         {dots}
-        <span className="text-xs font-medium truncate">{typingText}</span>
+        <ShimmerText>{typingText}</ShimmerText>
       </div>
       <div className="shrink-0">{rightContent}</div>
     </div>
