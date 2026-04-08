@@ -1241,6 +1241,21 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
     };
   }, [selectedThreadId, currentChannel?.id, fetchThreadMessagesById]);
 
+  // Safety net: batch-fetch missing users for displayed thread replies
+  useEffect(() => {
+    if (!selectedThreadId) return;
+    const messages = threadMessages[selectedThreadId];
+    if (!messages?.length) return;
+
+    const missingIds = new Set<string>();
+    for (const msg of messages) {
+      if (msg.user_id && !getUserFromCache(msg.user_id)) {
+        missingIds.add(msg.user_id);
+      }
+    }
+    missingIds.forEach((id) => void getOrFetchUser(id));
+  }, [selectedThreadId, threadMessages]);
+
   const handleCreateThread = useCallback(async () => {
     if (!user || !currentChannel) return;
 
