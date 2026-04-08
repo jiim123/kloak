@@ -88,20 +88,25 @@ const AppLayout = () => {
   const location = useLocation();
   const params = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, isLoading } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
+  const isLoading = useAuthStore((s) => s.isLoading);
   const { loadSettings: loadVoiceSettings } = useVoiceSettingsStore();
-  const { isMemberSidebarOpen, isServerSettingsOpen, closeMobileSidebars, activeModal } = useUIStore();
-  const {
-    currentServer,
-    currentChannel,
-    setCurrentChannel,
-    setCurrentServer,
-    fetchChannels,
-    servers,
-    channels,
-  } = useServerStore();
-  const { conversations, currentConversation, setCurrentConversation, fetchConversations } = useDMStore();
-  const { fetchFriends } = useFriendStore();
+  const isMemberSidebarOpen = useUIStore((s) => s.isMemberSidebarOpen);
+  const isServerSettingsOpen = useUIStore((s) => s.isServerSettingsOpen);
+  const closeMobileSidebars = useUIStore((s) => s.closeMobileSidebars);
+  const activeModal = useUIStore((s) => s.activeModal);
+  const currentServer = useServerStore((s) => s.currentServer);
+  const currentChannel = useServerStore((s) => s.currentChannel);
+  const setCurrentChannel = useServerStore((s) => s.setCurrentChannel);
+  const setCurrentServer = useServerStore((s) => s.setCurrentServer);
+  const fetchChannels = useServerStore((s) => s.fetchChannels);
+  const servers = useServerStore((s) => s.servers);
+  const channels = useServerStore((s) => s.channels);
+  const conversations = useDMStore((s) => s.conversations);
+  const currentConversation = useDMStore((s) => s.currentConversation);
+  const setCurrentConversation = useDMStore((s) => s.setCurrentConversation);
+  const fetchConversations = useDMStore((s) => s.fetchConversations);
+  const fetchFriends = useFriendStore((s) => s.fetchFriends);
   const isMobileRaw = useIsMobile();
   const joinedVoiceChannelId = useVoiceStore((s) => s.joinedChannelId);
   const authEntryPath = getAuthEntryPath();
