@@ -23,11 +23,11 @@ import KloakDrawLoader from "@/components/ui/KloakDrawLoader";
 import { DMSidebar, FriendsList, DMChatArea } from "@/components/dm";
 import { ServerSettingsPage, ChannelSettingsPage } from "@/components/settings";
 
+import { UserSettingsPage } from "@/components/modals/UserSettingsModal";
+
 // Always-mounted modals (have internal form state — lazy for code splitting only)
 const ServerSettingsModal = lazy(() => import("@/components/modals/ServerSettingsModal").then(m => ({ default: m.ServerSettingsModal })));
 const UserSettingsModal = lazy(() => import("@/components/modals/UserSettingsModal").then(m => ({ default: m.UserSettingsModal })));
-// Re-export UserSettingsPage for other consumers
-import { UserSettingsPage } from "@/components/modals/UserSettingsModal";
 
 // Conditionally-rendered modals (reset state on each open)
 const CreateServerModal = lazy(() => import("@/components/modals/CreateServerModal").then(m => ({ default: m.CreateServerModal })));
