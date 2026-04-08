@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef, Suspense, lazy } from "react";
 import { useNavigate, useSearchParams, useLocation, useParams, Outlet } from "react-router-dom";
 import { MotionConfig } from "framer-motion";
 import { useAuthStore, initializeAuth } from "@/stores/authStore";
@@ -22,29 +22,32 @@ import { ConnectionStatus } from "@/components/ui/ConnectionStatus";
 import KloakDrawLoader from "@/components/ui/KloakDrawLoader";
 import { DMSidebar, FriendsList, DMChatArea } from "@/components/dm";
 import { ServerSettingsPage, ChannelSettingsPage } from "@/components/settings";
-import {
-  CreateServerModal,
-  JoinServerModal,
-  InviteModal,
-  CreateChannelModal,
-  EditChannelModal,
-  ServerSettingsModal,
-  UserSettingsModal,
-  UserSettingsPage,
-  UserProfilePopup,
-  PinnedMessagesPanel,
-  SearchModal,
-  QuickSwitcherModal,
-  KeyboardShortcutsModal,
-  ConfirmActionModal,
-  ChangeNicknameModal,
-  ExternalLinkWarningModal,
-  PermissionDebugPanel,
-  ImportDiscordTemplateModal,
-  ImportEmojiPackModal,
-  SetStatusModal,
-  ChannelInfoModal,
-} from "@/components/modals";
+
+// Always-mounted modals (have internal form state — lazy for code splitting only)
+const ServerSettingsModal = lazy(() => import("@/components/modals/ServerSettingsModal").then(m => ({ default: m.ServerSettingsModal })));
+const UserSettingsModal = lazy(() => import("@/components/modals/UserSettingsModal").then(m => ({ default: m.UserSettingsModal })));
+// Re-export UserSettingsPage for other consumers
+import { UserSettingsPage } from "@/components/modals/UserSettingsModal";
+
+// Conditionally-rendered modals (reset state on each open)
+const CreateServerModal = lazy(() => import("@/components/modals/CreateServerModal").then(m => ({ default: m.CreateServerModal })));
+const JoinServerModal = lazy(() => import("@/components/modals/JoinServerModal").then(m => ({ default: m.JoinServerModal })));
+const InviteModal = lazy(() => import("@/components/modals/InviteModal").then(m => ({ default: m.InviteModal })));
+const CreateChannelModal = lazy(() => import("@/components/modals/CreateChannelModal").then(m => ({ default: m.CreateChannelModal })));
+const EditChannelModal = lazy(() => import("@/components/modals/EditChannelModal").then(m => ({ default: m.EditChannelModal })));
+const UserProfilePopup = lazy(() => import("@/components/modals/UserProfilePopup").then(m => ({ default: m.UserProfilePopup })));
+const PinnedMessagesPanel = lazy(() => import("@/components/modals/PinnedMessagesPanel").then(m => ({ default: m.PinnedMessagesPanel })));
+const SearchModal = lazy(() => import("@/components/modals/SearchModal").then(m => ({ default: m.SearchModal })));
+const QuickSwitcherModal = lazy(() => import("@/components/modals/QuickSwitcherModal").then(m => ({ default: m.QuickSwitcherModal })));
+const KeyboardShortcutsModal = lazy(() => import("@/components/modals/KeyboardShortcutsModal").then(m => ({ default: m.KeyboardShortcutsModal })));
+const ConfirmActionModal = lazy(() => import("@/components/modals/ConfirmActionModal").then(m => ({ default: m.ConfirmActionModal })));
+const ChangeNicknameModal = lazy(() => import("@/components/modals/ConfirmActionModal").then(m => ({ default: m.ChangeNicknameModal })));
+const ExternalLinkWarningModal = lazy(() => import("@/components/modals/ExternalLinkWarningModal").then(m => ({ default: m.ExternalLinkWarningModal })));
+const PermissionDebugPanel = lazy(() => import("@/components/modals/PermissionDebugPanel").then(m => ({ default: m.PermissionDebugPanel })));
+const ImportDiscordTemplateModal = lazy(() => import("@/components/modals/ImportDiscordTemplateModal").then(m => ({ default: m.ImportDiscordTemplateModal })));
+const ImportEmojiPackModal = lazy(() => import("@/components/modals/ImportEmojiPackModal").then(m => ({ default: m.ImportEmojiPackModal })));
+const SetStatusModal = lazy(() => import("@/components/modals/SetStatusModal").then(m => ({ default: m.SetStatusModal })));
+const ChannelInfoModal = lazy(() => import("@/components/chat/ChannelInfoModal").then(m => ({ default: m.ChannelInfoModal })));
 import { PersistentEmbedContainer } from "@/components/chat/PersistentEmbedContainer";
 import { DesktopTitleBar } from "@/components/layout/DesktopTitleBar";
 import { VoicePersistentHost } from "@/components/voice/VoicePersistentHost";
