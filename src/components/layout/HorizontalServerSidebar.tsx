@@ -66,6 +66,7 @@ import {
   ContextMenuSeparator,
 } from "@/components/ui/context-menu";
 import type { ServerWithMembership, Server } from "@/types";
+import { getServerInitials, getServerColor } from "@/lib/serverUtils";
 
 interface ServerChannels {
   [serverId: string]: string[];
