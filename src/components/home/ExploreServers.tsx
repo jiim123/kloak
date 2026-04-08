@@ -8,6 +8,7 @@ import { useServerStore } from '@/stores/serverStore';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { getServerInitials } from '@/lib/serverUtils';
 import { toast } from 'sonner';
 
 const PAGE_SIZE = 12;
@@ -140,13 +141,7 @@ const ExploreServersOriginal = () => {
     return items.filter((s) => s.name.toLowerCase().includes(q));
   }, [items, query]);
 
-  const getInitials = (name: string) =>
-    name
-      .split(' ')
-      .map((w) => w[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase();
+  const getInitials = getServerInitials;
 
   const extractTags = (about: string | null) => {
     if (!about) return [];

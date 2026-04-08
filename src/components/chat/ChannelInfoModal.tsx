@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useUIStore } from "@/stores/uiStore";
 import { useServerStore } from "@/stores/serverStore";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { getServerInitials } from "@/lib/serverUtils";
 
 const channelIcons: Record<string, typeof Hash> = {
   text: Hash,
@@ -72,7 +73,7 @@ export const ChannelInfoModal = () => {
             <div className="flex items-center gap-2 mb-3">
               <Avatar className="w-5 h-5 rounded">
                 <AvatarImage src={server.icon_url || undefined} alt={server.name} />
-                <AvatarFallback className="text-[10px] rounded bg-muted">{server.name.charAt(0)}</AvatarFallback>
+                <AvatarFallback className="text-[10px] rounded bg-muted">{getServerInitials(server.name)}</AvatarFallback>
               </Avatar>
               <span className="text-xs text-muted-foreground font-medium">{server.name}</span>
             </div>

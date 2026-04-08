@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useServerStore } from '@/stores/serverStore';
+import { getServerInitials } from '@/lib/serverUtils';
 import type { ResolvedEmoji } from '@/lib/globalEmojiResolver';
 
 interface CustomEmojiPopoverProps {
@@ -86,7 +87,7 @@ export function CustomEmojiPopover({ emoji, anchorRect, onClose }: CustomEmojiPo
               />
             ) : (
               <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-sm font-semibold text-foreground flex-shrink-0">
-                {emoji.serverName.charAt(0).toUpperCase()}
+                {getServerInitials(emoji.serverName)}
               </div>
             )}
             <div className="min-w-0">

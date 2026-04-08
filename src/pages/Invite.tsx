@@ -12,6 +12,7 @@ import { useServerStore } from "@/stores/serverStore";
 import { toast } from "sonner";
 import { SEO } from "@/components/seo";
 import { SEO_CONFIG } from "@/lib/seo";
+import { getServerInitials } from "@/lib/serverUtils";
 import { getAuthEntryPath } from "@/lib/tauriRuntime";
 
 type InviteServer = {
@@ -202,7 +203,7 @@ const Invite = () => {
                     <AvatarImage src={server.icon_url} />
                   ) : null}
                   <AvatarFallback className="rounded-2xl text-lg bg-secondary text-foreground font-bold">
-                    {server.name?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || "?"}
+                    {getServerInitials(server.name)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="min-w-0">
