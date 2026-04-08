@@ -74,11 +74,6 @@ export const NavigationMenu = () => {
               </Link>
             ))}
 
-            <Link to="/app">
-              <Button size="sm" rounded="lg" className="ml-2 min-h-[36px]">
-                Open Kloak
-              </Button>
-            </Link>
           </div>
 
           {/* Mobile Menu Toggle */}
