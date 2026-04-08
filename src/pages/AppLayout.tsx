@@ -88,6 +88,13 @@ const AppLayout = () => {
   const location = useLocation();
   const params = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  // Mask server/channel/DM IDs from the URL bar for privacy
+  useEffect(() => {
+    if (location.pathname.startsWith('/app') && location.pathname !== '/app') {
+      window.history.replaceState(null, '', '/app');
+    }
+  }, [location.pathname, location.search]);
   const user = useAuthStore((s) => s.user);
   const isLoading = useAuthStore((s) => s.isLoading);
   const { loadSettings: loadVoiceSettings } = useVoiceSettingsStore();
