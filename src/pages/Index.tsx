@@ -1,5 +1,4 @@
 import { lazy, Suspense, useRef, useState, useEffect } from "react";
-import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Shield,
@@ -8,19 +7,13 @@ import {
   Users,
   Zap,
   Lock,
-  X,
   Check,
-  Mic,
   Headphones,
   Palette,
-  Gamepad2,
-  Music,
-  Video,
 } from "lucide-react";
 import { Footer } from "@/components/ui/footer-section";
 import { NavigationMenu } from "@/components/layout/NavigationMenu";
 import HeroAscii from "@/components/landing/HeroAscii";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SEO } from "@/components/seo";
 import { SEO_CONFIG } from "@/lib/seo";
 
