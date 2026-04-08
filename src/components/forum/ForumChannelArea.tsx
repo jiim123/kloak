@@ -1241,6 +1241,21 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
     };
   }, [selectedThreadId, currentChannel?.id, fetchThreadMessagesById]);
 
+  // Safety net: batch-fetch missing users for displayed thread replies
+  useEffect(() => {
+    if (!selectedThreadId) return;
+    const messages = threadMessages[selectedThreadId];
+    if (!messages?.length) return;
+
+    const missingIds = new Set<string>();
+    for (const msg of messages) {
+      if (msg.user_id && !getUserFromCache(msg.user_id)) {
+        missingIds.add(msg.user_id);
+      }
+    }
+    missingIds.forEach((id) => void getOrFetchUser(id));
+  }, [selectedThreadId, threadMessages]);
+
   const handleCreateThread = useCallback(async () => {
     if (!user || !currentChannel) return;
 
@@ -1488,13 +1503,11 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
         void markAsRead(currentChannel.id, messageId);
       }
 
-      // Fetch thread messages if not already loaded
-      if (!threadMessages[threadId]) {
-        try {
-          await fetchThreadMessagesById(threadId);
-        } catch (error) {
-          handleError(error, "Failed to fetch thread messages");
-        }
+      // Always fetch thread messages to ensure user cache is populated
+      try {
+        await fetchThreadMessagesById(threadId);
+      } catch (error) {
+        handleError(error, "Failed to fetch thread messages");
       }
     },
     [selectedThreadId, threadMessages, fetchThreadMessagesById, currentChannel?.id, markAsRead],
