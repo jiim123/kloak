@@ -3147,150 +3147,162 @@ export const ServerSettingsPage = () => {
               {canManageEmojis ? (
                 <div className="space-y-5 max-w-4xl">
                   <h2 className="text-xl font-medium">Emojis</h2>
-                  {/* Import from emoji.gg */}
-                  <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/50">
+
+                  {/* Import from emoji.gg - highlighted */}
+                  <div className="flex items-center justify-between p-4 rounded-xl" style={{ backgroundColor: 'hsl(238, 84%, 65%)' }}>
                     <div className="min-w-0 flex-1">
-                      <h4 className="text-sm font-medium">Import from emoji.gg</h4>
-                      <p className="text-xs text-muted-foreground mt-0.5">
+                      <h4 className="text-sm font-medium text-white">Import from emoji.gg</h4>
+                      <p className="text-xs text-white/70 mt-0.5">
                         Browse and import emoji packs from emoji.gg
                       </p>
                     </div>
-                    <Button type="button" variant="outline" size="sm" onClick={() => openModal("import-emoji-pack")}>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => openModal("import-emoji-pack")}
+                      className="bg-white/20 hover:bg-white/30 text-white border-0"
+                    >
                       <Link2 className="w-4 h-4 mr-2" />
                       Import Pack
                     </Button>
                   </div>
 
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-medium">Custom Emojis</h4>
-                    <p className="text-xs text-muted-foreground">
-                      Upload an emoji and set a name (2-12 chars: a-z, 0-9, underscore). Use it in chat as{" "}
-                      <span className="font-mono">:name:</span>
-                    </p>
-                  </div>
+                  {/* Custom Emojis box */}
+                  <div className="rounded-xl border border-border bg-secondary/20 overflow-hidden">
+                    <div className="p-4 border-b border-border/50">
+                      <h4 className="text-sm font-medium">Custom Emojis</h4>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Upload an emoji and set a name (2-12 chars: a-z, 0-9, underscore). Use it in chat as{" "}
+                        <span className="font-mono">:name:</span>
+                      </p>
+                    </div>
 
-                  {/* Upload row */}
-                  <div className="flex flex-col sm:flex-row gap-3 sm:items-end p-4 border rounded-lg bg-secondary/50">
-                    <div className="flex items-center gap-3">
-                      <div
-                        onClick={() => emojiInputRef.current?.click()}
-                        className={cn(
-                          "w-14 h-14 rounded-xl bg-secondary flex items-center justify-center border-2 border-dashed border-muted-foreground/50 transition-colors flex-shrink-0 overflow-hidden cursor-pointer hover:border-primary",
-                        )}
-                      >
-                        {emojiPreview ? (
-                          <img src={emojiPreview} alt="Emoji preview" className="w-full h-full object-cover" />
-                        ) : (
-                          <Upload className="w-5 h-5 text-muted-foreground" />
-                        )}
+                    {/* Upload row */}
+                    <div className="flex flex-col sm:flex-row gap-3 sm:items-end p-4">
+                      <div className="flex items-center gap-3">
+                        <div
+                          onClick={() => emojiInputRef.current?.click()}
+                          className={cn(
+                            "w-14 h-14 rounded-xl bg-secondary flex items-center justify-center border-2 border-dashed border-muted-foreground/50 transition-colors flex-shrink-0 overflow-hidden cursor-pointer hover:border-primary",
+                          )}
+                        >
+                          {emojiPreview ? (
+                            <img src={emojiPreview} alt="Emoji preview" className="w-full h-full object-cover" />
+                          ) : (
+                            <Upload className="w-5 h-5 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium">Emoji Image</p>
+                          <p className="text-xs text-muted-foreground">PNG/GIF/WebP/JPEG • Max 1MB</p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium">Emoji Image</p>
-                        <p className="text-xs text-muted-foreground">PNG/GIF/WebP/JPEG • Max 1MB</p>
+
+                      <div className="flex-1 space-y-2">
+                        <Label className="text-sm" htmlFor="emojiName">
+                          Emoji Name
+                        </Label>
+                        <Input
+                          id="emojiName"
+                          value={emojiName}
+                          onChange={(e) => setEmojiName(e.target.value)}
+                          placeholder="e.g. cat"
+                          className="h-10 text-sm"
+                          maxLength={12}
+                        />
                       </div>
-                    </div>
 
-                    <div className="flex-1 space-y-2">
-                      <Label className="text-sm" htmlFor="emojiName">
-                        Emoji Name
-                      </Label>
-                      <Input
-                        id="emojiName"
-                        value={emojiName}
-                        onChange={(e) => setEmojiName(e.target.value)}
-                        placeholder="e.g. cat"
-                        className="h-10 text-sm"
-                        maxLength={12}
-                      />
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={uploadServerEmoji}
-                        disabled={isUploadingEmoji || !emojiFile || !emojiName.trim()}
-                        className="flex-1 sm:flex-none"
-                      >
-                        {isUploadingEmoji && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                        Upload
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={clearEmoji}
-                        disabled={isUploadingEmoji && !!emojiFile}
-                      >
-                        Clear
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Emoji list */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <h4 className="text-sm font-medium">Server Emojis</h4>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">
-                          {serverEmojis.length}/{MAX_SERVER_EMOJIS} slots
-                        </span>
-                        {serverEmojis.length > 0 && (
-                          <Button
-                            type="button"
-                            variant={isMultiSelectMode ? "secondary" : "outline"}
-                            size="sm"
-                            onClick={() => {
-                              setIsMultiSelectMode(!isMultiSelectMode);
-                              setSelectedEmojiIds(new Set());
-                            }}
-                            className="text-xs h-7"
-                          >
-                            {isMultiSelectMode ? "Cancel" : "Select"}
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                    {isMultiSelectMode && serverEmojis.length > 0 && (
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex gap-2">
                         <Button
                           type="button"
-                          variant="outline"
                           size="sm"
-                          className="text-xs h-7"
-                          onClick={() => {
-                            if (selectedEmojiIds.size === serverEmojis.length) {
-                              setSelectedEmojiIds(new Set());
-                            } else {
-                              setSelectedEmojiIds(new Set(serverEmojis.map((e) => e.id)));
-                            }
-                          }}
+                          onClick={uploadServerEmoji}
+                          disabled={isUploadingEmoji || !emojiFile || !emojiName.trim()}
+                          className="flex-1 sm:flex-none"
                         >
-                          {selectedEmojiIds.size === serverEmojis.length ? "Deselect All" : "Select All"}
+                          {isUploadingEmoji && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                          Upload
                         </Button>
-                        {selectedEmojiIds.size > 0 && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={clearEmoji}
+                          disabled={isUploadingEmoji && !!emojiFile}
+                        >
+                          Clear
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Server Emojis box */}
+                  <div className="rounded-xl border border-border bg-secondary/20 overflow-hidden">
+                    <div className="p-4 border-b border-border/50">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <h4 className="text-sm font-medium">Server Emojis</h4>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">
+                            {serverEmojis.length}/{MAX_SERVER_EMOJIS} slots
+                          </span>
+                          {serverEmojis.length > 0 && (
+                            <Button
+                              type="button"
+                              variant={isMultiSelectMode ? "secondary" : "outline"}
+                              size="sm"
+                              onClick={() => {
+                                setIsMultiSelectMode(!isMultiSelectMode);
+                                setSelectedEmojiIds(new Set());
+                              }}
+                              className="text-xs h-7"
+                            >
+                              {isMultiSelectMode ? "Cancel" : "Select"}
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                      {isMultiSelectMode && serverEmojis.length > 0 && (
+                        <div className="flex items-center gap-2 flex-wrap mt-3">
                           <Button
                             type="button"
-                            variant="destructive"
+                            variant="outline"
                             size="sm"
                             className="text-xs h-7"
-                            onClick={bulkDeleteEmojis}
-                            disabled={isDeletingEmojis}
+                            onClick={() => {
+                              if (selectedEmojiIds.size === serverEmojis.length) {
+                                setSelectedEmojiIds(new Set());
+                              } else {
+                                setSelectedEmojiIds(new Set(serverEmojis.map((e) => e.id)));
+                              }
+                            }}
                           >
-                            {isDeletingEmojis ? (
-                              <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
-                            ) : (
-                              <Trash2 className="w-3 h-3 mr-1.5" />
-                            )}
-                            Delete Selected ({selectedEmojiIds.size})
+                            {selectedEmojiIds.size === serverEmojis.length ? "Deselect All" : "Select All"}
                           </Button>
-                        )}
-                      </div>
-                    )}
+                          {selectedEmojiIds.size > 0 && (
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              className="text-xs h-7"
+                              onClick={bulkDeleteEmojis}
+                              disabled={isDeletingEmojis}
+                            >
+                              {isDeletingEmojis ? (
+                                <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-3 h-3 mr-1.5" />
+                              )}
+                              Delete Selected ({selectedEmojiIds.size})
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
                     {serverEmojis.length > 0 ? (
-                      <div className="rounded-lg border border-border overflow-hidden">
+                      <>
                         {/* Table header */}
-                        <div className="flex items-center gap-4 px-4 py-2 bg-secondary/40 border-b border-border text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        <div className="flex items-center gap-4 px-4 py-2 bg-secondary/40 border-b border-border/50 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                           {isMultiSelectMode && <span className="w-6" />}
                           <span className="w-10">Image</span>
                           <span className="flex-1">Name</span>
@@ -3298,7 +3310,7 @@ export const ServerSettingsPage = () => {
                         </div>
                         {/* Table rows */}
                         <div className="max-h-[400px] overflow-y-auto overscroll-contain">
-                          <div className="divide-y divide-border">
+                          <div className="divide-y divide-border/50">
                             {serverEmojisWithUrls.map((emoji) => (
                               <div
                                 key={emoji.id}
@@ -3399,7 +3411,7 @@ export const ServerSettingsPage = () => {
                             ))}
                           </div>
                         </div>
-                      </div>
+                      </>
                     ) : (
                       <div className="flex flex-col items-center justify-center py-8 text-center">
                         <Smile className="w-12 h-12 text-muted-foreground/50 mb-3" />
