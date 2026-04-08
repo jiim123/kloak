@@ -1,16 +1,6 @@
 import { lazy, Suspense, useRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import {
-  Shield,
-  Key,
-  MessageCircle,
-  Users,
-  Zap,
-  Lock,
-  Check,
-  Headphones,
-  Palette,
-} from "lucide-react";
+import { Shield, Key, MessageCircle, Users, Zap, Lock, Check, Headphones, Palette } from "lucide-react";
 import { Footer } from "@/components/ui/footer-section";
 import { NavigationMenu } from "@/components/layout/NavigationMenu";
 import HeroAscii from "@/components/landing/HeroAscii";
@@ -49,32 +39,38 @@ const Index = () => {
     {
       icon: MessageCircle,
       title: "Messaging",
-      description: "Send messages in real time with edits, replies, and rich formatting. Chat one-on-one through Direct Messages or create Group Messages with multiple friends.",
+      description:
+        "Send messages in real time with edits, replies, and rich formatting. Chat one-on-one through Direct Messages or create Group Messages with multiple friends.",
     },
     {
       icon: Users,
       title: "Friends & Social",
-      description: "Add friends by username, manage incoming requests, and block anyone instantly. Your friend list travels with you across every server.",
+      description:
+        "Add friends by username, manage incoming requests, and block anyone instantly. Your friend list travels with you across every server.",
     },
     {
       icon: Zap,
       title: "Reactions",
-      description: "React to any message with emoji. Servers can upload custom emoji packs that every member can use across channels.",
+      description:
+        "React to any message with emoji. Servers can upload custom emoji packs that every member can use across channels.",
     },
     {
       icon: Shield,
       title: "Roles & Permissions",
-      description: "Create custom roles with colors and icons. Over 30 granular permissions control who can post, pin, manage channels, and more.",
+      description:
+        "Create custom roles with colors and icons. Over 30 granular permissions control who can post, pin, manage channels, and more.",
     },
     {
       icon: Lock,
       title: "Administration",
-      description: "Kick or ban disruptive members, mute users, set slowmode, enable read-only channels, and block links or attachments per channel.",
+      description:
+        "Kick or ban disruptive members, mute users, set slowmode, enable read-only channels, and block links or attachments per channel.",
     },
     {
       icon: Key,
       title: "Secret Key Auth",
-      description: "No email, phone, or password. One cryptographic key is all you need. Generated on your device, hashed before it ever touches a server.",
+      description:
+        "No email, phone, or password. One cryptographic key is all you need. Generated on your device, hashed before it ever touches a server.",
     },
   ];
 
@@ -82,7 +78,8 @@ const Index = () => {
     {
       icon: MessageCircle,
       title: "Chat",
-      description: "Real-time text channels for everyday conversation. Supports replies, mentions, attachments, polls, and pinned messages.",
+      description:
+        "Real-time text channels for everyday conversation. Supports replies, mentions, attachments, polls, and pinned messages.",
     },
     {
       icon: Headphones,
@@ -92,22 +89,26 @@ const Index = () => {
     {
       icon: MessageCircle,
       title: "Forum",
-      description: "Organize long-running conversations into dedicated posts. Each post has its own reply thread, perfect for Q&A and feedback.",
+      description:
+        "Organize long-running conversations into dedicated posts. Each post has its own reply thread, perfect for Q&A and feedback.",
     },
     {
       icon: Shield,
       title: "Announcements",
-      description: "Share one-way updates from admins and moderators with the whole server. Members can react and comment without cluttering the feed.",
+      description:
+        "Share one-way updates from admins and moderators with the whole server. Members can react and comment without cluttering the feed.",
     },
     {
       icon: Check,
       title: "Tasks",
-      description: "Create tasks, assign them to members, and track progress. Keep your team aligned without leaving the platform.",
+      description:
+        "Create tasks, assign them to members, and track progress. Keep your team aligned without leaving the platform.",
     },
     {
       icon: Palette,
       title: "Media",
-      description: "A dedicated space for sharing images, videos, and visual inspiration. Gallery view with comments and reactions.",
+      description:
+        "A dedicated space for sharing images, videos, and visual inspiration. Gallery view with comments and reactions.",
     },
   ];
 
@@ -146,9 +147,9 @@ const Index = () => {
               >
                 Kloak is a real-time communication platform built for communities, friend groups, gaming squads, and
                 creative teams. It gives you servers, voice channels, direct messages, roles, and permissions, all
-                without requiring an email, phone number, or password. Your identity is a single cryptographic key
-                that only you hold. No ads, no data harvesting, no algorithm deciding what you see. Just a space to
-                talk, collaborate, and build communities on your own terms.
+                without requiring an email, phone number, or password. Your identity is a single cryptographic key that
+                only you hold. No ads, no data harvesting, no algorithm deciding what you see. Just a space to talk,
+                collaborate, and build communities on your own terms.
               </motion.p>
             </div>
           </section>
@@ -186,9 +187,7 @@ const Index = () => {
                       <h3 className="text-2xl sm:text-3xl font-light text-foreground tracking-tight mb-2">
                         {feature.title}
                       </h3>
-                      <p className="text-[15px] text-muted-foreground leading-relaxed">
-                        {feature.description}
-                      </p>
+                      <p className="text-[15px] text-muted-foreground leading-relaxed">{feature.description}</p>
                     </div>
                   </motion.div>
                 ))}
@@ -206,9 +205,9 @@ const Index = () => {
                 transition={{ duration: 0.6 }}
               >
                 <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
-                  Six channel types.
+                  Everything your community needs,
                   <br />
-                  <span>One server.</span>
+                  <span>from text to talk.</span>
                 </h2>
               </motion.div>
 
@@ -229,9 +228,7 @@ const Index = () => {
                       <h3 className="text-2xl sm:text-3xl font-light text-foreground tracking-tight mb-2">
                         {channel.title}
                       </h3>
-                      <p className="text-[15px] text-muted-foreground leading-relaxed">
-                        {channel.description}
-                      </p>
+                      <p className="text-[15px] text-muted-foreground leading-relaxed">{channel.description}</p>
                     </div>
                   </motion.div>
                 ))}
