@@ -52,36 +52,69 @@ function CtaSection() {
 }
 
 const Index = () => {
-  const features = [
+  const coreFeatures = [
     {
       icon: MessageCircle,
-      title: "Real-Time Messaging",
-      description: "Instant delivery with live edits, replies, and reactions.",
-    },
-    {
-      icon: Headphones,
-      title: "Voice Channels",
-      description: "Low-latency voice chat, always ready when you are.",
+      title: "Messaging",
+      description: "Send messages in real time with edits, replies, and rich formatting. Chat one-on-one through Direct Messages or create Group Messages with multiple friends.",
     },
     {
       icon: Users,
-      title: "Servers & Roles",
-      description: "Organize communities with granular role-based permissions.",
+      title: "Friends & Social",
+      description: "Add friends by username, manage incoming requests, and block anyone instantly. Your friend list travels with you across every server.",
     },
     {
-      icon: Lock,
-      title: "Secret Key Auth",
-      description: "One cryptographic key. No email, phone, or password.",
+      icon: Zap,
+      title: "Reactions",
+      description: "React to any message with emoji. Servers can upload custom emoji packs that every member can use across channels.",
     },
     {
       icon: Shield,
-      title: "Direct Messages",
-      description: "Private conversations with friends. Block anyone instantly.",
+      title: "Roles & Permissions",
+      description: "Create custom roles with colors and icons. Over 30 granular permissions control who can post, pin, manage channels, and more.",
+    },
+    {
+      icon: Lock,
+      title: "Administration",
+      description: "Kick or ban disruptive members, mute users, set slowmode, enable read-only channels, and block links or attachments per channel.",
+    },
+    {
+      icon: Key,
+      title: "Secret Key Auth",
+      description: "No email, phone, or password. One cryptographic key is all you need. Generated on your device, hashed before it ever touches a server.",
+    },
+  ];
+
+  const channelTypes = [
+    {
+      icon: MessageCircle,
+      title: "Chat",
+      description: "Real-time text channels for everyday conversation. Supports replies, mentions, attachments, polls, and pinned messages.",
+    },
+    {
+      icon: Headphones,
+      title: "Voice & Video",
+      description: "Talk in real-time with voice and video. Low-latency WebRTC connections, always ready when you are.",
+    },
+    {
+      icon: MessageCircle,
+      title: "Forum",
+      description: "Organize long-running conversations into dedicated posts. Each post has its own reply thread, perfect for Q&A and feedback.",
+    },
+    {
+      icon: Shield,
+      title: "Announcements",
+      description: "Share one-way updates from admins and moderators with the whole server. Members can react and comment without cluttering the feed.",
+    },
+    {
+      icon: Check,
+      title: "Tasks",
+      description: "Create tasks, assign them to members, and track progress. Keep your team aligned without leaving the platform.",
     },
     {
       icon: Palette,
-      title: "Themes",
-      description: "Multiple themes and full profile customization.",
+      title: "Media",
+      description: "A dedicated space for sharing images, videos, and visual inspiration. Gallery view with comments and reactions.",
     },
   ];
 
@@ -96,7 +129,7 @@ const Index = () => {
 
           {/* What is Kloak Section */}
           <section className="relative py-32 md:py-48 px-8 lg:px-16 bg-light text-light-foreground">
-            <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-12 md:gap-16 items-start">
+            <div className="max-w-[1240px] mx-auto grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-12 md:gap-16 items-start">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -127,10 +160,9 @@ const Index = () => {
             </div>
           </section>
 
-          {/* Features Section */}
+          {/* Core Features Section */}
           <section className="relative py-32 md:py-48 px-8 lg:px-16">
-            <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-12 md:gap-16 items-start">
-              {/* Sticky title column */}
+            <div className="max-w-[1240px] mx-auto grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-12 md:gap-16 items-start">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -145,9 +177,8 @@ const Index = () => {
                 </h2>
               </motion.div>
 
-              {/* Cards grid column */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
-                {features.map((feature, index) => (
+                {coreFeatures.map((feature, index) => (
                   <motion.div
                     key={feature.title}
                     initial={{ opacity: 0, y: 20 }}
@@ -165,6 +196,50 @@ const Index = () => {
                       </h3>
                       <p className="text-[15px] text-muted-foreground leading-relaxed">
                         {feature.description}
+                      </p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* Channel Types Section */}
+          <section className="relative py-32 md:py-48 px-8 lg:px-16">
+            <div className="max-w-[1240px] mx-auto grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-12 md:gap-16 items-start">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+                className="md:sticky md:top-24"
+              >
+                <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
+                  Six channel types.
+                  <br />
+                  <span>One server.</span>
+                </h2>
+              </motion.div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+                {channelTypes.map((channel, index) => (
+                  <motion.div
+                    key={channel.title}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: index * 0.08 }}
+                    className="group relative rounded-2xl border border-border/40 bg-card/30 p-8 md:p-10 flex flex-col justify-between min-h-[280px] md:min-h-[320px] hover:border-border/80 hover:bg-card/50 transition-all duration-300"
+                  >
+                    <div className="w-10 h-10 flex items-center justify-center">
+                      <channel.icon className="w-7 h-7 text-foreground" strokeWidth={1.5} />
+                    </div>
+                    <div className="mt-auto">
+                      <h3 className="text-2xl sm:text-3xl font-light text-foreground tracking-tight mb-2">
+                        {channel.title}
+                      </h3>
+                      <p className="text-[15px] text-muted-foreground leading-relaxed">
+                        {channel.description}
                       </p>
                     </div>
                   </motion.div>
