@@ -586,16 +586,19 @@ export const MessageItem = memo(function MessageItem({
   const getReactionUserNames = useCallback(
     (userIds: string[]) => {
       const unique = Array.from(new Set(userIds));
-      return unique.map((id) => {
-        if (id === user?.id) return "You";
-        const memberName = memberNameById.get(id);
-        if (memberName) return memberName;
-        const overrideName = reactionUserNameOverrides.get(id);
-        if (overrideName) return overrideName;
-        const cachedUser = getUserFromCache(id);
-        if (cachedUser) return cachedUser.display_name ?? cachedUser.username ?? id;
-        return id;
-      });
+      return unique
+        .map((id) => {
+          if (id === user?.id) return "You";
+          const memberName = memberNameById.get(id);
+          if (memberName) return memberName;
+          const overrideName = reactionUserNameOverrides.get(id);
+          if (overrideName === "[deleted]") return null; // deleted account
+          if (overrideName) return overrideName;
+          const cachedUser = getUserFromCache(id);
+          if (cachedUser) return cachedUser.display_name ?? cachedUser.username ?? null;
+          return null; // unresolved — don't show UUID
+        })
+        .filter((name): name is string => name !== null);
     },
     [memberNameById, reactionUserNameOverrides, user?.id],
   );
@@ -635,17 +638,25 @@ export const MessageItem = memo(function MessageItem({
 
       void getOrFetchUser(uid)
         .then((fetchedUser) => {
-          if (cancelled || !fetchedUser) return;
-          const displayName = fetchedUser.display_name ?? fetchedUser.username;
-          if (!displayName) return;
+          if (cancelled) return;
+          const displayName = fetchedUser?.display_name ?? fetchedUser?.username;
+          const value = displayName || "[deleted]";
           setReactionUserNameOverrides((prev) => {
-            if (prev.get(uid) === displayName) return prev;
+            if (prev.get(uid) === value) return prev;
             const next = new Map(prev);
-            next.set(uid, displayName);
+            next.set(uid, value);
             return next;
           });
         })
-        .catch(() => undefined);
+        .catch(() => {
+          if (cancelled) return;
+          setReactionUserNameOverrides((prev) => {
+            if (prev.has(uid)) return prev;
+            const next = new Map(prev);
+            next.set(uid, "[deleted]");
+            return next;
+          });
+        });
     });
 
     return () => {
