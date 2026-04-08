@@ -122,16 +122,15 @@ const Index = () => {
           <HeroAscii />
 
           {/* What is Kloak Section */}
-          <section className="relative py-32 md:py-48 px-8 lg:px-16 bg-light text-light-foreground">
+          <section className="relative py-32 md:py-48 px-8 lg:px-16">
             <div className="max-w-[1240px] mx-auto grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-12 md:gap-16 items-start">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6 }}
-                className="md:sticky md:top-24"
               >
-                <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-light-foreground leading-tight tracking-tight">
+                <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
                   A place to talk
                   <br />
                   without being watched.
@@ -143,7 +142,7 @@ const Index = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-100px" }}
                 transition={{ duration: 0.8 }}
-                className="text-base md:text-lg text-light-foreground/80 leading-[1.8]"
+                className="text-base md:text-lg text-muted-foreground leading-[1.8]"
               >
                 Kloak is a real-time communication platform built for communities, friend groups, gaming squads, and
                 creative teams. It gives you servers, voice channels, direct messages, roles, and permissions, all
