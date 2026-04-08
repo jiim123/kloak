@@ -66,6 +66,7 @@ import {
   ContextMenuSeparator,
 } from "@/components/ui/context-menu";
 import type { ServerWithMembership, Server } from "@/types";
+import { getServerInitials, getServerColor } from "@/lib/serverUtils";
 
 interface ServerChannels {
   [serverId: string]: string[];
@@ -824,31 +825,6 @@ export const HorizontalServerSidebar = () => {
   const totalHomeBadge = totalDMUnread + pendingFriendCount;
   const hasHomeUnread = hasDMUnread || pendingFriendCount > 0;
 
-  const getServerInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((word) => word[0])
-      .join("")
-      .slice(0, 2)
-      .toUpperCase();
-  };
-
-  const getServerColor = (name: string) => {
-    const colors = [
-      "bg-indigo-500",
-      "bg-purple-500",
-      "bg-pink-500",
-      "bg-red-500",
-      "bg-orange-500",
-      "bg-amber-500",
-      "bg-emerald-500",
-      "bg-teal-500",
-      "bg-cyan-500",
-      "bg-blue-500",
-    ];
-    const index = name.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return colors[index % colors.length];
-  };
 
   const getPillState = (serverId: string | null, hasUnread: boolean) => {
     if (currentServer?.id === serverId || (serverId === null && currentServer === null)) {
