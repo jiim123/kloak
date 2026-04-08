@@ -507,7 +507,7 @@ const AppLayout = () => {
     !isMobile && (isServerSettingsOpen || activeModal === "user-settings" || activeModal === "edit-channel");
 
   return (
-    <MotionConfig reducedMotion="always">
+    <MotionConfig>
       <UnreadDMsContext.Provider value={unreadDMsContextValue}>
         <UnreadChannelsContext.Provider value={unreadChannelsContextValue}>
         <SEO title={desktopTitle} noIndex />
