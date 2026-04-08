@@ -1,6 +1,6 @@
 import { lazy, Suspense, useRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Shield, Key, MessageCircle, Users, Zap, Lock, Headphones, MessagesSquare, Megaphone, ListChecks, Images } from "lucide-react";
+import { Key, MessageCircle, Users, Lock, Headphones, MessagesSquare, Megaphone, ListChecks, Images, SmilePlus, UserRoundCog, KeySquare } from "lucide-react";
 import { Footer } from "@/components/ui/footer-section";
 import { NavigationMenu } from "@/components/layout/NavigationMenu";
 import HeroAscii from "@/components/landing/HeroAscii";
@@ -49,13 +49,13 @@ const Index = () => {
         "Add friends by username, manage incoming requests, and block anyone instantly. Your friend list travels with you across every server.",
     },
     {
-      icon: Zap,
+      icon: SmilePlus,
       title: "Reactions",
       description:
         "React to any message with emoji. Servers can upload custom emoji packs that every member can use across channels.",
     },
     {
-      icon: Shield,
+      icon: UserRoundCog,
       title: "Roles & Permissions",
       description:
         "Create custom roles with colors and icons. Over 30 granular permissions control who can post, pin, manage channels, and more.",
@@ -67,7 +67,7 @@ const Index = () => {
         "Kick or ban disruptive members, mute users, set slowmode, enable read-only channels, and block links or attachments per channel.",
     },
     {
-      icon: Key,
+      icon: KeySquare,
       title: "Secret Key Auth",
       description:
         "No email, phone, or password. One cryptographic key is all you need. Generated on your device, hashed before it ever touches a server.",
