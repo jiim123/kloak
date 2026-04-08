@@ -144,11 +144,13 @@ const Index = () => {
                 transition={{ duration: 0.8 }}
                 className="text-base md:text-lg text-muted-foreground leading-[1.8]"
               >
-                Kloak is a real-time communication platform built for communities, friend groups, gaming squads, and
-                creative teams. It gives you servers, voice channels, direct messages, roles, and permissions, all
-                without requiring an email, phone number, or password. Your identity is a single cryptographic key that
-                only you hold. No ads, no data harvesting, no algorithm deciding what you see. Just a space to talk,
-                collaborate, and build communities on your own terms.
+                Kloak is a community-driven communication platform built by people who are genuinely passionate
+                about privacy. Not privacy as a buzzword or a toggle buried in settings. Privacy as the foundation
+                everything else is built on. There are no emails, no phone numbers, no passwords. Your identity is a
+                single cryptographic key generated on your device, hashed before it ever touches a server, and
+                unrecoverable by design. Kloak is not a company. There is no registered legal entity, no venture
+                capital, no ads, no subscriptions, and no data harvesting. It is a passion project maintained by a
+                small team of volunteers who believe your conversations should belong to you.
               </motion.p>
             </div>
           </section>
