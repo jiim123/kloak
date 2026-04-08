@@ -1488,13 +1488,11 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
         void markAsRead(currentChannel.id, messageId);
       }
 
-      // Fetch thread messages if not already loaded
-      if (!threadMessages[threadId]) {
-        try {
-          await fetchThreadMessagesById(threadId);
-        } catch (error) {
-          handleError(error, "Failed to fetch thread messages");
-        }
+      // Always fetch thread messages to ensure user cache is populated
+      try {
+        await fetchThreadMessagesById(threadId);
+      } catch (error) {
+        handleError(error, "Failed to fetch thread messages");
       }
     },
     [selectedThreadId, threadMessages, fetchThreadMessagesById, currentChannel?.id, markAsRead],
