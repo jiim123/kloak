@@ -177,7 +177,8 @@ export const EditableProfilePreview = ({
   const bannerUrl = previewUser?.banner_url || localBannerUrl;
 
   const handleDisplayNameChange = (value: string) => {
-    onDisplayNameChange(value);
+    const sanitized = sanitizeDisplayName(value);
+    onDisplayNameChange(sanitized);
   };
 
   const handleBioChange = (value: string) => {

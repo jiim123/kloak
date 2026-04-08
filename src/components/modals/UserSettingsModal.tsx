@@ -252,10 +252,18 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
   const handleSaveProfile = async () => {
     if (!user) return;
+
+    const cleanedName = sanitizeDisplayName(displayName);
+    const nameError = validateDisplayName(cleanedName);
+    if (nameError) {
+      toast.error(nameError);
+      return;
+    }
+
     setIsLoading(true);
     try {
       await updateUser({
-        display_name: displayName.trim() || null,
+        display_name: cleanedName || null,
         bio: bio.trim() ? bio : null,
         profile_theme_primary: profileThemePrimary,
         profile_theme_accent: profileThemeAccent,
