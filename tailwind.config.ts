@@ -146,6 +146,10 @@ export default {
           from: { opacity: "0", transform: "translateY(-4px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
+        marquee: {
+          from: { transform: "translateX(0)" },
+          to: { transform: "translateX(calc(-100% - var(--gap)))" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -159,6 +163,7 @@ export default {
         "toast-slide-in": "toast-slide-in 0.3s ease-out",
         "toast-slide-out": "toast-slide-out 0.25s ease-in forwards",
         "notification-enter": "notification-enter 0.2s ease-out",
+        marquee: "marquee var(--duration) linear infinite",
       },
     },
   },

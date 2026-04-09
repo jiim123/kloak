@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Key, MessageCircle, Users, Lock, Headphones, MessagesSquare, Megaphone, ListChecks, Images, SmilePlus, UserRoundCog, KeySquare } from "lucide-react";
 import { Footer } from "@/components/ui/footer-section";
 import { NavigationMenu } from "@/components/layout/NavigationMenu";
+import { Marquee } from "@/components/ui/marquee";
 import HeroAscii from "@/components/landing/HeroAscii";
 import { SEO } from "@/components/seo";
 import { SEO_CONFIG } from "@/lib/seo";
