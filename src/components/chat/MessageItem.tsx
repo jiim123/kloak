@@ -179,43 +179,8 @@ const AttachmentItem = memo(function AttachmentItem({
   const isVideo = attachment.file_type?.startsWith("video/");
   const isAudio = attachment.file_type?.startsWith("audio/");
   const isGif = attachment.file_type === "image/gif";
-  const [gifPreviewSrc, setGifPreviewSrc] = useState<string | null>(null);
-  const [isGifHovered, setIsGifHovered] = useState(false);
 
   // Compute constrained dimensions to reserve space and prevent layout shift
-  const reservedStyle = useMemo(() => {
-    if (!isImage || !attachment.width || !attachment.height) {
-      return isImage ? { width: 300, height: 200 } : undefined;
-    }
-    const maxW = 400;
-    const maxH = 300;
-    let w = attachment.width;
-    let h = attachment.height;
-    if (w > maxW) { h = Math.round(h * (maxW / w)); w = maxW; }
-    if (h > maxH) { w = Math.round(w * (maxH / h)); h = maxH; }
-    return { width: w, height: h };
-  }, [isImage, attachment.width, attachment.height]);
-
-  useEffect(() => {
-    if (!isGif || !signedUrl) {
-      setGifPreviewSrc(null);
-      setIsGifHovered(false);
-      return;
-    }
-
-    let cancelled = false;
-
-    getGifStillPreview(signedUrl).then((previewSrc) => {
-      if (cancelled) return;
-      setGifPreviewSrc(previewSrc);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isGif, signedUrl]);
-
-  const imageSrc = isGif && gifPreviewSrc && !isGifHovered ? gifPreviewSrc : signedUrl;
 
   // Show a compact loader while the signed URL resolves (don't return null — 
   // the attachment URL is already stripped from displayContent)
@@ -235,15 +200,11 @@ const AttachmentItem = memo(function AttachmentItem({
           style={reservedStyle ? { width: reservedStyle.width, height: reservedStyle.height } : undefined}
         >
           <img
-            src={imageSrc}
+            src={signedUrl}
             alt={attachment.file_name}
             className="w-full h-full object-contain rounded-lg cursor-pointer hover:opacity-90"
             decoding="async"
             onClick={() => signedUrl && onImageClick?.(signedUrl)}
-            onMouseEnter={isGif ? () => setIsGifHovered(true) : undefined}
-            onMouseLeave={isGif ? () => setIsGifHovered(false) : undefined}
-            onFocus={isGif ? () => setIsGifHovered(true) : undefined}
-            onBlur={isGif ? () => setIsGifHovered(false) : undefined}
             onError={refresh}
           />
         </div>
@@ -1921,7 +1882,7 @@ export const MessageItem = memo(function MessageItem({
                     <button
                       key={emoji}
                       onClick={() => handleMobileAddReaction(emoji)}
-                      className="p-2.5 hover:bg-secondary/40 active:bg-secondary/60 rounded-xl active:scale-90 transition-all flex-shrink-0"
+                      className="p-2.5 hover:bg-secondary/40 active:bg-secondary/60 rounded-xl transition-all flex-shrink-0"
                     >
                       <FluentEmoji emoji={emoji} size={28} />
                     </button>
