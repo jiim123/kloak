@@ -333,7 +333,7 @@ const SortableChannel = ({
         {/* Active indicator */}
         <div
           className={cn(
-            "absolute left-1 top-1.5 bottom-1.5 w-0.5 bg-white rounded-full transition-opacity duration-150",
+            "absolute left-1 top-1.5 bottom-1.5 w-0.5 bg-foreground rounded-full transition-opacity duration-150",
             isActive && !isSortingMode ? "opacity-100" : "opacity-0",
           )}
         />
@@ -1235,7 +1235,7 @@ export const ChannelSidebar = () => {
                   <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#111111] via-[#111111]/82 to-transparent" />
 
                   <div className="absolute inset-x-0 bottom-0 flex items-center gap-3 px-4 pb-3">
-                    <h2 className="min-w-0 flex-1 truncate text-[20px] font-normal leading-tight tracking-[-0.02em] text-white drop-shadow-[0_1px_8px_rgba(0,0,0,0.45)]">
+                    <h2 className="min-w-0 flex-1 truncate text-[20px] font-normal leading-tight tracking-[-0.02em] text-foreground drop-shadow-[0_1px_8px_rgba(0,0,0,0.45)]">
                       {currentServer.name}
                     </h2>
                     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-black/30 text-white/80 backdrop-blur-sm transition-colors group-hover:bg-black/40">
@@ -1380,7 +1380,7 @@ export const ChannelSidebar = () => {
                   >
                     <div
                       className={cn(
-                        "absolute left-1 top-1.5 bottom-1.5 w-0.5 bg-white rounded-full transition-opacity duration-150",
+                        "absolute left-1 top-1.5 bottom-1.5 w-0.5 bg-foreground rounded-full transition-opacity duration-150",
                         isOverviewActive ? "opacity-100" : "opacity-0",
                       )}
                     />
@@ -1578,7 +1578,7 @@ export const ChannelSidebar = () => {
                   >
                     <div
                       className={cn(
-                        "absolute left-1 top-1.5 bottom-1.5 w-0.5 bg-white rounded-full transition-opacity duration-150",
+                        "absolute left-1 top-1.5 bottom-1.5 w-0.5 bg-foreground rounded-full transition-opacity duration-150",
                         isOverviewActive ? "opacity-100" : "opacity-0",
                       )}
                     />
