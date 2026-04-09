@@ -247,11 +247,11 @@ export const useRealtimeReactions = (channelId: string | null) => {
         try {
           const channelState = (channel as any).state;
           if (channelState === 'closed' || channelState === 'errored' || channelState === 'timed_out') {
-            console.log('[Realtime] Visibility restored; re-establishing reactions subscription');
+            // Silent re-establish on tab return
             setupSubscription();
           }
         } catch {
-          console.log('[Realtime] Visibility restored; re-establishing reactions subscription (state unknown)');
+          // Silent re-establish on tab return
           setupSubscription();
         }
       }
