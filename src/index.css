@@ -889,17 +889,12 @@
 }
 
 /* Feature card hover effects */
-.feature-card:hover .feature-card-bg {
-  opacity: 1 !important;
+.feature-card {
+  transition: border-color 0.4s ease, transform 0.4s ease, box-shadow 0.4s ease;
 }
-.feature-card:hover .feature-card-icon {
-  color: var(--fc-text) !important;
-}
-.feature-card:hover .feature-card-title {
-  color: var(--fc-text) !important;
-}
-.feature-card:hover .feature-card-desc {
-  color: var(--fc-text-sub) !important;
+.feature-card:hover {
+  border-color: var(--fc-color) !important;
+  box-shadow: 0 0 20px -5px var(--fc-color);
 }
 
 @keyframes marquee-scroll {
@@ -909,8 +904,12 @@
 .marquee-container {
   animation: marquee-scroll 50s linear infinite;
 }
-.marquee-container:hover {
+.marquee-container.is-dragging {
   animation-play-state: paused;
+  cursor: grabbing;
+}
+.marquee-container:not(.is-dragging) {
+  cursor: grab;
 }
 
 /* Prism.js Theme - Works across all dark themes */
