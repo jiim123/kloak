@@ -72,12 +72,12 @@ export const MobileSidebar = ({ isDMView, showFriends, onShowFriendsChange, show
         
         <div className="flex flex-row flex-1 gap-1.5 p-1.5 h-full min-w-0">
           {/* Server sidebar - always visible */}
-          <div className="w-[72px] flex-shrink-0 bg-[#111111] rounded-[10px] border border-white/5 h-full pt-3 overflow-hidden">
+          <div className="w-[72px] flex-shrink-0 bg-card rounded-[10px] border border-border/50 h-full pt-3 overflow-hidden">
             <ServerSidebar />
           </div>
           
           {/* Channel/DM sidebar */}
-          <div className="flex-1 min-w-0 bg-[#111111] rounded-[10px] border border-white/5 h-full overflow-hidden">
+          <div className="flex-1 min-w-0 bg-card rounded-[10px] border border-border/50 h-full overflow-hidden">
             {isDMView ? (
               <DMSidebar 
                 showFriends={showFriends} 
