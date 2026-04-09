@@ -557,30 +557,6 @@
     font-weight: 400;
   }
 
-  /* Feature card hover effects */
-  .feature-card:hover .feature-card-bg {
-    opacity: 1 !important;
-  }
-  .feature-card:hover .feature-card-icon {
-    color: var(--fc-text) !important;
-  }
-  .feature-card:hover .feature-card-title {
-    color: var(--fc-text) !important;
-  }
-  .feature-card:hover .feature-card-desc {
-    color: var(--fc-text-sub) !important;
-  }
-
-  @keyframes marquee-scroll {
-    0% { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
-  }
-  .marquee-container {
-    animation: marquee-scroll 50s linear infinite;
-  }
-  .marquee-container:hover {
-    animation-play-state: paused;
-  }
 
   .landing-title {
     font-size: 1.375em;
