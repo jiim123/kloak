@@ -16,13 +16,17 @@ export function ConnectionStatus({ className, showLatency = false, compact = fal
   const { sync } = useSyncStore();
   const [showBanner, setShowBanner] = useState(false);
 
-  // Show banner on disconnection, hide after reconnection
+  // Show banner with grace period to avoid flashing on tab switch
   useEffect(() => {
-    if (!isConnected || isReconnecting) {
-      setShowBanner(true);
-    } else if (isConnected && showBanner) {
-      // Keep showing "Connected" briefly
-      const timer = setTimeout(() => setShowBanner(false), 2000);
+    if (isConnected && !isReconnecting) {
+      if (showBanner) {
+        // Keep showing "Connected" briefly then hide
+        const timer = setTimeout(() => setShowBanner(false), 2000);
+        return () => clearTimeout(timer);
+      }
+    } else {
+      // Disconnected or reconnecting — wait 3s before showing banner
+      const timer = setTimeout(() => setShowBanner(true), 3000);
       return () => clearTimeout(timer);
     }
   }, [isConnected, isReconnecting, showBanner]);
