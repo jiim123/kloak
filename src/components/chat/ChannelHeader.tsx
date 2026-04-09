@@ -112,7 +112,7 @@ export const ChannelHeader = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="relative w-8 h-8 rounded-lg text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                  className="relative w-8 h-8 rounded-lg text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
                   onClick={() => openModal("pinned-messages", { channelId: channel.id })}
                 >
                   <Pin className="w-4 h-4" />
@@ -126,7 +126,7 @@ export const ChannelHeader = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="relative w-8 h-8 rounded-lg text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                  className="relative w-8 h-8 rounded-lg text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
                   onClick={() => openModal("search", { channelId: channel.id })}
                 >
                   <Search className="w-4 h-4" />
@@ -145,7 +145,7 @@ export const ChannelHeader = ({
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative w-8 h-8 rounded-lg text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                className="relative w-8 h-8 rounded-lg text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
                 onClick={() => setMemberSidebarOpen(!isMemberSidebarOpen)}
                 aria-label={isMemberSidebarOpen ? "Hide member sidebar" : "Show member sidebar"}
               >

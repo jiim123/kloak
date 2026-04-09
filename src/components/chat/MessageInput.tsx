@@ -149,7 +149,7 @@ const ActionBar = memo(
     const canSend = (content.trim() || hasAttachments) && !isSending && canSubmitMessage;
 
     const iconBtnClass =
-      "flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-white/6 hover:text-foreground transition-colors";
+      "flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/6 hover:text-foreground transition-colors";
 
     return (
       <div className="flex items-center justify-between px-2 sm:px-3 pb-2 pt-0.5">
@@ -162,7 +162,7 @@ const ActionBar = memo(
           )}
           {setShowCreatePoll && (
             <>
-              <div className="w-px h-5 bg-white/8 mx-0.5" />
+              <div className="w-px h-5 bg-foreground/8 mx-0.5" />
               <button
                 type="button"
                 onClick={() => setShowCreatePoll(true)}
@@ -174,7 +174,7 @@ const ActionBar = memo(
             </>
           )}
 
-          <div className="w-px h-5 bg-white/8 mx-0.5" />
+          <div className="w-px h-5 bg-foreground/8 mx-0.5" />
 
           <EmojiPicker
             open={showEmojiPicker}
@@ -217,8 +217,8 @@ const ActionBar = memo(
             disabled={!canSend}
             className={`flex h-8 w-8 items-center justify-center rounded-full transition-all duration-200 ${
               canSend
-                ? "bg-white/10 text-white hover:bg-white/16 active:scale-95"
-                : "bg-white/5 text-muted-foreground/50 cursor-not-allowed"
+                ? "bg-foreground/10 text-white hover:bg-foreground/16 active:scale-95"
+                : "bg-foreground/5 text-muted-foreground/50 cursor-not-allowed"
             }`}
           >
             <AnimatePresence mode="wait">
@@ -961,7 +961,7 @@ export const MessageInput = ({
             transition={{ duration: 0.15, ease: "easeOut" }}
             className="overflow-hidden"
           >
-            <div className="flex items-center gap-2 px-3.5 py-1.5 bg-white/5 border-b border-white/6 rounded-t-[14px]">
+            <div className="flex items-center gap-2 px-3.5 py-1.5 bg-foreground/5 border-b border-border/50 rounded-t-[14px]">
               <span className="text-xs text-muted-foreground">
                 Replying to{" "}
                 {isDM ? (
@@ -1140,7 +1140,7 @@ const MobileOptimizedInput = memo(
         className={`rounded-[14px] bg-[rgb(24_24_24_/_55%)] border transition-all duration-200 shadow-[0_8px_30px_rgba(0,0,0,0.22)] ${
           isFocused
             ? "border-white/14 shadow-[0_10px_34px_rgba(0,0,0,0.28)] bg-[rgb(24_24_24_/_55%)]"
-            : "border-white/6 hover:border-white/10"
+            : "border-border/50 hover:border-border/50"
         } ${replyingTo || (showMentions && hasMentionOptions) || (showChannels && hasChannelOptions) ? "!rounded-t-none" : ""}`}
       >
         <AnimatePresence>
