@@ -302,6 +302,7 @@ const Index = () => {
                       icon={feature.icon}
                       title={feature.title}
                       description={feature.description}
+                      className="w-[340px] md:w-[400px] shrink-0"
                     />
                   )),
                 )}
