@@ -1,6 +1,19 @@
 import { lazy, Suspense, useRef, useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Key, MessageCircle, Users, Lock, Headphones, MessagesSquare, Megaphone, ListChecks, Images, SmilePlus, UserRoundCog, KeySquare } from "lucide-react";
+import {
+  Key,
+  MessageCircle,
+  Users,
+  Lock,
+  Headphones,
+  MessagesSquare,
+  Megaphone,
+  ListChecks,
+  Images,
+  SmilePlus,
+  UserRoundCog,
+  KeySquare,
+} from "lucide-react";
 import { Footer } from "@/components/ui/footer-section";
 import { NavigationMenu } from "@/components/layout/NavigationMenu";
 import { Marquee } from "@/components/ui/marquee";
@@ -17,47 +30,31 @@ function DraggableMarquee({ children }: { children: React.ReactNode }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const startX = useRef(0);
-  const dragOffset = useRef(0);
-  const currentOffset = useRef(0);
+  const scrollLeft = useRef(0);
 
   const getPageX = (e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent) =>
-    "touches" in e ? e.touches[0]?.pageX ?? 0 : (e as MouseEvent).pageX;
+    "touches" in e ? (e.touches[0]?.pageX ?? 0) : (e as MouseEvent).pageX;
 
   const onStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     isDragging.current = true;
-    startX.current = getPageX(e);
-    // Capture current computed translateX from the animation
-    const track = trackRef.current;
-    if (track) {
-      const style = window.getComputedStyle(track);
-      const matrix = new DOMMatrix(style.transform);
-      currentOffset.current = matrix.m41;
-      track.classList.add("is-dragging");
-      track.style.transform = `translateX(${currentOffset.current}px)`;
-    }
+    const container = containerRef.current!;
+    startX.current = getPageX(e) - container.offsetLeft;
+    scrollLeft.current = container.scrollLeft;
+    trackRef.current?.classList.add("is-dragging");
   }, []);
 
   const onMove = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (!isDragging.current) return;
     e.preventDefault();
-    const walk = getPageX(e) - startX.current;
-    dragOffset.current = walk;
-    const track = trackRef.current;
-    if (track) {
-      track.style.transform = `translateX(${currentOffset.current + walk}px)`;
-    }
+    const container = containerRef.current!;
+    const x = getPageX(e) - container.offsetLeft;
+    const walk = (x - startX.current) * 1.5;
+    container.scrollLeft = scrollLeft.current - walk;
   }, []);
 
   const onEnd = useCallback(() => {
-    if (!isDragging.current) return;
     isDragging.current = false;
-    const track = trackRef.current;
-    if (track) {
-      // Remove inline transform and resume CSS animation
-      track.style.transform = "";
-      track.classList.remove("is-dragging");
-    }
-    dragOffset.current = 0;
+    trackRef.current?.classList.remove("is-dragging");
   }, []);
 
   useEffect(() => {
@@ -82,11 +79,7 @@ function DraggableMarquee({ children }: { children: React.ReactNode }) {
       onTouchEnd={onEnd}
       style={{ userSelect: "none" }}
     >
-      <div
-        ref={trackRef}
-        className="flex gap-4 marquee-container"
-        style={{ width: "max-content" }}
-      >
+      <div ref={trackRef} className="flex gap-4 marquee-container" style={{ width: "max-content" }}>
         {children}
       </div>
     </div>
@@ -245,13 +238,13 @@ const Index = () => {
                 transition={{ duration: 0.8 }}
                 className="text-base md:text-lg text-muted-foreground leading-[1.8]"
               >
-                Kloak is a community-driven communication platform built by people who are genuinely passionate
-                about privacy. Not privacy as a buzzword or a toggle buried in settings. Privacy as the foundation
-                everything else is built on. There are no emails, no phone numbers, no passwords. Your identity is a
-                single cryptographic key generated on your device, hashed before it ever touches a server, and
-                unrecoverable by design. Kloak is not a company. There is no registered legal entity, no venture
-                capital, no ads, no subscriptions, and no data harvesting. It is a passion project maintained by a
-                small team of volunteers who believe your conversations should belong to you.
+                Kloak is a community-driven communication platform built by people who are genuinely passionate about
+                privacy. Not privacy as a buzzword or a toggle buried in settings. Privacy as the foundation everything
+                else is built on. There are no emails, no phone numbers, no passwords. Your identity is a single
+                cryptographic key generated on your device, hashed before it ever touches a server, and unrecoverable by
+                design. Kloak is not a company. There is no registered legal entity, no venture capital, no ads, no
+                subscriptions, and no data harvesting. It is a passion project maintained by a small team of volunteers
+                who believe your conversations should belong to you.
               </motion.p>
             </div>
           </section>
@@ -266,9 +259,7 @@ const Index = () => {
                 transition={{ duration: 0.6 }}
               >
                 <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground leading-tight tracking-tight">
-                  Everything you need.
-                  <br />
-                  <span>Nothing you don't.</span>
+                  Only What Matters.
                 </h2>
               </motion.div>
             </div>
@@ -282,9 +273,11 @@ const Index = () => {
                     <div
                       key={`${copy}-${feature.title}`}
                       className="feature-card relative rounded-2xl border border-border/40 bg-card/30 p-8 md:p-10 flex flex-col justify-between min-h-[280px] md:min-h-[320px] w-[340px] md:w-[400px] shrink-0 overflow-hidden"
-                      style={{
-                        "--fc-color": `rgb(${feature.color})`,
-                      } as React.CSSProperties}
+                      style={
+                        {
+                          "--fc-color": `rgb(${feature.color})`,
+                        } as React.CSSProperties
+                      }
                     >
                       <div className="relative z-10 w-10 h-10 flex items-center justify-center">
                         <feature.icon
@@ -297,12 +290,10 @@ const Index = () => {
                         <h3 className="text-2xl sm:text-3xl font-light text-foreground tracking-tight mb-2">
                           {feature.title}
                         </h3>
-                        <p className="text-[15px] text-muted-foreground leading-relaxed">
-                          {feature.description}
-                        </p>
+                        <p className="text-[15px] text-muted-foreground leading-relaxed">{feature.description}</p>
                       </div>
                     </div>
-                  ))
+                  )),
                 )}
               </DraggableMarquee>
             </div>
