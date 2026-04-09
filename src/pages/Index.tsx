@@ -11,6 +11,72 @@ import { SEO_CONFIG } from "@/lib/seo";
 // Lazy-load the heavy WebGL shader component (only visible at bottom of page)
 const LazyDithering = lazy(() => import("@paper-design/shaders-react").then((m) => ({ default: m.Dithering })));
 
+/** Draggable marquee wrapper – auto-scrolls, pauses on drag, resumes on release */
+function DraggableMarquee({ children }: { children: React.ReactNode }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
+  const startX = useRef(0);
+  const scrollLeft = useRef(0);
+
+  const getPageX = (e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent) =>
+    "touches" in e ? e.touches[0]?.pageX ?? 0 : (e as MouseEvent).pageX;
+
+  const onStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    isDragging.current = true;
+    const container = containerRef.current!;
+    startX.current = getPageX(e) - container.offsetLeft;
+    scrollLeft.current = container.scrollLeft;
+    trackRef.current?.classList.add("is-dragging");
+  }, []);
+
+  const onMove = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDragging.current) return;
+    e.preventDefault();
+    const container = containerRef.current!;
+    const x = getPageX(e) - container.offsetLeft;
+    const walk = (x - startX.current) * 1.5;
+    container.scrollLeft = scrollLeft.current - walk;
+  }, []);
+
+  const onEnd = useCallback(() => {
+    isDragging.current = false;
+    trackRef.current?.classList.remove("is-dragging");
+  }, []);
+
+  useEffect(() => {
+    const handleUp = () => onEnd();
+    window.addEventListener("mouseup", handleUp);
+    window.addEventListener("touchend", handleUp);
+    return () => {
+      window.removeEventListener("mouseup", handleUp);
+      window.removeEventListener("touchend", handleUp);
+    };
+  }, [onEnd]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="overflow-hidden"
+      onMouseDown={onStart}
+      onMouseMove={onMove}
+      onMouseUp={onEnd}
+      onTouchStart={onStart}
+      onTouchMove={onMove}
+      onTouchEnd={onEnd}
+      style={{ userSelect: "none" }}
+    >
+      <div
+        ref={trackRef}
+        className="flex gap-4 marquee-container"
+        style={{ width: "max-content" }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 /** CTA section – only mounts the heavy WebGL shader when scrolled into view */
 function CtaSection() {
   const ref = useRef<HTMLDivElement>(null);
