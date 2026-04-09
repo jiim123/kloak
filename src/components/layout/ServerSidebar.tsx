@@ -1001,8 +1001,8 @@ export const ServerSidebar = () => {
                       className={cn(
                         "w-12 h-12 flex items-center justify-center rounded-full",
                         currentServer === null
-                          ? "bg-[#2d2d2d] text-white"
-                          : "bg-[#242424] text-[#d0d0d0] hover:bg-[#303030] hover:text-white",
+                          ? "bg-secondary text-foreground"
+                          : "bg-muted text-muted-foreground hover:bg-secondary hover:text-foreground",
                       )}
                     >
                       <AnimatePresence mode="wait" initial={false}>
