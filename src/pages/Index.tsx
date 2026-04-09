@@ -441,12 +441,29 @@ const Index = () => {
                       title={channel.title}
                       description={channel.description}
                       className="h-full"
+                      onArrowClick={() => {
+                        const details = channelFeatureDetails[channel.title];
+                        if (details) {
+                          setActiveFeature({
+                            icon: channel.icon,
+                            title: channel.title,
+                            ...details,
+                          });
+                        }
+                      }}
                     />
                   </motion.div>
                 ))}
               </div>
             </div>
           </section>
+
+          {/* Feature Detail Modal */}
+          <FeatureDetailModal
+            feature={activeFeature}
+            open={!!activeFeature}
+            onClose={() => setActiveFeature(null)}
+          />
 
           {/* Footer */}
           <Footer />
