@@ -33,7 +33,7 @@ export function Marquee({
 
   return (
     <div
-      className={cn("relative overflow-hidden", className)}
+      className={cn("relative flex overflow-hidden gap-4", className)}
       onMouseEnter={pauseOnHover ? pause : undefined}
       onMouseLeave={pauseOnHover ? resume : undefined}
       {...props}
@@ -44,20 +44,18 @@ export function Marquee({
           <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-24 md:w-40 bg-gradient-to-l from-background to-transparent" />
         </>
       )}
-      <div className="flex gap-4">
-        {[0, 1].map((i) => (
-          <div
-            key={i}
-            ref={(el) => { tracksRef.current[i] = el; }}
-            className={cn("flex shrink-0 gap-4", reverse && "[animation-direction:reverse]")}
-            style={{
-              animation: `marquee ${duration} linear infinite`,
-            }}
-          >
-            {children}
-          </div>
-        ))}
-      </div>
+      {[0, 1].map((i) => (
+        <div
+          key={i}
+          ref={(el) => { tracksRef.current[i] = el; }}
+          className={cn("flex shrink-0 gap-4", reverse && "[animation-direction:reverse]")}
+          style={{
+            animation: `marquee ${duration} linear infinite`,
+          }}
+        >
+          {children}
+        </div>
+      ))}
     </div>
   );
 }
