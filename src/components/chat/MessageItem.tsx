@@ -74,7 +74,7 @@ import { getPollIdFromContent, isPollMessageContent } from "@/lib/poll";
 import { canRevealGhostIdentityForUser } from "@/lib/ghostIdentity";
 import { pickFirstNonBlank } from "@/lib/utils";
 import { openUserProfileModal, SIDE_ALIGNED_USER_PROFILE_POPOVER } from "@/lib/userProfilePopover";
-import { getGifStillPreview } from "@/lib/gifPreview";
+
 
 // Static data moved outside component
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "👋", "🔥", "👀", "💯", "🙌", "😍", "🤔"] as const;
@@ -178,7 +178,7 @@ const AttachmentItem = memo(function AttachmentItem({
   const isImage = attachment.file_type?.startsWith("image/");
   const isVideo = attachment.file_type?.startsWith("video/");
   const isAudio = attachment.file_type?.startsWith("audio/");
-  const isGif = attachment.file_type === "image/gif";
+  
 
   // Compute constrained dimensions to reserve space and prevent layout shift
   const reservedStyle = useMemo(() => {
