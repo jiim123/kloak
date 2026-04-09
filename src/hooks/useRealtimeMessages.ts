@@ -508,12 +508,12 @@ export const useRealtimeMessages = (channelId: string | null) => {
         try {
           const channelState = (channel as unknown as { state?: string }).state;
           if (channelState === 'closed' || channelState === 'errored' || channelState === 'timed_out') {
-            console.log('[Realtime] Visibility restored; re-establishing messages subscription');
+            // Silent re-establish on tab return
             setupSubscription();
           }
         } catch {
           // If we can't check state, try to re-establish anyway.
-          console.log('[Realtime] Visibility restored; re-establishing messages subscription (state unknown)');
+          // Silent re-establish on tab return
           setupSubscription();
         }
 
