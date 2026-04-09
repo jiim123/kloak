@@ -76,7 +76,7 @@ export const GroupChatHeader = ({ conversation, participants }: GroupChatHeaderP
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <button
               onClick={() => setMobileSidebarOpen(true)}
-              className="md:hidden w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-white/5 hover:text-foreground transition-colors flex-shrink-0"
+              className="md:hidden w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-foreground/5 hover:text-foreground transition-colors flex-shrink-0"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
@@ -93,7 +93,7 @@ export const GroupChatHeader = ({ conversation, participants }: GroupChatHeaderP
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="relative w-8 h-8 rounded-lg text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                  className="relative w-8 h-8 rounded-lg text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
                   onClick={() => setShowSettingsModal(true)}
                 >
                   <Settings className="w-4 h-4" />
