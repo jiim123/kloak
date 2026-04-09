@@ -202,7 +202,7 @@ export const useUIStore = create<UIState>()(
 
       toggleTheme: () => {
         const currentTheme = get().theme;
-        const newTheme = currentTheme === "default" ? "nostalgia" : "default";
+        const newTheme = currentTheme === "default" ? "light" : "default";
         applyTheme(newTheme);
         set({ theme: newTheme });
       },
