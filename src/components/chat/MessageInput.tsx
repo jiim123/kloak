@@ -217,7 +217,7 @@ const ActionBar = memo(
             disabled={!canSend}
             className={`flex h-8 w-8 items-center justify-center rounded-full transition-all duration-200 ${
               canSend
-                ? "bg-foreground/10 text-white hover:bg-foreground/16 active:scale-95"
+                ? "bg-foreground/10 text-foreground hover:bg-foreground/16 active:scale-95"
                 : "bg-foreground/5 text-muted-foreground/50 cursor-not-allowed"
             }`}
           >
