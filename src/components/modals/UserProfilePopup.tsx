@@ -558,9 +558,9 @@ export const UserProfilePopup = () => {
     if (isSelf || !profileUser) return null;
 
     const iconButtonClass =
-      "h-7 flex-1 rounded-lg border border-white/10 bg-[#2a2a2a] px-2 text-white hover:bg-[#353535] hover:text-white disabled:border-white/5 disabled:bg-[#1c1c1c] disabled:text-white/35";
+      "h-7 flex-1 rounded-lg border border-border bg-secondary px-2 text-foreground hover:bg-secondary-hover hover:text-foreground disabled:border-border/50 disabled:bg-muted disabled:text-muted-foreground/35";
     const dmButtonClass =
-      "h-7 flex-1 rounded-lg border border-white/10 bg-[#2a2a2a] px-2 text-white shadow-none hover:bg-[#353535] hover:text-white hover:shadow-none";
+      "h-7 flex-1 rounded-lg border border-border bg-secondary px-2 text-white shadow-none hover:bg-secondary-hover hover:text-foreground hover:shadow-none";
 
     return (
       <div className="relative z-10 border-t px-3 py-2" style={{ borderColor: divider }}>
@@ -622,7 +622,7 @@ export const UserProfilePopup = () => {
               </Button>
             )}
 
-            <Button variant="secondary" size="icon" className="h-7 w-7 rounded-lg border border-white/10 bg-[#2a2a2a] text-white hover:bg-[#353535] hover:text-white" onClick={handleBlockUser}>
+            <Button variant="secondary" size="icon" className="h-7 w-7 rounded-lg border border-border bg-secondary text-foreground hover:bg-secondary-hover hover:text-foreground" onClick={handleBlockUser}>
               <Ban className="h-3.5 w-3.5" />
             </Button>
           </div>
@@ -969,7 +969,7 @@ export const UserProfilePopup = () => {
           className="max-h-[85vh] max-w-[calc(100vw-1rem)] overflow-hidden border-none bg-transparent p-0 shadow-none"
           onOpenAutoFocus={(event) => event.preventDefault()}
         >
-          <div className="max-h-[75vh] overflow-y-auto rounded-[11px] border border-white/10 bg-[#1c1d22] shadow-2xl">
+          <div className="max-h-[75vh] overflow-y-auto rounded-[11px] border border-border bg-popover shadow-2xl">
             {renderCard()}
           </div>
         </DialogContent>
@@ -981,7 +981,7 @@ export const UserProfilePopup = () => {
     <div className="fixed inset-0 z-50" onMouseDown={handleClose}>
       <div
         ref={cardRef}
-        className="absolute max-h-[70vh] w-[320px] overflow-y-auto rounded-[11px] border border-white/10 bg-[#1c1d22] shadow-[0_22px_80px_rgba(0,0,0,0.45)]"
+        className="absolute max-h-[70vh] w-[320px] overflow-y-auto rounded-[11px] border border-border bg-popover shadow-[0_22px_80px_rgba(0,0,0,0.45)]"
         style={{
           left: position?.left ?? -9999,
           top: position?.top ?? -9999,
