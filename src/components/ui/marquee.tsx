@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import React from "react";
+import React, { useRef, useCallback } from "react";
 
 interface MarqueeProps extends React.HTMLAttributes<HTMLDivElement> {
   pauseOnHover?: boolean;
@@ -17,10 +17,20 @@ export function Marquee({
   className,
   ...props
 }: MarqueeProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const setPlayState = useCallback((state: "paused" | "running") => {
+    const tracks = containerRef.current?.querySelectorAll(".marquee-track");
+    tracks?.forEach((el) => {
+      (el as HTMLElement).style.animationPlayState = state;
+    });
+  }, []);
+
   return (
     <div
+      ref={containerRef}
       className={cn(
-        "group/marquee relative flex overflow-hidden [--gap:1rem] gap-[var(--gap)]",
+        "relative flex overflow-hidden [--gap:1rem] gap-[var(--gap)]",
         className,
       )}
       {...props}
@@ -45,17 +55,12 @@ export function Marquee({
             animationIterationCount: "infinite",
             animationDirection: reverse ? "reverse" : "normal",
           }}
+          onMouseEnter={pauseOnHover ? () => setPlayState("paused") : undefined}
+          onMouseLeave={pauseOnHover ? () => setPlayState("running") : undefined}
         >
           {children}
         </div>
       ))}
-      {pauseOnHover && (
-        <style>{`
-          .group\\/marquee:hover .marquee-track {
-            animation-play-state: paused !important;
-          }
-        `}</style>
-      )}
     </div>
   );
 }
