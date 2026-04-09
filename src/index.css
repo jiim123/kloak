@@ -557,6 +557,20 @@
     font-weight: 400;
   }
 
+  /* Feature card hover effects */
+  .feature-card:hover .feature-card-bg {
+    opacity: 1 !important;
+  }
+  .feature-card:hover .feature-card-icon {
+    color: var(--fc-text) !important;
+  }
+  .feature-card:hover .feature-card-title {
+    color: var(--fc-text) !important;
+  }
+  .feature-card:hover .feature-card-desc {
+    color: var(--fc-text-sub) !important;
+  }
+
   /* Legacy classes kept for backward compat */
   .landing-title {
     font-size: 1.375em;
