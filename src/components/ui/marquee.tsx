@@ -35,15 +35,27 @@ export function Marquee({
         <div
           key={i}
           className={cn(
-            "flex shrink-0 gap-[var(--gap)] [animation:marquee_var(--dur)_linear_infinite]",
-            pauseOnHover && "group-hover/marquee:[animation-play-state:paused]",
+            "marquee-track flex shrink-0 gap-[var(--gap)]",
             reverse && "[animation-direction:reverse]",
           )}
-          style={{ "--dur": duration } as React.CSSProperties}
+          style={{
+            animationName: "marquee",
+            animationDuration: duration,
+            animationTimingFunction: "linear",
+            animationIterationCount: "infinite",
+            animationDirection: reverse ? "reverse" : "normal",
+          }}
         >
           {children}
         </div>
       ))}
+      {pauseOnHover && (
+        <style>{`
+          .group\\/marquee:hover .marquee-track {
+            animation-play-state: paused !important;
+          }
+        `}</style>
+      )}
     </div>
   );
 }
