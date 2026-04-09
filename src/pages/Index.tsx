@@ -204,7 +204,8 @@ const Index = () => {
                     />
                     <div className="relative z-10 w-10 h-10 flex items-center justify-center">
                       <feature.icon
-                        className="w-7 h-7 text-foreground transition-colors duration-500 group-hover/card:text-gray-900"
+                        className="w-7 h-7 transition-colors duration-500 group-hover/card:text-gray-900"
+                        style={{ color: `rgb(${feature.color})` }}
                         strokeWidth={1.5}
                       />
                     </div>
