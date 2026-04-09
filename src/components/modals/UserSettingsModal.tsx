@@ -50,6 +50,7 @@ import { Slider } from "@/components/ui/slider";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AvatarDecorationModal } from "@/components/modals/AvatarDecorationModal";
 import { ProfileEffectModal } from "@/components/modals/ProfileEffectModal";
 import { EditableProfilePreview } from "@/components/modals/EditableProfilePreview";
