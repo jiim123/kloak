@@ -339,6 +339,7 @@ const Index = () => {
                       icon={channel.icon}
                       title={channel.title}
                       description={channel.description}
+                      className="h-full"
                     />
                   </motion.div>
                 ))}
