@@ -890,12 +890,12 @@
 
 /* Terminal card styles */
 .terminal-card {
-  border: 1px solid hsl(var(--border) / 0.3);
+  border: 1px solid hsl(var(--muted-foreground) / 0.2);
   border-radius: 4px;
   transition: border-color 0.3s ease;
 }
 .terminal-card:hover {
-  border-color: hsl(var(--border) / 0.8);
+  border-color: hsl(var(--muted-foreground) / 0.5);
 }
 .terminal-card:hover .terminal-card-icon {
   background-color: hsl(var(--foreground));
