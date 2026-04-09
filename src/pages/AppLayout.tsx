@@ -615,7 +615,7 @@ const AppLayout = () => {
                   {/* Main layout - ALWAYS mounted so VoicePersistentHost never unmounts */}
                   <div className={cn("flex-1 overflow-hidden", isFullscreenSettingsOverlayOpen && "invisible")}>
                     <div className="flex h-full gap-2">
-                      <div className="w-[278px] shrink-0 overflow-hidden bg-[#111111] rounded-[10px] border border-white/5">
+                      <div className="w-[278px] shrink-0 overflow-hidden bg-card rounded-[10px] border border-border/50">
                         {isDMView ? (
                           <DMSidebar
                             showFriends={showFriends}
