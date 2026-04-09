@@ -42,36 +42,42 @@ const Index = () => {
       title: "Messaging",
       description:
         "Send messages in real time with edits, replies, and rich formatting. Chat one-on-one through Direct Messages or create Group Messages with multiple friends.",
+      hoverColor: "group-hover:text-blue-400",
     },
     {
       icon: Users,
       title: "Friends & Social",
       description:
         "Add friends by username, manage incoming requests, and block anyone instantly. Your friend list travels with you across every server.",
+      hoverColor: "group-hover:text-green-400",
     },
     {
       icon: SmilePlus,
       title: "Reactions",
       description:
         "React to any message with emoji. Servers can upload custom emoji packs that every member can use across channels.",
+      hoverColor: "group-hover:text-yellow-400",
     },
     {
       icon: UserRoundCog,
       title: "Roles & Permissions",
       description:
         "Create custom roles with colors and icons. Over 30 granular permissions control who can post, pin, manage channels, and more.",
+      hoverColor: "group-hover:text-purple-400",
     },
     {
       icon: Lock,
       title: "Administration",
       description:
         "Kick or ban disruptive members, mute users, set slowmode, enable read-only channels, and block links or attachments per channel.",
+      hoverColor: "group-hover:text-red-400",
     },
     {
       icon: KeySquare,
       title: "Secret Key Auth",
       description:
         "No email, phone, or password. One cryptographic key is all you need. Generated on your device, hashed before it ever touches a server.",
+      hoverColor: "group-hover:text-orange-400",
     },
   ];
 
