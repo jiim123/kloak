@@ -88,7 +88,7 @@ function DraggableMarquee({ children }: { children: React.ReactNode }) {
       onTouchEnd={onEnd}
       style={{ userSelect: "none" }}
     >
-      <div ref={trackRef} className="flex gap-0 marquee-container" style={{ width: "max-content" }}>
+      <div ref={trackRef} className="flex gap-4 md:gap-6 marquee-container" style={{ width: "max-content" }}>
         {children}
       </div>
     </div>
@@ -311,7 +311,7 @@ const Index = () => {
                       icon={feature.icon}
                       title={feature.title}
                       description={feature.description}
-                      className="w-[340px] md:w-[400px] shrink-0"
+                      className="w-[340px] md:w-[400px] min-h-[280px] md:min-h-[300px] shrink-0"
                     />
                   )),
                 )}
