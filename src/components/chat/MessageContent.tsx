@@ -15,7 +15,7 @@ import { useServerStore } from "@/stores/serverStore";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
 import { getUserFromCache, getOrFetchUser } from "@/stores/userCacheStore";
-import { getGifStillPreview, isGifUrl } from "@/lib/gifPreview";
+
 import {
   getGlobalEmojiMap,
   getGlobalEmojiDuplicates,
@@ -423,7 +423,7 @@ export const parseTextContent = (
         const safeUrl = escapeHtml(resolved.url);
         const safeName = escapeHtml(name);
         const safeServer = escapeHtml(qualifier);
-        return `<img src="${safeUrl}" alt=":${safeName}~${safeServer}:" title=":${safeName}~${safeServer}:" class="inline-block w-8 h-8 align-middle object-contain cursor-pointer hover:scale-110 transition-transform" loading="lazy" data-cross-emoji="${safeName}" data-cross-emoji-server="${safeServer}" />`;
+        return `<img src="${safeUrl}" alt=":${safeName}~${safeServer}:" title=":${safeName}~${safeServer}:" class="inline-block w-8 h-8 align-middle object-contain cursor-pointer" loading="lazy" data-cross-emoji="${safeName}" data-cross-emoji-server="${safeServer}" />`;
       }
       return full;
     }
@@ -432,7 +432,7 @@ export const parseTextContent = (
     if (global) {
       const safeUrl = escapeHtml(global.url);
       const safeName = escapeHtml(name);
-      return `<img src="${safeUrl}" alt=":${safeName}:" title=":${safeName}:" class="inline-block w-8 h-8 align-middle object-contain cursor-pointer hover:scale-110 transition-transform" loading="lazy" data-cross-emoji="${safeName}" />`;
+      return `<img src="${safeUrl}" alt=":${safeName}:" title=":${safeName}:" class="inline-block w-8 h-8 align-middle object-contain cursor-pointer" loading="lazy" data-cross-emoji="${safeName}" />`;
     }
     return full;
   });
@@ -444,7 +444,7 @@ export const parseTextContent = (
   parsed = parsed.replace(INLINE_CUSTOM_EMOJI_TOKEN_REGEX, (_full, name: string, filePath: string) => {
     const safeName = escapeHtml(name);
     const safeUrl = escapeHtml(getServerEmojiPublicUrl(filePath));
-    return `<img src="${safeUrl}" alt=":${safeName}:" title=":${safeName}:" class="inline-block w-8 h-8 align-middle object-contain cursor-pointer hover:scale-110 transition-transform" loading="lazy" data-cross-emoji="${safeName}" data-cross-emoji-file-path="${escapeHtml(filePath)}" />`;
+    return `<img src="${safeUrl}" alt=":${safeName}:" title=":${safeName}:" class="inline-block w-8 h-8 align-middle object-contain cursor-pointer" loading="lazy" data-cross-emoji="${safeName}" data-cross-emoji-file-path="${escapeHtml(filePath)}" />`;
   });
 
   // Convert newlines to <br>
@@ -682,36 +682,6 @@ export const MessageContent = ({
     const el = contentRef.current;
     if (!el) return;
     let cancelled = false;
-    const cleanupCallbacks: Array<() => void> = [];
-
-    const attachGifHoverBehavior = async (img: HTMLImageElement, url: string) => {
-      if (!isGifUrl(url)) return;
-
-      const previewUrl = await getGifStillPreview(url);
-      if (cancelled || !previewUrl) return;
-
-      const animatedUrl = url;
-      img.src = previewUrl;
-
-      const playGif = () => {
-        img.src = animatedUrl;
-      };
-      const pauseGif = () => {
-        img.src = previewUrl;
-      };
-
-      img.addEventListener("mouseenter", playGif);
-      img.addEventListener("mouseleave", pauseGif);
-      img.addEventListener("focus", playGif);
-      img.addEventListener("blur", pauseGif);
-
-      cleanupCallbacks.push(() => {
-        img.removeEventListener("mouseenter", playGif);
-        img.removeEventListener("mouseleave", pauseGif);
-        img.removeEventListener("focus", playGif);
-        img.removeEventListener("blur", pauseGif);
-      });
-    };
 
     // Resolve kloak-attachment:// references (new format)
     const attachmentEls = el.querySelectorAll<HTMLElement>("[data-attachment-path]");
@@ -729,7 +699,6 @@ export const MessageContent = ({
             element.src = signedUrl;
             element.dataset.imageUrl = signedUrl;
             element.style.visibility = "visible";
-            void attachGifHoverBehavior(element, signedUrl);
           };
           preloadImg.src = signedUrl;
         } else if (element instanceof HTMLVideoElement || element instanceof HTMLAudioElement) {
@@ -759,16 +728,9 @@ export const MessageContent = ({
           img.src = signedUrl;
           img.dataset.imageUrl = signedUrl;
           img.style.visibility = "visible";
-          void attachGifHoverBehavior(img, signedUrl);
         };
         preloadImg.src = signedUrl;
       });
-    });
-
-    imgs.forEach((img) => {
-      const originalUrl = img.dataset.imageUrl;
-      if (!originalUrl || isSupabaseAttachmentUrl(originalUrl)) return;
-      void attachGifHoverBehavior(img, originalUrl);
     });
 
     // Resolve legacy signed URLs for video/audio elements
@@ -785,7 +747,6 @@ export const MessageContent = ({
 
     return () => {
       cancelled = true;
-      cleanupCallbacks.forEach((cleanup) => cleanup());
     };
   }, [content]);
 
