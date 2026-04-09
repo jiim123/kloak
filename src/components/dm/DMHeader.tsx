@@ -82,13 +82,13 @@ export const DMHeader = ({ otherUser }: DMHeaderProps) => {
   if (!otherUser) return null;
 
   return (
-    <div className="w-full bg-[#111111] rounded-[10px] border border-white/5 sticky top-0 z-40" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
+    <div className="w-full bg-card rounded-[10px] border border-border/50 sticky top-0 z-40" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
       <div className="flex items-center justify-between px-4 py-3">
         {/* Left side - Back button (mobile) + User info */}
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <button
             onClick={() => setMobileSidebarOpen(true)}
-            className="md:hidden w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-white/5 hover:text-foreground transition-colors flex-shrink-0"
+            className="md:hidden w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-foreground/5 hover:text-foreground transition-colors flex-shrink-0"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
@@ -123,7 +123,7 @@ export const DMHeader = ({ otherUser }: DMHeaderProps) => {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="relative w-8 h-8 rounded-lg text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                    className="relative w-8 h-8 rounded-lg text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
                   >
                     <MoreHorizontal className="w-4 h-4" />
                   </Button>

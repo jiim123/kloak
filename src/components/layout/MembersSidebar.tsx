@@ -1062,7 +1062,7 @@ export const MembersSidebar = () => {
   const sidebarContent = (
     <div className={cn(
       "h-full flex flex-col w-full overflow-hidden relative",
-      "bg-[#111111] rounded-[10px] border border-white/5"
+      "bg-card rounded-[10px] border border-border/50"
     )}>
       {/* Header */}
       <div className={cn("px-3 py-2.5 border-b border-border/10", isMobile && "px-3 py-3")}>
@@ -1134,7 +1134,7 @@ export const MembersSidebar = () => {
             <button
               type="button"
               onClick={exitMassBanMode}
-              className="px-3 py-1.5 text-xs font-medium text-white/80 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
+              className="px-3 py-1.5 text-xs font-medium text-white/80 hover:text-white rounded-lg hover:bg-foreground/10 transition-colors"
             >
               Cancel
             </button>

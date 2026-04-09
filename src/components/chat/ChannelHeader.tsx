@@ -41,12 +41,12 @@ export const ChannelHeader = ({
               : Hash;
 
   return (
-    <div className="hidden w-full bg-[#111111] rounded-[10px] border border-white/5 md:block">
+    <div className="hidden w-full bg-card rounded-[10px] border border-border/50 md:block">
       <div className="flex items-center justify-between px-4 py-3">
       {/* Left side - Channel info */}
       <div className="flex items-center gap-2 min-w-0 flex-1">
-        <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
-          <ChannelIcon className="w-4 h-4 text-[#d7d7d7]" />
+        <div className="w-8 h-8 rounded-lg bg-foreground/5 flex items-center justify-center flex-shrink-0">
+          <ChannelIcon className="w-4 h-4 text-muted-foreground" />
         </div>
         <span className="font-normal text-foreground shrink-0">{channel.name}</span>
 
@@ -112,7 +112,7 @@ export const ChannelHeader = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="relative w-8 h-8 rounded-lg text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                  className="relative w-8 h-8 rounded-lg text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
                   onClick={() => openModal("pinned-messages", { channelId: channel.id })}
                 >
                   <Pin className="w-4 h-4" />
@@ -126,7 +126,7 @@ export const ChannelHeader = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="relative w-8 h-8 rounded-lg text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                  className="relative w-8 h-8 rounded-lg text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
                   onClick={() => openModal("search", { channelId: channel.id })}
                 >
                   <Search className="w-4 h-4" />
@@ -145,7 +145,7 @@ export const ChannelHeader = ({
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative w-8 h-8 rounded-lg text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                className="relative w-8 h-8 rounded-lg text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
                 onClick={() => setMemberSidebarOpen(!isMemberSidebarOpen)}
                 aria-label={isMemberSidebarOpen ? "Hide member sidebar" : "Show member sidebar"}
               >

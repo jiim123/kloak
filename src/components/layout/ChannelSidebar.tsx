@@ -322,8 +322,8 @@ const SortableChannel = ({
         onClick={isSortingMode ? undefined : onSelect}
         className={cn(
           "group relative flex-1 min-w-0 flex items-center gap-2 px-2.5 py-2 md:py-1.5 text-[13px] font-medium transition-all duration-150 select-none rounded-[3px]",
-          "hover:bg-white/[0.04]",
-          isActive && !isSortingMode && "bg-white/[0.06] text-foreground",
+          "hover:bg-foreground/[0.04]",
+          isActive && !isSortingMode && "bg-foreground/[0.06] text-foreground",
           !isActive && "text-muted-foreground hover:text-foreground",
           isUnread && !isActive && "text-foreground font-[500]",
           isDragging && "opacity-50 shadow-lg ring-2 ring-primary/30 bg-secondary",
@@ -333,7 +333,7 @@ const SortableChannel = ({
         {/* Active indicator */}
         <div
           className={cn(
-            "absolute left-1 top-1.5 bottom-1.5 w-0.5 bg-white rounded-full transition-opacity duration-150",
+            "absolute left-1 top-1.5 bottom-1.5 w-0.5 bg-foreground rounded-full transition-opacity duration-150",
             isActive && !isSortingMode ? "opacity-100" : "opacity-0",
           )}
         />
@@ -1235,7 +1235,7 @@ export const ChannelSidebar = () => {
                   <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#111111] via-[#111111]/82 to-transparent" />
 
                   <div className="absolute inset-x-0 bottom-0 flex items-center gap-3 px-4 pb-3">
-                    <h2 className="min-w-0 flex-1 truncate text-[20px] font-normal leading-tight tracking-[-0.02em] text-white drop-shadow-[0_1px_8px_rgba(0,0,0,0.45)]">
+                    <h2 className="min-w-0 flex-1 truncate text-[20px] font-normal leading-tight tracking-[-0.02em] text-foreground drop-shadow-[0_1px_8px_rgba(0,0,0,0.45)]">
                       {currentServer.name}
                     </h2>
                     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-black/30 text-white/80 backdrop-blur-sm transition-colors group-hover:bg-black/40">
@@ -1333,7 +1333,7 @@ export const ChannelSidebar = () => {
 
         {/* Sorting Mode Header */}
         {isSortingMode && (
-          <div className="flex items-center justify-between px-2.5 py-1.5 bg-transparent border-b border-white/6">
+          <div className="flex items-center justify-between px-2.5 py-1.5 bg-transparent border-b border-border/50">
             <div className="flex items-center gap-2">
               <GripVertical className="w-4 h-4 text-primary" />
               <span className="text-sm font-medium text-primary">Sorting Mode</span>
@@ -1357,7 +1357,7 @@ export const ChannelSidebar = () => {
               <div
                 className={cn(
                   "flex-1 overflow-y-auto scrollbar-overlay px-2 py-2 scrollbar-hide",
-                  isSortingMode && "bg-white/[0.03] border-2 border-dashed border-white/10 rounded-xl mx-1 my-1",
+                  isSortingMode && "bg-foreground/[0.03] border-2 border-dashed border-border/50 rounded-xl mx-1 my-1",
                 )}
                 style={{ touchAction: "pan-y" }}
                 onContextMenu={(e) => {
@@ -1373,14 +1373,14 @@ export const ChannelSidebar = () => {
                     onClick={handleSelectOverview}
                     className={cn(
                       "group relative w-full flex items-center gap-2 px-2.5 py-1.5 text-sm transition-all duration-150 select-none",
-                      "hover:bg-white/[0.04]",
-                      isOverviewActive && "bg-white/[0.06] text-foreground",
+                      "hover:bg-foreground/[0.04]",
+                      isOverviewActive && "bg-foreground/[0.06] text-foreground",
                       !isOverviewActive && "text-muted-foreground hover:text-foreground",
                     )}
                   >
                     <div
                       className={cn(
-                        "absolute left-1 top-1.5 bottom-1.5 w-0.5 bg-white rounded-full transition-opacity duration-150",
+                        "absolute left-1 top-1.5 bottom-1.5 w-0.5 bg-foreground rounded-full transition-opacity duration-150",
                         isOverviewActive ? "opacity-100" : "opacity-0",
                       )}
                     />
@@ -1561,7 +1561,7 @@ export const ChannelSidebar = () => {
               <div
                 className={cn(
                 "flex-1 overflow-y-auto scrollbar-overlay px-2 py-2 scrollbar-hide",
-                  isSortingMode && "bg-white/[0.03] border-2 border-dashed border-white/10 rounded-xl mx-1 my-1",
+                  isSortingMode && "bg-foreground/[0.03] border-2 border-dashed border-border/50 rounded-xl mx-1 my-1",
                 )}
                 style={{ touchAction: "pan-y" }}
               >
@@ -1571,14 +1571,14 @@ export const ChannelSidebar = () => {
                     onClick={handleSelectOverview}
                     className={cn(
                       "group relative w-full flex items-center gap-2 px-2.5 py-1.5 text-sm transition-all duration-150 select-none",
-                      "hover:bg-white/[0.04]",
-                      isOverviewActive && "bg-white/[0.06] text-foreground",
+                      "hover:bg-foreground/[0.04]",
+                      isOverviewActive && "bg-foreground/[0.06] text-foreground",
                       !isOverviewActive && "text-muted-foreground hover:text-foreground",
                     )}
                   >
                     <div
                       className={cn(
-                        "absolute left-1 top-1.5 bottom-1.5 w-0.5 bg-white rounded-full transition-opacity duration-150",
+                        "absolute left-1 top-1.5 bottom-1.5 w-0.5 bg-foreground rounded-full transition-opacity duration-150",
                         isOverviewActive ? "opacity-100" : "opacity-0",
                       )}
                     />
