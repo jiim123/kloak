@@ -13,6 +13,7 @@ import {
   SmilePlus,
   UserRoundCog,
   KeySquare,
+  ArrowRight,
   type LucideIcon,
 } from "lucide-react";
 import { Footer } from "@/components/ui/footer-section";
@@ -99,13 +100,13 @@ function TerminalCard({
   icon: Icon,
   title,
   description,
-  buttonLabel = "Learn more",
+  href = "#",
   className = "",
 }: {
   icon: LucideIcon;
   title: string;
   description: string;
-  buttonLabel?: string;
+  href?: string;
   className?: string;
 }) {
   return (
@@ -127,11 +128,19 @@ function TerminalCard({
           {description}
         </p>
       </div>
-      {/* Button row */}
-      <div className="p-4">
-        <Button variant="secondary" size="sm" className="w-full text-[12px]">
-          {buttonLabel}
-        </Button>
+      {/* Action row: text + arrow link */}
+      <div className="flex">
+        <div className="w-3/4 flex items-center p-4 border-r border-muted-foreground/20">
+          <span className="text-[12px] text-muted-foreground truncate">
+            Learn more about {title}
+          </span>
+        </div>
+        <a
+          href={href}
+          className="terminal-card-arrow w-1/4 flex items-center justify-center p-4 transition-colors duration-300"
+        >
+          <ArrowRight className="w-4 h-4 text-foreground transition-all duration-300" strokeWidth={1.5} />
+        </a>
       </div>
     </div>
   );

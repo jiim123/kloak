@@ -899,6 +899,13 @@
 .terminal-card:hover .terminal-card-icon svg {
   color: hsl(var(--background)) !important;
 }
+.terminal-card-arrow:hover {
+  background-color: hsl(var(--foreground));
+}
+.terminal-card-arrow:hover svg {
+  color: hsl(var(--background)) !important;
+  transform: translateX(3px);
+}
 
 @keyframes marquee-scroll {
   0% { transform: translateX(0); }
