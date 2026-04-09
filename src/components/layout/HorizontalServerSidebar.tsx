@@ -188,7 +188,7 @@ const ServerIconVisual = ({
           </AvatarFallback>
         </Avatar>
       ) : (
-        <span className="text-xs font-bold text-white">{getServerInitials(server.name)}</span>
+        <span className="text-xs font-bold text-foreground">{getServerInitials(server.name)}</span>
       )}
     </div>
   );
@@ -287,7 +287,7 @@ const HorizontalFolderItem = ({
                     style={{ backgroundColor: folder.color }}
                   >
                     <Folder className="w-5 h-5" />
-                    <ChevronDown className="absolute bottom-0.5 right-0.5 w-3 h-3 text-white/70" />
+                    <ChevronDown className="absolute bottom-0.5 right-0.5 w-3 h-3 text-foreground/70" />
                   </motion.div>
 
                   {/* Mention badge */}
@@ -351,7 +351,7 @@ const HorizontalFolderItem = ({
                             </AvatarFallback>
                           </Avatar>
                         ) : (
-                          <span className="text-xs font-bold text-white">{getServerInitials(server.name)}</span>
+                          <span className="text-xs font-bold text-foreground">{getServerInitials(server.name)}</span>
                         )}
                       </div>
                       <span className={cn("text-sm truncate max-w-[150px]", hasUnread && "font-semibold")}>
@@ -557,7 +557,7 @@ const HorizontalSortableServerItem = forwardRef<
                       </Avatar>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <span className="text-xs font-bold text-white">{getServerInitials(server.name)}</span>
+                        <span className="text-xs font-bold text-foreground">{getServerInitials(server.name)}</span>
                       </div>
                     )}
                   </motion.div>
