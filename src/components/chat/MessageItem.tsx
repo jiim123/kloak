@@ -181,6 +181,18 @@ const AttachmentItem = memo(function AttachmentItem({
   const isGif = attachment.file_type === "image/gif";
 
   // Compute constrained dimensions to reserve space and prevent layout shift
+  const reservedStyle = useMemo(() => {
+    if (!isImage || !attachment.width || !attachment.height) {
+      return isImage ? { width: 300, height: 200 } : undefined;
+    }
+    const maxW = 400;
+    const maxH = 300;
+    let w = attachment.width;
+    let h = attachment.height;
+    if (w > maxW) { h = Math.round(h * (maxW / w)); w = maxW; }
+    if (h > maxH) { w = Math.round(w * (maxH / h)); h = maxH; }
+    return { width: w, height: h };
+  }, [isImage, attachment.width, attachment.height]);
 
   // Show a compact loader while the signed URL resolves (don't return null — 
   // the attachment URL is already stripped from displayContent)
