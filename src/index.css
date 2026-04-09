@@ -39,6 +39,7 @@
   to { transform: translateX(calc(-100% - var(--gap))); }
 }
 
+@layer base {
   :root,
   .default {
     /* Brand palette - Silver-grey #ECECEC */
