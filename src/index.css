@@ -34,12 +34,12 @@
 @tailwind components;
 @tailwind utilities;
 
-@keyframes marquee {
-  from { transform: translateX(0); }
-  to { transform: translateX(calc(-100% - 1rem)); }
-}
-
 @layer base {
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(calc(-100% - 1rem)); }
+  }
+
   :root,
   .default {
     /* Brand palette - Silver-grey #ECECEC */
