@@ -1137,9 +1137,9 @@ const MobileOptimizedInput = memo(
 
     return (
       <div
-        className={`rounded-[14px] bg-[rgb(24_24_24_/_55%)] border transition-all duration-200 shadow-[0_8px_30px_rgba(0,0,0,0.22)] ${
+        className={`rounded-[14px] bg-card/55 border transition-all duration-200 shadow-[0_8px_30px_rgba(0,0,0,0.12)] ${
           isFocused
-            ? "border-white/14 shadow-[0_10px_34px_rgba(0,0,0,0.28)] bg-[rgb(24_24_24_/_55%)]"
+            ? "border-border shadow-[0_10px_34px_rgba(0,0,0,0.18)] bg-card/55"
             : "border-border/50 hover:border-border/50"
         } ${replyingTo || (showMentions && hasMentionOptions) || (showChannels && hasChannelOptions) ? "!rounded-t-none" : ""}`}
       >
