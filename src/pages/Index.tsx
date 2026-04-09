@@ -163,8 +163,8 @@ const Index = () => {
           </section>
 
           {/* Core Features Section */}
-          <section className="relative py-32 md:py-48 px-8 lg:px-16">
-            <div className="max-w-[1240px] mx-auto space-y-12 md:space-y-16">
+          <section className="relative py-32 md:py-48 overflow-hidden">
+            <div className="max-w-[1240px] mx-auto space-y-12 md:space-y-16 px-8 lg:px-16">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -177,19 +177,17 @@ const Index = () => {
                   <span>Nothing you don't.</span>
                 </h2>
               </motion.div>
+            </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                {coreFeatures.map((feature, index) => (
-                  <motion.div
+            <div className="mt-12 md:mt-16">
+              <Marquee pauseOnHover duration="50s">
+                {coreFeatures.map((feature) => (
+                  <div
                     key={feature.title}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: index * 0.08 }}
-                    className="group relative rounded-2xl border border-border/40 bg-card/30 p-8 md:p-10 flex flex-col justify-between min-h-[280px] md:min-h-[320px] hover:border-border/80 hover:bg-card/50 transition-all duration-300"
+                    className="group relative rounded-2xl border border-border/40 bg-card/30 p-8 md:p-10 flex flex-col justify-between min-h-[280px] md:min-h-[320px] w-[340px] md:w-[400px] shrink-0 hover:border-border/80 hover:bg-card/50 transition-all duration-300"
                   >
                     <div className="w-10 h-10 flex items-center justify-center">
-                      <feature.icon className="w-7 h-7 text-foreground" strokeWidth={1.5} />
+                      <feature.icon className={`w-7 h-7 text-foreground transition-colors duration-300 ${feature.hoverColor}`} strokeWidth={1.5} />
                     </div>
                     <div className="mt-auto">
                       <h3 className="text-2xl sm:text-3xl font-light text-foreground tracking-tight mb-2">
@@ -197,9 +195,9 @@ const Index = () => {
                       </h3>
                       <p className="text-[15px] text-muted-foreground leading-relaxed">{feature.description}</p>
                     </div>
-                  </motion.div>
+                  </div>
                 ))}
-              </div>
+              </Marquee>
             </div>
           </section>
 
