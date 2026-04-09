@@ -165,252 +165,131 @@
   }
 
   /* ========================================
-     NOSTALGIA THEME
-     Warm, muted, vintage feel
+     LIGHT THEME
+     Default theme reversed — clean light mode
      ======================================== */
-  .nostalgia {
-    /* #452829 -> hsl(359, 28%, 21%) */
-    --background: 359 28% 21%;
-    --foreground: 26 38% 93%;
+  .light {
+    /* Brand palette - same silver-grey accent */
+    --brand-50: 0 0% 96%;
+    --brand-100: 0 0% 93%;
+    --brand-200: 0 0% 88%;
+    --brand-300: 0 0% 78%;
+    --brand-400: 0 0% 58%;
+    --brand-500: 0 0% 42%;
+    --brand-600: 0 0% 15%;
+    --brand-700: 0 0% 10%;
+    --brand-800: 0 0% 6%;
+    --brand-900: 0 0% 0%;
 
-    /* #3a2223 -> hsl(358, 27%, 18%) */
-    --card: 358 27% 18%;
-    --card-foreground: 26 38% 93%;
+    --brand-foreground: 0 0% 100%;
+    --brand-foreground-muted: 0 0% 80%;
 
-    --popover: 358 27% 18%;
-    --popover-foreground: 26 38% 93%;
+    /* Neutral palette - reversed */
+    --neutral-0: 0 0% 97%;
+    --neutral-50: 0 0% 94%;
+    --neutral-100: 0 0% 90%;
+    --neutral-200: 0 0% 85%;
+    --neutral-300: 0 0% 78%;
+    --neutral-400: 0 0% 58%;
+    --neutral-500: 0 0% 42%;
+    --neutral-600: 0 0% 30%;
+    --neutral-700: 0 0% 20%;
+    --neutral-800: 0 0% 12%;
+    --neutral-900: 0 0% 7%;
+    --neutral-950: 0 0% 4%;
 
-    /* #E8D1C5 -> hsl(18, 38%, 84%) - dusty rose accent */
-    --primary: 18 38% 84%;
-    --primary-foreground: 359 28% 15%;
+    /* Semantic colors */
+    --error-500: 0 84% 50%;
+    --error-600: 0 72% 42%;
+    --error-700: 0 73% 35%;
+    --error-foreground: 0 0% 100%;
 
-    /* #57595B -> hsl(210, 2%, 35%) - slate gray surface */
-    --secondary: 210 2% 35%;
-    --secondary-foreground: 26 38% 93%;
+    --warning-500: 38 92% 50%;
+    --warning-600: 38 92% 44%;
+    --warning-700: 38 90% 38%;
+    --warning-foreground: 0 0% 0%;
 
-    /* #2e1a1b -> hsl(356, 28%, 14%) */
-    --muted: 356 28% 14%;
-    --muted-foreground: 18 38% 65%;
+    --success-500: 160 84% 31%;
+    --success-600: 162 93% 24%;
+    --success-700: 163 88% 20%;
+    --success-foreground: 0 0% 100%;
 
-    --accent: 18 38% 84%;
-    --accent-foreground: 359 28% 15%;
+    --light-background: 40 18% 83%;
+    --light-foreground: 40 4% 13%;
 
-    --destructive: 0 65% 50%;
-    --destructive-foreground: 26 38% 93%;
+    /* Core tokens */
+    --background: var(--neutral-0);
+    --foreground: var(--neutral-800);
+    --card: var(--neutral-50);
+    --card-foreground: var(--neutral-800);
+    --popover: 0 0% 100%;
+    --popover-foreground: var(--neutral-800);
 
-    --border: 210 2% 35%;
-    --input: 358 27% 18%;
-    --ring: 18 38% 84%;
-
-    --sidebar: 356 28% 14%;
-    --sidebar-secondary: 358 27% 18%;
-    --chat: 359 28% 21%;
-    --members: 358 27% 18%;
-
-    --sidebar-background: 356 28% 14%;
-    --sidebar-foreground: 18 38% 65%;
-    --sidebar-primary: 18 38% 84%;
-    --sidebar-primary-foreground: 359 28% 15%;
-    --sidebar-accent: 358 27% 22%;
-    --sidebar-accent-foreground: 26 38% 93%;
-    --sidebar-border: 210 2% 30%;
-    --sidebar-ring: 18 38% 84%;
-
-    --kloak-success: 142 76% 52%;
-    --kloak-warning: 38 95% 60%;
-    --kloak-online: 160 92% 39%;
-    --kloak-idle: 24 97% 57%;
-    --kloak-dnd: 352 50% 47%;
-    --kloak-offline: 210 2% 40%;
-
-    --code-block-bg: 356 28% 12%;
-  }
-
-  /* ========================================
-     LO-FI THEME
-     Bold, retro, high contrast anime aesthetic
-     ======================================== */
-  .lofi {
-    /* #293462 -> hsl(230, 42%, 27%) */
-    --background: 230 42% 27%;
-    --foreground: 47 100% 88%;
-
-    /* #1e2747 -> hsl(226, 41%, 20%) */
-    --card: 226 41% 20%;
-    --card-foreground: 47 100% 88%;
-
-    --popover: 226 41% 20%;
-    --popover-foreground: 47 100% 88%;
-
-    /* #FE5F55 -> hsl(3, 99%, 66%) - coral red */
-    --primary: 3 99% 66%;
-    --primary-foreground: 230 42% 15%;
-
-    /* #354178 -> hsl(230, 39%, 34%) */
-    --secondary: 230 39% 34%;
-    --secondary-foreground: 47 100% 88%;
-
-    /* #161c35 -> hsl(228, 41%, 15%) */
-    --muted: 228 41% 15%;
-    --muted-foreground: 47 100% 70%;
-
-    --accent: 3 99% 66%;
-    --accent-foreground: 230 42% 15%;
-
-    /* #A64942 -> hsl(4, 43%, 46%) - muted burgundy red */
-    --destructive: 4 43% 46%;
-    --destructive-foreground: 47 100% 95%;
-
-    --border: 230 39% 34%;
-    --input: 226 41% 20%;
-    --ring: 3 99% 66%;
-
-    --sidebar: 228 41% 15%;
-    --sidebar-secondary: 226 41% 20%;
-    --chat: 230 42% 27%;
-    --members: 226 41% 20%;
-
-    --sidebar-background: 228 41% 15%;
-    --sidebar-foreground: 47 100% 70%;
-    --sidebar-primary: 3 99% 66%;
-    --sidebar-primary-foreground: 230 42% 15%;
-    --sidebar-accent: 230 39% 28%;
-    --sidebar-accent-foreground: 47 100% 88%;
-    --sidebar-border: 230 39% 30%;
-    --sidebar-ring: 3 99% 66%;
-
-    --kloak-success: 142 76% 52%;
-    --kloak-warning: 38 95% 60%;
-    --kloak-online: 160 92% 39%;
-    --kloak-idle: 24 97% 57%;
-    --kloak-dnd: 352 50% 47%;
-    --kloak-offline: 230 30% 45%;
-
-    --code-block-bg: 228 41% 12%;
-  }
-
-  /* ========================================
-     CAPPUCCINO THEME
-     Warm, cozy coffee house aesthetic
-     ======================================== */
-  .cappuccino {
-    /* #493628 -> hsl(24, 31%, 22%) */
-    --background: 24 31% 22%;
-    --foreground: 300 4% 88%;
-
-    /* #3a2b20 -> hsl(25, 30%, 18%) */
-    --card: 25 30% 18%;
-    --card-foreground: 300 4% 88%;
-
-    --popover: 25 30% 18%;
-    --popover-foreground: 300 4% 88%;
-
-    /* #AB886D -> hsl(27, 26%, 55%) - caramel */
-    --primary: 27 26% 55%;
-    --primary-foreground: 24 31% 12%;
-
-    /* #5a4535 -> hsl(26, 27%, 28%) */
-    --secondary: 26 27% 28%;
-    --secondary-foreground: 300 4% 88%;
-
-    /* #2c2018 -> hsl(24, 31%, 13%) */
-    --muted: 24 31% 13%;
-    --muted-foreground: 24 24% 60%;
-
-    --accent: 27 26% 55%;
-    --accent-foreground: 24 31% 12%;
-
-    --destructive: 0 65% 50%;
-    --destructive-foreground: 300 4% 95%;
-
-    --border: 27 26% 35%;
-    --input: 25 30% 18%;
-    --ring: 27 26% 55%;
-
-    --sidebar: 24 31% 13%;
-    --sidebar-secondary: 25 30% 18%;
-    --chat: 24 31% 22%;
-    --members: 25 30% 18%;
-
-    --sidebar-background: 24 31% 13%;
-    --sidebar-foreground: 24 24% 60%;
-    --sidebar-primary: 27 26% 55%;
-    --sidebar-primary-foreground: 24 31% 12%;
-    --sidebar-accent: 26 27% 24%;
-    --sidebar-accent-foreground: 300 4% 88%;
-    --sidebar-border: 27 26% 30%;
-    --sidebar-ring: 27 26% 55%;
-
-    --kloak-success: 142 76% 52%;
-    --kloak-warning: 38 95% 60%;
-    --kloak-online: 160 92% 39%;
-    --kloak-idle: 24 97% 57%;
-    --kloak-dnd: 352 50% 47%;
-    --kloak-offline: 24 15% 45%;
-
-    --code-block-bg: 24 31% 10%;
-  }
-
-  /* ========================================
-     HOKORI THEME
-     Stark, Japanese-inspired, dramatic minimalism
-     ======================================== */
-  .hokori {
-    /* Pure black */
-    --background: 0 0% 0%;
-    --foreground: 49 59% 91%;
-
-    /* Near black */
-    --card: 0 0% 4%;
-    --card-foreground: 49 59% 91%;
-
-    --popover: 0 0% 4%;
-    --popover-foreground: 49 59% 91%;
-
-    /* #E43636 -> hsl(0, 76%, 55%) - vibrant red */
-    --primary: 0 76% 55%;
+    --primary: var(--brand-600);
+    --primary-hover: var(--brand-700);
+    --primary-active: var(--brand-800);
     --primary-foreground: 0 0% 100%;
 
-    /* Charcoal */
-    --secondary: 0 0% 8%;
-    --secondary-foreground: 49 59% 91%;
+    --secondary: var(--neutral-200);
+    --secondary-hover: var(--neutral-300);
+    --secondary-active: var(--neutral-400);
+    --secondary-foreground: var(--neutral-900);
 
-    /* Deep black */
-    --muted: 0 0% 3%;
-    --muted-foreground: 49 40% 60%;
+    --tertiary: transparent;
+    --tertiary-hover: var(--neutral-200);
+    --tertiary-active: var(--neutral-300);
+    --tertiary-foreground: var(--neutral-800);
 
-    --accent: 0 76% 55%;
-    --accent-foreground: 0 0% 100%;
+    --muted: var(--neutral-200);
+    --muted-foreground: var(--neutral-500);
 
-    --destructive: 0 76% 55%;
-    --destructive-foreground: 0 0% 100%;
+    --accent: var(--brand-600);
+    --accent-foreground: var(--neutral-950);
 
-    --border: 49 40% 15%;
-    --input: 0 0% 4%;
-    --ring: 0 76% 55%;
+    --destructive: var(--error-500);
+    --destructive-hover: var(--error-600);
+    --destructive-active: var(--error-700);
+    --destructive-foreground: var(--error-foreground);
 
-    --sidebar: 0 0% 2%;
-    --sidebar-secondary: 0 0% 4%;
-    --chat: 0 0% 0%;
-    --members: 0 0% 4%;
+    --warning: var(--warning-500);
+    --warning-hover: var(--warning-600);
+    --warning-active: var(--warning-700);
+    --warning-foreground: var(--warning-foreground);
 
-    --sidebar-background: 0 0% 2%;
-    --sidebar-foreground: 49 40% 55%;
-    --sidebar-primary: 0 76% 55%;
+    --success: var(--success-500);
+    --success-hover: var(--success-600);
+    --success-active: var(--success-700);
+    --success-foreground: var(--success-foreground);
+
+    --border: var(--neutral-200);
+    --input: var(--neutral-200);
+    --ring: var(--brand-600);
+    --radius: 0.375rem;
+
+    /* Layout tokens */
+    --sidebar: 0 0% 100%;
+    --sidebar-secondary: var(--neutral-50);
+    --chat: var(--neutral-0);
+    --members: var(--neutral-50);
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: var(--neutral-600);
+    --sidebar-primary: var(--brand-600);
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 10%;
-    --sidebar-accent-foreground: 49 59% 91%;
-    --sidebar-border: 49 40% 12%;
-    --sidebar-ring: 0 76% 55%;
+    --sidebar-accent: var(--neutral-100);
+    --sidebar-accent-foreground: var(--neutral-800);
+    --sidebar-border: var(--neutral-200);
+    --sidebar-ring: var(--brand-600);
 
-    --kloak-success: 142 76% 52%;
-    --kloak-warning: 38 95% 60%;
+    /* Status colors */
+    --kloak-success: var(--success-500);
+    --kloak-warning: var(--warning-500);
     --kloak-online: 160 92% 39%;
     --kloak-idle: 24 97% 57%;
     --kloak-dnd: 352 50% 47%;
-    --kloak-offline: 0 0% 35%;
+    --kloak-offline: var(--neutral-400);
 
-    --code-block-bg: 0 0% 5%;
+    /* Code block */
+    --code-block-bg: var(--neutral-100);
   }
 }
 

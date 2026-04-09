@@ -3,11 +3,8 @@ import { persist } from "zustand/middleware";
 
 // All available themes
 export const THEMES = [
-  { id: "default", name: "Default", description: "Orange/Amber brand dark theme" },
-  { id: "nostalgia", name: "Nostalgia", description: "Warm, muted, vintage feel" },
-  { id: "lofi", name: "Lo-fi", description: "Bold, retro, high contrast anime aesthetic" },
-  { id: "cappuccino", name: "Cappuccino", description: "Warm, cozy coffee house aesthetic" },
-  { id: "hokori", name: "Hokori", description: "Stark, Japanese-inspired, dramatic minimalism" },
+  { id: "default", name: "Dark", description: "Default dark theme" },
+  { id: "light", name: "Light", description: "Clean light theme" },
 ] as const;
 
 export type Theme = (typeof THEMES)[number]["id"];
@@ -205,7 +202,7 @@ export const useUIStore = create<UIState>()(
 
       toggleTheme: () => {
         const currentTheme = get().theme;
-        const newTheme = currentTheme === "default" ? "nostalgia" : "default";
+        const newTheme = currentTheme === "default" ? "light" : "default";
         applyTheme(newTheme);
         set({ theme: newTheme });
       },
@@ -409,6 +406,11 @@ export const useUIStore = create<UIState>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
+          // Reset removed themes to default
+          const validThemes = THEMES.map((t) => t.id) as readonly string[];
+          if (!validThemes.includes(state.theme)) {
+            state.theme = "default";
+          }
           applyTheme(state.theme);
         }
       },
