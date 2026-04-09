@@ -17,31 +17,47 @@ function DraggableMarquee({ children }: { children: React.ReactNode }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const startX = useRef(0);
-  const scrollLeft = useRef(0);
+  const dragOffset = useRef(0);
+  const currentOffset = useRef(0);
 
   const getPageX = (e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent) =>
     "touches" in e ? e.touches[0]?.pageX ?? 0 : (e as MouseEvent).pageX;
 
   const onStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     isDragging.current = true;
-    const container = containerRef.current!;
-    startX.current = getPageX(e) - container.offsetLeft;
-    scrollLeft.current = container.scrollLeft;
-    trackRef.current?.classList.add("is-dragging");
+    startX.current = getPageX(e);
+    // Capture current computed translateX from the animation
+    const track = trackRef.current;
+    if (track) {
+      const style = window.getComputedStyle(track);
+      const matrix = new DOMMatrix(style.transform);
+      currentOffset.current = matrix.m41;
+      track.classList.add("is-dragging");
+      track.style.transform = `translateX(${currentOffset.current}px)`;
+    }
   }, []);
 
   const onMove = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (!isDragging.current) return;
     e.preventDefault();
-    const container = containerRef.current!;
-    const x = getPageX(e) - container.offsetLeft;
-    const walk = (x - startX.current) * 1.5;
-    container.scrollLeft = scrollLeft.current - walk;
+    const walk = getPageX(e) - startX.current;
+    dragOffset.current = walk;
+    const track = trackRef.current;
+    if (track) {
+      track.style.transform = `translateX(${currentOffset.current + walk}px)`;
+    }
   }, []);
 
   const onEnd = useCallback(() => {
+    if (!isDragging.current) return;
     isDragging.current = false;
-    trackRef.current?.classList.remove("is-dragging");
+    const track = trackRef.current;
+    if (track) {
+      // Remove inline transform and resume CSS animation
+      track.style.transform = "";
+      track.classList.remove("is-dragging");
+    }
+    dragOffset.current = 0;
   }, []);
 
   useEffect(() => {
