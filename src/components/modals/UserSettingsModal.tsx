@@ -1237,45 +1237,23 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const appearanceContent = (
     <div className="space-y-6">
       {/* Theme Selector */}
-      <div className="space-y-4">
+      <div className="space-y-2">
         <Label className="text-sm font-medium">Theme</Label>
-        <div className="grid grid-cols-2 gap-3">
-          {THEMES.map((t) => {
-            const preview = THEME_PREVIEWS[t.id];
-            const isActive = theme === t.id;
-
-            return (
-              <button
-                key={t.id}
-                onClick={() => setTheme(t.id)}
-                className={cn(
-                  "group relative flex flex-col overflow-hidden rounded-xl border-2 transition-all",
-                  isActive ? "border-primary ring-2 ring-primary/20" : "border-border hover:border-primary/50",
-                )}
-              >
-                {/* Theme preview */}
-                <div className="h-16 w-full flex" style={{ backgroundColor: preview.bg }}>
-                  <div className="w-1/4 h-full" style={{ backgroundColor: preview.sidebar }} />
-                  <div className="flex-1 p-2.5 flex items-end">
-                    <div className="h-3 w-3/4 rounded" style={{ backgroundColor: preview.accent }} />
-                  </div>
-                </div>
-
-                {/* Theme info */}
-                <div className="px-3 py-2.5 bg-card flex items-center justify-between">
-                  <div className="text-left">
-                    <p className="text-sm font-medium">{t.name}</p>
-                  </div>
-                  {isActive && (
-                    <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                      <Check className="w-3 h-3 text-primary-foreground" />
-                    </div>
-                  )}
-                </div>
-              </button>
-            );
-          })}
-        </div>
+        <Select value={theme} onValueChange={(val) => setTheme(val as Theme)}>
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {THEMES.map((t) => (
+              <SelectItem key={t.id} value={t.id}>
+                {t.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          {THEMES.find((t) => t.id === theme)?.description}
+        </p>
       </div>
 
       {/* Message Display Section */}
