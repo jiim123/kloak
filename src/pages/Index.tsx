@@ -100,17 +100,19 @@ function TerminalCard({
   title,
   description,
   buttonLabel = "Learn more",
+  className = "",
 }: {
   icon: LucideIcon;
   title: string;
   description: string;
   buttonLabel?: string;
+  className?: string;
 }) {
   return (
-    <div className="terminal-card flex flex-col w-[340px] md:w-[400px] shrink-0 bg-card/30">
+    <div className={`terminal-card flex flex-col bg-card/30 ${className}`}>
       {/* Top row: icon + title */}
-      <div className="flex border-b border-border/40">
-        <div className="w-1/4 flex items-center justify-center border-r border-border/40 p-4">
+      <div className="flex border-b border-border/30">
+        <div className="w-1/4 flex items-center justify-center border-r border-border/30 p-4">
           <Icon className="w-5 h-5 text-foreground" strokeWidth={1.5} />
         </div>
         <div className="w-3/4 flex items-center p-4">
@@ -120,7 +122,7 @@ function TerminalCard({
         </div>
       </div>
       {/* Content row */}
-      <div className="border-b border-border/40 p-4 flex-1">
+      <div className="border-b border-border/30 p-4 flex-1">
         <p className="text-[12px] text-muted-foreground leading-relaxed" style={{ textAlignLast: "justify" }}>
           {description}
         </p>
@@ -132,6 +134,8 @@ function TerminalCard({
         </Button>
       </div>
     </div>
+  );
+}
   );
 }
 
