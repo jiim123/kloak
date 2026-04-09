@@ -305,36 +305,36 @@ const Index = () => {
       icon: MessageCircle,
       title: "Chat",
       description:
-        "Real-time text channels for everyday conversation. Supports replies, mentions, attachments, polls, and pinned messages.",
+        "Text channels for everyday conversation. Reply to messages, mention friends, share files, run polls, and pin what matters most.",
     },
     {
       icon: Headphones,
       title: "Voice & Video",
-      description: "Talk in real-time with voice and video. Low-latency WebRTC connections, always ready when you are.",
+      description: "Jump into a voice or video call with your friends. No links, no scheduling. Just join a channel and start talking.",
     },
     {
       icon: MessagesSquare,
       title: "Forum",
       description:
-        "Organize long-running conversations into dedicated posts. Each post has its own reply thread, perfect for Q&A and feedback.",
+        "Give bigger topics their own space. Start a post, let people reply in threads, and keep everything easy to find later.",
     },
     {
       icon: Megaphone,
       title: "Announcements",
       description:
-        "Share one-way updates from admins and moderators with the whole server. Members can react and comment without cluttering the feed.",
+        "Post updates for your whole community in one place. Members can react and comment without burying the original message.",
     },
     {
       icon: ListChecks,
       title: "Tasks",
       description:
-        "Create tasks, assign them to members, and track progress. Keep your team aligned without leaving the platform.",
+        "Keep your group organized with simple task lists. Assign work, set priorities, and track what gets done, all in one place.",
     },
     {
       icon: Images,
       title: "Media",
       description:
-        "A dedicated space for sharing images, videos, and visual inspiration. Gallery view with comments and reactions.",
+        "A gallery for sharing photos, videos, and inspiration. Browse everything in one view with comments and reactions.",
     },
   ];
 
