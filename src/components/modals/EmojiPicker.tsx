@@ -6,7 +6,7 @@ import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { getServerInitials } from "@/lib/serverUtils";
+import { getServerInitials, getServerColor } from "@/lib/serverUtils";
 import { useServerStore } from "@/stores/serverStore";
 import { fetchServerEmojis, ServerEmoji } from "@/lib/serverEmojis";
 import { getGlobalEmojiDuplicates } from "@/lib/globalEmojiResolver";
@@ -638,7 +638,7 @@ export const EmojiPicker = ({
                           {server.icon_url ? (
                             <AvatarImage src={server.icon_url} alt={server.name} className="object-cover" />
                           ) : null}
-                          <AvatarFallback className="rounded-lg bg-muted text-xs font-medium">
+                          <AvatarFallback className={cn("rounded-lg text-xs font-medium text-white", getServerColor(server.name))}>
                             {getServerInitials(server.name)}
                           </AvatarFallback>
                         </Avatar>
