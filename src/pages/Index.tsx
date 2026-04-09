@@ -136,8 +136,6 @@ function TerminalCard({
     </div>
   );
 }
-  );
-}
 
 const Index = () => {
   const coreFeatures = [
