@@ -628,9 +628,9 @@ export const EmojiPicker = ({
                         className={cn(
                           "flex-shrink-0 w-9 h-9 rounded-lg transition-all duration-200",
                           selectedServerForEmoji === server.id
-                            ? "ring-2 ring-primary ring-offset-1 ring-offset-card"
-                            : "hover:opacity-80",
-                          isDisabled && "opacity-50 cursor-not-allowed pointer-events-auto",
+                            ? "opacity-100"
+                            : "opacity-50 grayscale hover:opacity-70 hover:grayscale-[50%]",
+                          isDisabled && "!opacity-30 cursor-not-allowed pointer-events-auto",
                         )}
                         title={isDisabled ? undefined : server.name}
                       >
