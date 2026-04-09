@@ -102,12 +102,14 @@ function TerminalCard({
   title,
   description,
   href = "#",
+  onArrowClick,
   className = "",
 }: {
   icon: LucideIcon;
   title: string;
   description: string;
   href?: string;
+  onArrowClick?: () => void;
   className?: string;
 }) {
   return (
@@ -130,12 +132,15 @@ function TerminalCard({
         <div className="w-3/4 flex items-center p-4 border-r border-muted-foreground/20">
           <span className="text-[12px] text-muted-foreground truncate">Learn more about {title}</span>
         </div>
-        <a
-          href={href}
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            onArrowClick?.();
+          }}
           className="terminal-card-arrow w-1/4 flex items-center justify-center p-4 transition-colors duration-300"
         >
           <ArrowRight className="w-4 h-4 text-foreground transition-all duration-300" strokeWidth={1.5} />
-        </a>
+        </button>
       </div>
     </div>
   );
