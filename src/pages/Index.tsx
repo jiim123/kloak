@@ -196,33 +196,40 @@ const Index = () => {
                 {coreFeatures.map((feature) => (
                   <div
                     key={feature.title}
-                    className="group/card relative rounded-2xl border border-border/40 bg-card/30 p-8 md:p-10 flex flex-col justify-between min-h-[280px] md:min-h-[320px] w-[340px] md:w-[400px] shrink-0 overflow-hidden transition-all duration-500 ease-out hover:scale-[1.03] hover:border-transparent hover:shadow-2xl"
+                    className="feature-card relative rounded-2xl border border-border/40 bg-card/30 p-8 md:p-10 flex flex-col justify-between min-h-[280px] md:min-h-[320px] w-[340px] md:w-[400px] shrink-0 overflow-hidden transition-all duration-500 ease-out hover:scale-[1.03] hover:border-transparent hover:shadow-2xl"
+                    style={{
+                      "--fc-color": `rgb(${feature.color})`,
+                      "--fc-bg": `rgba(${feature.color}, 1)`,
+                      "--fc-bg-mid": `rgba(${feature.color}, 0.9)`,
+                      "--fc-bg-end": `rgba(${feature.color}, 0.8)`,
+                      "--fc-text": `rgb(${feature.contrast})`,
+                      "--fc-text-sub": `rgba(${feature.contrastSub})`,
+                    } as React.CSSProperties}
                   >
                     <div
-                      className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 group-hover/card:opacity-100 transition-opacity duration-500 ease-out"
+                      className="feature-card-bg pointer-events-none absolute inset-0 rounded-2xl transition-opacity duration-500 ease-out"
                       style={{
-                        background: `radial-gradient(circle at 48px 48px, rgba(${feature.color}, 1) 0%, rgba(${feature.color}, 0.9) 40%, rgba(${feature.color}, 0.8) 100%)`,
+                        opacity: 0,
+                        background: `radial-gradient(circle at 48px 48px, var(--fc-bg) 0%, var(--fc-bg-mid) 40%, var(--fc-bg-end) 100%)`,
                       }}
                     />
                     <div className="relative z-10 w-10 h-10 flex items-center justify-center">
                       <feature.icon
-                        className="w-7 h-7 transition-colors duration-500"
-                        style={{ color: `rgb(${feature.color})`, ["--hover-color" as string]: `rgb(${feature.contrast})` }}
+                        className="feature-card-icon w-7 h-7 transition-colors duration-500"
+                        style={{ color: `var(--fc-color)` }}
                         strokeWidth={1.5}
                       />
                     </div>
                     <div className="relative z-10 mt-auto">
-                      <h3 className="text-2xl sm:text-3xl font-light text-foreground tracking-tight mb-2 transition-colors duration-500">
+                      <h3 className="feature-card-title text-2xl sm:text-3xl font-light text-foreground tracking-tight mb-2 transition-colors duration-500">
                         {feature.title}
                       </h3>
-                      <p className="text-[15px] text-muted-foreground leading-relaxed transition-colors duration-500">
+                      <p className="feature-card-desc text-[15px] text-muted-foreground leading-relaxed transition-colors duration-500">
                         {feature.description}
                       </p>
                     </div>
-                    <style>{`
-                      .group\\/card:hover .z-10 svg { color: rgb(${feature.contrast}) !important; }
-                    `}</style>
                   </div>
+                ))}
                 ))}
               </Marquee>
             </div>
