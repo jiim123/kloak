@@ -71,10 +71,6 @@ import type { User as UserType } from "@/types";
 import { useAppUpdater } from "@/hooks/useAppUpdater";
 import { sanitizeDisplayName, validateDisplayName } from "@/lib/displayNameValidation";
 
-  lofi: { bg: "#293462", sidebar: "#161c35", accent: "#FE5F55" },
-  cappuccino: { bg: "#493628", sidebar: "#2c2018", accent: "#AB886D" },
-  hokori: { bg: "#000000", sidebar: "#050505", accent: "#E43636" },
-};
 
 type UserSettingsVariant = "modal" | "page";
 
