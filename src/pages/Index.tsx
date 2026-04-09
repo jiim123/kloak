@@ -1,4 +1,4 @@
-import { lazy, Suspense, useRef, useState, useEffect } from "react";
+import { lazy, Suspense, useRef, useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Key, MessageCircle, Users, Lock, Headphones, MessagesSquare, Megaphone, ListChecks, Images, SmilePlus, UserRoundCog, KeySquare } from "lucide-react";
 import { Footer } from "@/components/ui/footer-section";
