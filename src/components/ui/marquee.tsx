@@ -19,7 +19,10 @@ export function Marquee({
 }: MarqueeProps) {
   return (
     <div
-      className={cn("relative flex overflow-hidden [--gap:1rem] gap-[var(--gap)]", className)}
+      className={cn(
+        "group/marquee relative flex overflow-hidden [--gap:1rem] gap-[var(--gap)]",
+        className,
+      )}
       {...props}
     >
       {fade && (
@@ -32,19 +35,11 @@ export function Marquee({
         <div
           key={i}
           className={cn(
-            "flex shrink-0 gap-[var(--gap)]",
-            pauseOnHover && "[&:hover]:[animation-play-state:paused]",
-            reverse && "[animation-direction:reverse]"
+            "flex shrink-0 gap-[var(--gap)] [animation:marquee_var(--dur)_linear_infinite]",
+            pauseOnHover && "group-hover/marquee:[animation-play-state:paused]",
+            reverse && "[animation-direction:reverse]",
           )}
-          style={{
-            animationName: "marquee",
-            animationDuration: duration,
-            animationTimingFunction: "linear",
-            animationIterationCount: "infinite",
-            animationDirection: reverse ? "reverse" : "normal",
-          }}
-          onMouseEnter={pauseOnHover ? (e) => { e.currentTarget.style.animationPlayState = "paused"; e.currentTarget.previousElementSibling && ((e.currentTarget.previousElementSibling as HTMLElement).style.animationPlayState = "paused"); e.currentTarget.nextElementSibling && ((e.currentTarget.nextElementSibling as HTMLElement).style.animationPlayState = "paused"); } : undefined}
-          onMouseLeave={pauseOnHover ? (e) => { e.currentTarget.style.animationPlayState = "running"; e.currentTarget.previousElementSibling && ((e.currentTarget.previousElementSibling as HTMLElement).style.animationPlayState = "running"); e.currentTarget.nextElementSibling && ((e.currentTarget.nextElementSibling as HTMLElement).style.animationPlayState = "running"); } : undefined}
+          style={{ "--dur": duration } as React.CSSProperties}
         >
           {children}
         </div>
