@@ -23,6 +23,7 @@ import HeroAscii from "@/components/landing/HeroAscii";
 import { SEO } from "@/components/seo";
 import { SEO_CONFIG } from "@/lib/seo";
 import { Button } from "@/components/ui/button";
+import { FeatureDetailModal, type FeatureDetail } from "@/components/landing/FeatureDetailModal";
 
 /** Draggable marquee wrapper - auto-scrolls, pauses on drag, resumes on release */
 function DraggableMarquee({ children }: { children: React.ReactNode }) {
