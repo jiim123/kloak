@@ -1,98 +1,61 @@
 import { cn } from "@/lib/utils";
 import React, { useRef, useCallback } from "react";
 
-interface MarqueeProps extends React.HTMLAttributes<HTMLDivElement> {
+interface MarqueeProps {
+  children: React.ReactNode;
   pauseOnHover?: boolean;
-  reverse?: boolean;
   duration?: string;
-  fade?: boolean;
-  /** CSS selector for child elements that trigger pause on hover. Defaults to direct children of the track. */
-  pauseSelector?: string;
+  className?: string;
 }
 
 export function Marquee({
   children,
   pauseOnHover = false,
-  reverse = false,
-  duration = "40s",
-  fade = true,
-  pauseSelector,
+  duration = "50s",
   className,
-  ...props
 }: MarqueeProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const hoverCountRef = useRef(0);
+  const track1 = useRef<HTMLDivElement>(null);
+  const track2 = useRef<HTMLDivElement>(null);
 
-  const setPlayState = useCallback((state: "paused" | "running") => {
-    const tracks = containerRef.current?.querySelectorAll(".marquee-track");
-    tracks?.forEach((el) => {
-      (el as HTMLElement).style.animationPlayState = state;
-    });
+  const pause = useCallback(() => {
+    if (track1.current) track1.current.style.animationPlayState = "paused";
+    if (track2.current) track2.current.style.animationPlayState = "paused";
   }, []);
 
-  const onCardEnter = useCallback(() => {
-    hoverCountRef.current++;
-    setPlayState("paused");
-  }, [setPlayState]);
+  const resume = useCallback(() => {
+    if (track1.current) track1.current.style.animationPlayState = "running";
+    if (track2.current) track2.current.style.animationPlayState = "running";
+  }, []);
 
-  const onCardLeave = useCallback(() => {
-    hoverCountRef.current--;
-    if (hoverCountRef.current <= 0) {
-      hoverCountRef.current = 0;
-      setPlayState("running");
-    }
-  }, [setPlayState]);
-
-  // Wrap children to attach hover handlers per-item
-  const wrappedChildren = pauseOnHover
-    ? React.Children.map(children, (child) => {
-        if (!React.isValidElement(child)) return child;
-        return React.cloneElement(child as React.ReactElement<any>, {
-          onMouseEnter: (e: React.MouseEvent) => {
-            onCardEnter();
-            (child as any).props.onMouseEnter?.(e);
-          },
-          onMouseLeave: (e: React.MouseEvent) => {
-            onCardLeave();
-            (child as any).props.onMouseLeave?.(e);
-          },
-        });
-      })
-    : children;
+  const trackStyle: React.CSSProperties = {
+    display: "flex",
+    flexShrink: 0,
+    gap: "1rem",
+    animation: `marquee-scroll ${duration} linear infinite`,
+  };
 
   return (
-    <div
-      ref={containerRef}
-      className={cn(
-        "relative flex overflow-hidden [--gap:1rem] gap-[var(--gap)]",
-        className,
-      )}
-      {...props}
-    >
-      {fade && (
-        <>
-          <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-24 md:w-40 bg-gradient-to-r from-background to-transparent" />
-          <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-24 md:w-40 bg-gradient-to-l from-background to-transparent" />
-        </>
-      )}
-      {Array.from({ length: 2 }).map((_, i) => (
-        <div
-          key={i}
-          className={cn(
-            "marquee-track flex shrink-0 gap-[var(--gap)]",
-            reverse && "[animation-direction:reverse]",
-          )}
-          style={{
-            animationName: "marquee",
-            animationDuration: duration,
-            animationTimingFunction: "linear",
-            animationIterationCount: "infinite",
-            animationDirection: reverse ? "reverse" : "normal",
-          }}
-        >
-          {wrappedChildren}
+    <div className={cn("relative", className)}>
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes marquee-scroll {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(calc(-100% - 1rem)); }
+        }
+      `}} />
+      {/* Fade edges */}
+      <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-24 md:w-40 bg-gradient-to-r from-background to-transparent" />
+      <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-24 md:w-40 bg-gradient-to-l from-background to-transparent" />
+      {/* Scroll container */}
+      <div
+        className="overflow-hidden"
+        onMouseEnter={pauseOnHover ? pause : undefined}
+        onMouseLeave={pauseOnHover ? resume : undefined}
+      >
+        <div style={{ display: "flex", gap: "1rem" }}>
+          <div ref={track1} style={trackStyle}>{children}</div>
+          <div ref={track2} style={trackStyle}>{children}</div>
         </div>
-      ))}
+      </div>
     </div>
   );
 }
