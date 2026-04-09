@@ -406,6 +406,11 @@ export const useUIStore = create<UIState>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
+          // Reset removed themes to default
+          const validThemes = THEMES.map((t) => t.id) as readonly string[];
+          if (!validThemes.includes(state.theme)) {
+            state.theme = "default";
+          }
           applyTheme(state.theme);
         }
       },
