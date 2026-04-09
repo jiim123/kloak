@@ -6,8 +6,6 @@ interface MarqueeProps extends React.HTMLAttributes<HTMLDivElement> {
   reverse?: boolean;
   duration?: string;
   fade?: boolean;
-  /** CSS selector for child elements that trigger pause on hover. Defaults to direct children of the track. */
-  pauseSelector?: string;
 }
 
 export function Marquee({
@@ -16,53 +14,30 @@ export function Marquee({
   reverse = false,
   duration = "40s",
   fade = true,
-  pauseSelector,
   className,
   ...props
 }: MarqueeProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const hoverCountRef = useRef(0);
+  const tracksRef = useRef<(HTMLDivElement | null)[]>([]);
 
-  const setPlayState = useCallback((state: "paused" | "running") => {
-    const tracks = containerRef.current?.querySelectorAll(".marquee-track");
-    tracks?.forEach((el) => {
-      (el as HTMLElement).style.animationPlayState = state;
+  const pause = useCallback(() => {
+    tracksRef.current.forEach((el) => {
+      if (el) el.style.animationPlayState = "paused";
     });
   }, []);
 
-  const onCardEnter = useCallback(() => {
-    hoverCountRef.current++;
-    setPlayState("paused");
-  }, [setPlayState]);
+  const resume = useCallback(() => {
+    tracksRef.current.forEach((el) => {
+      if (el) el.style.animationPlayState = "running";
+    });
+  }, []);
 
-  const onCardLeave = useCallback(() => {
-    hoverCountRef.current--;
-    if (hoverCountRef.current <= 0) {
-      hoverCountRef.current = 0;
-      setPlayState("running");
-    }
-  }, [setPlayState]);
-
-  // Wrap children to attach hover handlers per-item
-  const wrappedChildren = pauseOnHover
-    ? React.Children.map(children, (child) => {
-        if (!React.isValidElement(child)) return child;
-        return React.cloneElement(child as React.ReactElement<any>, {
-          onMouseEnter: (e: React.MouseEvent) => {
-            onCardEnter();
-            (child as any).props.onMouseEnter?.(e);
-          },
-          onMouseLeave: (e: React.MouseEvent) => {
-            onCardLeave();
-            (child as any).props.onMouseLeave?.(e);
-          },
-        });
-      })
-    : children;
+  // Wrap children so each item gets hover handlers for pause
+  const itemProps = pauseOnHover
+    ? { onMouseEnter: pause, onMouseLeave: resume }
+    : {};
 
   return (
     <div
-      ref={containerRef}
       className={cn(
         "relative flex overflow-hidden [--gap:1rem] gap-[var(--gap)]",
         className,
@@ -75,13 +50,11 @@ export function Marquee({
           <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-24 md:w-40 bg-gradient-to-l from-background to-transparent" />
         </>
       )}
-      {Array.from({ length: 2 }).map((_, i) => (
+      {[0, 1].map((i) => (
         <div
           key={i}
-          className={cn(
-            "marquee-track flex shrink-0 gap-[var(--gap)]",
-            reverse && "[animation-direction:reverse]",
-          )}
+          ref={(el) => { tracksRef.current[i] = el; }}
+          className="marquee-track flex shrink-0 gap-[var(--gap)]"
           style={{
             animationName: "marquee",
             animationDuration: duration,
@@ -90,7 +63,11 @@ export function Marquee({
             animationDirection: reverse ? "reverse" : "normal",
           }}
         >
-          {wrappedChildren}
+          {React.Children.map(children, (child, idx) => (
+            <div key={idx} {...itemProps}>
+              {child}
+            </div>
+          ))}
         </div>
       ))}
     </div>
