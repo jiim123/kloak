@@ -151,95 +151,95 @@ const Index = () => {
 
   const channelFeatureDetails: Record<string, Omit<FeatureDetail, "icon" | "title">> = {
     Chat: {
-      tagline: "Real-time conversation without the surveillance.",
+      tagline: "Conversation without the surveillance.",
       description:
-        "Chat channels are the foundation of every Kloak server. They deliver instant, real-time text communication with support for replies, threaded conversations, mentions, file attachments, polls, and pinned messages. Every message is delivered through WebSocket connections for zero-perceptible latency.",
+        "Chat channels are the heart of every Kloak server. Send messages, reply to friends, mention people, share files, create polls, and pin important stuff so it never gets lost. Everything happens instantly.",
       howItWorks:
-        "When you send a message, it is transmitted through Supabase Realtime to every connected client in the channel. Messages support rich formatting including bold, italic, code blocks with syntax highlighting, spoiler tags, and inline mentions. Attachments are uploaded to encrypted storage and linked to your message. Read tracking keeps everyone in sync with unread counts and mention badges.",
+        "Type a message and everyone in the channel sees it right away. You can format text with bold, italic, code snippets, and spoiler tags. Drag and drop files to share them. Unread badges and mention highlights make sure you never miss what matters.",
       benefits: [
-        "Zero-latency delivery through persistent WebSocket connections.",
-        "Rich formatting and syntax-highlighted code blocks for technical communities.",
-        "Granular channel permissions let admins control who can post, attach files, or embed links.",
-        "Slowmode and read-only options give moderators precise control over conversation flow.",
-        "Ghost mode hides usernames and avatars for truly anonymous discussions.",
+        "Messages arrive instantly with no noticeable delay.",
+        "Format your messages with bold, code blocks, spoilers, and more.",
+        "Server admins can control who posts, shares files, or drops links in each channel.",
+        "Slowmode and read-only settings help keep busy channels under control.",
+        "Ghost mode lets people talk without showing who said what.",
       ],
       controversial:
-        "Most chat platforms mine your conversations for ad targeting and algorithmic recommendations. Kloak does not read, index, or monetize your messages. There is no recommendation engine, no trending topics derived from your private conversations, and no data broker partnerships. Your words belong to you.",
+        "Most chat apps read your conversations to sell ads or recommend content. Kloak does none of that. We do not scan, index, or monetize your messages. No recommendations, no trending topics pulled from your private chats. Your words stay yours.",
     },
     "Voice & Video": {
       tagline: "Talk freely, without anyone listening in.",
       description:
-        "Voice and video channels provide low-latency, peer-to-peer communication using WebRTC. Jump into a voice channel and start talking instantly with no meeting links, no scheduling, and no account verification beyond your secret key.",
+        "Voice and video channels let you hop into a call whenever you want. No meeting links, no calendar invites, no extra steps. Just click a channel and start talking with your friends.",
       howItWorks:
-        "Connections are established peer-to-peer through WebRTC, meaning your audio and video travel directly between participants rather than through a central server. Supabase Presence tracks who is in each voice channel, and the VoicePersistentHost component maintains your connection even as you navigate between text channels.",
+        "Your audio and video go directly between you and the people in the call, not through a middleman server. You stay connected even while browsing other text channels, so the conversation never drops when you switch tabs.",
       benefits: [
-        "Peer-to-peer architecture means lower latency and no central point of interception.",
-        "Persistent connections survive navigation, so you stay in voice while browsing channels.",
-        "Simple mute, deafen, and disconnect controls with no unnecessary complexity.",
-        "No meeting links or calendar integrations required. Just join and talk.",
+        "Direct connections mean less lag and nobody sitting in between.",
+        "Stay in your call while you browse other channels.",
+        "Simple controls: mute, deafen, disconnect. Nothing you don't need.",
+        "No meeting links or scheduling required. Just join and talk.",
       ],
       controversial:
-        "Traditional platforms route all voice traffic through their servers, giving them the technical ability to record and analyze your calls. Kloak's peer-to-peer model eliminates this possibility by design. Your voice data never touches our infrastructure.",
+        "Most platforms route all your voice and video through their own servers, which means they could technically record or analyze your calls. Kloak sends your voice directly between participants. Your call data never passes through our systems.",
     },
     Forum: {
-      tagline: "Long-form discussion, organized by topic.",
+      tagline: "Bigger topics deserve their own space.",
       description:
-        "Forum channels transform chaotic group chats into structured, searchable discussions. Each topic gets its own dedicated post with a threaded reply chain, making it easy to follow complex conversations days or weeks after they started.",
+        "Forum channels turn messy group chats into organized discussions. Start a post about any topic and let people reply in a dedicated thread. Come back days or weeks later and everything is still easy to follow.",
       howItWorks:
-        "Users create posts within the forum channel, each with a title and opening message. Other members reply within that post's thread, keeping the conversation focused and organized. Posts can be sorted by activity, creation date, or engagement, and moderators can pin important threads.",
+        "Create a post with a title and your opening thoughts. Others reply inside that thread, keeping the conversation focused. You can sort posts by recent activity or date, and admins can pin the most important ones to the top.",
       benefits: [
-        "Threaded replies keep discussions organized and easy to follow.",
-        "Perfect for Q&A, feedback collection, and knowledge sharing.",
-        "Posts remain searchable and accessible long after creation.",
-        "Reduces noise in real-time chat channels by giving complex topics their own space.",
+        "Threaded replies keep conversations tidy and easy to read.",
+        "Great for Q&A, collecting feedback, or sharing knowledge.",
+        "Posts stick around and stay searchable long after they are created.",
+        "Keeps detailed discussions out of your fast-moving chat channels.",
       ],
       controversial:
-        "Most forum platforms track every view, scroll, and click to build engagement profiles. Kloak forums exist purely for communication. We do not track read time, scroll depth, or use your browsing patterns to manipulate what you see next.",
+        "Most forum platforms track every view, scroll, and click to build a profile of your behavior. Kloak forums are just for talking. We do not track how long you read, how far you scroll, or use your habits to decide what you see next.",
     },
     Announcements: {
-      tagline: "One voice to the whole server, without the noise.",
+      tagline: "Important updates, front and center.",
       description:
-        "Announcement channels give admins and moderators a dedicated broadcast space. Posts appear prominently and members can react and comment without cluttering the main feed, ensuring important updates are seen without being buried.",
+        "Announcement channels give admins a dedicated space to share news with the whole server. Members can react and leave comments without burying the original post.",
       howItWorks:
-        "Only users with the appropriate permissions can create announcement posts. Each post supports rich text formatting and file attachments. Members interact through a dedicated comment section and emoji reactions, keeping the announcement itself clean while allowing community response.",
+        "Only people with the right permissions can create announcements. Members respond through a comment section and emoji reactions, so the announcement itself stays clean while the conversation happens underneath.",
       benefits: [
-        "Clear separation between official communications and member discussion.",
-        "Comment sections allow feedback without cluttering the announcement.",
-        "Reaction support gives admins quick sentiment feedback.",
-        "Permission-gated posting prevents unauthorized announcements.",
+        "Official updates stay separate from everyday chatter.",
+        "Comment sections let people respond without cluttering the post.",
+        "Reactions give admins a quick read on how people feel.",
+        "Only authorized members can post, so announcements stay trustworthy.",
       ],
       controversial:
-        "On mainstream platforms, announcements are often mixed with algorithmic content and promotional material. Kloak's announcement channels are purely chronological with no algorithmic sorting, no promoted content, and no engagement optimization.",
+        "On other platforms, announcements get mixed in with algorithm-picked content and promotions. Kloak keeps it simple: announcements show up in order, with no algorithmic sorting, no promoted posts, and no engagement tricks.",
     },
     Tasks: {
-      tagline: "Project management without leaving the conversation.",
+      tagline: "Stay organized without leaving the chat.",
       description:
-        "Task channels bring lightweight project management directly into your server. Create tasks, assign them to members, set priorities, and track progress, all without switching to a separate tool or giving a third-party app access to your workspace.",
+        "Task channels bring simple project management right into your server. Create to-dos, assign them to people, set priorities, and track what gets done, all without opening another app.",
       howItWorks:
-        "Tasks are created within dedicated task channels and can be assigned to one or more server members. Each task has a status, priority level, and comment thread. Changes are broadcast in real-time through Supabase Realtime, so the entire team sees updates instantly.",
+        "Create a task, assign it to one or more members, and set a priority. Everyone sees updates as they happen. Each task has its own comment thread so context stays attached to the work.",
       benefits: [
-        "No need for external project management tools that require separate accounts.",
-        "Real-time updates keep the entire team synchronized.",
-        "Task assignments integrate with the existing member and role system.",
-        "Comment threads on tasks keep context attached to the work.",
+        "No need for a separate project tool with yet another login.",
+        "Everyone sees changes the moment they happen.",
+        "Assignments work with your existing server members and roles.",
+        "Comments on tasks keep the conversation where the work is.",
       ],
       controversial:
-        "Most project management tools harvest detailed productivity metrics, tracking how long tasks take, who is most active, and building performance profiles. Kloak tasks exist to help your team coordinate. We do not measure or report individual productivity.",
+        "Most project tools track how long tasks take and build performance reports on individuals. Kloak tasks are just here to help your group get things done. We do not measure or report anyone's productivity.",
     },
     Media: {
-      tagline: "Share visuals in a space built for them.",
+      tagline: "A gallery for everything your community shares.",
       description:
-        "Media channels provide a gallery-style experience for sharing images, videos, and visual content. Instead of images getting lost in a chat scroll, they are displayed in a browsable grid with full-size previews, comments, and reactions.",
+        "Media channels give photos, videos, and visual content a proper home instead of letting them disappear in a chat scroll. Everything shows up in a clean, browsable gallery.",
       howItWorks:
-        "Users upload media to the channel, which is displayed in a responsive gallery grid. Each item can have a title, description, and comment thread. The gallery supports filtering by media type and user, making it easy to find specific content.",
+        "Upload an image or video and it appears in a gallery grid. Each item can have a title, description, and its own comment thread. Filter by type or by who posted it to find exactly what you are looking for.",
       benefits: [
-        "Gallery view prevents visual content from being lost in chat scroll.",
-        "Dedicated comment threads per media item for focused discussion.",
-        "Support for images, videos, and YouTube embeds in one unified space.",
-        "Clean browsing experience designed for visual content consumption.",
+        "Visual content never gets lost in the chat scroll.",
+        "Each image or video gets its own comment thread.",
+        "Supports photos, videos, and YouTube links in one place.",
+        "A clean browsing experience built for visual content.",
       ],
       controversial:
-        "Social media platforms use your uploaded images for facial recognition training, ad targeting, and content recommendation algorithms. Kloak media channels are simple storage and display. Your images are not scanned, analyzed, or used for any purpose beyond showing them to your community.",
+        "Social media platforms scan your uploads for facial recognition, ad targeting, and training algorithms. Kloak media channels simply store and display your content. Your images are not analyzed or used for anything beyond showing them to your community.",
     },
   };
 
