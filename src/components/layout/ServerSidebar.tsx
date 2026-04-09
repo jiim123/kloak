@@ -1141,7 +1141,7 @@ export const ServerSidebar = () => {
               </AnimatePresence>
 
               {/* Separator */}
-              <div className="w-8 h-px bg-white/10 mb-1 shrink-0" />
+              <div className="w-8 h-px bg-foreground/10 mb-1 shrink-0" />
 
               {/* Folder items + servers */}
               <AnimatePresence>
