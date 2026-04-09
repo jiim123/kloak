@@ -895,7 +895,13 @@
   transition: border-color 0.3s ease;
 }
 .terminal-card:hover {
-  border-color: hsl(var(--border) / 0.6);
+  border-color: hsl(var(--border) / 0.8);
+}
+.terminal-card:hover .terminal-card-icon {
+  background-color: hsl(var(--foreground));
+}
+.terminal-card:hover .terminal-card-icon svg {
+  color: hsl(var(--background)) !important;
 }
 
 @keyframes marquee-scroll {
