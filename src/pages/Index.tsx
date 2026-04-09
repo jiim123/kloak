@@ -230,7 +230,6 @@ const Index = () => {
                     </div>
                   </div>
                 ))}
-                ))}
               </Marquee>
             </div>
           </section>
