@@ -117,23 +117,17 @@ function TerminalCard({
           <Icon className="w-5 h-5 text-foreground transition-colors duration-300" strokeWidth={1.5} />
         </div>
         <div className="w-3/4 flex items-center p-4">
-          <span className="text-[14px] uppercase tracking-widest text-foreground font-medium">
-            {title}
-          </span>
+          <span className="text-[14px] uppercase tracking-widest text-foreground font-medium">{title}</span>
         </div>
       </div>
       {/* Content row */}
       <div className="border-b border-muted-foreground/20 p-4 flex-1">
-        <p className="text-[14px] text-muted-foreground leading-relaxed">
-          {description}
-        </p>
+        <p className="text-[14px] text-muted-foreground leading-relaxed">{description}</p>
       </div>
       {/* Action row: text + arrow link */}
       <div className="flex">
         <div className="w-3/4 flex items-center p-4 border-r border-muted-foreground/20">
-          <span className="text-[12px] text-muted-foreground truncate">
-            Learn more about {title}
-          </span>
+          <span className="text-[12px] text-muted-foreground truncate">Learn more about {title}</span>
         </div>
         <a
           href={href}
@@ -274,13 +268,9 @@ const Index = () => {
                 transition={{ duration: 0.8 }}
                 className="text-base md:text-lg text-muted-foreground leading-[1.8]"
               >
-                Kloak is a community-driven communication platform built by people who are genuinely passionate about
-                privacy. Not privacy as a buzzword or a toggle buried in settings. Privacy as the foundation everything
-                else is built on. There are no emails, no phone numbers, no passwords. Your identity is a single
-                cryptographic key generated on your device, hashed before it ever touches a server, and unrecoverable by
-                design. Kloak is not a company. There is no registered legal entity, no venture capital, no ads, no
-                subscriptions, and no data harvesting. It is a passion project maintained by a small team of volunteers
-                who believe your conversations should belong to you.
+                Kloak is a community-driven passion project for people who want to talk without being tracked. We don’t
+                want your email, your phone number, or your data. Your identity is a cryptographic key that lives on
+                your device, giving you total ownership over your digital life.
               </motion.p>
             </div>
           </section>
@@ -355,7 +345,6 @@ const Index = () => {
               </div>
             </div>
           </section>
-
 
           {/* Footer */}
           <Footer />
