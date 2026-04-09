@@ -199,7 +199,7 @@ const Index = () => {
                     <div
                       className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 group-hover/card:opacity-100 transition-opacity duration-500 ease-out"
                       style={{
-                        background: `radial-gradient(circle at 48px 48px, rgb(${feature.color}) 0%, rgb(${feature.color} / 0.85) 40%, rgb(${feature.color} / 0.7) 100%)`,
+                        background: `radial-gradient(circle at 48px 48px, rgba(${feature.color}, 1) 0%, rgba(${feature.color}, 0.9) 40%, rgba(${feature.color}, 0.8) 100%)`,
                       }}
                     />
                     <div className="relative z-10 w-10 h-10 flex items-center justify-center">
