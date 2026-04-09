@@ -111,8 +111,8 @@ function TerminalCard({
   return (
     <div className={`terminal-card flex flex-col bg-card/30 ${className}`}>
       {/* Top row: icon + title */}
-      <div className="flex border-b border-border/30">
-        <div className="terminal-card-icon w-1/4 flex items-center justify-center border-r border-border/30 p-4 transition-colors duration-300">
+      <div className="flex border-b border-muted-foreground/20">
+        <div className="terminal-card-icon w-1/4 flex items-center justify-center border-r border-muted-foreground/20 p-4 transition-colors duration-300">
           <Icon className="w-5 h-5 text-foreground transition-colors duration-300" strokeWidth={1.5} />
         </div>
         <div className="w-3/4 flex items-center p-4">
@@ -122,7 +122,7 @@ function TerminalCard({
         </div>
       </div>
       {/* Content row */}
-      <div className="border-b border-border/30 p-4 flex-1">
+      <div className="border-b border-muted-foreground/20 p-4 flex-1">
         <p className="text-[14px] text-muted-foreground leading-relaxed">
           {description}
         </p>
