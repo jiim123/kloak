@@ -42,48 +42,54 @@ const Index = () => {
       title: "Messaging",
       description:
         "Send messages in real time with edits, replies, and rich formatting. Chat one-on-one through Direct Messages or create Group Messages with multiple friends.",
-      color: "96, 165, 250",   // blue-400
-      textDark: true,
+      color: "96, 165, 250",
+      contrast: "15, 40, 80",
+      contrastSub: "15, 40, 80, 0.6",
     },
     {
       icon: Users,
       title: "Friends & Social",
       description:
         "Add friends by username, manage incoming requests, and block anyone instantly. Your friend list travels with you across every server.",
-      color: "74, 222, 128",   // green-400
-      textDark: true,
+      color: "74, 222, 128",
+      contrast: "10, 50, 25",
+      contrastSub: "10, 50, 25, 0.6",
     },
     {
       icon: SmilePlus,
       title: "Reactions",
       description:
         "React to any message with emoji. Servers can upload custom emoji packs that every member can use across channels.",
-      color: "250, 204, 21",   // yellow-400
-      textDark: true,
+      color: "250, 204, 21",
+      contrast: "60, 45, 5",
+      contrastSub: "60, 45, 5, 0.65",
     },
     {
       icon: UserRoundCog,
       title: "Roles & Permissions",
       description:
         "Create custom roles with colors and icons. Over 30 granular permissions control who can post, pin, manage channels, and more.",
-      color: "192, 132, 252",  // purple-400
-      textDark: true,
+      color: "192, 132, 252",
+      contrast: "35, 10, 60",
+      contrastSub: "35, 10, 60, 0.6",
     },
     {
       icon: Lock,
       title: "Administration",
       description:
         "Kick or ban disruptive members, mute users, set slowmode, enable read-only channels, and block links or attachments per channel.",
-      color: "248, 113, 113",  // red-400
-      textDark: true,
+      color: "248, 113, 113",
+      contrast: "65, 10, 10",
+      contrastSub: "65, 10, 10, 0.6",
     },
     {
       icon: KeySquare,
       title: "Secret Key Auth",
       description:
         "No email, phone, or password. One cryptographic key is all you need. Generated on your device, hashed before it ever touches a server.",
-      color: "251, 146, 60",   // orange-400
-      textDark: true,
+      color: "251, 146, 60",
+      contrast: "55, 25, 5",
+      contrastSub: "55, 25, 5, 0.6",
     },
   ];
 
@@ -190,30 +196,35 @@ const Index = () => {
                 {coreFeatures.map((feature) => (
                   <div
                     key={feature.title}
-                    className="group/card relative rounded-2xl border border-border/40 bg-card/30 p-8 md:p-10 flex flex-col justify-between min-h-[280px] md:min-h-[320px] w-[340px] md:w-[400px] shrink-0 overflow-hidden transition-all duration-500 ease-out hover:scale-[1.03] hover:border-transparent hover:shadow-2xl"
+                    className="feature-card relative rounded-2xl border border-border/40 bg-card/30 p-8 md:p-10 flex flex-col justify-between min-h-[280px] md:min-h-[320px] w-[340px] md:w-[400px] shrink-0 overflow-hidden transition-all duration-500 ease-out hover:scale-[1.03] hover:border-transparent hover:shadow-2xl"
                     style={{
-                      "--feature-color": feature.color,
+                      "--fc-color": `rgb(${feature.color})`,
+                      "--fc-bg": `rgba(${feature.color}, 1)`,
+                      "--fc-bg-mid": `rgba(${feature.color}, 0.9)`,
+                      "--fc-bg-end": `rgba(${feature.color}, 0.8)`,
+                      "--fc-text": `rgb(${feature.contrast})`,
+                      "--fc-text-sub": `rgba(${feature.contrastSub})`,
                     } as React.CSSProperties}
                   >
-                    {/* Radial fill that expands from the icon position */}
                     <div
-                      className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 group-hover/card:opacity-100 transition-opacity duration-500 ease-out"
+                      className="feature-card-bg pointer-events-none absolute inset-0 rounded-2xl transition-opacity duration-500 ease-out"
                       style={{
-                        background: `radial-gradient(circle at 48px 48px, rgba(${feature.color}, 1) 0%, rgba(${feature.color}, 0.9) 40%, rgba(${feature.color}, 0.8) 100%)`,
+                        opacity: 0,
+                        background: `radial-gradient(circle at 48px 48px, var(--fc-bg) 0%, var(--fc-bg-mid) 40%, var(--fc-bg-end) 100%)`,
                       }}
                     />
                     <div className="relative z-10 w-10 h-10 flex items-center justify-center">
                       <feature.icon
-                        className="w-7 h-7 transition-colors duration-500 group-hover/card:text-gray-900"
-                        style={{ color: `rgb(${feature.color})` }}
+                        className="feature-card-icon w-7 h-7 transition-colors duration-500"
+                        style={{ color: `var(--fc-color)` }}
                         strokeWidth={1.5}
                       />
                     </div>
                     <div className="relative z-10 mt-auto">
-                      <h3 className="text-2xl sm:text-3xl font-light text-foreground tracking-tight mb-2 transition-colors duration-500 group-hover/card:text-gray-900">
+                      <h3 className="feature-card-title text-2xl sm:text-3xl font-light text-foreground tracking-tight mb-2 transition-colors duration-500">
                         {feature.title}
                       </h3>
-                      <p className="text-[15px] text-muted-foreground leading-relaxed transition-colors duration-500 group-hover/card:text-gray-900/70">
+                      <p className="feature-card-desc text-[15px] text-muted-foreground leading-relaxed transition-colors duration-500">
                         {feature.description}
                       </p>
                     </div>
