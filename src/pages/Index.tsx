@@ -194,6 +194,51 @@ const Index = () => {
     },
   };
 
+  const coreFeatureDetails: Record<string, Omit<FeatureDetail, "icon" | "title">> = {
+    Messaging: {
+      tagline: "Say what you mean, without anyone reading over your shoulder.",
+      description:
+        "Send messages to friends one-on-one or in group chats. Edit what you said, reply to specific messages, format your text, and share files. Whether it is a quick hello or a long catch-up, your conversations stay private and instant.",
+      controversial:
+        "Other platforms scan your DMs to serve you targeted ads and build a profile of your interests. Kloak does not read your messages, period. There is no ad engine, no behavioral tracking, and no data shared with third parties. Your private conversations are actually private.",
+    },
+    "Friends & Social": {
+      tagline: "Your circle, your rules.",
+      description:
+        "Add friends by their username, accept or decline requests, and block anyone you do not want to hear from. Your friend list follows you everywhere on Kloak, so you always know who is around no matter which server you are in.",
+      controversial:
+        "Most social platforms suggest friends based on your contacts, location, or browsing history. Kloak never accesses your phone contacts, tracks your location, or suggests people based on surveillance data. You add who you want, and that is it.",
+    },
+    Reactions: {
+      tagline: "Express yourself without saying a word.",
+      description:
+        "React to any message with emoji to show how you feel. Server owners can upload custom emoji packs that everyone in the community can use, giving your server its own personality.",
+      controversial:
+        "On other platforms, your reactions are tracked to build engagement profiles and feed recommendation algorithms. On Kloak, a reaction is just a reaction. We do not use them to analyze your behavior or decide what content to show you next.",
+    },
+    "Roles & Permissions": {
+      tagline: "Give the right people the right access.",
+      description:
+        "Create custom roles with unique colors and icons, then assign them to members. With over 30 permission settings, you decide exactly who can post, pin messages, manage channels, invite people, and more.",
+      controversial:
+        "Some platforms lock advanced permissions behind paid tiers or make you hand over admin access to third-party bots. Kloak gives you full control over your server's permissions out of the box, with no paywalls and no outside dependencies.",
+    },
+    Administration: {
+      tagline: "Keep your community safe and focused.",
+      description:
+        "Remove disruptive members with kicks or bans, mute people who need a cooldown, slow down busy channels, make channels read-only, and control whether links or file uploads are allowed. Everything you need to run a healthy community.",
+      controversial:
+        "Many platforms collect moderation data and use it to train content filtering AI that can censor legitimate speech. Kloak gives moderators the tools they need without feeding your community's conversations into any machine learning pipeline.",
+    },
+    "Secret Key Auth": {
+      tagline: "One key. No email. No phone. No password.",
+      description:
+        "When you sign up, Kloak generates a single secret key on your device. That key is all you need to log in, forever. We never ask for your email, phone number, or any personal information. If you lose your key, nobody can recover it for you, and that is the point.",
+      controversial:
+        "Every other platform ties your account to personal information they can sell, leak, or hand over. Kloak cannot identify you even if someone demanded it. Your key is hashed before it reaches our servers, so we literally do not know who you are.",
+    },
+  };
+
   const coreFeatures = [
     {
       icon: MessageCircle,
@@ -355,6 +400,16 @@ const Index = () => {
                       title={feature.title}
                       description={feature.description}
                       className="w-[340px] md:w-[400px] min-h-[280px] md:min-h-[300px] shrink-0"
+                      onArrowClick={() => {
+                        const details = coreFeatureDetails[feature.title];
+                        if (details) {
+                          setActiveFeature({
+                            icon: feature.icon,
+                            title: feature.title,
+                            ...details,
+                          });
+                        }
+                      }}
                     />
                   )),
                 )}
