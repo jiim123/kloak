@@ -1,14 +1,11 @@
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { X, type LucideIcon } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 
 export interface FeatureDetail {
   icon: LucideIcon;
   title: string;
   tagline: string;
   description: string;
-  howItWorks: string;
-  benefits: string[];
   controversial: string;
 }
 
@@ -55,7 +52,7 @@ export function FeatureDetailModal({ feature, open, onClose }: FeatureDetailModa
             </p>
           </div>
 
-          {/* Description */}
+          {/* Overview */}
           <div className="border-b border-muted-foreground/20 p-6">
             <div className="flex border-b border-muted-foreground/20 mb-4 pb-2">
               <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Overview</span>
@@ -65,32 +62,7 @@ export function FeatureDetailModal({ feature, open, onClose }: FeatureDetailModa
             </p>
           </div>
 
-          {/* How it works */}
-          <div className="border-b border-muted-foreground/20 p-6">
-            <div className="flex border-b border-muted-foreground/20 mb-4 pb-2">
-              <span className="text-[11px] uppercase tracking-widest text-muted-foreground">How It Works</span>
-            </div>
-            <p className="text-[14px] text-muted-foreground leading-[1.8]">
-              {feature.howItWorks}
-            </p>
-          </div>
-
-          {/* Benefits */}
-          <div className="border-b border-muted-foreground/20 p-6">
-            <div className="flex border-b border-muted-foreground/20 mb-4 pb-2">
-              <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Benefits</span>
-            </div>
-            <ul className="space-y-3">
-              {feature.benefits.map((benefit, i) => (
-                <li key={i} className="flex items-start gap-3">
-                  <span className="text-[11px] text-muted-foreground/50 font-mono mt-[3px]">{String(i + 1).padStart(2, "0")}</span>
-                  <span className="text-[14px] text-muted-foreground leading-relaxed">{benefit}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Controversial take */}
+          {/* Why It's Different */}
           <div className="p-6">
             <div className="flex border-b border-muted-foreground/20 mb-4 pb-2">
               <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Why It's Different</span>
