@@ -888,13 +888,14 @@
   }
 }
 
-/* Feature card hover effects */
-.feature-card {
-  transition: border-color 0.4s ease, transform 0.4s ease, box-shadow 0.4s ease;
+/* Terminal card styles */
+.terminal-card {
+  border: 1px solid hsl(var(--border) / 0.3);
+  border-radius: 4px;
+  transition: border-color 0.3s ease;
 }
-.feature-card:hover {
-  border-color: var(--fc-color) !important;
-  box-shadow: 0 0 20px -5px var(--fc-color);
+.terminal-card:hover {
+  border-color: hsl(var(--border) / 0.6);
 }
 
 @keyframes marquee-scroll {

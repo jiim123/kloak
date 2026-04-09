@@ -13,6 +13,7 @@ import {
   SmilePlus,
   UserRoundCog,
   KeySquare,
+  type LucideIcon,
 } from "lucide-react";
 import { Footer } from "@/components/ui/footer-section";
 import { NavigationMenu } from "@/components/layout/NavigationMenu";
@@ -20,41 +21,48 @@ import { Marquee } from "@/components/ui/marquee";
 import HeroAscii from "@/components/landing/HeroAscii";
 import { SEO } from "@/components/seo";
 import { SEO_CONFIG } from "@/lib/seo";
+import { Button } from "@/components/ui/button";
 
-// Lazy-load the heavy WebGL shader component (only visible at bottom of page)
-const LazyDithering = lazy(() => import("@paper-design/shaders-react").then((m) => ({ default: m.Dithering })));
-
-/** Draggable marquee wrapper – auto-scrolls, pauses on drag, resumes on release */
+/** Draggable marquee wrapper - auto-scrolls, pauses on drag, resumes on release */
 function DraggableMarquee({ children }: { children: React.ReactNode }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const startX = useRef(0);
-  const scrollLeft = useRef(0);
+  const currentOffset = useRef(0);
 
   const getPageX = (e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent) =>
     "touches" in e ? (e.touches[0]?.pageX ?? 0) : (e as MouseEvent).pageX;
 
   const onStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     isDragging.current = true;
-    const container = containerRef.current!;
-    startX.current = getPageX(e) - container.offsetLeft;
-    scrollLeft.current = container.scrollLeft;
-    trackRef.current?.classList.add("is-dragging");
+    const track = trackRef.current;
+    if (track) {
+      const style = window.getComputedStyle(track);
+      const matrix = new DOMMatrix(style.transform);
+      currentOffset.current = matrix.m41;
+      track.style.transform = `translateX(${currentOffset.current}px)`;
+      track.classList.add("is-dragging");
+    }
+    startX.current = getPageX(e);
   }, []);
 
   const onMove = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (!isDragging.current) return;
     e.preventDefault();
-    const container = containerRef.current!;
-    const x = getPageX(e) - container.offsetLeft;
-    const walk = (x - startX.current) * 1.5;
-    container.scrollLeft = scrollLeft.current - walk;
+    const track = trackRef.current;
+    if (!track) return;
+    const delta = getPageX(e) - startX.current;
+    track.style.transform = `translateX(${currentOffset.current + delta}px)`;
   }, []);
 
   const onEnd = useCallback(() => {
     isDragging.current = false;
-    trackRef.current?.classList.remove("is-dragging");
+    const track = trackRef.current;
+    if (track) {
+      track.style.transform = "";
+      track.classList.remove("is-dragging");
+    }
   }, []);
 
   useEffect(() => {
@@ -79,35 +87,54 @@ function DraggableMarquee({ children }: { children: React.ReactNode }) {
       onTouchEnd={onEnd}
       style={{ userSelect: "none" }}
     >
-      <div ref={trackRef} className="flex gap-4 marquee-container" style={{ width: "max-content" }}>
+      <div ref={trackRef} className="flex gap-0 marquee-container" style={{ width: "max-content" }}>
         {children}
       </div>
     </div>
   );
 }
 
-/** CTA section – only mounts the heavy WebGL shader when scrolled into view */
-function CtaSection() {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          io.disconnect();
-        }
-      },
-      { rootMargin: "200px" },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-
-  return null;
+/** Terminal-style feature card */
+function TerminalCard({
+  icon: Icon,
+  title,
+  description,
+  buttonLabel = "Learn more",
+  className = "",
+}: {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  buttonLabel?: string;
+  className?: string;
+}) {
+  return (
+    <div className={`terminal-card flex flex-col bg-card/30 ${className}`}>
+      {/* Top row: icon + title */}
+      <div className="flex border-b border-border/30">
+        <div className="w-1/4 flex items-center justify-center border-r border-border/30 p-4">
+          <Icon className="w-5 h-5 text-foreground" strokeWidth={1.5} />
+        </div>
+        <div className="w-3/4 flex items-center p-4">
+          <span className="text-[14px] uppercase tracking-widest text-foreground font-medium">
+            {title}
+          </span>
+        </div>
+      </div>
+      {/* Content row */}
+      <div className="border-b border-border/30 p-4 flex-1">
+        <p className="text-[12px] text-muted-foreground leading-relaxed" style={{ textAlignLast: "justify" }}>
+          {description}
+        </p>
+      </div>
+      {/* Button row */}
+      <div className="p-4">
+        <Button variant="secondary" size="sm" className="w-full text-[12px]">
+          {buttonLabel}
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 const Index = () => {
@@ -270,29 +297,13 @@ const Index = () => {
               <DraggableMarquee>
                 {[0, 1].map((copy) =>
                   coreFeatures.map((feature) => (
-                    <div
+                    <TerminalCard
                       key={`${copy}-${feature.title}`}
-                      className="feature-card relative rounded-2xl border border-border/40 bg-card/30 p-8 md:p-10 flex flex-col justify-between min-h-[280px] md:min-h-[320px] w-[340px] md:w-[400px] shrink-0 overflow-hidden"
-                      style={
-                        {
-                          "--fc-color": `rgb(${feature.color})`,
-                        } as React.CSSProperties
-                      }
-                    >
-                      <div className="relative z-10 w-10 h-10 flex items-center justify-center">
-                        <feature.icon
-                          className="w-7 h-7 transition-colors duration-500"
-                          style={{ color: `rgb(${feature.color})` }}
-                          strokeWidth={1.5}
-                        />
-                      </div>
-                      <div className="relative z-10 mt-auto">
-                        <h3 className="text-2xl sm:text-3xl font-light text-foreground tracking-tight mb-2">
-                          {feature.title}
-                        </h3>
-                        <p className="text-[15px] text-muted-foreground leading-relaxed">{feature.description}</p>
-                      </div>
-                    </div>
+                      icon={feature.icon}
+                      title={feature.title}
+                      description={feature.description}
+                      className="w-[340px] md:w-[400px] shrink-0"
+                    />
                   )),
                 )}
               </DraggableMarquee>
@@ -323,25 +334,18 @@ const Index = () => {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.5, delay: index * 0.08 }}
-                    className="group relative rounded-2xl border border-border/40 bg-card/30 p-8 md:p-10 flex flex-col justify-between min-h-[280px] md:min-h-[320px] hover:border-border/80 hover:bg-card/50 transition-all duration-300"
                   >
-                    <div className="w-10 h-10 flex items-center justify-center">
-                      <channel.icon className="w-7 h-7 text-foreground" strokeWidth={1.5} />
-                    </div>
-                    <div className="mt-auto">
-                      <h3 className="text-2xl sm:text-3xl font-light text-foreground tracking-tight mb-2">
-                        {channel.title}
-                      </h3>
-                      <p className="text-[15px] text-muted-foreground leading-relaxed">{channel.description}</p>
-                    </div>
+                    <TerminalCard
+                      icon={channel.icon}
+                      title={channel.title}
+                      description={channel.description}
+                    />
                   </motion.div>
                 ))}
               </div>
             </div>
           </section>
 
-          {/* CTA Section with Dithering Background */}
-          <CtaSection />
 
           {/* Footer */}
           <Footer />
