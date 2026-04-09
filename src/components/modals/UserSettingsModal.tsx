@@ -71,10 +71,6 @@ import type { User as UserType } from "@/types";
 import { useAppUpdater } from "@/hooks/useAppUpdater";
 import { sanitizeDisplayName, validateDisplayName } from "@/lib/displayNameValidation";
 
-// Theme preview colors for the selector
-const THEME_PREVIEWS: Record<Theme, { bg: string; sidebar: string; accent: string }> = {
-  default: { bg: "#0a0a0a", sidebar: "#171717", accent: "#f97316" },
-  nostalgia: { bg: "#452829", sidebar: "#2e1a1b", accent: "#E8D1C5" },
   lofi: { bg: "#293462", sidebar: "#161c35", accent: "#FE5F55" },
   cappuccino: { bg: "#493628", sidebar: "#2c2018", accent: "#AB886D" },
   hokori: { bg: "#000000", sidebar: "#050505", accent: "#E43636" },
