@@ -295,29 +295,12 @@ const Index = () => {
               <DraggableMarquee>
                 {[0, 1].map((copy) =>
                   coreFeatures.map((feature) => (
-                    <div
+                    <TerminalCard
                       key={`${copy}-${feature.title}`}
-                      className="feature-card relative rounded-2xl border border-border/40 bg-card/30 p-8 md:p-10 flex flex-col justify-between min-h-[280px] md:min-h-[320px] w-[340px] md:w-[400px] shrink-0 overflow-hidden"
-                      style={
-                        {
-                          "--fc-color": `rgb(${feature.color})`,
-                        } as React.CSSProperties
-                      }
-                    >
-                      <div className="relative z-10 w-10 h-10 flex items-center justify-center">
-                        <feature.icon
-                          className="w-7 h-7 transition-colors duration-500"
-                          style={{ color: `rgb(${feature.color})` }}
-                          strokeWidth={1.5}
-                        />
-                      </div>
-                      <div className="relative z-10 mt-auto">
-                        <h3 className="text-2xl sm:text-3xl font-light text-foreground tracking-tight mb-2">
-                          {feature.title}
-                        </h3>
-                        <p className="text-[15px] text-muted-foreground leading-relaxed">{feature.description}</p>
-                      </div>
-                    </div>
+                      icon={feature.icon}
+                      title={feature.title}
+                      description={feature.description}
+                    />
                   )),
                 )}
               </DraggableMarquee>
@@ -348,25 +331,18 @@ const Index = () => {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.5, delay: index * 0.08 }}
-                    className="group relative rounded-2xl border border-border/40 bg-card/30 p-8 md:p-10 flex flex-col justify-between min-h-[280px] md:min-h-[320px] hover:border-border/80 hover:bg-card/50 transition-all duration-300"
                   >
-                    <div className="w-10 h-10 flex items-center justify-center">
-                      <channel.icon className="w-7 h-7 text-foreground" strokeWidth={1.5} />
-                    </div>
-                    <div className="mt-auto">
-                      <h3 className="text-2xl sm:text-3xl font-light text-foreground tracking-tight mb-2">
-                        {channel.title}
-                      </h3>
-                      <p className="text-[15px] text-muted-foreground leading-relaxed">{channel.description}</p>
-                    </div>
+                    <TerminalCard
+                      icon={channel.icon}
+                      title={channel.title}
+                      description={channel.description}
+                    />
                   </motion.div>
                 ))}
               </div>
             </div>
           </section>
 
-          {/* CTA Section with Dithering Background */}
-          <CtaSection />
 
           {/* Footer */}
           <Footer />
