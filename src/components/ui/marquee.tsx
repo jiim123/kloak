@@ -31,17 +31,14 @@ export function Marquee({
     });
   }, []);
 
-  // Wrap children so each item gets hover handlers for pause
-  const itemProps = pauseOnHover
-    ? { onMouseEnter: pause, onMouseLeave: resume }
-    : {};
-
   return (
     <div
       className={cn(
         "relative flex overflow-hidden [--gap:1rem] gap-[var(--gap)]",
         className,
       )}
+      onMouseEnter={pauseOnHover ? pause : undefined}
+      onMouseLeave={pauseOnHover ? resume : undefined}
       {...props}
     >
       {fade && (
@@ -63,11 +60,7 @@ export function Marquee({
             animationDirection: reverse ? "reverse" : "normal",
           }}
         >
-          {React.Children.map(children, (child, idx) => (
-            <div key={idx} {...itemProps}>
-              {child}
-            </div>
-          ))}
+          {children}
         </div>
       ))}
     </div>
