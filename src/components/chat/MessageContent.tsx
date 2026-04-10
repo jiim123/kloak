@@ -370,10 +370,7 @@ export const parseTextContent = (
       return escapeHtml(url); // Don't linkify unsafe URLs
     }
     if (isImageUrl(url)) {
-      if (isTrustedInlineImageUrl(url)) {
-        return `<img src="${escapeHtml(url)}" alt="Image" class="block mr-auto max-w-full sm:max-w-[400px] max-h-[60vh] sm:max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90 object-contain" loading="lazy" data-image-url="${escapeHtml(url)}" style="min-height:40px;max-height:350px;background:rgb(24 24 24 / 40%)" onload="this.style.backgroundColor='transparent'" />`;
-      }
-      return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="message-link">${escapeHtml(url)}</a>`;
+      return `<img src="${escapeHtml(url)}" alt="Image" class="block mr-auto max-w-full sm:max-w-[400px] max-h-[60vh] sm:max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90 object-contain" loading="lazy" data-image-url="${escapeHtml(url)}" style="min-height:40px;max-height:350px;background:rgb(24 24 24 / 40%)" onload="this.style.backgroundColor='transparent'" />`;
     }
     return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="message-link">${escapeHtml(url)}</a>`;
   });
@@ -863,7 +860,7 @@ export const MessageContent = ({
     return extractUrls(textContent);
   }, [segments]);
 
-  const imageUrls = useMemo(() => allUrls.filter((url) => isImageUrl(url) && isTrustedInlineImageUrl(url)), [allUrls]);
+  const imageUrls = useMemo(() => allUrls.filter((url) => isImageUrl(url)), [allUrls]);
 
   const inviteCodes = useMemo(() => {
     const codes = new Set<string>();
@@ -877,7 +874,7 @@ export const MessageContent = ({
   const previewUrls = useMemo(() => {
     // Filter out image URLs (already rendered inline) and invite links (handled separately)
     return allUrls.filter((url) => {
-      if (isImageUrl(url) && isTrustedInlineImageUrl(url)) return false;
+      if (isImageUrl(url)) return false;
       if (/\/invite\/[A-Za-z0-9]{8}/.test(url)) return false;
       return true;
     });
