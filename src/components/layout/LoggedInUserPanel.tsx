@@ -54,8 +54,8 @@ export const LoggedInUserPanel = ({
   return (
     <motion.div
       className={cn(
-        "h-14 px-3 flex items-center gap-3 border-t border-white/6",
-        containerClassName ?? "bg-[rgb(24_24_24_/_55%)]",
+        "h-14 px-3 flex items-center gap-3 border-t border-border/30",
+        containerClassName ?? "bg-card/55",
       )}
       initial={{ y: 20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}

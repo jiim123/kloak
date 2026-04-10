@@ -587,7 +587,7 @@ const AppLayout = () => {
               </div>
             ) : (
               /* Desktop layout */
-              <div className="flex flex-col flex-1 overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.045),transparent_28%),linear-gradient(180deg,rgba(18,18,18,0.98),rgba(10,10,10,1))]">
+              <div className="flex flex-col flex-1 overflow-hidden bg-background">
                 {/* Alpha notice banner */}
                 {!isFullscreenSettingsOverlayOpen && <AlphaNoticeBanner />}
 
