@@ -1229,10 +1229,10 @@ export const ChannelSidebar = () => {
                       className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
                     />
                   ) : (
-                    <div className="h-full w-full bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.14),transparent_34%),linear-gradient(160deg,#303030,#151515_72%)]" />
+                    <div className="h-full w-full bg-[radial-gradient(circle_at_top_left,hsl(var(--neutral-400)/0.14),transparent_34%),linear-gradient(160deg,hsl(var(--neutral-300)),hsl(var(--neutral-100))_72%)]" />
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#111111]" />
-                  <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#111111] via-[#111111]/82 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[hsl(var(--neutral-100))]" />
+                  <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[hsl(var(--neutral-100))] via-[hsl(var(--neutral-100)/0.82)] to-transparent" />
 
                   <div className="absolute inset-x-0 bottom-0 flex items-center gap-3 px-4 pb-3">
                     <h2 className="min-w-0 flex-1 truncate text-[20px] font-normal leading-tight tracking-[-0.02em] text-foreground drop-shadow-[0_1px_8px_rgba(0,0,0,0.45)]">
