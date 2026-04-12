@@ -132,7 +132,7 @@ const cardStyle: CSSProperties = {
   border: "1px solid rgba(63, 63, 70, 0.3)",
   borderRadius: 10,
   maxWidth: 420,
-  width: 420,
+  width: "100%",
   overflow: "hidden",
 };
 
@@ -863,6 +863,7 @@ export const UserProfilePopup = () => {
           left: position?.left ?? -9999,
           top: position?.top ?? -9999,
           opacity: position ? 1 : 0,
+          width: 420,
           maxHeight: "75vh",
           overflowY: "auto",
         }}
