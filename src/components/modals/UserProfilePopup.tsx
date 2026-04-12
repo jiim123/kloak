@@ -56,7 +56,7 @@ const statusLabels: Record<UserStatus, string> = {
 };
 
 const COOLDOWN_MINUTES = 5;
-const DESKTOP_CARD_WIDTH = 300;
+const DESKTOP_CARD_WIDTH = 340;
 const VIEWPORT_MARGIN = 12;
 
 /* ─── Color helpers ─── */
@@ -131,24 +131,24 @@ const cardStyle: CSSProperties = {
   background: "rgba(24, 24, 27, 0.95)",
   border: "1px solid rgba(63, 63, 70, 0.3)",
   borderRadius: 8,
-  maxWidth: 300,
+  maxWidth: 340,
   width: "100%",
   overflow: "hidden",
 };
 
 const sectionLabelStyle: CSSProperties = {
-  fontSize: 10,
+  fontSize: 11,
   fontWeight: 600,
   textTransform: "uppercase" as const,
   color: "#a1a1aa",
   letterSpacing: "0.06em",
-  marginBottom: 6,
+  marginBottom: 8,
 };
 
 const bodyTextStyle: CSSProperties = {
-  fontSize: 12,
+  fontSize: 13,
   color: "#d4d4d8",
-  lineHeight: 1.5,
+  lineHeight: 1.55,
 };
 
 const dividerStyle: CSSProperties = {
@@ -511,7 +511,7 @@ export const UserProfilePopup = () => {
         </div>
 
         {/* Avatar overlapping banner */}
-        <div style={{ position: "relative", padding: "0 16px" }}>
+        <div style={{ position: "relative", padding: "0 18px" }}>
           <div style={{ marginTop: -32, position: "relative", width: 64, height: 64 }}>
             <AvatarWithDecoration
               user={profileUser}
@@ -532,14 +532,14 @@ export const UserProfilePopup = () => {
         </div>
 
         {/* Identity */}
-        <div style={{ padding: "8px 16px 0" }}>
+        <div style={{ padding: "10px 18px 0" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 15, fontWeight: 700, color: "#fafafa", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <span style={{ fontSize: 16, fontWeight: 700, color: "#fafafa", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {profileUser.display_name || profileUser.username}
             </span>
             {profileUser.is_bot && <BotTag className="rounded-md px-1.5 py-0.5 text-[10px]" />}
           </div>
-          <p style={{ fontSize: 11, color: "#a1a1aa", marginTop: 2 }}>@{profileUser.username}</p>
+          <p style={{ fontSize: 12, color: "#a1a1aa", marginTop: 3 }}>@{profileUser.username}</p>
 
           {/* Badges */}
           {userBadges.length > 0 && (
@@ -568,18 +568,18 @@ export const UserProfilePopup = () => {
         </div>
 
         {/* Divider */}
-        <div style={{ padding: "10px 16px 0" }}><div style={dividerStyle} /></div>
+        <div style={{ padding: "12px 18px 0" }}><div style={dividerStyle} /></div>
 
         {/* About Me */}
         {bioText && (
-          <div style={{ padding: "10px 16px 0" }}>
+          <div style={{ padding: "12px 18px 0" }}>
             <div style={sectionLabelStyle}>About Me</div>
             <p style={{ ...bodyTextStyle, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{bioText}</p>
           </div>
         )}
 
         {/* Member Since */}
-        <div style={{ padding: "10px 16px 0" }}>
+        <div style={{ padding: "12px 18px 0" }}>
           <div style={sectionLabelStyle}>Member Since</div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <Calendar style={{ width: 12, height: 12, color: "#a1a1aa", flexShrink: 0 }} />
@@ -589,7 +589,7 @@ export const UserProfilePopup = () => {
 
         {/* Roles */}
         {(rolePreview.length > 0 || (isSelf && selfAssignableRoles.length > 0)) && (
-          <div style={{ padding: "10px 16px 0" }}>
+          <div style={{ padding: "12px 18px 0" }}>
             <div style={sectionLabelStyle}>Roles</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
               {rolePreview.map((role) => {
@@ -678,7 +678,7 @@ export const UserProfilePopup = () => {
 
         {/* Shared Servers */}
         {!isSelf && sharedServers.length > 0 && (
-          <div style={{ padding: "10px 16px 0" }}>
+          <div style={{ padding: "12px 18px 0" }}>
             <div style={{ ...sectionLabelStyle, display: "flex", alignItems: "center", gap: 4 }}>
               Shared Servers
               <span style={{ fontSize: 10, color: "#71717a", fontWeight: 400, textTransform: "none", letterSpacing: "normal" }}>{sharedServers.length}</span>
@@ -711,12 +711,12 @@ export const UserProfilePopup = () => {
 
         {/* Divider before actions */}
         {!isSelf && profileUser && (
-          <div style={{ padding: "10px 16px 0" }}><div style={dividerStyle} /></div>
+          <div style={{ padding: "12px 18px 0" }}><div style={dividerStyle} /></div>
         )}
 
         {/* Action buttons */}
         {!isSelf && profileUser && (
-          <div style={{ padding: "10px 16px 12px" }}>
+          <div style={{ padding: "12px 18px 14px" }}>
             {!isBlocked ? (
               <div style={{ display: "flex", gap: 6 }}>
                 {/* Friend button */}
