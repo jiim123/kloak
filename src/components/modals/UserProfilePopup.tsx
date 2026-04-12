@@ -558,12 +558,12 @@ export const UserProfilePopup = () => {
     if (isSelf || !profileUser) return null;
 
     const iconButtonClass =
-      "h-7 flex-1 rounded-lg border border-border bg-secondary px-2 text-foreground hover:bg-secondary-hover hover:text-foreground disabled:border-border/50 disabled:bg-muted disabled:text-muted-foreground/35";
+      "h-9 flex-1 rounded-lg border border-border bg-secondary px-2 text-foreground hover:bg-secondary-hover hover:text-foreground disabled:border-border/50 disabled:bg-muted disabled:text-muted-foreground/35";
     const dmButtonClass =
-      "h-7 flex-1 rounded-lg border border-border bg-secondary px-2 text-white shadow-none hover:bg-secondary-hover hover:text-foreground hover:shadow-none";
+      "h-9 flex-1 rounded-lg border border-border bg-secondary px-2 text-foreground shadow-none hover:bg-secondary-hover hover:text-foreground hover:shadow-none";
 
     return (
-      <div className="relative z-10 border-t px-3 py-2" style={{ borderColor: divider }}>
+      <div className="relative z-10 border-t px-3 py-2.5" style={{ borderColor: divider }}>
         {!isBlocked ? (
           <div className="flex items-center gap-1.5">
             <Button onClick={handleMessage} className={dmButtonClass}>
@@ -622,14 +622,14 @@ export const UserProfilePopup = () => {
               </Button>
             )}
 
-            <Button variant="secondary" size="icon" className="h-7 w-7 rounded-lg border border-border bg-secondary text-foreground hover:bg-secondary-hover hover:text-foreground" onClick={handleBlockUser}>
+            <Button variant="secondary" size="icon" className="h-9 w-9 rounded-lg border border-border bg-secondary text-foreground hover:bg-secondary-hover hover:text-foreground" onClick={handleBlockUser} title="Block user">
               <Ban className="h-3.5 w-3.5" />
             </Button>
           </div>
         ) : (
           <Button
             variant="secondary"
-            className="h-7 w-full rounded-lg border border-white/10 bg-white/10 text-white hover:bg-white/18"
+            className="h-9 w-full rounded-lg border border-border bg-secondary text-foreground hover:bg-secondary-hover"
             onClick={handleUnblockUser}
           >
             <Ban className="mr-1.5 h-3.5 w-3.5" />
@@ -769,21 +769,21 @@ export const UserProfilePopup = () => {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap gap-1.5">
                     <span
-                      className="inline-flex items-center rounded-full px-2 py-1 text-[10px] font-medium"
+                      className="inline-flex items-center rounded-full px-2 py-1 text-[11px] font-medium"
                       style={{ backgroundColor: divider }}
                     >
                       {statusLabels[presence.status]}
                     </span>
                     {profileUser.pronouns && (
                       <span
-                        className="inline-flex items-center rounded-full px-2 py-1 text-[10px] font-medium"
+                        className="inline-flex items-center rounded-full px-2 py-1 text-[11px] font-medium"
                         style={{ backgroundColor: divider }}
                       >
                         {profileUser.pronouns}
                       </span>
                     )}
                     <span
-                      className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-medium"
+                      className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium"
                       style={{ backgroundColor: divider }}
                     >
                       <Calendar className="h-3 w-3" />
@@ -837,7 +837,7 @@ export const UserProfilePopup = () => {
                           return (
                             <span
                               key={role.id}
-                              className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium"
+                              className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium"
                               style={
                                 isGradient
                                   ? { background: background, color: fg }
@@ -854,7 +854,7 @@ export const UserProfilePopup = () => {
                         })}
                         {userRoles.length > rolePreview.length && (
                           <span
-                            className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium"
+                            className="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium"
                             style={{ borderColor: divider, color: muted }}
                           >
                             +{userRoles.length - rolePreview.length}
@@ -868,7 +868,7 @@ export const UserProfilePopup = () => {
                             <PopoverTrigger asChild>
                               <button
                                 type="button"
-                                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium transition-opacity hover:opacity-80"
+                                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-opacity hover:opacity-80"
                                 style={{ backgroundColor: divider }}
                                 title="Manage self-assignable roles"
                               >
@@ -926,7 +926,7 @@ export const UserProfilePopup = () => {
                     )}
 
                     {!isSelf && sharedServers.length > 0 && (
-                      <div className="flex gap-1.5">
+                      <div className="flex flex-wrap gap-1.5">
                         {sharedServers.map((server) => (
                           <button
                             key={server.id}
@@ -966,7 +966,7 @@ export const UserProfilePopup = () => {
     return (
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
         <DialogContent
-          className="max-h-[85vh] max-w-[calc(100vw-1rem)] overflow-hidden border-none bg-transparent p-0 shadow-none"
+          className="max-h-[85vh] w-[calc(100vw-2rem)] max-w-[360px] overflow-hidden border-none bg-transparent p-0 shadow-none"
           onOpenAutoFocus={(event) => event.preventDefault()}
         >
           <div className="max-h-[75vh] overflow-y-auto rounded-[11px] border border-border bg-popover shadow-2xl">
