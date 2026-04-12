@@ -130,25 +130,25 @@ const cardStyle: CSSProperties = {
   fontFamily: "'DM Sans', sans-serif",
   background: "rgba(24, 24, 27, 0.95)",
   border: "1px solid rgba(63, 63, 70, 0.3)",
-  borderRadius: 8,
-  maxWidth: 340,
+  borderRadius: 10,
+  maxWidth: 380,
   width: "100%",
   overflow: "hidden",
 };
 
 const sectionLabelStyle: CSSProperties = {
-  fontSize: 11,
+  fontSize: 11.5,
   fontWeight: 600,
   textTransform: "uppercase" as const,
   color: "#a1a1aa",
   letterSpacing: "0.06em",
-  marginBottom: 8,
+  marginBottom: 10,
 };
 
 const bodyTextStyle: CSSProperties = {
-  fontSize: 13,
+  fontSize: 13.5,
   color: "#d4d4d8",
-  lineHeight: 1.55,
+  lineHeight: 1.6,
 };
 
 const dividerStyle: CSSProperties = {
