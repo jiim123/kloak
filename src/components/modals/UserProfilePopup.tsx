@@ -56,7 +56,7 @@ const statusLabels: Record<UserStatus, string> = {
 };
 
 const COOLDOWN_MINUTES = 5;
-const DESKTOP_CARD_WIDTH = 380;
+const DESKTOP_CARD_WIDTH = 420;
 const VIEWPORT_MARGIN = 12;
 
 /* ─── Color helpers ─── */
@@ -131,8 +131,8 @@ const cardStyle: CSSProperties = {
   background: "rgba(24, 24, 27, 0.95)",
   border: "1px solid rgba(63, 63, 70, 0.3)",
   borderRadius: 10,
-  maxWidth: 380,
-  width: "100%",
+  maxWidth: 420,
+  width: 420,
   overflow: "hidden",
 };
 
