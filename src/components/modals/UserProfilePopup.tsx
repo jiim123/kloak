@@ -56,7 +56,7 @@ const statusLabels: Record<UserStatus, string> = {
 };
 
 const COOLDOWN_MINUTES = 5;
-const DESKTOP_CARD_WIDTH = 340;
+const DESKTOP_CARD_WIDTH = 380;
 const VIEWPORT_MARGIN = 12;
 
 /* ─── Color helpers ─── */
