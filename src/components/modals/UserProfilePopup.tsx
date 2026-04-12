@@ -511,7 +511,7 @@ export const UserProfilePopup = () => {
         </div>
 
         {/* Avatar overlapping banner */}
-        <div style={{ position: "relative", padding: "0 16px" }}>
+        <div style={{ position: "relative", padding: "0 18px" }}>
           <div style={{ marginTop: -32, position: "relative", width: 64, height: 64 }}>
             <AvatarWithDecoration
               user={profileUser}
@@ -532,7 +532,7 @@ export const UserProfilePopup = () => {
         </div>
 
         {/* Identity */}
-        <div style={{ padding: "8px 16px 0" }}>
+        <div style={{ padding: "10px 18px 0" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ fontSize: 15, fontWeight: 700, color: "#fafafa", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {profileUser.display_name || profileUser.username}
@@ -568,18 +568,18 @@ export const UserProfilePopup = () => {
         </div>
 
         {/* Divider */}
-        <div style={{ padding: "10px 16px 0" }}><div style={dividerStyle} /></div>
+        <div style={{ padding: "12px 18px 0" }}><div style={dividerStyle} /></div>
 
         {/* About Me */}
         {bioText && (
-          <div style={{ padding: "10px 16px 0" }}>
+          <div style={{ padding: "12px 18px 0" }}>
             <div style={sectionLabelStyle}>About Me</div>
             <p style={{ ...bodyTextStyle, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{bioText}</p>
           </div>
         )}
 
         {/* Member Since */}
-        <div style={{ padding: "10px 16px 0" }}>
+        <div style={{ padding: "12px 18px 0" }}>
           <div style={sectionLabelStyle}>Member Since</div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <Calendar style={{ width: 12, height: 12, color: "#a1a1aa", flexShrink: 0 }} />
@@ -589,7 +589,7 @@ export const UserProfilePopup = () => {
 
         {/* Roles */}
         {(rolePreview.length > 0 || (isSelf && selfAssignableRoles.length > 0)) && (
-          <div style={{ padding: "10px 16px 0" }}>
+          <div style={{ padding: "12px 18px 0" }}>
             <div style={sectionLabelStyle}>Roles</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
               {rolePreview.map((role) => {
@@ -678,7 +678,7 @@ export const UserProfilePopup = () => {
 
         {/* Shared Servers */}
         {!isSelf && sharedServers.length > 0 && (
-          <div style={{ padding: "10px 16px 0" }}>
+          <div style={{ padding: "12px 18px 0" }}>
             <div style={{ ...sectionLabelStyle, display: "flex", alignItems: "center", gap: 4 }}>
               Shared Servers
               <span style={{ fontSize: 10, color: "#71717a", fontWeight: 400, textTransform: "none", letterSpacing: "normal" }}>{sharedServers.length}</span>
@@ -711,12 +711,12 @@ export const UserProfilePopup = () => {
 
         {/* Divider before actions */}
         {!isSelf && profileUser && (
-          <div style={{ padding: "10px 16px 0" }}><div style={dividerStyle} /></div>
+          <div style={{ padding: "12px 18px 0" }}><div style={dividerStyle} /></div>
         )}
 
         {/* Action buttons */}
         {!isSelf && profileUser && (
-          <div style={{ padding: "10px 16px 12px" }}>
+          <div style={{ padding: "12px 18px 14px" }}>
             {!isBlocked ? (
               <div style={{ display: "flex", gap: 6 }}>
                 {/* Friend button */}
