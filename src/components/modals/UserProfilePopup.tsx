@@ -539,7 +539,7 @@ export const UserProfilePopup = () => {
             </span>
             {profileUser.is_bot && <BotTag className="rounded-md px-1.5 py-0.5 text-[10px]" />}
           </div>
-          <p style={{ fontSize: 11, color: "#a1a1aa", marginTop: 2 }}>@{profileUser.username}</p>
+          <p style={{ fontSize: 12, color: "#a1a1aa", marginTop: 3 }}>@{profileUser.username}</p>
 
           {/* Badges */}
           {userBadges.length > 0 && (
