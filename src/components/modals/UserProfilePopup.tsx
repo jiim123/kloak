@@ -37,6 +37,8 @@ import type { Badge } from "@/types/badge";
 import type { User, UserStatus } from "@/types";
 import type { UserProfileAnchorRect } from "@/lib/userProfilePopover";
 
+/* ─── Constants ─── */
+
 type UserProfileAnchorSide = "left" | "right";
 type UserProfileAnchorAlign = "auto" | "center";
 
@@ -55,8 +57,10 @@ const statusLabels: Record<UserStatus, string> = {
 };
 
 const COOLDOWN_MINUTES = 5;
-const DESKTOP_CARD_WIDTH = 320;
+const DESKTOP_CARD_WIDTH = 360;
 const VIEWPORT_MARGIN = 12;
+
+/* ─── Color helpers (profile-theme support) ─── */
 
 const withAlpha = (hex: string, alphaHex: string) => {
   if (!hex || !hex.startsWith("#") || hex.length !== 7) return hex;
@@ -81,19 +85,6 @@ const relLuminance = (hex: string) => {
   return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
 };
 
-const getReadableRoleTextColor = (color: string) => {
-  const pick = (lum: number | null) => (lum !== null && lum > 0.62 ? "#0b0b0f" : "#f8fafc");
-  if (color.startsWith("linear-gradient")) {
-    const hexes = color.match(/#[0-9a-fA-F]{6}/g) || [];
-    if (hexes.length === 0) return "#f8fafc";
-    const lums = hexes.map((hex) => relLuminance(hex)).filter((v): v is number => v !== null);
-    if (lums.length === 0) return "#f8fafc";
-    const avg = lums.reduce((a, b) => a + b, 0) / lums.length;
-    return pick(avg);
-  }
-  return pick(relLuminance(color));
-};
-
 const withRoleBackgroundOpacity = (color: string, alpha = 0.34) => {
   const toRgba = (hex: string) => {
     const clean = hex.replace("#", "");
@@ -103,37 +94,26 @@ const withRoleBackgroundOpacity = (color: string, alpha = 0.34) => {
     const b = parseInt(clean.slice(4, 6), 16);
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   };
-
-  if (color.startsWith("linear-gradient")) {
-    return color.replace(/#[0-9a-fA-F]{6}/g, (hex) => toRgba(hex));
-  }
-
-  if (/^#[0-9a-fA-F]{6}$/.test(color)) {
-    return toRgba(color);
-  }
-
+  if (color.startsWith("linear-gradient")) return color.replace(/#[0-9a-fA-F]{6}/g, (hex) => toRgba(hex));
+  if (/^#[0-9a-fA-F]{6}$/.test(color)) return toRgba(color);
   return color;
 };
 
 const isLightTheme = (primary?: string | null, accent?: string | null, fallback?: string | null) => {
   const lums: number[] = [];
-  if (primary) {
-    const l = relLuminance(primary);
-    if (l !== null) lums.push(l);
-  }
-  if (accent) {
-    const l = relLuminance(accent);
-    if (l !== null) lums.push(l);
-  }
-  if (lums.length === 0 && fallback) {
-    const l = relLuminance(fallback);
-    if (l !== null) lums.push(l);
-  }
+  [primary, accent, ...(lums.length === 0 ? [fallback] : [])].forEach((c) => {
+    if (c) {
+      const l = relLuminance(c);
+      if (l !== null) lums.push(l);
+    }
+  });
   if (lums.length === 0) return false;
   return lums.reduce((a, b) => a + b, 0) / lums.length > 0.62;
 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
+/* ─── Positioning ─── */
 
 const getAnchoredPosition = (
   anchorRect: UserProfileAnchorRect | undefined,
@@ -142,62 +122,45 @@ const getAnchoredPosition = (
   anchorAlign: UserProfileAnchorAlign = "auto",
   anchorOffset = 10,
 ) => {
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
-  const fallbackLeft = viewportWidth / 2 - DESKTOP_CARD_WIDTH / 2;
-  const fallbackTop = viewportHeight / 2 - cardHeight / 2;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const fallbackLeft = vw / 2 - DESKTOP_CARD_WIDTH / 2;
+  const fallbackTop = vh / 2 - cardHeight / 2;
 
   if (!anchorRect) {
     return {
-      left: clamp(fallbackLeft, VIEWPORT_MARGIN, viewportWidth - DESKTOP_CARD_WIDTH - VIEWPORT_MARGIN),
-      top: clamp(fallbackTop, VIEWPORT_MARGIN, viewportHeight - cardHeight - VIEWPORT_MARGIN),
+      left: clamp(fallbackLeft, VIEWPORT_MARGIN, vw - DESKTOP_CARD_WIDTH - VIEWPORT_MARGIN),
+      top: clamp(fallbackTop, VIEWPORT_MARGIN, vh - cardHeight - VIEWPORT_MARGIN),
     };
   }
 
   const top =
     anchorAlign === "center"
-      ? clamp(
-          anchorRect.top + anchorRect.height / 2 - cardHeight / 2,
-          VIEWPORT_MARGIN,
-          viewportHeight - cardHeight - VIEWPORT_MARGIN,
-        )
+      ? clamp(anchorRect.top + anchorRect.height / 2 - cardHeight / 2, VIEWPORT_MARGIN, vh - cardHeight - VIEWPORT_MARGIN)
       : (() => {
-          const preferredBelow = anchorRect.bottom + 10;
-          const preferredAbove = anchorRect.top - cardHeight - 10;
-          const fitsBelow = preferredBelow + cardHeight <= viewportHeight - VIEWPORT_MARGIN;
-          const fitsAbove = preferredAbove >= VIEWPORT_MARGIN;
-
-          return fitsBelow
-            ? preferredBelow
-            : fitsAbove
-              ? preferredAbove
-              : clamp(preferredBelow, VIEWPORT_MARGIN, viewportHeight - cardHeight - VIEWPORT_MARGIN);
+          const below = anchorRect.bottom + 10;
+          const above = anchorRect.top - cardHeight - 10;
+          const fitsBelow = below + cardHeight <= vh - VIEWPORT_MARGIN;
+          const fitsAbove = above >= VIEWPORT_MARGIN;
+          return fitsBelow ? below : fitsAbove ? above : clamp(below, VIEWPORT_MARGIN, vh - cardHeight - VIEWPORT_MARGIN);
         })();
 
-  const fitsToLeft = anchorRect.left - anchorOffset - DESKTOP_CARD_WIDTH >= VIEWPORT_MARGIN;
-  const fitsToRight = anchorRect.right + anchorOffset + DESKTOP_CARD_WIDTH <= viewportWidth - VIEWPORT_MARGIN;
   const leftOfAnchor = anchorRect.left - DESKTOP_CARD_WIDTH - anchorOffset;
   const rightOfAnchor = anchorRect.right + anchorOffset;
-  const alignedLeft = anchorRect.left;
-  const rightAligned = anchorRect.right - DESKTOP_CARD_WIDTH;
+  const fitsLeft = leftOfAnchor >= VIEWPORT_MARGIN;
+  const fitsRight = rightOfAnchor + DESKTOP_CARD_WIDTH <= vw - VIEWPORT_MARGIN;
 
   let left: number;
   if (anchorSide === "left") {
-    left = fitsToLeft
-      ? leftOfAnchor
-      : fitsToRight
-        ? rightOfAnchor
-        : clamp(rightAligned, VIEWPORT_MARGIN, viewportWidth - DESKTOP_CARD_WIDTH - VIEWPORT_MARGIN);
+    left = fitsLeft ? leftOfAnchor : fitsRight ? rightOfAnchor : clamp(anchorRect.right - DESKTOP_CARD_WIDTH, VIEWPORT_MARGIN, vw - DESKTOP_CARD_WIDTH - VIEWPORT_MARGIN);
   } else {
-    left = fitsToRight
-      ? rightOfAnchor
-      : fitsToLeft
-        ? leftOfAnchor
-        : clamp(alignedLeft, VIEWPORT_MARGIN, viewportWidth - DESKTOP_CARD_WIDTH - VIEWPORT_MARGIN);
+    left = fitsRight ? rightOfAnchor : fitsLeft ? leftOfAnchor : clamp(anchorRect.left, VIEWPORT_MARGIN, vw - DESKTOP_CARD_WIDTH - VIEWPORT_MARGIN);
   }
 
   return { left, top };
 };
+
+/* ─── Component ─── */
 
 export const UserProfilePopup = () => {
   const { activeModal, modalData, closeModal, openModal } = useUIStore();
@@ -208,16 +171,8 @@ export const UserProfilePopup = () => {
 
   const serverIds = useMemo(() => servers.map((s) => s.id), [servers]);
   const {
-    friends,
-    pendingRequests,
-    outgoingRequests,
-    blockedUsers,
-    sendRequest,
-    removeFriend,
-    acceptRequest,
-    declineRequest,
-    blockUser,
-    unblockUser,
+    friends, pendingRequests, outgoingRequests, blockedUsers,
+    sendRequest, removeFriend, acceptRequest, declineRequest, blockUser, unblockUser,
   } = useFriendStore();
   const { openConversation, setCurrentConversation } = useDMStore();
 
@@ -244,37 +199,25 @@ export const UserProfilePopup = () => {
   const anchorAlign = (modalData?.anchorAlign as UserProfileAnchorAlign | undefined) ?? "auto";
   const anchorOffset = typeof modalData?.anchorOffset === "number" ? modalData.anchorOffset : 10;
 
-  const applyCooldownFromDeclinedAt = useCallback((declinedAtRaw: string | null | undefined) => {
-    if (!declinedAtRaw) {
-      setCooldownSeconds(0);
-      return;
-    }
+  /* ─── Cooldown logic ─── */
 
-    const declinedAt = new Date(declinedAtRaw);
-    const cooldownEnd = new Date(declinedAt.getTime() + COOLDOWN_MINUTES * 60 * 1000);
-    const remainingMs = cooldownEnd.getTime() - Date.now();
-    setCooldownSeconds(remainingMs > 0 ? Math.ceil(remainingMs / 1000) : 0);
+  const applyCooldownFromDeclinedAt = useCallback((declinedAtRaw: string | null | undefined) => {
+    if (!declinedAtRaw) { setCooldownSeconds(0); return; }
+    const cooldownEnd = new Date(new Date(declinedAtRaw).getTime() + COOLDOWN_MINUTES * 60 * 1000);
+    const remaining = cooldownEnd.getTime() - Date.now();
+    setCooldownSeconds(remaining > 0 ? Math.ceil(remaining / 1000) : 0);
   }, []);
 
   const refreshCooldown = useCallback(async () => {
     if (!currentUser?.id || !userId || currentUser.id === userId) return;
     try {
-      const { data, error } = await supabase.rpc("profile", {
-        _target_user_id: userId,
-        _requesting_user_id: currentUser.id,
-        _server_ids: [],
-      });
-
-      if (error) {
-        console.error("Failed to refresh cooldown:", error);
-        return;
-      }
-
+      const { data, error } = await supabase.rpc("profile", { _target_user_id: userId, _requesting_user_id: currentUser.id, _server_ids: [] });
+      if (error) { console.error("Failed to refresh cooldown:", error); return; }
       applyCooldownFromDeclinedAt((data as any)?.declined_at ?? null);
-    } catch (err) {
-      console.error("Error refreshing cooldown:", err);
-    }
+    } catch (err) { console.error("Error refreshing cooldown:", err); }
   }, [applyCooldownFromDeclinedAt, currentUser?.id, userId]);
+
+  /* ─── Close / Reset ─── */
 
   const handleClose = useCallback(() => {
     setProfileUser(null);
@@ -283,6 +226,8 @@ export const UserProfilePopup = () => {
     setPosition(null);
     closeModal();
   }, [closeModal]);
+
+  /* ─── Profile effect handling ─── */
 
   useEffect(() => {
     if (!isOpen) return;
@@ -293,81 +238,54 @@ export const UserProfilePopup = () => {
 
   useEffect(() => {
     if (!profileUser?.profile_effect || !isOpen) return;
-
     const effectSrc = getProfileEffectSrc(profileUser.profile_effect);
     if (!effectSrc || profileEffectStillFrame) return;
     let captureTimeout: number | null = null;
     let cancelled = false;
-
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.src = effectSrc;
-
-    const captureStillFrame = () => {
-      if (cancelled) return;
-      try {
-        const canvas = document.createElement("canvas");
-        canvas.width = img.naturalWidth || 800;
-        canvas.height = img.naturalHeight || 600;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
-
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        setProfileEffectStillFrame(canvas.toDataURL("image/png"));
-        profileEffectAnimationEndedRef.current = true;
-      } catch (error) {
-        console.error("Failed to capture still frame:", error);
-      }
-    };
-
     img.onload = () => {
-      captureTimeout = window.setTimeout(captureStillFrame, 3000);
+      captureTimeout = window.setTimeout(() => {
+        if (cancelled) return;
+        try {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.naturalWidth || 800;
+          canvas.height = img.naturalHeight || 600;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return;
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          setProfileEffectStillFrame(canvas.toDataURL("image/png"));
+          profileEffectAnimationEndedRef.current = true;
+        } catch (error) { console.error("Failed to capture still frame:", error); }
+      }, 3000);
     };
-
-    return () => {
-      cancelled = true;
-      img.onload = null;
-      if (captureTimeout !== null) window.clearTimeout(captureTimeout);
-    };
+    return () => { cancelled = true; img.onload = null; if (captureTimeout !== null) window.clearTimeout(captureTimeout); };
   }, [isOpen, profileEffectStillFrame, profileUser?.profile_effect]);
+
+  /* ─── Fetch profile data ─── */
 
   useEffect(() => {
     if (!isOpen || !userId || !currentUser?.id) return;
-
     const fetchProfile = async () => {
       setIsLoading(true);
       try {
-        const { data, error } = await supabase.rpc("profile", {
-          _target_user_id: userId,
-          _requesting_user_id: currentUser.id,
-          _server_ids: serverIds,
-        });
-
+        const { data, error } = await supabase.rpc("profile", { _target_user_id: userId, _requesting_user_id: currentUser.id, _server_ids: serverIds });
         if (error) throw error;
         const payload = data as any;
         if (!payload?.user) throw new Error("Profile not found");
-
         const d = payload.user as any;
         setProfileUser({
-          id: d.id,
-          username: d.username,
-          display_name: d.display_name,
-          avatar_url: d.avatar_url,
-          banner_url: d.banner_url ?? null,
-          avatar_decoration: d.avatar_decoration,
-          profile_effect: d.profile_effect ?? null,
+          id: d.id, username: d.username, display_name: d.display_name,
+          avatar_url: d.avatar_url, banner_url: d.banner_url ?? null,
+          avatar_decoration: d.avatar_decoration, profile_effect: d.profile_effect ?? null,
           banner_color: d.banner_color || "#5865F2",
           profile_theme_primary: d.profile_theme_primary ?? null,
           profile_theme_accent: d.profile_theme_accent ?? null,
-          bio: d.bio,
-          status: d.status as UserStatus,
-          custom_status: d.custom_status,
-          created_at: d.created_at,
-          last_seen: d.last_seen,
-          pronouns: d.pronouns ?? null,
-          is_bot: d.is_bot ?? false,
+          bio: d.bio, status: d.status as UserStatus, custom_status: d.custom_status,
+          created_at: d.created_at, last_seen: d.last_seen,
+          pronouns: d.pronouns ?? null, is_bot: d.is_bot ?? false,
         });
-
         setUserBadges((Array.isArray(payload.badges) ? payload.badges : []) as Badge[]);
         const sharedServerIds = new Set((Array.isArray(payload.shared_server_ids) ? payload.shared_server_ids : []) as string[]);
         setSharedServers(servers.filter((s) => sharedServerIds.has(s.id)).slice(0, 3));
@@ -377,46 +295,39 @@ export const UserProfilePopup = () => {
         toast.error("Failed to load profile");
         setProfileUser(null);
         setUserBadges([]);
-      } finally {
-        setIsLoading(false);
-      }
+      } finally { setIsLoading(false); }
     };
-
     void fetchProfile();
   }, [applyCooldownFromDeclinedAt, currentUser?.id, isOpen, serverIds, servers, userId]);
 
+  /* ─── Timers & listeners ─── */
+
   useEffect(() => {
     if (cooldownSeconds <= 0) return;
-    const interval = window.setInterval(() => {
-      setCooldownSeconds((prev) => Math.max(prev - 1, 0));
-    }, 1000);
+    const interval = window.setInterval(() => setCooldownSeconds((prev) => Math.max(prev - 1, 0)), 1000);
     return () => window.clearInterval(interval);
   }, [cooldownSeconds]);
 
   useEffect(() => {
     if (!isOpen || isMobile) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") handleClose();
-    };
-
+    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === "Escape") handleClose(); };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isMobile, isOpen]);
+  }, [isMobile, isOpen, handleClose]);
 
   useLayoutEffect(() => {
     if (!isOpen || isMobile || !cardRef.current) return;
-
     const updatePosition = () => {
       const rect = cardRef.current?.getBoundingClientRect();
       const height = rect?.height ?? 480;
       setPosition(getAnchoredPosition(anchorRect, height, anchorSide, anchorAlign, anchorOffset));
     };
-
     updatePosition();
     window.addEventListener("resize", updatePosition);
     return () => window.removeEventListener("resize", updatePosition);
   }, [anchorAlign, anchorOffset, anchorRect, anchorSide, isLoading, isMobile, isOpen, profileUser, sharedServers.length]);
+
+  /* ─── Derived state ─── */
 
   const isSelf = currentUser?.id === userId;
   const isFriend = friends.some((f) => f.id === userId);
@@ -438,10 +349,12 @@ export const UserProfilePopup = () => {
     if (memberRoles && memberRoles.length > 0) return memberRoles;
     return authorStyles[userId]?.roles || [];
   }, [authorStyles, currentServer, members, userId]);
+
   const selfMember = useMemo(() => {
     if (!isSelf || !currentServer || !currentUser?.id) return null;
     return members.find((m) => m.server_id === currentServer.id && m.user_id === currentUser.id) ?? null;
   }, [isSelf, currentServer, currentUser?.id, members]);
+
   const selfAssignableRoles = useMemo(
     () => roles.filter((role) => role.name !== "@everyone" && Boolean(role.is_self_assignable)).sort((a, b) => a.position - b.position),
     [roles],
@@ -458,6 +371,8 @@ export const UserProfilePopup = () => {
     void fetchRoles(currentServer.id);
   }, [isOpen, isSelf, currentServer?.id, fetchRoles]);
 
+  /* ─── Action handlers ─── */
+
   const handleSelfRoleToggle = useCallback(
     async (roleId: string) => {
       if (!currentServer?.id || !currentUser?.id) return;
@@ -470,9 +385,7 @@ export const UserProfilePopup = () => {
         }
       } catch (error: any) {
         toast.error(error?.message || "Failed to update role");
-      } finally {
-        setUpdatingRoleId(null);
-      }
+      } finally { setUpdatingRoleId(null); }
     },
     [assignSelfRole, currentServer?.id, currentUser?.id, removeSelfRole, selfAssignedRoleIds],
   );
@@ -481,23 +394,16 @@ export const UserProfilePopup = () => {
     if (!currentUser || !profileUser) return;
     try {
       const conversation = await openConversation(currentUser.id, profileUser.id);
-      if (!conversation) {
-        toast.error("You can't message this user");
-        return;
-      }
-
+      if (!conversation) { toast.error("You can't message this user"); return; }
       navigate(`/app?conversation=${conversation.id}`, { replace: true });
       setCurrentServer(null);
       setCurrentConversation(conversation);
       handleClose();
-    } catch {
-      toast.error("Failed to open conversation");
-    }
+    } catch { toast.error("Failed to open conversation"); }
   };
 
   const handleFriendAction = async () => {
     if (!currentUser || !profileUser) return;
-
     if (isFriend) {
       const friendship = friends.find((f) => f.id === profileUser.id);
       if (!friendship) return;
@@ -505,32 +411,28 @@ export const UserProfilePopup = () => {
       toast.success("Friend removed");
       return;
     }
-
     if (!hasPendingRequest && !hasSentRequest && !isInCooldown) {
       setIsSendingRequest(true);
       const success = await sendRequest(currentUser.id, profileUser.username);
       setIsSendingRequest(false);
-      if (success) {
-        toast.success("Friend request sent");
-      } else {
-        await refreshCooldown();
-      }
+      if (success) toast.success("Friend request sent");
+      else await refreshCooldown();
     }
   };
 
   const handleAcceptRequest = async () => {
     if (!currentUser) return;
-    const pendingFriend = pendingRequests.find((f) => f.id === userId);
-    if (!pendingFriend) return;
-    await acceptRequest(pendingFriend.friendship_id, currentUser.id);
+    const pending = pendingRequests.find((f) => f.id === userId);
+    if (!pending) return;
+    await acceptRequest(pending.friendship_id, currentUser.id);
     toast.success("Friend request accepted");
   };
 
   const handleDeclineRequest = async () => {
     if (!currentUser) return;
-    const pendingFriend = pendingRequests.find((f) => f.id === userId);
-    if (!pendingFriend) return;
-    await declineRequest(pendingFriend.friendship_id, currentUser.id);
+    const pending = pendingRequests.find((f) => f.id === userId);
+    if (!pending) return;
+    await declineRequest(pending.friendship_id, currentUser.id);
     toast.success("Friend request declined");
   };
 
@@ -539,9 +441,7 @@ export const UserProfilePopup = () => {
     try {
       await blockUser(currentUser.id, profileUser.id);
       toast.success(`Blocked ${profileUser.display_name || profileUser.username}`);
-    } catch {
-      toast.error("Failed to block user");
-    }
+    } catch { toast.error("Failed to block user"); }
   };
 
   const handleUnblockUser = async () => {
@@ -549,105 +449,98 @@ export const UserProfilePopup = () => {
     try {
       await unblockUser(currentUser.id, profileUser.id);
       toast.success(`Unblocked ${profileUser.display_name || profileUser.username}`);
-    } catch {
-      toast.error("Failed to unblock user");
-    }
+    } catch { toast.error("Failed to unblock user"); }
   };
 
-  const renderActionRow = (divider: string) => {
+  /* ─── Render: Action Row ─── */
+
+  const renderActionRow = () => {
     if (isSelf || !profileUser) return null;
 
-    const iconButtonClass =
-      "h-7 flex-1 rounded-lg border border-border bg-secondary px-2 text-foreground hover:bg-secondary-hover hover:text-foreground disabled:border-border/50 disabled:bg-muted disabled:text-muted-foreground/35";
-    const dmButtonClass =
-      "h-7 flex-1 rounded-lg border border-border bg-secondary px-2 text-white shadow-none hover:bg-secondary-hover hover:text-foreground hover:shadow-none";
-
     return (
-      <div className="relative z-10 border-t px-3 py-2" style={{ borderColor: divider }}>
+      <div className="border-t border-border/50 px-4 py-3">
         {!isBlocked ? (
-          <div className="flex items-center gap-1.5">
-            <Button onClick={handleMessage} className={dmButtonClass}>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="flex-1 rounded-lg"
+              onClick={handleMessage}
+            >
               <MessageCircle className="mr-1.5 h-3.5 w-3.5" />
               Message
             </Button>
 
             {hasPendingRequest ? (
               <>
-                <Button variant="secondary" className={iconButtonClass} onClick={handleAcceptRequest}>
-                  <Check className="h-3.5 w-3.5" />
+                <Button variant="secondary" size="sm" className="flex-1 rounded-lg" onClick={handleAcceptRequest}>
+                  <Check className="h-3.5 w-3.5 mr-1" />
                   Accept
                 </Button>
-                <Button variant="secondary" className={iconButtonClass} onClick={handleDeclineRequest}>
-                  <X className="h-3.5 w-3.5" />
+                <Button variant="secondary" size="sm" className="flex-1 rounded-lg" onClick={handleDeclineRequest}>
+                  <X className="h-3.5 w-3.5 mr-1" />
                   Decline
                 </Button>
               </>
             ) : (
               <Button
                 variant="secondary"
-                className={iconButtonClass}
+                size="sm"
+                className="flex-1 rounded-lg"
                 onClick={handleFriendAction}
                 disabled={hasSentRequest || isInCooldown || isSendingRequest}
                 title={
-                  hasSentRequest
-                    ? "Friend request sent"
-                    : isInCooldown
-                      ? `Retry in ${formatCooldown(cooldownSeconds)}`
-                      : isFriend
-                        ? "Remove friend"
-                        : "Add friend"
+                  hasSentRequest ? "Friend request sent"
+                    : isInCooldown ? `Retry in ${formatCooldown(cooldownSeconds)}`
+                    : isFriend ? "Remove friend" : "Add friend"
                 }
               >
                 {isSendingRequest ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Sending
-                  </>
+                  <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />Sending</>
                 ) : isFriend ? (
-                  <>
-                    <UserMinus className="h-3.5 w-3.5" />
-                    Remove
-                  </>
+                  <><UserMinus className="h-3.5 w-3.5 mr-1" />Remove</>
                 ) : isInCooldown ? (
-                  <>
-                    <Clock className="h-3.5 w-3.5" />
-                    Wait
-                  </>
+                  <><Clock className="h-3.5 w-3.5 mr-1" />Wait</>
                 ) : (
-                  <>
-                    <UserPlus className="h-3.5 w-3.5" />
-                    Add
-                  </>
+                  <><UserPlus className="h-3.5 w-3.5 mr-1" />Add</>
                 )}
               </Button>
             )}
 
-            <Button variant="secondary" size="icon" className="h-7 w-7 rounded-lg border border-border bg-secondary text-foreground hover:bg-secondary-hover hover:text-foreground" onClick={handleBlockUser}>
+            <Button
+              variant="secondary"
+              size="icon-sm"
+              className="rounded-lg shrink-0"
+              onClick={handleBlockUser}
+              title="Block user"
+            >
               <Ban className="h-3.5 w-3.5" />
             </Button>
           </div>
         ) : (
           <Button
             variant="secondary"
-            className="h-7 w-full rounded-lg border border-white/10 bg-white/10 text-white hover:bg-white/18"
+            size="sm"
+            className="w-full rounded-lg"
             onClick={handleUnblockUser}
           >
             <Ban className="mr-1.5 h-3.5 w-3.5" />
             Unblock
           </Button>
         )}
-
       </div>
     );
   };
 
+  /* ─── Render: Card ─── */
+
   const renderCard = () => {
     if (isLoading) {
       return (
-        <div className="flex h-64 items-center justify-center">
-          <div className="flex flex-col items-center gap-3 text-white/75">
+        <div className="flex h-72 items-center justify-center">
+          <div className="flex flex-col items-center gap-3 text-muted-foreground">
             <Loader2 className="h-7 w-7 animate-spin" />
-            <p className="text-sm">Loading profile...</p>
+            <p className="text-sm">Loading profile…</p>
           </div>
         </div>
       );
@@ -655,50 +548,49 @@ export const UserProfilePopup = () => {
 
     if (!profileUser) return null;
 
-    const light = isLightTheme(
-      profileUser.profile_theme_primary,
-      profileUser.profile_theme_accent,
-      profileUser.banner_color,
-    );
+    const light = isLightTheme(profileUser.profile_theme_primary, profileUser.profile_theme_accent, profileUser.banner_color);
     const fg = light ? "#0b0b0f" : "#f8fafc";
-    const muted = light ? "rgba(11, 11, 15, 0.64)" : "rgba(248, 250, 252, 0.7)";
-    const divider = light ? "rgba(11, 11, 15, 0.12)" : "rgba(248, 250, 252, 0.12)";
-    const surface = light ? "rgba(255,255,255,0.32)" : "rgba(17,18,21,0.72)";
+    const muted = light ? "rgba(11, 11, 15, 0.58)" : "rgba(248, 250, 252, 0.6)";
+    const divider = light ? "rgba(11, 11, 15, 0.1)" : "rgba(248, 250, 252, 0.1)";
+    const surface = light ? "rgba(255,255,255,0.36)" : "rgba(17,18,21,0.65)";
     const overlay = light ? "rgba(255,255,255,0.42)" : "rgba(0,0,0,0.28)";
     const bannerUrl = profileUser.banner_url;
     const hasProfileDecoration = Boolean(profileUser.avatar_decoration);
     const presence = getEffectivePresence(profileUser.status || "offline", profileUser.last_seen, profileUser.id);
     const effectSrc = profileUser.profile_effect ? getProfileEffectSrc(profileUser.profile_effect) : null;
-    const displayEffectSrc =
-      profileEffectAnimationEndedRef.current && profileEffectStillFrame ? profileEffectStillFrame : effectSrc;
+    const displayEffectSrc = profileEffectAnimationEndedRef.current && profileEffectStillFrame ? profileEffectStillFrame : effectSrc;
     const joinedAt = profileUser.created_at ? format(new Date(profileUser.created_at), "MMM d, yyyy") : "Unknown";
     const rolePreview = userRoles.slice(0, 3);
     const bioText = profileUser.bio?.trim();
-    const shouldCollapseBio = Boolean(bioText && bioText.length > 50);
+    const shouldCollapseBio = Boolean(bioText && bioText.length > 80);
     const statusText = profileUser.custom_status?.trim();
     const selfStatusLabel = statusText || "Set a status";
+
+    const hasThemeColors = profileUser.profile_theme_primary && profileUser.profile_theme_accent;
     const themeStyle: CSSProperties = {
       color: fg,
-      background:
-        profileUser.profile_theme_primary && profileUser.profile_theme_accent
-          ? `linear-gradient(180deg, ${profileUser.profile_theme_primary} 0%, ${profileUser.profile_theme_accent} 100%)`
-          : `linear-gradient(180deg, ${withAlpha(profileUser.banner_color, "33")} 0%, ${withAlpha(profileUser.banner_color, "12")} 100%)`,
+      background: hasThemeColors
+        ? `linear-gradient(180deg, ${profileUser.profile_theme_primary} 0%, ${profileUser.profile_theme_accent} 100%)`
+        : `linear-gradient(180deg, ${withAlpha(profileUser.banner_color, "33")} 0%, ${withAlpha(profileUser.banner_color, "12")} 100%)`,
       ["--profile-muted" as string]: muted,
     };
 
     return (
-      <div className="relative overflow-hidden rounded-[11px]" style={themeStyle}>
+      <div className="relative overflow-hidden rounded-xl" style={themeStyle}>
+        {/* Background overlay */}
         <div className="pointer-events-none absolute inset-0" style={{ backgroundColor: overlay }} />
 
+        {/* Banner */}
         {bannerUrl ? (
-          <div className="relative h-16 overflow-hidden">
+          <div className="relative h-24 sm:h-20 overflow-hidden">
             <img src={bannerUrl} alt="Profile banner" className="h-full w-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-black/10 to-black/50" />
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/40" />
           </div>
         ) : (
-          <div className="h-14" />
+          <div className="h-16 sm:h-14" />
         )}
 
+        {/* Profile effect */}
         {displayEffectSrc && (
           <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden">
             <img
@@ -706,108 +598,112 @@ export const UserProfilePopup = () => {
               key={`effect-${profileUser.profile_effect}-${userId}-${profileEffectStillFrame ? "still" : "anim"}`}
               src={displayEffectSrc}
               alt=""
-              className="h-full w-full object-cover object-top opacity-85"
+              className="h-full w-full object-cover object-top opacity-80"
             />
           </div>
         )}
 
-        <div className="relative z-10 px-3 pb-0">
-          <div className="-mt-3 flex items-end gap-3">
+        {/* Main content */}
+        <div className="relative z-10 px-4 pb-1">
+          {/* Avatar + Identity */}
+          <div className="-mt-8 sm:-mt-7 flex items-end gap-3.5">
             <div className="relative shrink-0">
               <AvatarWithDecoration
                 user={profileUser}
-                className={hasProfileDecoration ? "h-[52px] w-[52px]" : "h-[58px] w-[58px]"}
+                className={hasProfileDecoration ? "h-16 w-16 sm:h-[60px] sm:w-[60px]" : "h-[72px] w-[72px] sm:h-16 sm:w-16"}
                 active
               />
               <div
                 className={cn(
-                  "absolute bottom-1 right-1 rounded-full border-[3px] border-background shadow-lg",
-                  hasProfileDecoration ? "h-3.5 w-3.5" : "h-4 w-4",
+                  "absolute bottom-0.5 right-0.5 rounded-full border-[3px] shadow-sm",
+                  hasProfileDecoration ? "h-4 w-4" : "h-[18px] w-[18px]",
                   statusColors[presence.status],
                 )}
+                style={{ borderColor: hasThemeColors ? profileUser.profile_theme_accent! : "hsl(var(--background))" }}
                 title={statusLabels[presence.status]}
               />
             </div>
-            <div className="min-w-0 flex-1 pt-5 pb-0.5">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <h2 className="truncate text-[19px] font-semibold leading-none">
-                      {profileUser.display_name || profileUser.username}
-                    </h2>
-                    {profileUser.is_bot && <BotTag className="rounded-md px-1.5 py-0.5 text-[10px]" />}
-                  </div>
-                  <p className="mt-1 truncate text-[13px] font-medium text-[color:var(--profile-muted)]">
-                    @{profileUser.username}
-                  </p>
-                  {isSelf && (
-                    <button
-                      type="button"
-                      onClick={() => openModal("set-status")}
-                      className={cn(
-                        "mt-1 truncate text-left text-[13px] font-medium text-[color:var(--profile-muted)] transition-opacity hover:opacity-80",
-                        !statusText && "font-semibold",
-                      )}
-                      title={selfStatusLabel}
-                    >
-                      {selfStatusLabel}
-                    </button>
-                  )}
-                </div>
+
+            <div className="min-w-0 flex-1 pb-1">
+              <div className="flex items-center gap-2">
+                <h2 className="truncate text-lg font-semibold leading-tight">
+                  {profileUser.display_name || profileUser.username}
+                </h2>
+                {profileUser.is_bot && <BotTag className="rounded-md px-1.5 py-0.5 text-[10px]" />}
                 {userBadges.length > 0 && (
-                  <div className="shrink-0 self-start pt-0.5">
+                  <div className="shrink-0 ml-auto">
                     <UserBadges badges={userBadges} />
                   </div>
                 )}
               </div>
+              <p className="mt-0.5 truncate text-[13px] font-medium" style={{ color: muted }}>
+                @{profileUser.username}
+              </p>
             </div>
           </div>
 
-          <div className="mt-4 pb-3">
-            <div className="rounded-[11px] p-3" style={{ backgroundColor: surface, backdropFilter: "blur(14px)" }}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap gap-1.5">
-                    <span
-                      className="inline-flex items-center rounded-full px-2 py-1 text-[10px] font-medium"
-                      style={{ backgroundColor: divider }}
-                    >
-                      {statusLabels[presence.status]}
-                    </span>
-                    {profileUser.pronouns && (
-                      <span
-                        className="inline-flex items-center rounded-full px-2 py-1 text-[10px] font-medium"
-                        style={{ backgroundColor: divider }}
-                      >
-                        {profileUser.pronouns}
-                      </span>
-                    )}
-                    <span
-                      className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-medium"
-                      style={{ backgroundColor: divider }}
-                    >
-                      <Calendar className="h-3 w-3" />
-                      {joinedAt}
-                    </span>
-                  </div>
-                  {!isSelf && statusText && (
-                    <p className="mt-2 truncate text-[13px] font-medium text-[color:var(--profile-muted)]">{statusText}</p>
-                  )}
-                </div>
+          {/* Custom status (self) */}
+          {isSelf && (
+            <button
+              type="button"
+              onClick={() => openModal("set-status")}
+              className={cn(
+                "mt-2 truncate text-left text-[13px] transition-opacity hover:opacity-80",
+                statusText ? "font-medium" : "font-semibold",
+              )}
+              style={{ color: muted }}
+              title={selfStatusLabel}
+            >
+              {selfStatusLabel}
+            </button>
+          )}
+
+          {/* Info card */}
+          <div className="mt-4 mb-3">
+            <div className="rounded-xl p-3.5" style={{ backgroundColor: surface, backdropFilter: "blur(16px)" }}>
+              {/* Meta tags */}
+              <div className="flex flex-wrap gap-1.5">
+                <span
+                  className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium"
+                  style={{ backgroundColor: divider }}
+                >
+                  {statusLabels[presence.status]}
+                </span>
+                {profileUser.pronouns && (
+                  <span
+                    className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium"
+                    style={{ backgroundColor: divider }}
+                  >
+                    {profileUser.pronouns}
+                  </span>
+                )}
+                <span
+                  className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium"
+                  style={{ backgroundColor: divider }}
+                >
+                  <Calendar className="h-3 w-3" />
+                  {joinedAt}
+                </span>
               </div>
 
+              {/* Custom status (other user) */}
+              {!isSelf && statusText && (
+                <p className="mt-3 text-[13px] font-medium" style={{ color: muted }}>{statusText}</p>
+              )}
+
+              {/* Bio */}
               {bioText && (
-                <div className="mt-2">
+                <div className="mt-3">
                   <div className="relative">
                     <p
-                      className="whitespace-pre-wrap break-words text-[13px] leading-5"
-                      style={!isBioExpanded && shouldCollapseBio ? { maxHeight: "3.75rem", overflow: "hidden" } : undefined}
+                      className="whitespace-pre-wrap break-words text-[13px] leading-relaxed"
+                      style={!isBioExpanded && shouldCollapseBio ? { maxHeight: "4.5rem", overflow: "hidden" } : undefined}
                     >
                       {bioText}
                     </p>
                     {!isBioExpanded && shouldCollapseBio && (
                       <div
-                        className="pointer-events-none absolute inset-x-0 bottom-0 h-8"
+                        className="pointer-events-none absolute inset-x-0 bottom-0 h-10"
                         style={{ background: `linear-gradient(180deg, rgba(255,255,255,0) 0%, ${surface} 100%)` }}
                       />
                     )}
@@ -815,7 +711,7 @@ export const UserProfilePopup = () => {
                   {shouldCollapseBio && (
                     <button
                       type="button"
-                      className="mt-1 text-[12px] font-medium transition-opacity hover:opacity-80"
+                      className="mt-1 text-[12px] font-semibold transition-opacity hover:opacity-80"
                       style={{ color: fg }}
                       onClick={() => setIsBioExpanded((prev) => !prev)}
                     >
@@ -825,10 +721,13 @@ export const UserProfilePopup = () => {
                 </div>
               )}
 
+              {/* Roles & Shared Servers */}
               {(rolePreview.length > 0 || (isSelf && selfAssignableRoles.length > 0) || (!isSelf && sharedServers.length > 0)) && (
                 <>
-                  <div className="mt-3 h-px" style={{ backgroundColor: divider }} />
-                  <div className="mt-3 space-y-2">
+                  <div className="mt-3.5 h-px" style={{ backgroundColor: divider }} />
+
+                  <div className="mt-3.5 space-y-3">
+                    {/* Roles */}
                     {(rolePreview.length > 0 || (isSelf && selfAssignableRoles.length > 0)) && (
                       <div className="flex flex-wrap gap-1.5">
                         {rolePreview.map((role) => {
@@ -837,15 +736,11 @@ export const UserProfilePopup = () => {
                           return (
                             <span
                               key={role.id}
-                              className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium"
-                              style={
-                                isGradient
-                                  ? { background: background, color: fg }
-                                  : { backgroundColor: background, color: fg }
-                              }
+                              className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium"
+                              style={isGradient ? { background, color: fg } : { backgroundColor: background, color: fg }}
                             >
                               <span
-                                className="h-2 w-2 rounded-full"
+                                className="h-2 w-2 rounded-full shrink-0"
                                 style={isGradient ? { background: role.color } : { backgroundColor: role.color }}
                               />
                               {role.name}
@@ -854,7 +749,7 @@ export const UserProfilePopup = () => {
                         })}
                         {userRoles.length > rolePreview.length && (
                           <span
-                            className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium"
+                            className="inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium"
                             style={{ borderColor: divider, color: muted }}
                           >
                             +{userRoles.length - rolePreview.length}
@@ -868,7 +763,7 @@ export const UserProfilePopup = () => {
                             <PopoverTrigger asChild>
                               <button
                                 type="button"
-                                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium transition-opacity hover:opacity-80"
+                                className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium transition-opacity hover:opacity-80"
                                 style={{ backgroundColor: divider }}
                                 title="Manage self-assignable roles"
                               >
@@ -925,19 +820,17 @@ export const UserProfilePopup = () => {
                       </div>
                     )}
 
+                    {/* Shared servers */}
                     {!isSelf && sharedServers.length > 0 && (
-                      <div className="flex gap-1.5">
+                      <div className="flex gap-2">
                         {sharedServers.map((server) => (
                           <button
                             key={server.id}
                             type="button"
-                            className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg text-[10px] font-semibold transition-transform hover:scale-105"
+                            className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg text-[11px] font-semibold transition-transform hover:scale-105"
                             style={{ backgroundColor: divider }}
                             title={server.name}
-                            onClick={() => {
-                              setCurrentServer(server);
-                              handleClose();
-                            }}
+                            onClick={() => { setCurrentServer(server); handleClose(); }}
                           >
                             {server.icon_url ? (
                               <img src={server.icon_url} alt={server.name} className="h-full w-full object-cover" />
@@ -955,10 +848,13 @@ export const UserProfilePopup = () => {
           </div>
         </div>
 
-        {renderActionRow(divider)}
+        {/* Action row */}
+        {renderActionRow()}
       </div>
     );
   };
+
+  /* ─── Render ─── */
 
   if (!isOpen) return null;
 
@@ -966,10 +862,10 @@ export const UserProfilePopup = () => {
     return (
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
         <DialogContent
-          className="max-h-[85vh] max-w-[calc(100vw-1rem)] overflow-hidden border-none bg-transparent p-0 shadow-none"
-          onOpenAutoFocus={(event) => event.preventDefault()}
+          className="max-h-[85vh] w-[calc(100vw-2rem)] max-w-sm overflow-hidden border-none bg-transparent p-0 shadow-none"
+          onOpenAutoFocus={(e) => e.preventDefault()}
         >
-          <div className="max-h-[75vh] overflow-y-auto rounded-[11px] border border-border bg-popover shadow-2xl">
+          <div className="max-h-[80vh] overflow-y-auto rounded-xl border border-border bg-popover shadow-2xl">
             {renderCard()}
           </div>
         </DialogContent>
@@ -981,13 +877,13 @@ export const UserProfilePopup = () => {
     <div className="fixed inset-0 z-50" onMouseDown={handleClose}>
       <div
         ref={cardRef}
-        className="absolute max-h-[70vh] w-[320px] overflow-y-auto rounded-[11px] border border-border bg-popover shadow-[0_22px_80px_rgba(0,0,0,0.45)]"
+        className="absolute max-h-[75vh] w-[360px] overflow-y-auto rounded-xl border border-border bg-popover shadow-[0_24px_80px_rgba(0,0,0,0.5)]"
         style={{
           left: position?.left ?? -9999,
           top: position?.top ?? -9999,
           opacity: position ? 1 : 0,
         }}
-        onMouseDown={(event) => event.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
       >
         {renderCard()}
       </div>
