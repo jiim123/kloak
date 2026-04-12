@@ -534,7 +534,7 @@ export const UserProfilePopup = () => {
         {/* Identity */}
         <div style={{ padding: "10px 18px 0" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 15, fontWeight: 700, color: "#fafafa", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <span style={{ fontSize: 16, fontWeight: 700, color: "#fafafa", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {profileUser.display_name || profileUser.username}
             </span>
             {profileUser.is_bot && <BotTag className="rounded-md px-1.5 py-0.5 text-[10px]" />}
