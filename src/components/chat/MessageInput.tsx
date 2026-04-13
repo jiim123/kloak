@@ -786,6 +786,8 @@ export const MessageInput = ({
   }, [
     isDM,
     isForum,
+    isEditMode,
+    editingMessage,
     dmConfig,
     openChatNoticePopup,
     content,
@@ -799,6 +801,9 @@ export const MessageInput = ({
     convertMentionsForSend,
     sendMessage,
     channelSetReplyingTo,
+    channelEditMessage,
+    dmEditMessage,
+    cancelEditing,
     isSlowmodeEnabled,
     isSlowmodeExempt,
     slowmodeSeconds,
