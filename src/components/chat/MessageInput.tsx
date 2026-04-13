@@ -541,8 +541,11 @@ export const MessageInput = ({
     if (!isDM) {
       detectAutocomplete(val, e.target.selectionStart);
     }
-    const draftKey = isForum ? `forum-${targetId}` : isDM ? `dm-${targetId}` : targetId;
-    saveDraft(draftKey, val);
+    // Don't save draft while editing — draft is preserved in savedDraftRef
+    if (!isEditMode) {
+      const draftKey = isForum ? `forum-${targetId}` : isDM ? `dm-${targetId}` : targetId;
+      saveDraft(draftKey, val);
+    }
   };
 
   const convertMentionsForSend = useCallback((text: string): string => {
