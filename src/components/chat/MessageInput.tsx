@@ -269,11 +269,15 @@ export const MessageInput = ({
   const isDM = !isForum && !!dmConfig;
   const targetId = isForum ? forumConfig!.threadId : isDM ? dmConfig!.conversationId : channelId!;
   const { user } = useAuthStore();
-  const { replyingTo: channelReplyingTo, setReplyingTo: channelSetReplyingTo, sendMessage: channelSendMessage } = useMessageStore();
-  const { sendMessage: dmSendMessage } = useDMStore();
+  const { replyingTo: channelReplyingTo, setReplyingTo: channelSetReplyingTo, sendMessage: channelSendMessage, editMessage: channelEditMessage } = useMessageStore();
+  const { sendMessage: dmSendMessage, editMessage: dmEditMessage } = useDMStore();
+  const { editingMessage, cancelEditing } = useEditStore();
   const { members, currentServer, currentChannel, channels, fetchRolePermissions } = useServerStore();
   const { getQueuedForChannel } = useOfflineQueueStore();
   const isMobile = useIsMobile();
+
+  // Is this input currently in edit mode?
+  const isEditMode = !!editingMessage && editingMessage.channelId === targetId;
 
   // Unified reply state
   const replyingTo = isForum ? forumConfig?.replyingTo : isDM ? dmConfig?.replyingTo : channelReplyingTo;
@@ -281,6 +285,9 @@ export const MessageInput = ({
   const sendMessage = isDM ? dmSendMessage : channelSendMessage;
   const forumConfigRef = useRef(forumConfig);
   forumConfigRef.current = forumConfig;
+
+  // Draft preservation for edit mode
+  const savedDraftRef = useRef<string | null>(null);
 
   const [content, setContent] = useState("");
   const [isFocused, setIsFocused] = useState(false);
