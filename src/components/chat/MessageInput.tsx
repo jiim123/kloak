@@ -1104,6 +1104,7 @@ export const MessageInput = ({
         content={content}
         isFocused={isFocused}
         replyingTo={replyingTo}
+        isEditMode={isEditMode}
         canSendMessage={canSendMessage}
         canSubmitMessage={canSubmitMessage}
         isLockedByNotice={isComposerLockedByNotice}
