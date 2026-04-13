@@ -855,47 +855,6 @@ export const MessageItem = memo(function MessageItem({
 
   const MESSAGE_CHAR_LIMIT = 2000;
 
-  const handleEditFormat = useCallback((type: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selected = editContent.slice(start, end);
-    const syntax = type === "codeblock" ? getCodeBlockSyntax("") : FORMAT_SYNTAX[type];
-    if (!syntax) return;
-    const newContent = editContent.slice(0, start) + syntax.prefix + (selected || "text") + syntax.suffix + editContent.slice(end);
-    setEditContent(newContent);
-    requestAnimationFrame(() => {
-      textarea.focus();
-      const newCursorPos = start + syntax.prefix.length + (selected || "text").length;
-      textarea.setSelectionRange(newCursorPos, newCursorPos);
-    });
-  }, [editContent]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      // Format shortcuts
-      if (e.ctrlKey || e.metaKey) {
-        const formatMap: Record<string, string> = { b: "bold", i: "italic", u: "underline", c: "code", k: "codeblock", s: "spoiler" };
-        const fmt = formatMap[e.key.toLowerCase()];
-        if (fmt) {
-          e.preventDefault();
-          e.stopPropagation();
-          handleEditFormat(fmt);
-          return;
-        }
-      }
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        handleEdit();
-      }
-      if (e.key === "Escape") {
-        handleCancelEdit();
-      }
-    },
-    [handleEdit, handleCancelEdit, handleEditFormat],
-  );
-
   // Computed class names — Discord-style spacing:
   // Non-grouped (first in group): top margin for visual group separation
   // Grouped (chained): zero extra spacing for uniform line density
