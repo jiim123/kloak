@@ -1215,6 +1215,7 @@ const MobileOptimizedInput = memo(
     content,
     isFocused,
     replyingTo,
+    isEditMode,
     canSendMessage,
     canSubmitMessage,
     isLockedByNotice,
