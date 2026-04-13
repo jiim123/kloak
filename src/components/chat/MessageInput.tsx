@@ -1072,6 +1072,31 @@ export const MessageInput = ({
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {isEditMode && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className="overflow-hidden"
+          >
+            <div className="flex items-center justify-between px-3.5 py-1.5 bg-primary/10 border-b border-primary/20 rounded-t-[14px]">
+              <div className="flex items-center gap-2 text-xs text-primary">
+                <Pencil className="w-3.5 h-3.5" />
+                <span className="font-medium">Editing message</span>
+              </div>
+              <button
+                onClick={handleCancelEdit}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <MobileOptimizedInput
         content={content}
         isFocused={isFocused}
