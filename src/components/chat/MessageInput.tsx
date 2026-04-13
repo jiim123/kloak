@@ -13,11 +13,13 @@ import {
   ImagePlay,
   Info,
   Check,
+  Pencil,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthStore } from "@/stores/authStore";
 import { useMessageStore } from "@/stores/messageStore";
 import { useDMStore } from "@/stores/dmStore";
+import { useEditStore } from "@/stores/editStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useChannelSettingsStore } from "@/stores/channelSettingsStore";
 import { useOfflineQueueStore } from "@/stores/offlineQueueStore";
