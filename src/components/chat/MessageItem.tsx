@@ -124,8 +124,6 @@ interface MessageItemProps {
   onStartEdit?: () => void;
   customEmojiMap?: Map<string, string>;
   globalEmojiMap?: Map<string, ResolvedEmoji>;
-  customEmojiMap?: Map<string, string>;
-  globalEmojiMap?: Map<string, ResolvedEmoji>;
   authorStyleFallback?: {
     role?: ServerRole | null;
     nickname?: string | null;
