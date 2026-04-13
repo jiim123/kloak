@@ -122,8 +122,8 @@ interface MessageItemProps {
   showNewDivider?: boolean;
   isHighlighted?: boolean;
   onStartEdit?: () => void;
-  externalEditTargetId?: string | null;
-  onExternalEditHandled?: (messageId: string) => void;
+  customEmojiMap?: Map<string, string>;
+  globalEmojiMap?: Map<string, ResolvedEmoji>;
   customEmojiMap?: Map<string, string>;
   globalEmojiMap?: Map<string, ResolvedEmoji>;
   authorStyleFallback?: {
@@ -263,8 +263,6 @@ export const MessageItem = memo(function MessageItem({
   showNewDivider,
   isHighlighted,
   onStartEdit,
-  externalEditTargetId,
-  onExternalEditHandled,
   customEmojiMap: sharedCustomEmojiMap,
   globalEmojiMap: sharedGlobalEmojiMap,
   authorStyleFallback,
