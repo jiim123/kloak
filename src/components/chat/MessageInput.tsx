@@ -559,7 +559,33 @@ export const MessageInput = ({
     return result;
   }, []);
 
+  const handleCancelEdit = useCallback(() => {
+    cancelEditing();
+  }, [cancelEditing]);
+
   const handleSubmit = useCallback(async () => {
+    // --- EDIT MODE ---
+    if (isEditMode && editingMessage && user) {
+      const trimmed = content.trim();
+      if (!trimmed) return;
+      setIsSending(true);
+      try {
+        if (editingMessage.isDM) {
+          await dmEditMessage(editingMessage.id, user.id, trimmed);
+        } else {
+          const finalContent = convertMentionsForSend(trimmed);
+          await channelEditMessage(editingMessage.id, finalContent, user.id);
+        }
+        cancelEditing();
+      } catch (error) {
+        handleError(error, "Failed to edit message");
+      } finally {
+        setIsSending(false);
+      }
+      return;
+    }
+
+    // --- NORMAL SEND MODE ---
     // Channel-only checks (skip for forum and DM)
     if (!isDM && !isForum) {
       if (openChatNoticePopup()) return;
