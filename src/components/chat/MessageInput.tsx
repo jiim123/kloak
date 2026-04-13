@@ -852,6 +852,13 @@ export const MessageInput = ({
 
   const handleComposerKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      // Escape cancels editing
+      if (e.key === "Escape" && isEditMode) {
+        e.preventDefault();
+        handleCancelEdit();
+        return;
+      }
+
       if (!isDM && requiresChatNoticeAck) {
         const isTypingAction = e.key.length === 1 || e.key === "Enter" || e.key === "Backspace" || e.key === "Delete";
         if (isTypingAction && !e.metaKey && !e.ctrlKey && !e.altKey) {
@@ -871,7 +878,7 @@ export const MessageInput = ({
       }
 
       // Restore Discord-like "edit your last message" shortcut (channel only).
-      if (!isDM && !isForum && e.key === "ArrowUp" && !isMobile && !content.trim() && pendingAttachments.length === 0 && user?.id) {
+      if (!isDM && !isForum && !isEditMode && e.key === "ArrowUp" && !isMobile && !content.trim() && pendingAttachments.length === 0 && user?.id) {
         e.preventDefault();
         window.dispatchEvent(
           new CustomEvent("editLastMessage", {
@@ -881,7 +888,7 @@ export const MessageInput = ({
         return;
       }
 
-      // Format shortcuts (all modes: channel, DM, forum, reply, etc.)
+      // Format shortcuts (all modes: channel, DM, forum, reply, edit, etc.)
       if (e.ctrlKey || e.metaKey) {
         const formatMap: Record<string, string> = { b: "bold", i: "italic", u: "underline", c: "code", k: "codeblock", s: "spoiler" };
         const fmt = formatMap[e.key.toLowerCase()];
