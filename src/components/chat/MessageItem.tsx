@@ -54,6 +54,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { MessageContent } from "./MessageContent";
 import { PollMessage } from "./PollMessage";
 import { isImageOnlyMessage, convertMentionsToReadable, convertMentionsToRaw } from "@/lib/message";
+import { SelectionFormatToolbar, FORMAT_SYNTAX, getCodeBlockSyntax } from "./FormatToolbar";
 import { ReplyPreview } from "./MessageContent";
 import { formatMessageTimestamp } from "@/lib/format";
 import { DeleteMessageModal } from "@/components/modals/DeleteMessageModal";
