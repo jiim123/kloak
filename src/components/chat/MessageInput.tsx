@@ -331,6 +331,44 @@ export const MessageInput = ({
     };
   }, [targetId, isDM]);
 
+  // Enter/exit edit mode — save/restore draft and populate edit content
+  const prevEditingIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const currentEditId = isEditMode ? editingMessage!.id : null;
+    if (currentEditId === prevEditingIdRef.current) return;
+
+    if (currentEditId && !prevEditingIdRef.current) {
+      // Entering edit mode — save current draft, load edit content
+      savedDraftRef.current = content;
+      setContent(editingMessage!.content);
+      setPendingAttachments([]);
+      requestAnimationFrame(() => {
+        const t = textareaRef.current;
+        if (t) {
+          t.focus();
+          const len = t.value.length;
+          t.setSelectionRange(len, len);
+          // Resize to fit edit content
+          t.style.height = "0px";
+          t.style.height = `${Math.min(Math.max(t.scrollHeight, 40), 160)}px`;
+        }
+      });
+    } else if (!currentEditId && prevEditingIdRef.current) {
+      // Exiting edit mode — restore draft
+      setContent(savedDraftRef.current || "");
+      savedDraftRef.current = null;
+      requestAnimationFrame(() => {
+        const t = textareaRef.current;
+        if (t) {
+          t.style.height = "0px";
+          t.style.height = `${Math.min(Math.max(t.scrollHeight, 40), 160)}px`;
+        }
+      });
+    }
+
+    prevEditingIdRef.current = currentEditId;
+  }, [isEditMode, editingMessage?.id, editingMessage?.content]);
+
   // Auto-focus text input when switching channels/conversations
   useEffect(() => {
     if (targetId) {
