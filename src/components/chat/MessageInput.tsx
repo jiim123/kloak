@@ -803,12 +803,13 @@ export const MessageInput = ({
         return;
       }
 
-      // DM: format shortcuts
-      if (isDM && (e.ctrlKey || e.metaKey)) {
-        const formatMap: Record<string, string> = { b: "bold", i: "italic", e: "code", p: "spoiler" };
+      // Format shortcuts (all modes: channel, DM, forum, reply, etc.)
+      if (e.ctrlKey || e.metaKey) {
+        const formatMap: Record<string, string> = { b: "bold", i: "italic", u: "underline", c: "code", k: "codeblock", s: "spoiler" };
         const fmt = formatMap[e.key.toLowerCase()];
         if (fmt) {
           e.preventDefault();
+          e.stopPropagation();
           handleFormat(fmt);
           return;
         }
