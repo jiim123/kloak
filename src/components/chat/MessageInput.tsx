@@ -1258,7 +1258,7 @@ const MobileOptimizedInput = memo(
           isFocused
             ? "border-border shadow-[0_10px_34px_rgba(0,0,0,0.18)] bg-card/55"
             : "border-border/50 hover:border-border/50"
-        } ${replyingTo || (showMentions && hasMentionOptions) || (showChannels && hasChannelOptions) ? "!rounded-t-none" : ""}`}
+        } ${replyingTo || isEditMode || (showMentions && hasMentionOptions) || (showChannels && hasChannelOptions) ? "!rounded-t-none" : ""}`}
       >
         <AnimatePresence>
           {hasAttachments && (
