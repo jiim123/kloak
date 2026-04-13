@@ -1458,6 +1458,7 @@ export const MessageItem = memo(function MessageItem({
                     {/* Message content */}
                     {isEditing ? (
                       <div className="relative">
+                        <SelectionFormatToolbar textareaRef={textareaRef} onFormat={handleEditFormat} />
                         <textarea
                           ref={textareaRef}
                           value={editContent}
