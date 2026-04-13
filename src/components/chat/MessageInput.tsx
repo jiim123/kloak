@@ -913,6 +913,8 @@ export const MessageInput = ({
       hasMentionOptions,
       showChannels,
       hasChannelOptions,
+      isEditMode,
+      handleCancelEdit,
       isMobile,
       content,
       pendingAttachments.length,
