@@ -56,6 +56,7 @@ import { PollMessage } from "./PollMessage";
 import { isImageOnlyMessage, convertMentionsToReadable, convertMentionsToRaw } from "@/lib/message";
 import { SelectionFormatToolbar, FORMAT_SYNTAX, getCodeBlockSyntax } from "./FormatToolbar";
 import { ReplyPreview } from "./MessageContent";
+import { useEditStore } from "@/stores/editStore";
 import { formatMessageTimestamp } from "@/lib/format";
 import { DeleteMessageModal } from "@/components/modals/DeleteMessageModal";
 import { ImageLightbox } from "@/components/modals/ImageLightbox";
