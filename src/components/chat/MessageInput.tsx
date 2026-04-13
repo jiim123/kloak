@@ -13,11 +13,13 @@ import {
   ImagePlay,
   Info,
   Check,
+  Pencil,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthStore } from "@/stores/authStore";
 import { useMessageStore } from "@/stores/messageStore";
 import { useDMStore } from "@/stores/dmStore";
+import { useEditStore } from "@/stores/editStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useChannelSettingsStore } from "@/stores/channelSettingsStore";
 import { useOfflineQueueStore } from "@/stores/offlineQueueStore";
@@ -267,11 +269,15 @@ export const MessageInput = ({
   const isDM = !isForum && !!dmConfig;
   const targetId = isForum ? forumConfig!.threadId : isDM ? dmConfig!.conversationId : channelId!;
   const { user } = useAuthStore();
-  const { replyingTo: channelReplyingTo, setReplyingTo: channelSetReplyingTo, sendMessage: channelSendMessage } = useMessageStore();
-  const { sendMessage: dmSendMessage } = useDMStore();
+  const { replyingTo: channelReplyingTo, setReplyingTo: channelSetReplyingTo, sendMessage: channelSendMessage, editMessage: channelEditMessage } = useMessageStore();
+  const { sendMessage: dmSendMessage, editMessage: dmEditMessage } = useDMStore();
+  const { editingMessage, cancelEditing } = useEditStore();
   const { members, currentServer, currentChannel, channels, fetchRolePermissions } = useServerStore();
   const { getQueuedForChannel } = useOfflineQueueStore();
   const isMobile = useIsMobile();
+
+  // Is this input currently in edit mode?
+  const isEditMode = !!editingMessage && editingMessage.channelId === targetId;
 
   // Unified reply state
   const replyingTo = isForum ? forumConfig?.replyingTo : isDM ? dmConfig?.replyingTo : channelReplyingTo;
@@ -279,6 +285,9 @@ export const MessageInput = ({
   const sendMessage = isDM ? dmSendMessage : channelSendMessage;
   const forumConfigRef = useRef(forumConfig);
   forumConfigRef.current = forumConfig;
+
+  // Draft preservation for edit mode
+  const savedDraftRef = useRef<string | null>(null);
 
   const [content, setContent] = useState("");
   const [isFocused, setIsFocused] = useState(false);
@@ -321,6 +330,44 @@ export const MessageInput = ({
       });
     };
   }, [targetId, isDM]);
+
+  // Enter/exit edit mode — save/restore draft and populate edit content
+  const prevEditingIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const currentEditId = isEditMode ? editingMessage!.id : null;
+    if (currentEditId === prevEditingIdRef.current) return;
+
+    if (currentEditId && !prevEditingIdRef.current) {
+      // Entering edit mode — save current draft, load edit content
+      savedDraftRef.current = content;
+      setContent(editingMessage!.content);
+      setPendingAttachments([]);
+      requestAnimationFrame(() => {
+        const t = textareaRef.current;
+        if (t) {
+          t.focus();
+          const len = t.value.length;
+          t.setSelectionRange(len, len);
+          // Resize to fit edit content
+          t.style.height = "0px";
+          t.style.height = `${Math.min(Math.max(t.scrollHeight, 40), 160)}px`;
+        }
+      });
+    } else if (!currentEditId && prevEditingIdRef.current) {
+      // Exiting edit mode — restore draft
+      setContent(savedDraftRef.current || "");
+      savedDraftRef.current = null;
+      requestAnimationFrame(() => {
+        const t = textareaRef.current;
+        if (t) {
+          t.style.height = "0px";
+          t.style.height = `${Math.min(Math.max(t.scrollHeight, 40), 160)}px`;
+        }
+      });
+    }
+
+    prevEditingIdRef.current = currentEditId;
+  }, [isEditMode, editingMessage?.id, editingMessage?.content]);
 
   // Auto-focus text input when switching channels/conversations
   useEffect(() => {
@@ -494,8 +541,11 @@ export const MessageInput = ({
     if (!isDM) {
       detectAutocomplete(val, e.target.selectionStart);
     }
-    const draftKey = isForum ? `forum-${targetId}` : isDM ? `dm-${targetId}` : targetId;
-    saveDraft(draftKey, val);
+    // Don't save draft while editing — draft is preserved in savedDraftRef
+    if (!isEditMode) {
+      const draftKey = isForum ? `forum-${targetId}` : isDM ? `dm-${targetId}` : targetId;
+      saveDraft(draftKey, val);
+    }
   };
 
   const convertMentionsForSend = useCallback((text: string): string => {
@@ -512,7 +562,33 @@ export const MessageInput = ({
     return result;
   }, []);
 
+  const handleCancelEdit = useCallback(() => {
+    cancelEditing();
+  }, [cancelEditing]);
+
   const handleSubmit = useCallback(async () => {
+    // --- EDIT MODE ---
+    if (isEditMode && editingMessage && user) {
+      const trimmed = content.trim();
+      if (!trimmed) return;
+      setIsSending(true);
+      try {
+        if (editingMessage.isDM) {
+          await dmEditMessage(editingMessage.id, user.id, trimmed);
+        } else {
+          const finalContent = convertMentionsForSend(trimmed);
+          await channelEditMessage(editingMessage.id, finalContent, user.id);
+        }
+        cancelEditing();
+      } catch (error) {
+        handleError(error, "Failed to edit message");
+      } finally {
+        setIsSending(false);
+      }
+      return;
+    }
+
+    // --- NORMAL SEND MODE ---
     // Channel-only checks (skip for forum and DM)
     if (!isDM && !isForum) {
       if (openChatNoticePopup()) return;
@@ -713,6 +789,8 @@ export const MessageInput = ({
   }, [
     isDM,
     isForum,
+    isEditMode,
+    editingMessage,
     dmConfig,
     openChatNoticePopup,
     content,
@@ -726,6 +804,9 @@ export const MessageInput = ({
     convertMentionsForSend,
     sendMessage,
     channelSetReplyingTo,
+    channelEditMessage,
+    dmEditMessage,
+    cancelEditing,
     isSlowmodeEnabled,
     isSlowmodeExempt,
     slowmodeSeconds,
@@ -774,6 +855,13 @@ export const MessageInput = ({
 
   const handleComposerKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      // Escape cancels editing
+      if (e.key === "Escape" && isEditMode) {
+        e.preventDefault();
+        handleCancelEdit();
+        return;
+      }
+
       if (!isDM && requiresChatNoticeAck) {
         const isTypingAction = e.key.length === 1 || e.key === "Enter" || e.key === "Backspace" || e.key === "Delete";
         if (isTypingAction && !e.metaKey && !e.ctrlKey && !e.altKey) {
@@ -793,7 +881,7 @@ export const MessageInput = ({
       }
 
       // Restore Discord-like "edit your last message" shortcut (channel only).
-      if (!isDM && !isForum && e.key === "ArrowUp" && !isMobile && !content.trim() && pendingAttachments.length === 0 && user?.id) {
+      if (!isDM && !isForum && !isEditMode && e.key === "ArrowUp" && !isMobile && !content.trim() && pendingAttachments.length === 0 && user?.id) {
         e.preventDefault();
         window.dispatchEvent(
           new CustomEvent("editLastMessage", {
@@ -803,7 +891,7 @@ export const MessageInput = ({
         return;
       }
 
-      // Format shortcuts (all modes: channel, DM, forum, reply, etc.)
+      // Format shortcuts (all modes: channel, DM, forum, reply, edit, etc.)
       if (e.ctrlKey || e.metaKey) {
         const formatMap: Record<string, string> = { b: "bold", i: "italic", u: "underline", c: "code", k: "codeblock", s: "spoiler" };
         const fmt = formatMap[e.key.toLowerCase()];
@@ -828,6 +916,8 @@ export const MessageInput = ({
       hasMentionOptions,
       showChannels,
       hasChannelOptions,
+      isEditMode,
+      handleCancelEdit,
       isMobile,
       content,
       pendingAttachments.length,
@@ -985,10 +1075,36 @@ export const MessageInput = ({
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {isEditMode && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className="overflow-hidden"
+          >
+            <div className="flex items-center justify-between px-3.5 py-1.5 bg-primary/10 border-b border-primary/20 rounded-t-[14px]">
+              <div className="flex items-center gap-2 text-xs text-primary">
+                <Pencil className="w-3.5 h-3.5" />
+                <span className="font-medium">Editing message</span>
+              </div>
+              <button
+                onClick={handleCancelEdit}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <MobileOptimizedInput
         content={content}
         isFocused={isFocused}
         replyingTo={replyingTo}
+        isEditMode={isEditMode}
         canSendMessage={canSendMessage}
         canSubmitMessage={canSubmitMessage}
         isLockedByNotice={isComposerLockedByNotice}
@@ -1099,6 +1215,7 @@ const MobileOptimizedInput = memo(
     content,
     isFocused,
     replyingTo,
+    isEditMode,
     canSendMessage,
     canSubmitMessage,
     isLockedByNotice,
@@ -1142,7 +1259,7 @@ const MobileOptimizedInput = memo(
           isFocused
             ? "border-border shadow-[0_10px_34px_rgba(0,0,0,0.18)] bg-card/55"
             : "border-border/50 hover:border-border/50"
-        } ${replyingTo || (showMentions && hasMentionOptions) || (showChannels && hasChannelOptions) ? "!rounded-t-none" : ""}`}
+        } ${replyingTo || isEditMode || (showMentions && hasMentionOptions) || (showChannels && hasChannelOptions) ? "!rounded-t-none" : ""}`}
       >
         <AnimatePresence>
           {hasAttachments && (

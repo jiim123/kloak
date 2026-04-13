@@ -56,6 +56,7 @@ import { PollMessage } from "./PollMessage";
 import { isImageOnlyMessage, convertMentionsToReadable, convertMentionsToRaw } from "@/lib/message";
 import { SelectionFormatToolbar, FORMAT_SYNTAX, getCodeBlockSyntax } from "./FormatToolbar";
 import { ReplyPreview } from "./MessageContent";
+import { useEditStore } from "@/stores/editStore";
 import { formatMessageTimestamp } from "@/lib/format";
 import { DeleteMessageModal } from "@/components/modals/DeleteMessageModal";
 import { ImageLightbox } from "@/components/modals/ImageLightbox";
@@ -121,8 +122,6 @@ interface MessageItemProps {
   showNewDivider?: boolean;
   isHighlighted?: boolean;
   onStartEdit?: () => void;
-  externalEditTargetId?: string | null;
-  onExternalEditHandled?: (messageId: string) => void;
   customEmojiMap?: Map<string, string>;
   globalEmojiMap?: Map<string, ResolvedEmoji>;
   authorStyleFallback?: {
@@ -262,8 +261,6 @@ export const MessageItem = memo(function MessageItem({
   showNewDivider,
   isHighlighted,
   onStartEdit,
-  externalEditTargetId,
-  onExternalEditHandled,
   customEmojiMap: sharedCustomEmojiMap,
   globalEmojiMap: sharedGlobalEmojiMap,
   authorStyleFallback,
@@ -303,8 +300,8 @@ export const MessageItem = memo(function MessageItem({
     : channelRemoveReaction;
 
   // State - SEPARATE states for desktop and mobile emoji pickers
-  const [isEditing, setIsEditing] = useState(false);
-  const [editContent, setEditContent] = useState(message.content);
+  const editingMessage = useEditStore((s) => s.editingMessage);
+  const isBeingEdited = editingMessage?.id === message.id;
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showMobileActions, setShowMobileActions] = useState(false);
   const [showDesktopEmojiPicker, setShowDesktopEmojiPicker] = useState(false);
@@ -735,120 +732,21 @@ export const MessageItem = memo(function MessageItem({
   const formattedTimestamp = useMemo(() => formatMessageTimestamp(message.created_at), [message.created_at]);
 
   // Auto-resize textarea for edit mode
-  const resizeEditTextarea = useCallback(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
+  // (Inline edit textarea removed — editing now happens in MessageInput)
 
-    // Reset to 0 to get accurate scrollHeight measurement
-    textarea.style.height = "0px";
+  // Callbacks — editing now delegates to editStore
+  const handleStartEditing = useCallback(() => {
+    const { startEditing } = useEditStore.getState();
+    startEditing({
+      id: message.id,
+      channelId: message.channel_id || (dmActions ? '' : ''),
+      content: message.content,
+      isDM: !!dmActions,
+    });
+  }, [message.id, message.channel_id, message.content, dmActions]);
 
-    // Calculate new height with min/max constraints
-    const scrollHeight = textarea.scrollHeight;
-    const newHeight = Math.min(Math.max(scrollHeight, MIN_EDIT_TEXTAREA_HEIGHT), MAX_EDIT_TEXTAREA_HEIGHT);
-
-    // Always apply the height
-    textarea.style.height = `${newHeight}px`;
-  }, []);
-
-  // Focus textarea when editing starts and resize to fit content
-  const hasInitializedEdit = useRef(false);
-  useEffect(() => {
-    if (isEditing && textareaRef.current && !hasInitializedEdit.current) {
-      hasInitializedEdit.current = true;
-
-      // Resize first to show full content
-      resizeEditTextarea();
-
-      // Then focus and place cursor at end
-      textareaRef.current.focus();
-      const len = textareaRef.current.value.length;
-      textareaRef.current.setSelectionRange(len, len);
-    }
-    if (!isEditing) {
-      hasInitializedEdit.current = false;
-    }
-  }, [isEditing, resizeEditTextarea]);
-
-  // Also resize when editContent changes (for initial load)
-  useEffect(() => {
-    if (isEditing) {
-      resizeEditTextarea();
-    }
-  }, [editContent, isEditing, resizeEditTextarea]);
-
-  useEffect(() => {
-    if (externalEditTargetId !== message.id || !isOwnMessage) return;
-    const readableContent = convertMentionsToReadable(message.content, usersMap, channelsMap);
-    setEditContent(readableContent);
-    setIsEditing(true);
-    onStartEdit?.();
-    onExternalEditHandled?.(message.id);
-  }, [
-    externalEditTargetId,
-    message.id,
-    message.content,
-    isOwnMessage,
-    onStartEdit,
-    onExternalEditHandled,
-    usersMap,
-    channelsMap,
-  ]);
-
-  // Callbacks
-  const handleEdit = useCallback(async () => {
-    const trimmed = editContent.trim();
-    if (trimmed && user) {
-      // Convert readable mentions back to UUID format before saving
-      const rawContent = convertMentionsToRaw(trimmed, usersMap, channelsMap);
-
-      // Block @everyone/@here if permission denied
-      if (!isDM && !hasPermission('mention_everyone') && (rawContent.includes('@everyone') || rawContent.includes('@here'))) {
-        toast.error("You don't have permission to mention @everyone in this channel");
-        return;
-      }
-
-      // Block role mentions if permission denied
-      if (!isDM && !hasPermission('mention_roles') && /<@&[0-9a-f-]{36}>/.test(rawContent)) {
-        toast.error("You don't have permission to mention roles in this channel");
-        return;
-      }
-
-      // Block adding URLs if embed_links is denied
-      if (!isDM && !hasPermission('embed_links')) {
-        const urlPattern = /https?:\/\/[^\s<>`\]]+/g;
-        const newUrls = rawContent.match(urlPattern) || [];
-        const oldUrls = message.content.match(urlPattern) || [];
-        const oldUrlSet = new Set(oldUrls);
-        const addedUrls = newUrls.filter(url => !oldUrlSet.has(url));
-        if (addedUrls.length > 0) {
-          toast.error("You don't have permission to embed links in this channel");
-          return;
-        }
-      }
-
-      // Block adding attachment references if attach_files is denied
-      if (!isDM && !hasPermission('attach_files')) {
-        const attachmentPattern = /kloak-attachment:\/\/|\/storage\/v1\/object\/sign\/attachments\//;
-        const hadAttachment = attachmentPattern.test(message.content);
-        const hasAttachment = attachmentPattern.test(rawContent);
-        if (!hadAttachment && hasAttachment) {
-          toast.error("You don't have permission to attach files in this channel");
-          return;
-        }
-      }
-
-      if (rawContent !== message.content) {
-        await editMessage(message.id, rawContent, user.id);
-      }
-    }
-    setIsEditing(false);
-  }, [editContent, message.content, message.id, user, editMessage, usersMap, channelsMap, isDM, hasPermission]);
-
-  const handleCancelEdit = useCallback(() => {
-    setIsEditing(false);
-    const readableContent = convertMentionsToReadable(message.content, usersMap);
-    setEditContent(readableContent);
-  }, [message.content, usersMap]);
+  // For DMs, channel_id won't exist — use conversation context
+  // The channelId for DMs is set via the dmActions context in DMChatArea
 
   const handlePin = useCallback(async () => {
     if (!user) return;
@@ -955,64 +853,7 @@ export const MessageItem = memo(function MessageItem({
     }
   }, [isDM, dmActions, message, setReplyingTo]);
 
-  const handleStartEditing = useCallback(() => {
-    // Convert UUID mentions to readable format for editing (no-op in DM mode since no mentions)
-    const readableContent = isDM ? message.content : convertMentionsToReadable(message.content, usersMap, channelsMap);
-    setEditContent(readableContent);
-    setIsEditing(true);
-  }, [isDM, message.content, usersMap, channelsMap]);
-
   const MESSAGE_CHAR_LIMIT = 2000;
-
-  const handleEditContentChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      const value = e.target.value.slice(0, MESSAGE_CHAR_LIMIT);
-      setEditContent(value);
-      resizeEditTextarea();
-    },
-    [resizeEditTextarea],
-  );
-
-  const handleEditFormat = useCallback((type: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selected = editContent.slice(start, end);
-    const syntax = type === "codeblock" ? getCodeBlockSyntax("") : FORMAT_SYNTAX[type];
-    if (!syntax) return;
-    const newContent = editContent.slice(0, start) + syntax.prefix + (selected || "text") + syntax.suffix + editContent.slice(end);
-    setEditContent(newContent);
-    requestAnimationFrame(() => {
-      textarea.focus();
-      const newCursorPos = start + syntax.prefix.length + (selected || "text").length;
-      textarea.setSelectionRange(newCursorPos, newCursorPos);
-    });
-  }, [editContent]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      // Format shortcuts
-      if (e.ctrlKey || e.metaKey) {
-        const formatMap: Record<string, string> = { b: "bold", i: "italic", u: "underline", c: "code", k: "codeblock", s: "spoiler" };
-        const fmt = formatMap[e.key.toLowerCase()];
-        if (fmt) {
-          e.preventDefault();
-          e.stopPropagation();
-          handleEditFormat(fmt);
-          return;
-        }
-      }
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        handleEdit();
-      }
-      if (e.key === "Escape") {
-        handleCancelEdit();
-      }
-    },
-    [handleEdit, handleCancelEdit, handleEditFormat],
-  );
 
   // Computed class names — Discord-style spacing:
   // Non-grouped (first in group): top margin for visual group separation
