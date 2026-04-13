@@ -15,6 +15,7 @@ const FORMAT_OPTIONS = [
 export const FORMAT_SYNTAX: Record<string, { prefix: string; suffix: string }> = {
   bold: { prefix: '**', suffix: '**' },
   italic: { prefix: '*', suffix: '*' },
+  underline: { prefix: '__', suffix: '__' },
   strikethrough: { prefix: '~~', suffix: '~~' },
   code: { prefix: '`', suffix: '`' },
   codeblock: { prefix: '```\n', suffix: '\n```' },
