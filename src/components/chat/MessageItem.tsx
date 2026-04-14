@@ -1297,61 +1297,7 @@ export const MessageItem = memo(function MessageItem({
                     )}
 
                     {/* Message content */}
-                    {isEditing ? (
-                      <div className="relative">
-                        <SelectionFormatToolbar textareaRef={textareaRef} onFormat={handleEditFormat} />
-                        <textarea
-                          ref={textareaRef}
-                          value={editContent}
-                          onChange={handleEditContentChange}
-                          className="w-full bg-background border border-border rounded-lg px-3 py-2 pb-10 text-sm resize-none outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 min-h-[60px] max-h-[300px] overflow-y-auto"
-                          onKeyDown={handleKeyDown}
-                          onPaste={(e) => {
-                            if (!isDM && !hasPermission('attach_files')) {
-                              const items = Array.from(e.clipboardData?.items || []);
-                              const hasFile = items.some(item => item.kind === 'file');
-                              if (hasFile) {
-                                e.preventDefault();
-                                toast.error("You don't have permission to attach files in this channel");
-                              }
-                            }
-                          }}
-                          style={{
-                            lineHeight: "1.5",
-                          }}
-                        />
-                        <div className="absolute bottom-3 right-3 flex items-center gap-1.5">
-                          <span className={`inline-flex items-center h-7 sm:h-8 px-2.5 sm:px-3 rounded-full text-[12px] sm:text-[13px] tabular-nums select-none transition-colors border ${
-                            editContent.length > MESSAGE_CHAR_LIMIT * 0.95
-                              ? 'border-[#b23b4a] bg-[#2a1015] text-[#e8616f] font-medium'
-                              : editContent.length > MESSAGE_CHAR_LIMIT * 0.8
-                                ? 'border-warning/50 bg-[#2a1e0a] text-warning'
-                                : 'border-border bg-muted text-muted-foreground'
-                          }`}>
-                            {editContent.length}/{MESSAGE_CHAR_LIMIT}
-                          </span>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={handleCancelEdit}
-                            iconLeft={<X className="w-3.5 h-3.5" />}
-                            className="bg-[#2a1015] text-[#e8616f] hover:bg-[#3a1520] hover:text-[#f0717f] border border-[#b23b4a]/50"
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={handleEdit}
-                            disabled={!editContent.trim() || editContent.length > MESSAGE_CHAR_LIMIT}
-                            iconLeft={<Check className="w-3.5 h-3.5" />}
-                            className="bg-[#0a2a1f] text-[#09bc8a] hover:bg-[#0f3a2a] hover:text-[#1fd9a0] border border-[#09bc8a]/50"
-                          >
-                            Save
-                          </Button>
-                        </div>
-                      </div>
-                    ) : pollId ? (
+                    {pollId ? (
                       <div className="mt-1 max-w-[520px]">
                         <PollMessage pollId={pollId} />
                       </div>
@@ -1418,7 +1364,7 @@ export const MessageItem = memo(function MessageItem({
                     )}
 
                     {/* Edited indicator */}
-                    {message.edited_at && !isEditing && (
+                    {message.edited_at && (
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <span className="text-[10px] text-muted-foreground cursor-help ml-1">(edited)</span>
@@ -1441,7 +1387,7 @@ export const MessageItem = memo(function MessageItem({
               </div>
 
               {/* Hover actions - Desktop only - skip for system messages */}
-              {!isEditing && !message.is_system_message && (
+              {!isBeingEdited && !message.is_system_message && (
                 <div className="absolute right-2 -top-4 hidden md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 md:flex items-center gap-1 bg-background border border-border rounded-xl shadow-md p-1 transition-opacity duration-100">
                   {/* Quick reactions - top 3 most used */}
                   {effectiveCanAddReactions && !isBlockedUser && topEmojis.map((emoji) => (
