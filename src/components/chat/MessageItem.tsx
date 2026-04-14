@@ -79,9 +79,6 @@ import { openUserProfileModal, SIDE_ALIGNED_USER_PROFILE_POPOVER } from "@/lib/u
 // Static data moved outside component
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "👋", "🔥", "👀", "💯", "🙌", "😍", "🤔"] as const;
 
-const MIN_EDIT_TEXTAREA_HEIGHT = 60;
-const MAX_EDIT_TEXTAREA_HEIGHT = 300;
-
 const ROLE_COLORS: Record<string, string> = {
   owner: "text-yellow-400",
   admin: "text-red-400",
