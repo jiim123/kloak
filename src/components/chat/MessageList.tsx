@@ -209,12 +209,13 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       const userMessages = messagesRef.current.filter((m) => m.user_id === e.detail.userId);
       if (userMessages.length > 0) {
         const msg = userMessages[userMessages.length - 1];
-        const { startEditing } = (await import("@/stores/editStore")).useEditStore.getState();
-        startEditing({
-          id: msg.id,
-          channelId: msg.channel_id,
-          content: msg.content,
-          isDM: false,
+        import("@/stores/editStore").then(({ useEditStore }) => {
+          useEditStore.getState().startEditing({
+            id: msg.id,
+            channelId: msg.channel_id,
+            content: msg.content,
+            isDM: false,
+          });
         });
       }
     };
@@ -367,8 +368,8 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     return () => window.removeEventListener("channelMessageSent", listener);
   }, [scrollToBottom]);
 
-  const handleExternalEditHandled = useCallback((messageId: string) => {
-    setExternalEditTargetId((current) => (current === messageId ? null : current));
+  const handleExternalEditHandled = useCallback((_messageId: string) => {
+    // No-op — editing now handled by editStore
   }, []);
 
   const handleAtBottomStateChange = useCallback((atBottom: boolean) => {
@@ -492,8 +493,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   globalEmojiMapRef.current = globalEmojiMap;
   const highlightedMessageIdRef = useRef(highlightedMessageId);
   highlightedMessageIdRef.current = highlightedMessageId;
-  const externalEditTargetIdRef = useRef(externalEditTargetId);
-  externalEditTargetIdRef.current = externalEditTargetId;
+  // externalEditTargetId removed — editing handled by editStore
 
   const itemContent = useCallback(
     (item: ListItem, index: number) => {
@@ -529,8 +529,6 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
           showNewDivider={showNewDivider}
           isHighlighted={message.id === highlightedMessageIdRef.current}
           authorStyleFallback={authorStyleMapRef.current[message.user_id]}
-          externalEditTargetId={externalEditTargetIdRef.current}
-          onExternalEditHandled={handleExternalEditHandled}
           customEmojiMap={customEmojiMapRef.current}
           globalEmojiMap={globalEmojiMapRef.current}
         />
