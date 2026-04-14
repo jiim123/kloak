@@ -159,7 +159,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   }, [currentServerId]);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const [externalEditTargetId, setExternalEditTargetId] = useState<string | null>(null);
+  const [_unused, _setUnused] = useState<string | null>(null); // kept for stable hook order
   const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
   const [globalEmojiMap, setGlobalEmojiMap] = useState<Map<string, ResolvedEmoji>>(new Map());
   const [showJumpToPresent, setShowJumpToPresent] = useState(false);
@@ -207,7 +207,16 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     const handleEditLastMessage = (e: CustomEvent<{ userId: string; channelId: string }>) => {
       if (e.detail.channelId !== channelIdRef.current || !e.detail.userId) return;
       const userMessages = messagesRef.current.filter((m) => m.user_id === e.detail.userId);
-      if (userMessages.length > 0) setExternalEditTargetId(userMessages[userMessages.length - 1].id);
+      if (userMessages.length > 0) {
+        const msg = userMessages[userMessages.length - 1];
+        const { startEditing } = (await import("@/stores/editStore")).useEditStore.getState();
+        startEditing({
+          id: msg.id,
+          channelId: msg.channel_id,
+          content: msg.content,
+          isDM: false,
+        });
+      }
     };
     const listener = handleEditLastMessage as unknown as EventListener;
     window.addEventListener("editLastMessage", listener);
