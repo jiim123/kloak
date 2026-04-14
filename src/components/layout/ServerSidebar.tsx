@@ -160,7 +160,7 @@ const dashedBorderHover = {
   strokeDashoffset: -10,
   opacity: 0,
   transition: {
-    strokeDashoffset: { duration: 0.6, ease: "linear" },
+    strokeDashoffset: { duration: 0.6, ease: "linear" as const },
     opacity: { duration: 0.2, delay: 0.4 },
   },
 };
