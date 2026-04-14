@@ -313,7 +313,7 @@ export const MessageItem = memo(function MessageItem({
   const [reactionDrawerOpen, setReactionDrawerOpen] = useState(false);
 
   // Refs
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // Refs
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reactionLongPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
