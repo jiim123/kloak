@@ -1,40 +1,12 @@
-import { useState, useMemo, useCallback, useEffect, type ReactNode } from "react";
+import { useState, useMemo, useCallback, useEffect, memo, type ReactNode } from "react";
 import { FluentEmoji } from "@/components/ui/FluentEmoji";
 import { useLocation, useNavigate } from "react-router-dom";
-import {
-  ChevronDown,
-  ChevronRight,
-  Hash,
-  Volume2,
-  VolumeX,
-  MessageSquare,
-  Settings,
-  Plus,
-  LogOut,
-  UserPlus,
-  FolderPlus,
-  Info,
-  
-  Edit2,
-  Trash2,
-  Copy,
-  Lock,
-  GripVertical,
-  ArrowUpDown,
-  Megaphone,
-  Film,
-  ClipboardList,
-  EyeOff,
-  Eye,
-  MicOff,
-} from "lucide-react";
 import { toast } from "sonner";
 import {
   DndContext,
   closestCenter,
   KeyboardSensor,
   PointerSensor,
-  TouchSensor,
   useSensor,
   useSensors,
   DragOverlay,
@@ -92,28 +64,209 @@ import { fetchAndCacheUser, getUserFromCache, useUserCacheStore } from "@/stores
 import { openUserProfileModal } from "@/lib/userProfilePopover";
 import type { Channel, ChannelCategory, ServerRole } from "@/types";
 
-// Ghost Icon Component
-const GhostIcon = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-    <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
-    <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g>
-    <g id="SVGRepo_iconCarrier">
-      <path
-        d="M16 10.5C16 11.3284 15.5523 12 15 12C14.4477 12 14 11.3284 14 10.5C14 9.67157 14.4477 9 15 9C15.5523 9 16 9.67157 16 10.5Z"
-        fill="currentColor"
-      ></path>
-      <ellipse cx="9" cy="10.5" rx="1" ry="1.5" fill="currentColor"></ellipse>
-      <path
-        d="M22 19.723V12.3006C22 6.61173 17.5228 2 12 2C6.47715 2 2 6.61173 2 12.3006V19.723C2 21.0453 3.35098 21.9054 4.4992 21.314C5.42726 20.836 6.5328 20.9069 7.39614 21.4998C8.36736 22.1667 9.63264 22.1667 10.6039 21.4998L10.9565 21.2576C11.5884 20.8237 12.4116 20.8237 13.0435 21.2576L13.3961 21.4998C14.3674 22.1667 15.6326 22.1667 16.6039 21.4998C17.4672 20.9069 18.5727 20.836 19.5008 21.314C20.649 21.9054 22 21.0453 22 19.723Z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      ></path>
-    </g>
-  </svg>
-);
+// ─── Inline SVG Icons (memo-wrapped, zero bundle cost) ───
 
-// Voice Participant List for sidebar
-const VoiceParticipantList = ({
+const HashIcon = memo(({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <line x1="4" y1="9" x2="20" y2="9" /><line x1="4" y1="15" x2="20" y2="15" />
+    <line x1="10" y1="3" x2="8" y2="21" /><line x1="16" y1="3" x2="14" y2="21" />
+  </svg>
+));
+HashIcon.displayName = "HashIcon";
+
+const VolumeIcon = memo(({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+    <path d="M19.07 4.93a10 10 0 0 1 0 14.14" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+  </svg>
+));
+VolumeIcon.displayName = "VolumeIcon";
+
+const VolumeXIcon = memo(({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+    <line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" />
+  </svg>
+));
+VolumeXIcon.displayName = "VolumeXIcon";
+
+const MicOffIcon = memo(({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <line x1="1" y1="1" x2="23" y2="23" />
+    <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
+    <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .76-.12 1.49-.34 2.18" />
+    <line x1="12" y1="19" x2="12" y2="23" /><line x1="8" y1="23" x2="16" y2="23" />
+  </svg>
+));
+MicOffIcon.displayName = "MicOffIcon";
+
+const ChevronDownIcon = memo(({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <polyline points="6 9 12 15 18 9" />
+  </svg>
+));
+ChevronDownIcon.displayName = "ChevronDownIcon";
+
+const ChevronRightIcon = memo(({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <polyline points="9 18 15 12 9 6" />
+  </svg>
+));
+ChevronRightIcon.displayName = "ChevronRightIcon";
+
+const SettingsIcon = memo(({ className, onClick }: { className?: string; onClick?: (e: React.MouseEvent) => void }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} onClick={onClick}>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+  </svg>
+));
+SettingsIcon.displayName = "SettingsIcon";
+
+const PlusIcon = memo(({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+  </svg>
+));
+PlusIcon.displayName = "PlusIcon";
+
+const LockIcon = memo(({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </svg>
+));
+LockIcon.displayName = "LockIcon";
+
+const LogOutIcon = memo(({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
+  </svg>
+));
+LogOutIcon.displayName = "LogOutIcon";
+
+const UserPlusIcon = memo(({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="8.5" cy="7" r="4" /><line x1="20" y1="8" x2="20" y2="14" /><line x1="23" y1="11" x2="17" y2="11" />
+  </svg>
+));
+UserPlusIcon.displayName = "UserPlusIcon";
+
+const FolderPlusIcon = memo(({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+    <line x1="12" y1="11" x2="12" y2="17" /><line x1="9" y1="14" x2="15" y2="14" />
+  </svg>
+));
+FolderPlusIcon.displayName = "FolderPlusIcon";
+
+const InfoIcon = memo(({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
+  </svg>
+));
+InfoIcon.displayName = "InfoIcon";
+
+const Edit2Icon = memo(({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+  </svg>
+));
+Edit2Icon.displayName = "Edit2Icon";
+
+const Trash2Icon = memo(({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <polyline points="3 6 5 6 21 6" /><path d="M19 6l-2 14H7L5 6" />
+    <path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+  </svg>
+));
+Trash2Icon.displayName = "Trash2Icon";
+
+const GripVerticalIcon = memo(({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <circle cx="9" cy="12" r="1" /><circle cx="9" cy="5" r="1" /><circle cx="9" cy="19" r="1" />
+    <circle cx="15" cy="12" r="1" /><circle cx="15" cy="5" r="1" /><circle cx="15" cy="19" r="1" />
+  </svg>
+));
+GripVerticalIcon.displayName = "GripVerticalIcon";
+
+const ArrowUpDownIcon = memo(({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <line x1="12" y1="2" x2="12" y2="22" /><polyline points="8 18 12 22 16 18" /><polyline points="8 6 12 2 16 6" />
+  </svg>
+));
+ArrowUpDownIcon.displayName = "ArrowUpDownIcon";
+
+const MegaphoneIcon = memo(({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="m3 11 18-5v12L3 13v-2z" /><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
+  </svg>
+));
+MegaphoneIcon.displayName = "MegaphoneIcon";
+
+const FilmIcon = memo(({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18" />
+    <line x1="7" y1="2" x2="7" y2="22" /><line x1="17" y1="2" x2="17" y2="22" />
+    <line x1="2" y1="12" x2="22" y2="12" /><line x1="2" y1="7" x2="7" y2="7" />
+    <line x1="2" y1="17" x2="7" y2="17" /><line x1="17" y1="7" x2="22" y2="7" /><line x1="17" y1="17" x2="22" y2="17" />
+  </svg>
+));
+FilmIcon.displayName = "FilmIcon";
+
+const ClipboardListIcon = memo(({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+    <path d="M12 11h4" /><path d="M12 16h4" /><path d="M8 11h.01" /><path d="M8 16h.01" />
+  </svg>
+));
+ClipboardListIcon.displayName = "ClipboardListIcon";
+
+const MessageSquareIcon = memo(({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+  </svg>
+));
+MessageSquareIcon.displayName = "MessageSquareIcon";
+
+const EyeOffIcon = memo(({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+    <line x1="1" y1="1" x2="23" y2="23" />
+  </svg>
+));
+EyeOffIcon.displayName = "EyeOffIcon";
+
+const CopyIcon = memo(({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+  </svg>
+));
+CopyIcon.displayName = "CopyIcon";
+
+// Ghost Icon Component
+const GhostIcon = memo(({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <path
+      d="M16 10.5C16 11.3284 15.5523 12 15 12C14.4477 12 14 11.3284 14 10.5C14 9.67157 14.4477 9 15 9C15.5523 9 16 9.67157 16 10.5Z"
+      fill="currentColor"
+    />
+    <ellipse cx="9" cy="10.5" rx="1" ry="1.5" fill="currentColor" />
+    <path
+      d="M22 19.723V12.3006C22 6.61173 17.5228 2 12 2C6.47715 2 2 6.61173 2 12.3006V19.723C2 21.0453 3.35098 21.9054 4.4992 21.314C5.42726 20.836 6.5328 20.9069 7.39614 21.4998C8.36736 22.1667 9.63264 22.1667 10.6039 21.4998L10.9565 21.2576C11.5884 20.8237 12.4116 20.8237 13.0435 21.2576L13.3961 21.4998C14.3674 22.1667 15.6326 22.1667 16.6039 21.4998C17.4672 20.9069 18.5727 20.836 19.5008 21.314C20.649 21.9054 22 21.0453 22 19.723Z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    />
+  </svg>
+));
+GhostIcon.displayName = "GhostIcon";
+
+// ─── Voice Participant List ───
+
+const VoiceParticipantList = memo(({
   channelId,
   userIds,
   resolveUser,
@@ -125,6 +278,10 @@ const VoiceParticipantList = ({
   const participantMeta = useVoiceStore((s) => s.participantMeta);
   const { openModal } = useUIStore();
 
+  const handleClick = useCallback((userId: string, el: HTMLElement) => {
+    openUserProfileModal(openModal, userId, el);
+  }, [openModal]);
+
   return (
     <div className="ml-7 mt-1 space-y-0.5">
       {userIds.map((id) => {
@@ -133,29 +290,28 @@ const VoiceParticipantList = ({
         return (
           <button
             key={id}
-            className="flex items-center gap-2.5 px-2 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-secondary/50 transition-smooth w-full text-left cursor-pointer"
-            onClick={(e) => {
-              openUserProfileModal(openModal, id, e.currentTarget);
-            }}
+            className="flex items-center gap-2.5 px-2 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-secondary/50 transition-colors w-full text-left cursor-pointer"
+            onClick={(e) => handleClick(id, e.currentTarget)}
+            aria-label={`Voice user ${info.label}`}
           >
             <AvatarWithDecoration user={info.avatarUser} size={22} freezeGifUntilHover />
             <span className="truncate flex-1">{info.label}</span>
             {meta?.isDeafened ? (
-              <VolumeX className="w-3.5 h-3.5 text-destructive/70 flex-shrink-0" />
+              <VolumeXIcon className="w-3.5 h-3.5 text-destructive/70 flex-shrink-0" />
             ) : meta?.isMuted ? (
-              <MicOff className="w-3.5 h-3.5 text-destructive/70 flex-shrink-0" />
+              <MicOffIcon className="w-3.5 h-3.5 text-destructive/70 flex-shrink-0" />
             ) : null}
           </button>
         );
       })}
     </div>
   );
-};
+});
+VoiceParticipantList.displayName = "VoiceParticipantList";
 
-// isAdminRole is no longer needed - we use permission hooks instead
+// ─── Uncategorized Drop Zone ───
 
-// Uncategorized Drop Zone
-const UncategorizedDropZone = ({
+const UncategorizedDropZone = memo(({
   children,
   isDragOver,
   hasChannels,
@@ -184,10 +340,52 @@ const UncategorizedDropZone = ({
       )}
     </div>
   );
-};
+});
+UncategorizedDropZone.displayName = "UncategorizedDropZone";
 
-// Modern Sortable Channel Item
-const SortableChannel = ({
+// ─── Voice user count badge with pulsing dot ───
+
+const VoiceUserCountBadge = memo(({ count }: { count: number }) => (
+  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[11px] font-mono rounded-full bg-green-600/20 text-green-400 flex-shrink-0">
+    <span className="relative flex h-1.5 w-1.5">
+      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-400" />
+    </span>
+    {count}
+  </span>
+));
+VoiceUserCountBadge.displayName = "VoiceUserCountBadge";
+
+// ─── Unread dot indicator ───
+
+const UnreadDot = memo(() => (
+  <span className="w-1.5 h-1.5 rounded-full bg-foreground flex-shrink-0" />
+));
+UnreadDot.displayName = "UnreadDot";
+
+// ─── Channel icon resolver (memoized helper) ───
+
+const ChannelIcon = memo(({ channel, isUnread, isActive }: { channel: Channel; isUnread: boolean; isActive: boolean }) => {
+  const iconCn = cn(
+    "w-4 h-4 flex-shrink-0 transition-colors",
+    isUnread && !isActive ? "text-foreground opacity-100" : "text-muted-foreground",
+  );
+
+  if (channel.icon) return <FluentEmoji emoji={channel.icon} size={18} />;
+  if (channel.is_private) return <LockIcon className={iconCn} />;
+  if (channel.type === "voice") return <VolumeIcon className={iconCn} />;
+  if (channel.type === "forum") return <MessageSquareIcon className={iconCn} />;
+  if (channel.type === "announcement") return <MegaphoneIcon className={iconCn} />;
+  if (channel.type === "media") return <FilmIcon className={iconCn} />;
+  if (channel.type === "tasks") return <ClipboardListIcon className={iconCn} />;
+  if (channel.ghost_mode) return <GhostIcon className={iconCn} />;
+  return <HashIcon className={iconCn} />;
+});
+ChannelIcon.displayName = "ChannelIcon";
+
+// ─── Modern Sortable Channel Item ───
+
+const SortableChannel = memo(({
   channel,
   isActive,
   isUnread,
@@ -225,104 +423,46 @@ const SortableChannel = ({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: channel.id,
     data: { type: "channel", channel },
-    disabled: isMobile && !isSortingMode, // Disable sorting on mobile when not in sort mode
+    disabled: isMobile && !isSortingMode,
   });
 
-  const style = {
+  const style = useMemo(() => ({
     transform: CSS.Transform.toString(transform),
     transition,
     zIndex: isDragging ? 50 : undefined,
-  };
+  }), [transform, transition, isDragging]);
 
-  // Determine the icon to display
-  const getChannelIcon = () => {
-    if (channel.icon) {
-      return <FluentEmoji emoji={channel.icon} size={18} />;
-    }
-    if (channel.type === "voice") {
-      return (
-        <Volume2
-          className={cn(
-            "w-4 h-4 flex-shrink-0 transition-colors",
-            isUnread && !isActive ? "text-foreground" : "text-muted-foreground",
-          )}
-        />
-      );
-    }
-    if (channel.type === "forum") {
-      return (
-        <MessageSquare
-          className={cn(
-            "w-4 h-4 flex-shrink-0 transition-colors",
-            isUnread && !isActive ? "text-foreground" : "text-muted-foreground",
-          )}
-        />
-      );
-    }
-    if (channel.type === "announcement") {
-      return (
-        <Megaphone
-          className={cn(
-            "w-4 h-4 flex-shrink-0 transition-colors",
-            isUnread && !isActive ? "text-foreground" : "text-muted-foreground",
-          )}
-        />
-      );
-    }
-    if (channel.type === "media") {
-      return (
-        <Film
-          className={cn(
-            "w-4 h-4 flex-shrink-0 transition-colors",
-            isUnread && !isActive ? "text-foreground" : "text-muted-foreground",
-          )}
-        />
-      );
-    }
-    if (channel.type === "tasks") {
-      return (
-        <ClipboardList
-          className={cn(
-            "w-4 h-4 flex-shrink-0 transition-colors",
-            isUnread && !isActive ? "text-foreground" : "text-muted-foreground",
-          )}
-        />
-      );
-    }
-    // Show ghost icon if ghost mode is enabled
-    if (channel.ghost_mode) {
-      return (
-        <GhostIcon
-          className={cn(
-            "w-4 h-4 flex-shrink-0 transition-colors",
-            isUnread && !isActive ? "text-foreground" : "text-muted-foreground",
-          )}
-        />
-      );
-    }
-    return (
-      <Hash
-        className={cn(
-          "w-4 h-4 flex-shrink-0 transition-colors",
-          isUnread && !isActive ? "text-foreground" : "text-muted-foreground",
-        )}
-      />
-    );
-  };
+  const handleSettingsClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEdit();
+  }, [onEdit]);
+
+  const voiceCount = voiceUserIds?.length ?? 0;
+
+  // Build aria-label
+  const ariaLabel = useMemo(() => {
+    const parts = [`${channel.type || 'text'} channel ${channel.name}`];
+    if (isUnread && mentionCount === 0) parts.push('unread');
+    if (mentionCount > 0) parts.push(`${mentionCount} mention${mentionCount > 1 ? 's' : ''}`);
+    if (channel.is_private) parts.push('private');
+    return parts.join(', ');
+  }, [channel.name, channel.type, channel.is_private, isUnread, mentionCount]);
 
   const buttonContent = (
     <div className="flex items-center w-full min-w-0">
-      {/* Visible drag handle in sort mode on mobile */}
       {isMobile && isSortingMode && isAdmin && (
         <div {...attributes} {...listeners} className="p-1.5 mr-1 cursor-grab active:cursor-grabbing touch-none">
-          <GripVertical className="w-4 h-4 text-muted-foreground" />
+          <GripVerticalIcon className="w-4 h-4 text-muted-foreground" />
         </div>
       )}
       <button
         onClick={isSortingMode ? undefined : onSelect}
+        aria-label={ariaLabel}
         className={cn(
-          "group relative flex-1 min-w-0 flex items-center gap-2 px-2.5 py-2 md:py-1.5 text-[13px] font-medium transition-all duration-150 select-none rounded-[3px]",
+          "group relative flex-1 min-w-0 flex items-center gap-2 px-2.5 py-2 md:py-1.5 text-[13px] font-medium select-none rounded-[3px]",
+          "transition-colors duration-150",
           "hover:bg-foreground/[0.04]",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-1",
           isActive && !isSortingMode && "bg-foreground/[0.06] text-foreground",
           !isActive && "text-muted-foreground hover:text-foreground",
           isUnread && !isActive && "text-foreground font-[500]",
@@ -339,13 +479,15 @@ const SortableChannel = ({
         />
 
         {/* Channel icon */}
-        <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">{getChannelIcon()}</div>
+        <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
+          <ChannelIcon channel={channel} isUnread={isUnread} isActive={isActive} />
+        </div>
 
         {/* Channel name */}
         <span className="truncate flex-1 text-left">{channel.name}</span>
 
-        {/* Private indicator */}
-        {channel.is_private && <Lock className="w-3 h-3 text-muted-foreground flex-shrink-0" />}
+        {/* Private indicator (only if no custom icon already showing lock) */}
+        {channel.is_private && !channel.icon && <LockIcon className="w-3 h-3 text-muted-foreground flex-shrink-0" />}
 
         {/* NSFW badge */}
         {channel.is_nsfw && (
@@ -353,6 +495,14 @@ const SortableChannel = ({
             NSFW
           </span>
         )}
+
+        {/* Voice user count badge */}
+        {channel.type === "voice" && voiceCount > 0 && !isSortingMode && (
+          <VoiceUserCountBadge count={voiceCount} />
+        )}
+
+        {/* Unread dot (no mentions) */}
+        {isUnread && mentionCount === 0 && !isSortingMode && <UnreadDot />}
 
         {/* Mention badge */}
         {mentionCount > 0 && !isSortingMode && (
@@ -363,12 +513,9 @@ const SortableChannel = ({
 
         {/* Admin settings - desktop only, not in sort mode */}
         {isAdmin && !isMobile && !isSortingMode && (
-          <Settings
+          <SettingsIcon
             className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground cursor-pointer flex-shrink-0"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit();
-            }}
+            onClick={handleSettingsClick}
           />
         )}
 
@@ -386,23 +533,21 @@ const SortableChannel = ({
           </div>
         )}
       </button>
-
     </div>
   );
 
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const handleMobileContextMenu = (e: React.MouseEvent | React.TouchEvent) => {
+  const handleMobileContextMenu = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (isMobile && !isSortingMode && !isDraggingAny) {
       e.preventDefault();
       e.stopPropagation();
       setDrawerOpen(true);
     }
-  };
+  }, [isMobile, isSortingMode, isDraggingAny]);
 
   return (
     <div ref={setNodeRef} style={style} className="relative">
-      {/* In sort mode or during drag on mobile - disable context menu */}
       {isMobile && (isSortingMode || isDraggingAny) ? (
         buttonContent
       ) : isMobile ? (
@@ -444,10 +589,12 @@ const SortableChannel = ({
       )}
     </div>
   );
-};
+});
+SortableChannel.displayName = "SortableChannel";
 
-// Category Content - simplified without height animation
-const CategoryContent = ({
+// ─── Category Content ───
+
+const CategoryContent = memo(({
   channels,
   currentChannelId,
   getChannelUnread,
@@ -480,9 +627,11 @@ const CategoryContent = ({
   isSortingMode?: boolean;
   categories?: ChannelCategory[];
 }) => {
+  const channelIds = useMemo(() => channels.map((c) => c.id), [channels]);
+
   return (
     <div className="space-y-0.5 ml-1 animate-fade-in">
-      <SortableContext items={channels.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+      <SortableContext items={channelIds} strategy={verticalListSortingStrategy}>
         {channels.map((channel) => {
           const { unreadCount, mentionCount } = getChannelUnread(channel.id);
           return (
@@ -509,10 +658,12 @@ const CategoryContent = ({
       </SortableContext>
     </div>
   );
-};
+});
+CategoryContent.displayName = "CategoryContent";
 
-// Sortable Category - simplified
-const SortableCategory = ({
+// ─── Sortable Category ───
+
+const SortableCategory = memo(({
   category,
   channels,
   isCollapsed,
@@ -562,7 +713,7 @@ const SortableCategory = ({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: category.id,
     data: { type: "category", category },
-    disabled: isMobile && !isSortingMode, // Disable sorting on mobile when not in sort mode
+    disabled: isMobile && !isSortingMode,
   });
 
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({
@@ -570,29 +721,36 @@ const SortableCategory = ({
     data: { type: "category-drop", categoryId: category.id },
   });
 
-  const style = {
+  const style = useMemo(() => ({
     transform: CSS.Transform.toString(transform),
     transition,
     zIndex: isDragging ? 50 : undefined,
-  };
+  }), [transform, transition, isDragging]);
+
+  const handleSettingsClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEditCategory();
+  }, [onEditCategory]);
 
   const categoryButton = (
     <div className="flex items-center flex-1">
-      {/* Visible drag handle in sort mode on mobile */}
       {isMobile && isSortingMode && isAdmin && (
         <div {...attributes} {...listeners} className="p-1 mr-1 cursor-grab active:cursor-grabbing touch-none">
-          <GripVertical className="w-4 h-4 text-muted-foreground" />
+          <GripVerticalIcon className="w-4 h-4 text-muted-foreground" />
         </div>
       )}
       <button
         className={cn(
           "flex items-center gap-1 text-[11px] md:text-[11px] font-[500] text-muted-foreground hover:text-foreground uppercase tracking-wider flex-1 py-1.5",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-1 rounded-sm",
           isDragging && "opacity-50",
           isSortingMode && "cursor-default",
         )}
         onClick={isSortingMode ? undefined : onToggle}
+        aria-expanded={!isCollapsed}
+        aria-label={`${category.name} category, ${channels.length} channels${isCollapsed ? ', collapsed' : ''}`}
       >
-        <ChevronDown className={cn("w-3 h-3 transition-transform duration-150", isCollapsed && "-rotate-90")} />
+        <ChevronDownIcon className={cn("w-3 h-3 transition-transform duration-150", isCollapsed && "-rotate-90")} />
         <span className="truncate">{category.name}</span>
         {isCollapsed && <span className="ml-1 text-muted-foreground/60">({channels.length})</span>}
       </button>
@@ -601,23 +759,35 @@ const SortableCategory = ({
 
   const [catDrawerOpen, setCatDrawerOpen] = useState(false);
 
-  const handleCatMobileContext = (e: React.MouseEvent | React.TouchEvent) => {
+  const handleCatMobileContext = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (isMobile && isAdmin && !isSortingMode && !isDraggingAny) {
       e.preventDefault();
       e.stopPropagation();
       setCatDrawerOpen(true);
     }
-  };
+  }, [isMobile, isAdmin, isSortingMode, isDraggingAny]);
+
+  const handleEditFromDrawer = useCallback(() => {
+    setCatDrawerOpen(false);
+    onEditCategory();
+  }, [onEditCategory]);
+
+  const handleDeleteFromDrawer = useCallback(() => {
+    setCatDrawerOpen(false);
+    onDeleteCategory();
+  }, [onDeleteCategory]);
+
+  const setRefs = useCallback((node: HTMLDivElement | null) => {
+    setNodeRef(node);
+    setDroppableRef(node);
+  }, [setNodeRef, setDroppableRef]);
 
   return (
     <div
-      ref={(node) => {
-        setNodeRef(node);
-        setDroppableRef(node);
-      }}
+      ref={setRefs}
       style={style}
       className={cn(
-        "mb-4 transition-all duration-200",
+        "mb-4 transition-colors duration-200",
         (isOver || isDragOver) && "ring-2 ring-primary/50 ring-offset-2 ring-offset-card/50 rounded-md",
         isDragging && "shadow-lg ring-2 ring-primary/30 bg-card rounded-md",
       )}
@@ -639,17 +809,17 @@ const SortableCategory = ({
                   </DrawerHeader>
                   <div className="px-2 pb-6 space-y-0.5">
                     <button
-                      onClick={() => { setCatDrawerOpen(false); onEditCategory(); }}
+                      onClick={handleEditFromDrawer}
                       className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium rounded-lg text-foreground hover:bg-secondary/40 active:bg-secondary/60 transition-colors"
                     >
-                      <Edit2 className="w-4 h-4" />
+                      <Edit2Icon className="w-4 h-4" />
                       Edit Category
                     </button>
                     <button
-                      onClick={() => { setCatDrawerOpen(false); onDeleteCategory(); }}
+                      onClick={handleDeleteFromDrawer}
                       className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium rounded-lg text-destructive hover:bg-destructive/10 active:bg-destructive/20 transition-colors"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2Icon className="w-4 h-4" />
                       Delete Category
                     </button>
                   </div>
@@ -665,11 +835,11 @@ const SortableCategory = ({
             {isAdmin && (
               <ContextMenuContent>
                 <ContextMenuItem onClick={onEditCategory}>
-                  <Edit2 className="w-4 h-4 mr-2" />
+                  <Edit2Icon className="w-4 h-4 mr-2" />
                   Edit Category
                 </ContextMenuItem>
                 <ContextMenuItem onClick={onDeleteCategory} className="text-destructive focus:text-destructive">
-                  <Trash2 className="w-4 h-4 mr-2" />
+                  <Trash2Icon className="w-4 h-4 mr-2" />
                   Delete Category
                 </ContextMenuItem>
               </ContextMenuContent>
@@ -679,12 +849,9 @@ const SortableCategory = ({
 
         {/* Desktop-only controls - hide in sort mode */}
         {isAdmin && !isMobile && !isSortingMode && (
-          <Settings
+          <SettingsIcon
             className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground cursor-pointer flex-shrink-0"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEditCategory();
-            }}
+            onClick={handleSettingsClick}
           />
         )}
 
@@ -693,10 +860,11 @@ const SortableCategory = ({
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground rounded hover:bg-secondary"
+                className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground rounded hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                 onClick={onAddChannel}
+                aria-label={`Create channel in ${category.name}`}
               >
-                <Plus className="w-3.5 h-3.5" />
+                <PlusIcon className="w-3.5 h-3.5" />
               </button>
             </TooltipTrigger>
             <TooltipContent side="top" className="text-xs">
@@ -742,7 +910,10 @@ const SortableCategory = ({
       )}
     </div>
   );
-};
+});
+SortableCategory.displayName = "SortableCategory";
+
+// ─── Main Sidebar ───
 
 export const ChannelSidebar = () => {
   const navigate = useNavigate();
@@ -781,7 +952,7 @@ export const ChannelSidebar = () => {
 
   // Fetch per-user channel settings (mute, hide, pin) when channels change
   const { fetchSettings, isHidden, isPinned } = useChannelSettingsStore();
-  const channelIdsKey = channelIds.join(",");
+  const channelIdsKey = useMemo(() => channelIds.join(","), [channelIds]);
   useEffect(() => {
     fetchSettings(channelIds);
   }, [channelIdsKey]);
@@ -791,9 +962,6 @@ export const ChannelSidebar = () => {
     [channels],
   );
 
-  // IMPORTANT: don't watch the voice channel topic we are actively joined to, otherwise we can end up with
-  // duplicate Realtime subscriptions to `voice:${channelId}` (watcher + voice join), which can cause
-  // "Voice signaling connection failed" (CHANNEL_ERROR / TIMED_OUT).
   const watchedVoiceChannelIds = useMemo(
     () => voiceChannelIds.filter((id) => id !== joinedVoiceChannelId),
     [voiceChannelIds, joinedVoiceChannelId],
@@ -845,7 +1013,7 @@ export const ChannelSidebar = () => {
   const canManageChannels = hasPermission("manage_channels");
   const canManageServer = hasPermission("manage_server");
   const canManageRoles = hasPermission("manage_roles");
-  const isAdmin = canManageChannels; // For channel/category management
+  const isAdmin = canManageChannels;
   const canSeeServerSettings = canManageChannels || canManageServer || canManageRoles;
 
   const channelSettings = useChannelSettingsStore((s) => s.settings);
@@ -906,8 +1074,6 @@ export const ChannelSidebar = () => {
     return map;
   }, [channels]);
 
-  // Sidebar-only resolver:
-  // surface linked voice-text unread/mentions on the parent voice channel row.
   const getSidebarChannelUnread = useCallback(
     (channelId: string) => {
       const base = getChannelUnread(channelId);
@@ -926,19 +1092,11 @@ export const ChannelSidebar = () => {
         mentionCount += linkedInfo.mentionCount;
       }
 
-      return {
-        ...base,
-        unreadCount,
-        mentionCount,
-      };
+      return { ...base, unreadCount, mentionCount };
     },
     [getChannelUnread, channelById, linkedTextIdsByVoiceId],
   );
 
-  // Configure sensors dynamically based on sort mode:
-  // - On mobile in sort mode: PointerSensor with minimal distance for immediate drag
-  // - On mobile not in sort mode: No touch sensor (scrolling works perfectly)
-  // - On desktop: PointerSensor with 10px distance
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: isMobile && isSortingMode ? 5 : 10 },
@@ -948,10 +1106,9 @@ export const ChannelSidebar = () => {
     }),
   );
 
-  // Track if any drag is happening (for disabling context menus)
   const isDraggingAny = activeId !== null;
 
-  const toggleCategory = (categoryId: string) => {
+  const toggleCategory = useCallback((categoryId: string) => {
     setCollapsedCategories((prev) => {
       const next = new Set(prev);
       if (next.has(categoryId)) {
@@ -961,13 +1118,12 @@ export const ChannelSidebar = () => {
       }
       return next;
     });
-  };
+  }, []);
 
   const handleSelectChannel = useCallback(
     (channel: Channel) => {
       setCurrentChannel(channel);
       closeMobileSidebars();
-      // Navigate to channel URL
       if (currentServer) {
         navigate(`/app/servers/${currentServer.id}/channels/${channel.id}`);
       }
@@ -977,16 +1133,16 @@ export const ChannelSidebar = () => {
 
   const isOverviewActive = !!currentServer && location.pathname === `/app/servers/${currentServer.id}/overview`;
 
-  const handleSelectOverview = () => {
+  const handleSelectOverview = useCallback(() => {
     if (!currentServer) return;
     setCurrentChannel(null);
     navigate(`/app/servers/${currentServer.id}/overview`);
-  };
+  }, [currentServer, setCurrentChannel, navigate]);
 
-  const handleLeaveServer = async () => {
+  const handleLeaveServer = useCallback(async () => {
     if (!currentServer || !user || isOwner) return;
     await leaveServer(currentServer.id, user.id);
-  };
+  }, [currentServer, user, isOwner, leaveServer]);
 
   const handleCopyChannelLink = useCallback(
     (channelId: string) => {
@@ -1030,15 +1186,14 @@ export const ChannelSidebar = () => {
     [user, deleteCategory],
   );
 
-  const handleDragStart = (event: DragStartEvent) => {
+  const handleDragStart = useCallback((event: DragStartEvent) => {
     const { active } = event;
     const data = active.data.current;
-
     setActiveId(active.id as string);
     setActiveType(data?.type || null);
-  };
+  }, []);
 
-  const handleDragOver = (event: DragOverEvent) => {
+  const handleDragOver = useCallback((event: DragOverEvent) => {
     const { active, over } = event;
 
     if (!over) {
@@ -1049,30 +1204,26 @@ export const ChannelSidebar = () => {
     const activeData = active.data.current;
     const overData = over.data.current;
 
-    // If dragging a channel over a category drop zone
     if (activeData?.type === "channel" && overData?.type === "category-drop") {
-      const categoryId = overData.categoryId as string | null;
-      setOverCategoryId(categoryId);
+      setOverCategoryId(overData.categoryId as string | null);
       return;
     }
 
-    // If dragging a channel over another channel, find its category
     if (activeData?.type === "channel" && overData?.type === "channel") {
       const overChannel = overData.channel as Channel;
       setOverCategoryId(overChannel.category_id || null);
       return;
     }
 
-    // If dragging over a category header
     if (activeData?.type === "channel" && overData?.type === "category") {
       setOverCategoryId(over.id as string);
       return;
     }
 
     setOverCategoryId(null);
-  };
+  }, []);
 
-  const handleDragEnd = async (event: DragEndEvent) => {
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     const { active, over } = event;
 
     setActiveId(null);
@@ -1098,38 +1249,32 @@ export const ChannelSidebar = () => {
     if (activeData?.type === "channel") {
       const activeChannel = activeData.channel as Channel;
 
-      // Check if dropped on a category drop zone
       if (overData?.type === "category-drop") {
         const targetCategoryId = overData.categoryId as string | null;
         const targetChannels = targetCategoryId ? getChannelsForCategory(targetCategoryId) : uncategorizedChannels;
         const newPosition = targetChannels.length;
 
-        // Only move if it's a different category
         if (activeChannel.category_id !== targetCategoryId) {
           await reorderChannels(activeChannel.id, targetCategoryId, newPosition);
         }
         return;
       }
 
-      // Check if dropped on a category header
       if (overData?.type === "category") {
         const targetCategoryId = over.id as string;
         const targetChannels = getChannelsForCategory(targetCategoryId);
         const newPosition = targetChannels.length;
 
-        // Only move if it's a different category
         if (activeChannel.category_id !== targetCategoryId) {
           await reorderChannels(activeChannel.id, targetCategoryId, newPosition);
         }
         return;
       }
 
-      // Check if dropped on another channel
       const overChannel = overData?.channel as Channel | undefined;
       if (overChannel) {
         const targetCategoryId = overChannel.category_id;
 
-        // If same category, reorder within category
         if ((activeChannel.category_id ?? null) === (targetCategoryId ?? null)) {
           const categoryChannels = targetCategoryId ? getChannelsForCategory(targetCategoryId) : uncategorizedChannels;
           const oldIndex = categoryChannels.findIndex((c) => c.id === active.id);
@@ -1139,7 +1284,6 @@ export const ChannelSidebar = () => {
             await reorderChannels(activeChannel.id, activeChannel.category_id, newIndex);
           }
         } else {
-          // Different category - move to that category at the position of the over channel
           const targetChannels = targetCategoryId ? getChannelsForCategory(targetCategoryId) : uncategorizedChannels;
           const newIndex = targetChannels.findIndex((c) => c.id === over.id);
 
@@ -1149,9 +1293,9 @@ export const ChannelSidebar = () => {
         }
       }
     }
-  };
+  }, [sortedCategories, uncategorizedChannels, getChannelsForCategory, reorderCategories, reorderChannels]);
 
-  const getActiveItem = () => {
+  const getActiveItem = useCallback(() => {
     if (!activeId) return null;
 
     if (activeType === "category") {
@@ -1159,7 +1303,7 @@ export const ChannelSidebar = () => {
       if (category) {
         return (
           <div className="flex items-center gap-1 px-3 py-1.5 bg-card border border-border shadow-lg rounded-md text-sm ring-2 ring-primary/30">
-            <ChevronRight className="w-3 h-3 text-muted-foreground" />
+            <ChevronRightIcon className="w-3 h-3 text-muted-foreground" />
             <span className="uppercase text-xs font-normal">{category.name}</span>
           </div>
         );
@@ -1170,16 +1314,10 @@ export const ChannelSidebar = () => {
       const channel = channels.find((c) => c.id === activeId);
       if (channel) {
         const getIcon = () => {
-          if (channel.icon) {
-            return <FluentEmoji emoji={channel.icon} size={18} />;
-          }
-          if (channel.type === "voice") {
-            return <Volume2 className="w-4 h-4 text-muted-foreground" />;
-          }
-          if (channel.ghost_mode) {
-            return <GhostIcon className="w-4 h-4 text-muted-foreground" />;
-          }
-          return <Hash className="w-4 h-4 text-muted-foreground" />;
+          if (channel.icon) return <FluentEmoji emoji={channel.icon} size={18} />;
+          if (channel.type === "voice") return <VolumeIcon className="w-4 h-4 text-muted-foreground" />;
+          if (channel.ghost_mode) return <GhostIcon className="w-4 h-4 text-muted-foreground" />;
+          return <HashIcon className="w-4 h-4 text-muted-foreground" />;
         };
 
         return (
@@ -1192,7 +1330,59 @@ export const ChannelSidebar = () => {
     }
 
     return null;
-  };
+  }, [activeId, activeType, categories, channels]);
+
+  const handleToggleHidden = useCallback(() => {
+    setShowHidden((prev) => !prev);
+  }, []);
+
+  const handleExitSortMode = useCallback(() => {
+    setIsSortingMode(false);
+  }, []);
+
+  // Memoize handler factories to avoid inline arrows where possible
+  const handleOpenInvite = useCallback(() => {
+    if (currentServer) openModal("invite", { serverId: currentServer.id });
+  }, [currentServer, openModal]);
+
+  const handleOpenServerSettings = useCallback(() => {
+    if (isMobile) {
+      openServerSettings();
+      closeMobileSidebars();
+    } else {
+      openServerSettingsPage();
+    }
+  }, [isMobile, openServerSettings, openServerSettingsPage, closeMobileSidebars]);
+
+  const handleOpenCreateChannel = useCallback(() => {
+    if (currentServer) openModal("create-channel", { serverId: currentServer.id });
+  }, [currentServer, openModal]);
+
+  const handleOpenCreateCategory = useCallback(() => {
+    if (currentServer) openModal("create-channel", { serverId: currentServer.id, isCategory: true });
+  }, [currentServer, openModal]);
+
+  const handleBgContextMenu = useCallback((e: React.MouseEvent) => {
+    if (isMobile && isAdmin && !isSortingMode) {
+      e.preventDefault();
+      setBgDrawerOpen(true);
+    }
+  }, [isMobile, isAdmin, isSortingMode]);
+
+  const handleBgDrawerCreateCategory = useCallback(() => {
+    setBgDrawerOpen(false);
+    if (currentServer) openModal("create-channel", { serverId: currentServer.id, isCategory: true });
+  }, [currentServer, openModal]);
+
+  const handleBgDrawerCreateChannel = useCallback(() => {
+    setBgDrawerOpen(false);
+    if (currentServer) openModal("create-channel", { serverId: currentServer.id });
+  }, [currentServer, openModal]);
+
+  const handleBgDrawerSort = useCallback(() => {
+    setBgDrawerOpen(false);
+    setIsSortingMode(true);
+  }, []);
 
   if (!currentServer) {
     return (
@@ -1200,7 +1390,7 @@ export const ChannelSidebar = () => {
         <div className="flex-1 flex flex-col bg-card/50 rounded-2xl border border-border/50 items-center justify-center">
           <div className="text-center animate-fade-in">
             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-secondary/50 flex items-center justify-center">
-              <Hash className="w-8 h-8 text-muted-foreground/50" />
+              <HashIcon className="w-8 h-8 text-muted-foreground/50" />
             </div>
             <p className="text-sm text-muted-foreground">Select a server</p>
           </div>
@@ -1208,6 +1398,168 @@ export const ChannelSidebar = () => {
       </div>
     );
   }
+
+  // Shared channel list rendering (used by both mobile and desktop)
+  const renderChannelList = (
+    <>
+      {/* Default sections */}
+      <div className="mb-2 space-y-0.5">
+        <button
+          onClick={handleSelectOverview}
+          aria-label="Server overview"
+          className={cn(
+            "group relative w-full flex items-center gap-2 px-2.5 py-1.5 text-sm select-none",
+            "transition-colors duration-150",
+            "hover:bg-foreground/[0.04]",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-1 rounded-sm",
+            isOverviewActive && "bg-foreground/[0.06] text-foreground",
+            !isOverviewActive && "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <div
+            className={cn(
+              "absolute left-1 top-1.5 bottom-1.5 w-0.5 bg-foreground rounded-full transition-opacity duration-150",
+              isOverviewActive ? "opacity-100" : "opacity-0",
+            )}
+          />
+          <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
+            <InfoIcon
+              className={cn(
+                "w-4 h-4 flex-shrink-0 transition-colors translate-y-[0.5px]",
+                isOverviewActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground",
+              )}
+            />
+          </div>
+          <span className="truncate flex-1 text-left">Overview</span>
+        </button>
+      </div>
+
+      <UncategorizedDropZone
+        isDragOver={overCategoryId === null && activeType === "channel"}
+        hasChannels={uncategorizedChannels.length > 0}
+      >
+        {uncategorizedChannels.length > 0 && (
+          <div className="mb-3 space-y-0.5">
+            <SortableContext items={uncategorizedChannels.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+              {uncategorizedChannels.map((channel) => {
+                const { unreadCount, mentionCount } = getSidebarChannelUnread(channel.id);
+                return (
+                  <SortableChannel
+                    key={channel.id}
+                    channel={channel}
+                    isActive={currentChannel?.id === channel.id}
+                    isUnread={unreadCount > 0}
+                    mentionCount={mentionCount}
+                    isAdmin={isAdmin}
+                    voiceUserIds={voicePresenceByChannel[channel.id]}
+                    resolveUser={resolveUser}
+                    onSelect={() => handleSelectChannel(channel)}
+                    onEdit={() => openModal("edit-channel", { channelId: channel.id })}
+                    onDelete={() => handleDeleteChannel(channel.id)}
+                    onCopyLink={() => handleCopyChannelLink(channel.id)}
+                    isMobile={isMobile}
+                    isDraggingAny={isDraggingAny}
+                    isSortingMode={isSortingMode}
+                  />
+                );
+              })}
+            </SortableContext>
+          </div>
+        )}
+      </UncategorizedDropZone>
+
+      <SortableContext items={sortedCategories.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+        {sortedCategories.map((category) => (
+          <SortableCategory
+            key={category.id}
+            category={category}
+            channels={getChannelsForCategory(category.id)}
+            isCollapsed={collapsedCategories.has(category.id)}
+            isAdmin={isAdmin}
+            currentChannelId={currentChannel?.id}
+            getChannelUnread={getSidebarChannelUnread}
+            onToggle={() => toggleCategory(category.id)}
+            onSelectChannel={handleSelectChannel}
+            onAddChannel={() => openModal("create-channel", { categoryId: category.id })}
+            onEditChannel={(channelId) => openModal("edit-channel", { channelId })}
+            onEditCategory={() => openModal("edit-channel", { isCategory: true, categoryId: category.id })}
+            onDeleteCategory={() => handleDeleteCategory(category.id)}
+            onDeleteChannel={handleDeleteChannel}
+            onCopyChannelLink={handleCopyChannelLink}
+            onMarkAsRead={(channelId) => markAsRead(channelId)}
+            isDragOver={overCategoryId === category.id && activeType === "channel"}
+            voicePresenceByChannel={voicePresenceByChannel}
+            resolveUser={resolveUser}
+            isMobile={isMobile}
+            isDraggingAny={isDraggingAny}
+            isSortingMode={isSortingMode}
+            allCategories={sortedCategories}
+          />
+        ))}
+      </SortableContext>
+
+      {hiddenChannels.length > 0 && (
+        <div className="mt-4 border-t border-border/30 pt-2">
+          <button
+            onClick={handleToggleHidden}
+            aria-expanded={showHidden}
+            aria-label={`Hidden channels, ${hiddenChannels.length} channels${showHidden ? ', expanded' : ', collapsed'}`}
+            className="w-full flex items-center gap-1.5 px-2 py-1 text-xs font-normal uppercase text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 rounded-sm"
+          >
+            {showHidden ? <ChevronDownIcon className="w-3 h-3" /> : <ChevronRightIcon className="w-3 h-3" />}
+            <EyeOffIcon className="w-3 h-3" />
+            <span>Hidden Channels ({hiddenChannels.length})</span>
+          </button>
+          {showHidden && (
+            <div className="mt-1 space-y-0.5 opacity-60">
+              {hiddenChannels.map((channel) => {
+                const { unreadCount, mentionCount } = getSidebarChannelUnread(channel.id);
+                return (
+                  <SortableChannel
+                    key={channel.id}
+                    channel={channel}
+                    isActive={currentChannel?.id === channel.id}
+                    isUnread={unreadCount > 0}
+                    mentionCount={mentionCount}
+                    isAdmin={isAdmin}
+                    voiceUserIds={voicePresenceByChannel[channel.id]}
+                    resolveUser={resolveUser}
+                    onSelect={() => handleSelectChannel(channel)}
+                    onEdit={() => openModal("edit-channel", { channelId: channel.id })}
+                    onDelete={() => handleDeleteChannel(channel.id)}
+                    onCopyLink={() => handleCopyChannelLink(channel.id)}
+                    onMarkAsRead={() => markAsRead(channel.id)}
+                    isMobile={isMobile}
+                    isDraggingAny={isDraggingAny}
+                    isSortingMode={isSortingMode}
+                    categories={sortedCategories}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {(channels || []).length === 0 && (categories || []).length === 0 && (
+        <div className="flex flex-col items-center justify-center py-12 text-center animate-fade-in">
+          <div className="w-12 h-12 rounded-xl bg-secondary/50 flex items-center justify-center mb-3">
+            <HashIcon className="w-6 h-6 text-muted-foreground/50" />
+          </div>
+          <p className="text-sm text-muted-foreground mb-2">No channels yet</p>
+          {isAdmin && (
+            <Button
+              variant="link"
+              size="sm"
+              onClick={handleOpenCreateChannel}
+            >
+              Create a channel
+            </Button>
+          )}
+        </div>
+      )}
+    </>
+  );
 
   return (
     <div className="h-full flex flex-col">
@@ -1239,7 +1591,7 @@ export const ChannelSidebar = () => {
                       {currentServer.name}
                     </h2>
                     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-black/30 text-white/80 backdrop-blur-sm transition-colors group-hover:bg-black/40">
-                      <ChevronDown className="h-4 w-4" />
+                      <ChevronDownIcon className="h-4 w-4" />
                     </div>
                   </div>
                 </div>
@@ -1252,11 +1604,11 @@ export const ChannelSidebar = () => {
             >
               {/* Invite People */}
               <DropdownMenuItem
-                onClick={() => openModal("invite", { serverId: currentServer.id })}
+                onClick={handleOpenInvite}
                 className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-secondary/60 focus:bg-secondary/80 transition-colors"
               >
                 <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <UserPlus className="w-3.5 h-3.5 text-primary" />
+                  <UserPlusIcon className="w-3.5 h-3.5 text-primary" />
                 </div>
                 <span className="text-sm font-medium">Invite People</span>
               </DropdownMenuItem>
@@ -1267,18 +1619,11 @@ export const ChannelSidebar = () => {
 
                   {/* Server Settings */}
                   <DropdownMenuItem
-                    onClick={() => {
-                      if (isMobile) {
-                        openServerSettings();
-                        closeMobileSidebars();
-                        return;
-                      }
-                      openServerSettingsPage();
-                    }}
+                    onClick={handleOpenServerSettings}
                     className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-secondary/60 focus:bg-secondary/80 transition-colors"
                   >
                     <div className="w-6 h-6 rounded-lg bg-secondary/80 flex items-center justify-center flex-shrink-0">
-                      <Settings className="w-3.5 h-3.5 text-muted-foreground" />
+                      <SettingsIcon className="w-3.5 h-3.5 text-muted-foreground" />
                     </div>
                     <span className="text-sm font-medium">Server Settings</span>
                   </DropdownMenuItem>
@@ -1287,22 +1632,22 @@ export const ChannelSidebar = () => {
                     <>
                       {/* Create Channel */}
                       <DropdownMenuItem
-                        onClick={() => openModal("create-channel", { serverId: currentServer.id })}
+                        onClick={handleOpenCreateChannel}
                         className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-secondary/60 focus:bg-secondary/80 transition-colors"
                       >
                         <div className="w-6 h-6 rounded-lg bg-secondary/80 flex items-center justify-center flex-shrink-0">
-                          <Hash className="w-3.5 h-3.5 text-muted-foreground" />
+                          <HashIcon className="w-3.5 h-3.5 text-muted-foreground" />
                         </div>
                         <span className="text-sm font-medium">Create Channel</span>
                       </DropdownMenuItem>
 
                       {/* Create Category */}
                       <DropdownMenuItem
-                        onClick={() => openModal("create-channel", { serverId: currentServer.id, isCategory: true })}
+                        onClick={handleOpenCreateCategory}
                         className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-secondary/60 focus:bg-secondary/80 transition-colors"
                       >
                         <div className="w-6 h-6 rounded-lg bg-secondary/80 flex items-center justify-center flex-shrink-0">
-                          <FolderPlus className="w-3.5 h-3.5 text-muted-foreground" />
+                          <FolderPlusIcon className="w-3.5 h-3.5 text-muted-foreground" />
                         </div>
                         <span className="text-sm font-medium">Create Category</span>
                       </DropdownMenuItem>
@@ -1321,7 +1666,7 @@ export const ChannelSidebar = () => {
                     className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer text-destructive hover:bg-destructive/10 focus:text-destructive focus:bg-destructive/10 transition-colors"
                   >
                     <div className="w-6 h-6 rounded-lg bg-destructive/10 flex items-center justify-center flex-shrink-0">
-                      <LogOut className="w-3.5 h-3.5" />
+                      <LogOutIcon className="w-3.5 h-3.5" />
                     </div>
                     <span className="text-sm font-medium">Leave Server</span>
                   </DropdownMenuItem>
@@ -1335,10 +1680,10 @@ export const ChannelSidebar = () => {
         {isSortingMode && (
           <div className="flex items-center justify-between px-2.5 py-1.5 bg-transparent border-b border-border/50">
             <div className="flex items-center gap-2">
-              <GripVertical className="w-4 h-4 text-primary" />
+              <GripVerticalIcon className="w-4 h-4 text-primary" />
               <span className="text-sm font-medium text-primary">Sorting Mode</span>
             </div>
-            <Button size="sm" variant="ghost" onClick={() => setIsSortingMode(false)} className="h-7 px-2 text-xs">
+            <Button size="sm" variant="ghost" onClick={handleExitSortMode} className="h-7 px-2 text-xs">
               Done
             </Button>
           </div>
@@ -1356,168 +1701,13 @@ export const ChannelSidebar = () => {
             <>
               <div
                 className={cn(
-                  "flex-1 overflow-y-auto scrollbar-overlay px-2 py-2 scrollbar-hide",
+                  "flex-1 overflow-y-auto px-2 py-2 channel-sidebar-scroll",
                   isSortingMode && "bg-foreground/[0.03] border-2 border-dashed border-border/50 rounded-xl mx-1 my-1",
                 )}
                 style={{ touchAction: "pan-y" }}
-                onContextMenu={(e) => {
-                  if (isAdmin && !isSortingMode) {
-                    e.preventDefault();
-                    setBgDrawerOpen(true);
-                  }
-                }}
+                onContextMenu={handleBgContextMenu}
               >
-                {/* Default sections */}
-                <div className="mb-2 space-y-0.5">
-                  <button
-                    onClick={handleSelectOverview}
-                    className={cn(
-                      "group relative w-full flex items-center gap-2 px-2.5 py-1.5 text-sm transition-all duration-150 select-none",
-                      "hover:bg-foreground/[0.04]",
-                      isOverviewActive && "bg-foreground/[0.06] text-foreground",
-                      !isOverviewActive && "text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "absolute left-1 top-1.5 bottom-1.5 w-0.5 bg-foreground rounded-full transition-opacity duration-150",
-                        isOverviewActive ? "opacity-100" : "opacity-0",
-                      )}
-                    />
-                    <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
-                      <Info
-                        className={cn(
-                          "w-4 h-4 flex-shrink-0 transition-colors translate-y-[0.5px]",
-                          isOverviewActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground",
-                        )}
-                      />
-                    </div>
-                    <span className="truncate flex-1 text-left">Overview</span>
-                  </button>
-                </div>
-
-                <UncategorizedDropZone
-                  isDragOver={overCategoryId === null && activeType === "channel"}
-                  hasChannels={uncategorizedChannels.length > 0}
-                >
-                  {uncategorizedChannels.length > 0 && (
-                    <div className="mb-3 space-y-0.5">
-                      <SortableContext items={uncategorizedChannels.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-                        {uncategorizedChannels.map((channel) => {
-                          const { unreadCount, mentionCount } = getSidebarChannelUnread(channel.id);
-                          return (
-                            <SortableChannel
-                              key={channel.id}
-                              channel={channel}
-                              isActive={currentChannel?.id === channel.id}
-                              isUnread={unreadCount > 0}
-                              mentionCount={mentionCount}
-                              isAdmin={isAdmin}
-                              voiceUserIds={voicePresenceByChannel[channel.id]}
-                              resolveUser={resolveUser}
-                              onSelect={() => handleSelectChannel(channel)}
-                              onEdit={() => openModal("edit-channel", { channelId: channel.id })}
-                              onDelete={() => handleDeleteChannel(channel.id)}
-                              onCopyLink={() => handleCopyChannelLink(channel.id)}
-                              isMobile={isMobile}
-                              isDraggingAny={isDraggingAny}
-                              isSortingMode={isSortingMode}
-                            />
-                          );
-                        })}
-                      </SortableContext>
-                    </div>
-                  )}
-                </UncategorizedDropZone>
-
-                <SortableContext items={sortedCategories.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-                  {sortedCategories.map((category) => (
-                    <SortableCategory
-                      key={category.id}
-                      category={category}
-                      channels={getChannelsForCategory(category.id)}
-                      isCollapsed={collapsedCategories.has(category.id)}
-                      isAdmin={isAdmin}
-                      currentChannelId={currentChannel?.id}
-                      getChannelUnread={getSidebarChannelUnread}
-                      onToggle={() => toggleCategory(category.id)}
-                      onSelectChannel={handleSelectChannel}
-                      onAddChannel={() => openModal("create-channel", { categoryId: category.id })}
-                      onEditChannel={(channelId) => openModal("edit-channel", { channelId })}
-                      onEditCategory={() => openModal("edit-channel", { isCategory: true, categoryId: category.id })}
-                      onDeleteCategory={() => handleDeleteCategory(category.id)}
-                      onDeleteChannel={handleDeleteChannel}
-                      onCopyChannelLink={handleCopyChannelLink}
-                      onMarkAsRead={(channelId) => markAsRead(channelId)}
-                      isDragOver={overCategoryId === category.id && activeType === "channel"}
-                      voicePresenceByChannel={voicePresenceByChannel}
-                      resolveUser={resolveUser}
-                      isMobile={isMobile}
-                      isDraggingAny={isDraggingAny}
-                      isSortingMode={isSortingMode}
-                      allCategories={sortedCategories}
-                    />
-                  ))}
-                </SortableContext>
-
-                {hiddenChannels.length > 0 && (
-                  <div className="mt-4 border-t border-border/30 pt-2">
-                    <button
-                      onClick={() => setShowHidden(!showHidden)}
-                      className="w-full flex items-center gap-1.5 px-2 py-1 text-xs font-normal uppercase text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {showHidden ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                      <EyeOff className="w-3 h-3" />
-                      <span>Hidden Channels ({hiddenChannels.length})</span>
-                    </button>
-                    {showHidden && (
-                      <div className="mt-1 space-y-0.5 opacity-60">
-                        {hiddenChannels.map((channel) => {
-                          const { unreadCount, mentionCount } = getSidebarChannelUnread(channel.id);
-                          return (
-                            <SortableChannel
-                              key={channel.id}
-                              channel={channel}
-                              isActive={currentChannel?.id === channel.id}
-                              isUnread={unreadCount > 0}
-                              mentionCount={mentionCount}
-                              isAdmin={isAdmin}
-                              voiceUserIds={voicePresenceByChannel[channel.id]}
-                              resolveUser={resolveUser}
-                              onSelect={() => handleSelectChannel(channel)}
-                              onEdit={() => openModal("edit-channel", { channelId: channel.id })}
-                              onDelete={() => handleDeleteChannel(channel.id)}
-                              onCopyLink={() => handleCopyChannelLink(channel.id)}
-                              onMarkAsRead={() => markAsRead(channel.id)}
-                              isMobile={isMobile}
-                              isDraggingAny={isDraggingAny}
-                              isSortingMode={isSortingMode}
-                              categories={sortedCategories}
-                            />
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {(channels || []).length === 0 && (categories || []).length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-12 text-center animate-fade-in">
-                    <div className="w-12 h-12 rounded-xl bg-secondary/50 flex items-center justify-center mb-3">
-                      <Hash className="w-6 h-6 text-muted-foreground/50" />
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-2">No channels yet</p>
-                    {isAdmin && (
-                      <Button
-                        variant="link"
-                        size="sm"
-                        onClick={() => openModal("create-channel", { serverId: currentServer.id })}
-                      >
-                        Create a channel
-                      </Button>
-                    )}
-                  </div>
-                )}
+                {renderChannelList}
               </div>
 
               {/* Mobile background drawer */}
@@ -1529,25 +1719,25 @@ export const ChannelSidebar = () => {
                     </DrawerHeader>
                     <div className="px-2 pb-6 space-y-0.5">
                       <button
-                        onClick={() => { setBgDrawerOpen(false); openModal("create-channel", { serverId: currentServer.id, isCategory: true }); }}
+                        onClick={handleBgDrawerCreateCategory}
                         className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium rounded-lg text-foreground hover:bg-secondary/40 active:bg-secondary/60 transition-colors"
                       >
-                        <FolderPlus className="w-4 h-4" />
+                        <FolderPlusIcon className="w-4 h-4" />
                         Create Category
                       </button>
                       <button
-                        onClick={() => { setBgDrawerOpen(false); openModal("create-channel", { serverId: currentServer.id }); }}
+                        onClick={handleBgDrawerCreateChannel}
                         className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium rounded-lg text-foreground hover:bg-secondary/40 active:bg-secondary/60 transition-colors"
                       >
-                        <Plus className="w-4 h-4" />
+                        <PlusIcon className="w-4 h-4" />
                         Create Channel
                       </button>
                       <div className="h-px bg-border/50 my-1" />
                       <button
-                        onClick={() => { setBgDrawerOpen(false); setIsSortingMode(true); }}
+                        onClick={handleBgDrawerSort}
                         className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium rounded-lg text-foreground hover:bg-secondary/40 active:bg-secondary/60 transition-colors"
                       >
-                        <ArrowUpDown className="w-4 h-4" />
+                        <ArrowUpDownIcon className="w-4 h-4" />
                         Sort Channels
                       </button>
                     </div>
@@ -1560,175 +1750,23 @@ export const ChannelSidebar = () => {
             <ContextMenuTrigger asChild disabled={isSortingMode}>
               <div
                 className={cn(
-                "flex-1 overflow-y-auto scrollbar-overlay px-2 py-2 scrollbar-hide",
+                  "flex-1 overflow-y-auto px-2 py-2 channel-sidebar-scroll",
                   isSortingMode && "bg-foreground/[0.03] border-2 border-dashed border-border/50 rounded-xl mx-1 my-1",
                 )}
                 style={{ touchAction: "pan-y" }}
               >
-                {/* Default sections */}
-                <div className="mb-2 space-y-0.5">
-                  <button
-                    onClick={handleSelectOverview}
-                    className={cn(
-                      "group relative w-full flex items-center gap-2 px-2.5 py-1.5 text-sm transition-all duration-150 select-none",
-                      "hover:bg-foreground/[0.04]",
-                      isOverviewActive && "bg-foreground/[0.06] text-foreground",
-                      !isOverviewActive && "text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "absolute left-1 top-1.5 bottom-1.5 w-0.5 bg-foreground rounded-full transition-opacity duration-150",
-                        isOverviewActive ? "opacity-100" : "opacity-0",
-                      )}
-                    />
-                    <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
-                      <Info
-                        className={cn(
-                          "w-4 h-4 flex-shrink-0 transition-colors translate-y-[0.5px]",
-                          isOverviewActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground",
-                        )}
-                      />
-                    </div>
-                    <span className="truncate flex-1 text-left">Overview</span>
-                  </button>
-                </div>
-
-                <UncategorizedDropZone
-                  isDragOver={overCategoryId === null && activeType === "channel"}
-                  hasChannels={uncategorizedChannels.length > 0}
-                >
-                  {uncategorizedChannels.length > 0 && (
-                    <div className="mb-3 space-y-0.5">
-                      <SortableContext items={uncategorizedChannels.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-                        {uncategorizedChannels.map((channel) => {
-                          const { unreadCount, mentionCount } = getSidebarChannelUnread(channel.id);
-                          return (
-                            <SortableChannel
-                              key={channel.id}
-                              channel={channel}
-                              isActive={currentChannel?.id === channel.id}
-                              isUnread={unreadCount > 0}
-                              mentionCount={mentionCount}
-                              isAdmin={isAdmin}
-                              voiceUserIds={voicePresenceByChannel[channel.id]}
-                              resolveUser={resolveUser}
-                              onSelect={() => handleSelectChannel(channel)}
-                              onEdit={() => openModal("edit-channel", { channelId: channel.id })}
-                              onDelete={() => handleDeleteChannel(channel.id)}
-                              onCopyLink={() => handleCopyChannelLink(channel.id)}
-                              isMobile={isMobile}
-                              isDraggingAny={isDraggingAny}
-                              isSortingMode={isSortingMode}
-                            />
-                          );
-                        })}
-                      </SortableContext>
-                    </div>
-                  )}
-                </UncategorizedDropZone>
-
-                <SortableContext items={sortedCategories.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-                  {sortedCategories.map((category) => (
-                    <SortableCategory
-                      key={category.id}
-                      category={category}
-                      channels={getChannelsForCategory(category.id)}
-                      isCollapsed={collapsedCategories.has(category.id)}
-                      isAdmin={isAdmin}
-                      currentChannelId={currentChannel?.id}
-                      getChannelUnread={getSidebarChannelUnread}
-                      onToggle={() => toggleCategory(category.id)}
-                      onSelectChannel={handleSelectChannel}
-                      onAddChannel={() => openModal("create-channel", { categoryId: category.id })}
-                      onEditChannel={(channelId) => openModal("edit-channel", { channelId })}
-                      onEditCategory={() => openModal("edit-channel", { isCategory: true, categoryId: category.id })}
-                      onDeleteCategory={() => handleDeleteCategory(category.id)}
-                      onDeleteChannel={handleDeleteChannel}
-                      onCopyChannelLink={handleCopyChannelLink}
-                      onMarkAsRead={(channelId) => markAsRead(channelId)}
-                      isDragOver={overCategoryId === category.id && activeType === "channel"}
-                      voicePresenceByChannel={voicePresenceByChannel}
-                      resolveUser={resolveUser}
-                      isMobile={isMobile}
-                      isDraggingAny={isDraggingAny}
-                      isSortingMode={isSortingMode}
-                      allCategories={sortedCategories}
-                    />
-                  ))}
-                </SortableContext>
-
-                {hiddenChannels.length > 0 && (
-                  <div className="mt-4 border-t border-border/30 pt-2">
-                    <button
-                      onClick={() => setShowHidden(!showHidden)}
-                      className="w-full flex items-center gap-1.5 px-2 py-1 text-xs font-normal uppercase text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {showHidden ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                      <EyeOff className="w-3 h-3" />
-                      <span>Hidden Channels ({hiddenChannels.length})</span>
-                    </button>
-                    {showHidden && (
-                      <div className="mt-1 space-y-0.5 opacity-60">
-                        {hiddenChannels.map((channel) => {
-                          const { unreadCount, mentionCount } = getSidebarChannelUnread(channel.id);
-                          return (
-                            <SortableChannel
-                              key={channel.id}
-                              channel={channel}
-                              isActive={currentChannel?.id === channel.id}
-                              isUnread={unreadCount > 0}
-                              mentionCount={mentionCount}
-                              isAdmin={isAdmin}
-                              voiceUserIds={voicePresenceByChannel[channel.id]}
-                              resolveUser={resolveUser}
-                              onSelect={() => handleSelectChannel(channel)}
-                              onEdit={() => openModal("edit-channel", { channelId: channel.id })}
-                              onDelete={() => handleDeleteChannel(channel.id)}
-                              onCopyLink={() => handleCopyChannelLink(channel.id)}
-                              onMarkAsRead={() => markAsRead(channel.id)}
-                              isMobile={isMobile}
-                              isDraggingAny={isDraggingAny}
-                              isSortingMode={isSortingMode}
-                              categories={sortedCategories}
-                            />
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {(channels || []).length === 0 && (categories || []).length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-12 text-center animate-fade-in">
-                    <div className="w-12 h-12 rounded-xl bg-secondary/50 flex items-center justify-center mb-3">
-                      <Hash className="w-6 h-6 text-muted-foreground/50" />
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-2">No channels yet</p>
-                    {isAdmin && (
-                      <Button
-                        variant="link"
-                        size="sm"
-                        onClick={() => openModal("create-channel", { serverId: currentServer.id })}
-                      >
-                        Create a channel
-                      </Button>
-                    )}
-                  </div>
-                )}
+                {renderChannelList}
               </div>
             </ContextMenuTrigger>
             {isAdmin && (
               <ContextMenuContent>
-                <ContextMenuItem
-                  onClick={() => openModal("create-channel", { serverId: currentServer.id, isCategory: true })}
-                >
-                  <FolderPlus className="w-4 h-4 mr-2" />
+                <ContextMenuItem onClick={handleOpenCreateCategory}>
+                  <FolderPlusIcon className="w-4 h-4 mr-2" />
                   Create Category
                 </ContextMenuItem>
                 <ContextMenuSeparator />
-                <ContextMenuItem onClick={() => openModal("create-channel", { serverId: currentServer.id })}>
-                  <Plus className="w-4 h-4 mr-2" />
+                <ContextMenuItem onClick={handleOpenCreateChannel}>
+                  <PlusIcon className="w-4 h-4 mr-2" />
                   Create Channel
                 </ContextMenuItem>
               </ContextMenuContent>

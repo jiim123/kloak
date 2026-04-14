@@ -562,6 +562,33 @@
     display: none; /* Chrome, Safari and Opera */
   }
 
+  /* Ultra-thin sidebar scrollbar: 4px, visible only on hover */
+  .channel-sidebar-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  .channel-sidebar-scroll:hover {
+    scrollbar-color: hsl(var(--muted-foreground) / 0.25) transparent;
+  }
+  .channel-sidebar-scroll::-webkit-scrollbar {
+    width: 4px;
+  }
+  .channel-sidebar-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .channel-sidebar-scroll::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 9999px;
+  }
+  .channel-sidebar-scroll:hover::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.25);
+  }
+  .channel-sidebar-scroll::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.4);
+  }
+
   /* Status indicator colors */
   .status-online {
     @apply bg-[hsl(var(--kloak-online))];
