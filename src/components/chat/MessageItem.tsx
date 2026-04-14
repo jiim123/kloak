@@ -16,7 +16,6 @@ import {
   Loader2,
   UserX,
   Ban,
-  Check,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -53,8 +52,7 @@ import { canModerateByRoles } from "@/lib/permissions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MessageContent } from "./MessageContent";
 import { PollMessage } from "./PollMessage";
-import { isImageOnlyMessage, convertMentionsToReadable, convertMentionsToRaw } from "@/lib/message";
-import { SelectionFormatToolbar, FORMAT_SYNTAX, getCodeBlockSyntax } from "./FormatToolbar";
+import { isImageOnlyMessage, convertMentionsToReadable } from "@/lib/message";
 import { ReplyPreview } from "./MessageContent";
 import { useEditStore } from "@/stores/editStore";
 import { formatMessageTimestamp } from "@/lib/format";
