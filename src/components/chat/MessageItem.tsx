@@ -62,11 +62,7 @@ import { EmojiPicker } from "@/components/modals/EmojiPicker";
 import { BotTag } from "@/components/ui/bot-tag";
 import type { CustomServerRole, Message, ServerRole } from "@/types";
 import { format } from "date-fns";
-import {
-  resolveEmojisByNameFallback,
-  resolveQualifiedEmoji,
-  type ResolvedEmoji,
-} from "@/lib/globalEmojiResolver";
+import { resolveEmojisByNameFallback, resolveQualifiedEmoji, type ResolvedEmoji } from "@/lib/globalEmojiResolver";
 import { useMessageUser, fetchAndCacheUser, getUserFromCache, getOrFetchUser } from "@/stores/userCacheStore";
 import { cn } from "@/lib/utils";
 import { useSignedUrl } from "@/hooks/useSignedUrl";
@@ -74,7 +70,6 @@ import { getPollIdFromContent, isPollMessageContent } from "@/lib/poll";
 import { canRevealGhostIdentityForUser } from "@/lib/ghostIdentity";
 import { pickFirstNonBlank } from "@/lib/utils";
 import { openUserProfileModal, SIDE_ALIGNED_USER_PROFILE_POPOVER } from "@/lib/userProfilePopover";
-
 
 // Static data moved outside component
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "👋", "🔥", "👀", "💯", "🙌", "😍", "🤔"] as const;
@@ -155,7 +150,7 @@ const RoleIconWrapper = forwardRef<HTMLSpanElement, RoleIconWrapperProps>(
     >
       {children}
     </span>
-  )
+  ),
 );
 RoleIconWrapper.displayName = "RoleIconWrapper";
 
@@ -165,7 +160,15 @@ const AttachmentItem = memo(function AttachmentItem({
   onImageClick,
   uploaderName,
 }: {
-  attachment: { id: string; file_url: string; file_name: string; file_type?: string; file_size?: number; width?: number | null; height?: number | null };
+  attachment: {
+    id: string;
+    file_url: string;
+    file_name: string;
+    file_type?: string;
+    file_size?: number;
+    width?: number | null;
+    height?: number | null;
+  };
   onImageClick?: (url: string) => void;
   uploaderName?: string;
 }) {
@@ -173,7 +176,6 @@ const AttachmentItem = memo(function AttachmentItem({
   const isImage = attachment.file_type?.startsWith("image/");
   const isVideo = attachment.file_type?.startsWith("video/");
   const isAudio = attachment.file_type?.startsWith("audio/");
-  
 
   // Compute constrained dimensions to reserve space and prevent layout shift
   const reservedStyle = useMemo(() => {
@@ -184,12 +186,18 @@ const AttachmentItem = memo(function AttachmentItem({
     const maxH = 300;
     let w = attachment.width;
     let h = attachment.height;
-    if (w > maxW) { h = Math.round(h * (maxW / w)); w = maxW; }
-    if (h > maxH) { w = Math.round(w * (maxH / h)); h = maxH; }
+    if (w > maxW) {
+      h = Math.round(h * (maxW / w));
+      w = maxW;
+    }
+    if (h > maxH) {
+      w = Math.round(w * (maxH / h));
+      h = maxH;
+    }
     return { width: w, height: h };
   }, [isImage, attachment.width, attachment.height]);
 
-  // Show a compact loader while the signed URL resolves (don't return null — 
+  // Show a compact loader while the signed URL resolves (don't return null —
   // the attachment URL is already stripped from displayContent)
   if (!signedUrl && (isImage || isVideo || isAudio)) {
     return (
@@ -224,28 +232,28 @@ const AttachmentItem = memo(function AttachmentItem({
           fileSize={attachment.file_size}
           onError={refresh}
         />
-      ) : (() => {
-        const Icon = getFileIcon(attachment.file_type);
-        const sizeLabel = attachment.file_size
-          ? attachment.file_size >= 1024 * 1024
-            ? `${(attachment.file_size / (1024 * 1024)).toFixed(1)} MB`
-            : `${Math.round(attachment.file_size / 1024)} KB`
-          : null;
-        return (
-          <a
-            href={signedUrl ?? attachment.file_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-3 p-3 bg-secondary rounded-lg hover:bg-secondary/80 max-w-[400px] transition-colors"
-          >
-            <Icon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-            <span className="text-sm font-medium truncate">{attachment.file_name}</span>
-            {sizeLabel && (
-              <span className="text-xs text-muted-foreground flex-shrink-0">({sizeLabel})</span>
-            )}
-          </a>
-        );
-      })()}
+      ) : (
+        (() => {
+          const Icon = getFileIcon(attachment.file_type);
+          const sizeLabel = attachment.file_size
+            ? attachment.file_size >= 1024 * 1024
+              ? `${(attachment.file_size / (1024 * 1024)).toFixed(1)} MB`
+              : `${Math.round(attachment.file_size / 1024)} KB`
+            : null;
+          return (
+            <a
+              href={signedUrl ?? attachment.file_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 p-3 bg-secondary rounded-lg hover:bg-secondary/80 max-w-[400px] transition-colors"
+            >
+              <Icon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              <span className="text-sm font-medium truncate">{attachment.file_name}</span>
+              {sizeLabel && <span className="text-xs text-muted-foreground flex-shrink-0">({sizeLabel})</span>}
+            </a>
+          );
+        })()
+      )}
     </div>
   );
 });
@@ -306,7 +314,7 @@ export const MessageItem = memo(function MessageItem({
   const customEmojiMap = sharedCustomEmojiMap ?? EMPTY_CUSTOM_EMOJI_MAP;
   const globalEmojiMap = sharedGlobalEmojiMap ?? EMPTY_GLOBAL_EMOJI_MAP;
   const [hoveredRoleIcon, setHoveredRoleIcon] = useState(false);
-  
+
   const [reactionDetailsEmoji, setReactionDetailsEmoji] = useState<string | null>(null);
   const [attachmentLightboxUrl, setAttachmentLightboxUrl] = useState<string | null>(null);
   const [reactionUserNameOverrides, setReactionUserNameOverrides] = useState<Map<string, string>>(new Map());
@@ -333,13 +341,15 @@ export const MessageItem = memo(function MessageItem({
     let cleaned = message.content;
     for (const att of message.attachments) {
       if (att.file_url) {
-        cleaned = cleaned.replace(att.file_url, '').trim();
+        cleaned = cleaned.replace(att.file_url, "").trim();
       }
     }
     // Also strip any Supabase signed attachment URLs and kloak-attachment:// references
-    cleaned = cleaned.replace(/https?:\/\/[^\s]*supabase\.co\/storage\/v1\/object\/sign\/attachments\/[^\s]*/g, '').trim();
-    cleaned = cleaned.replace(/kloak-attachment:\/\/[^\s]*/g, '').trim();
-    cleaned = cleaned.replace(/https?:\/\/kloakcdn\.b-cdn\.net\/attachments\/[^\s]*/g, '').trim();
+    cleaned = cleaned
+      .replace(/https?:\/\/[^\s]*supabase\.co\/storage\/v1\/object\/sign\/attachments\/[^\s]*/g, "")
+      .trim();
+    cleaned = cleaned.replace(/kloak-attachment:\/\/[^\s]*/g, "").trim();
+    cleaned = cleaned.replace(/https?:\/\/kloakcdn\.b-cdn\.net\/attachments\/[^\s]*/g, "").trim();
     return cleaned;
   }, [message.content, message.attachments]);
 
@@ -391,7 +401,7 @@ export const MessageItem = memo(function MessageItem({
   }, [members, channels, user?.id, message.user_id, isDM]);
 
   const messageRoles = useMemo(
-    () => isDM ? [] : (messageMember?.roles ?? effectiveAuthorStyle?.roles ?? []),
+    () => (isDM ? [] : (messageMember?.roles ?? effectiveAuthorStyle?.roles ?? [])),
     [isDM, messageMember?.roles, effectiveAuthorStyle?.roles],
   );
   const messageBaseRole = isDM ? undefined : (messageMember?.role ?? effectiveAuthorStyle?.role);
@@ -655,7 +665,9 @@ export const MessageItem = memo(function MessageItem({
 
   // Kick/Ban permissions for avatar context menu — disabled in DM mode
   const isMessageAuthorOwner = isDM ? false : currentServer?.owner_id === message.user_id;
-  const canModTarget = isDM ? false : canModerateByRoles(currentUserIsOwner, currentMember?.roles, isMessageAuthorOwner, messageRoles);
+  const canModTarget = isDM
+    ? false
+    : canModerateByRoles(currentUserIsOwner, currentMember?.roles, isMessageAuthorOwner, messageRoles);
   const canKickUser = hasPermission("kick_members") && canModTarget && !isOwnMessage;
   const canBanUser = hasPermission("ban_members") && canModTarget && !isOwnMessage;
   const hasModActions = canKickUser || canBanUser;
@@ -692,15 +704,17 @@ export const MessageItem = memo(function MessageItem({
   }, [setEmbedHidden, message.id, user]);
 
   // Ghost mode - hide avatar/username for non-admin message authors (disabled in DM mode)
-  const isGhostMode = isDM ? false : (currentChannel?.ghost_mode || false);
+  const isGhostMode = isDM ? false : currentChannel?.ghost_mode || false;
   const showMessageAuthorIdentity = useMemo(
     () =>
-      isDM ? true : canRevealGhostIdentityForUser({
-        isGhostMode,
-        authorUserId: message.user_id,
-        members,
-        ownerId: currentServer?.owner_id,
-      }),
+      isDM
+        ? true
+        : canRevealGhostIdentityForUser({
+            isGhostMode,
+            authorUserId: message.user_id,
+            members,
+            ownerId: currentServer?.owner_id,
+          }),
     [isGhostMode, message.user_id, members, currentServer?.owner_id],
   );
   const showGhostIdentity = isGhostMode && !showMessageAuthorIdentity;
@@ -734,7 +748,7 @@ export const MessageItem = memo(function MessageItem({
     const { startEditing } = useEditStore.getState();
     startEditing({
       id: message.id,
-      channelId: message.channel_id || (dmActions ? '' : ''),
+      channelId: message.channel_id || (dmActions ? "" : ""),
       content: message.content,
       isDM: !!dmActions,
     });
@@ -914,16 +928,13 @@ export const MessageItem = memo(function MessageItem({
   const displayName = showGhostIdentity
     ? "Anonymous"
     : isDM
-      ? pickFirstNonBlank(
-          messageUser?.display_name,
-          messageUser?.username,
-        ) ?? "Unknown"
-      : pickFirstNonBlank(
+      ? (pickFirstNonBlank(messageUser?.display_name, messageUser?.username) ?? "Unknown")
+      : (pickFirstNonBlank(
           messageMember?.nickname,
           effectiveAuthorStyle?.nickname,
           messageUser?.display_name,
           messageUser?.username,
-        ) ?? "Unknown";
+        ) ?? "Unknown");
   const isBotMessageAuthor = !showGhostIdentity && Boolean(messageUser?.is_bot);
 
   const handleUsernameClick = useCallback(
@@ -959,15 +970,16 @@ export const MessageItem = memo(function MessageItem({
     });
   }, [messageMember, displayName, openModal]);
 
+  const handleRowMouseEnter = useCallback(() => setIsRowHovered(true), []);
+  const handleRowMouseLeave = useCallback(() => setIsRowHovered(false), []);
+
   const handleReplyClick = useCallback(
     (e: React.MouseEvent | React.TouchEvent) => {
       e.preventDefault();
       e.stopPropagation();
       if (message.reply_to?.id) {
         // Dispatch a custom event instead of using useSearchParams (which causes every MessageItem to re-render)
-        window.dispatchEvent(
-          new CustomEvent("scrollToMessage", { detail: { messageId: message.reply_to.id } }),
-        );
+        window.dispatchEvent(new CustomEvent("scrollToMessage", { detail: { messageId: message.reply_to.id } }));
       }
     },
     [message.reply_to?.id],
@@ -983,18 +995,14 @@ export const MessageItem = memo(function MessageItem({
         </div>
       )}
 
-      <div
-        id={`message-${message.id}`}
-        className={outerClassName}
-        style={{ contain: "layout style" }}
-      >
+      <div id={`message-${message.id}`} className={outerClassName} style={{ contain: "layout style" }}>
         {/* ContextMenu is disabled on mobile (use Drawer instead) */}
         <ContextMenu>
           <ContextMenuTrigger asChild disabled={isMobile}>
             <div
               className={innerClassName}
-              onMouseEnter={() => setIsRowHovered(true)}
-              onMouseLeave={() => setIsRowHovered(false)}
+              onMouseEnter={handleRowMouseEnter}
+              onMouseLeave={handleRowMouseLeave}
               onTouchStart={handleTouchStart}
               onTouchEnd={clearLongPress}
               onTouchMove={clearLongPress}
@@ -1166,9 +1174,7 @@ export const MessageItem = memo(function MessageItem({
                         >
                           {displayName}
                         </span>
-                        {isBotMessageAuthor && (
-                          <BotTag className="mr-1.5" />
-                        )}
+                        {isBotMessageAuthor && <BotTag className="mr-1.5" />}
                         {roleIconNode && priorityRoleWithIcon && (
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -1184,7 +1190,7 @@ export const MessageItem = memo(function MessageItem({
                     ) : (
                       !isGrouped &&
                       messageUser && (
-                         <div className="flex items-baseline gap-1.5 font-[Inter,system-ui,sans-serif]">
+                        <div className="flex items-baseline gap-1.5 font-[Inter,system-ui,sans-serif]">
                           <span
                             onClick={handleUsernameClick}
                             className={`text-[13px] font-medium leading-tight hover:underline cursor-pointer ${usernameColorClass}`}
@@ -1192,9 +1198,7 @@ export const MessageItem = memo(function MessageItem({
                           >
                             {displayName}
                           </span>
-                          {isBotMessageAuthor && (
-                            <BotTag />
-                          )}
+                          {isBotMessageAuthor && <BotTag />}
                           {roleIconNode && priorityRoleWithIcon && (
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -1206,7 +1210,7 @@ export const MessageItem = memo(function MessageItem({
                             </Tooltip>
                           )}
                           {showTimestamps && (
-                           <span className="text-[12px] text-muted-foreground/60 leading-none">
+                            <span className="text-[12px] text-muted-foreground/60 leading-none">
                               {formattedTimestamp}
                             </span>
                           )}
@@ -1266,7 +1270,9 @@ export const MessageItem = memo(function MessageItem({
                           const kloakAttachmentPattern = /kloak-attachment:\/\/[^\s]*/g;
                           const textOnly = replyContent
                             .split("\n")
-                            .map((line) => line.replace(attachmentUrlPattern, "").replace(kloakAttachmentPattern, "").trim())
+                            .map((line) =>
+                              line.replace(attachmentUrlPattern, "").replace(kloakAttachmentPattern, "").trim(),
+                            )
                             .filter((line) => line.length > 0)
                             .join(" ");
                           if (!textOnly) {
@@ -1305,9 +1311,7 @@ export const MessageItem = memo(function MessageItem({
                             const doubleNewlineIdx = content.indexOf("\n\n");
                             const hasTitle = doubleNewlineIdx > 0;
                             const title = hasTitle ? content.slice(0, doubleNewlineIdx).trim() : "";
-                            const announcementContent = hasTitle
-                              ? content.slice(doubleNewlineIdx + 2).trim()
-                              : content;
+                            const announcementContent = hasTitle ? content.slice(doubleNewlineIdx + 2).trim() : content;
 
                             return (
                               <div className="space-y-2 !block">
@@ -1372,11 +1376,15 @@ export const MessageItem = memo(function MessageItem({
                     {!message.is_system_message && message.attachments && message.attachments.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-2 w-full">
                         {message.attachments.map((attachment) => (
-                          <AttachmentItem key={attachment.id} attachment={attachment} onImageClick={setAttachmentLightboxUrl} uploaderName={displayName} />
+                          <AttachmentItem
+                            key={attachment.id}
+                            attachment={attachment}
+                            onImageClick={setAttachmentLightboxUrl}
+                            uploaderName={displayName}
+                          />
                         ))}
                       </div>
                     )}
-
                   </>
                 )}
               </div>
@@ -1385,17 +1393,19 @@ export const MessageItem = memo(function MessageItem({
               {!isBeingEdited && !message.is_system_message && (
                 <div className="absolute right-2 -top-4 hidden md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 md:flex items-center gap-1 bg-background border border-border rounded-xl shadow-md p-1 transition-opacity duration-100">
                   {/* Quick reactions - top 3 most used */}
-                  {effectiveCanAddReactions && !isBlockedUser && topEmojis.map((emoji) => (
-                    <button
-                      key={`quick-${emoji}`}
-                      className="p-1.5 rounded-lg bg-transparent hover:bg-muted transition-colors"
-                      onClick={() => handleAddReaction(emoji)}
-                      aria-label={`React with ${emoji}`}
-                      title={`React with ${emoji}`}
-                    >
-                      <FluentEmoji emoji={emoji} size={18} />
-                    </button>
-                  ))}
+                  {effectiveCanAddReactions &&
+                    !isBlockedUser &&
+                    topEmojis.map((emoji) => (
+                      <button
+                        key={`quick-${emoji}`}
+                        className="p-1.5 rounded-lg bg-transparent hover:bg-muted transition-colors"
+                        onClick={() => handleAddReaction(emoji)}
+                        aria-label={`React with ${emoji}`}
+                        title={`React with ${emoji}`}
+                      >
+                        <FluentEmoji emoji={emoji} size={18} />
+                      </button>
+                    ))}
                   {/* Reactions - Desktop */}
                   {effectiveCanAddReactions && !isBlockedUser && (
                     <EmojiPicker
@@ -1557,19 +1567,13 @@ export const MessageItem = memo(function MessageItem({
               <>
                 <ContextMenuSeparator />
                 {canKickUser && (
-                  <ContextMenuItem
-                    onClick={handleKickUser}
-                    className="text-orange-400 focus:text-orange-400"
-                  >
+                  <ContextMenuItem onClick={handleKickUser} className="text-orange-400 focus:text-orange-400">
                     <UserX className="w-4 h-4" />
                     Kick {displayName}
                   </ContextMenuItem>
                 )}
                 {canBanUser && (
-                  <ContextMenuItem
-                    onClick={handleBanUser}
-                    className="text-destructive focus:text-destructive"
-                  >
+                  <ContextMenuItem onClick={handleBanUser} className="text-destructive focus:text-destructive">
                     <Ban className="w-4 h-4" />
                     Ban {displayName}
                   </ContextMenuItem>
@@ -1702,7 +1706,7 @@ export const MessageItem = memo(function MessageItem({
             {effectiveCanAddReactions && !isBlockedUser && (
               <div className="mb-4 rounded-xl bg-muted/50 overflow-hidden">
                 <div className="flex items-center gap-1.5 p-2 overflow-x-auto scrollbar-hide">
-                {QUICK_REACTIONS.map((emoji) => (
+                  {QUICK_REACTIONS.map((emoji) => (
                     <button
                       key={emoji}
                       onClick={() => handleMobileAddReaction(emoji)}
@@ -1883,9 +1887,7 @@ export const MessageItem = memo(function MessageItem({
                       handleReactionClick(reaction.emoji, reaction.hasReacted);
                     }}
                     className={`flex items-center gap-1 bg-transparent border-none cursor-pointer transition-opacity duration-150 ${
-                      reaction.hasReacted
-                        ? "text-foreground opacity-100"
-                        : "text-muted-foreground opacity-60"
+                      reaction.hasReacted ? "text-foreground opacity-100" : "text-muted-foreground opacity-60"
                     }`}
                   >
                     {reactionEmojiNode(reaction.emoji)}
@@ -1902,9 +1904,7 @@ export const MessageItem = memo(function MessageItem({
                 <div key={`drawer-details-${reaction.emoji}`} className="space-y-2">
                   <div className="flex items-center gap-2">
                     {reactionEmojiNodeLarge(reaction.emoji)}
-                    <span className="text-sm font-semibold text-foreground">
-                      {reaction.count}
-                    </span>
+                    <span className="text-sm font-semibold text-foreground">{reaction.count}</span>
                   </div>
                   {isGhostMode ? (
                     <p className="text-sm text-muted-foreground pl-10">
@@ -1927,7 +1927,11 @@ export const MessageItem = memo(function MessageItem({
       </Drawer>
 
       {/* Delete confirmation modal */}
-      <DeleteMessageModal message={showDeleteModal ? message : null} onClose={() => setShowDeleteModal(false)} customDeleteHandler={isDM ? dmActions?.deleteMessage : undefined} />
+      <DeleteMessageModal
+        message={showDeleteModal ? message : null}
+        onClose={() => setShowDeleteModal(false)}
+        customDeleteHandler={isDM ? dmActions?.deleteMessage : undefined}
+      />
 
       {/* Attachment image lightbox */}
       <ImageLightbox imageUrl={attachmentLightboxUrl} onClose={() => setAttachmentLightboxUrl(null)} />
