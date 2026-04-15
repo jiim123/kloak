@@ -64,6 +64,7 @@ import type { CustomServerRole, Message, ServerRole } from "@/types";
 import { format } from "date-fns";
 import { resolveEmojisByNameFallback, resolveQualifiedEmoji, type ResolvedEmoji } from "@/lib/globalEmojiResolver";
 import { useMessageUser, fetchAndCacheUser, getUserFromCache, getOrFetchUser } from "@/stores/userCacheStore";
+import { useMessageMaps } from "./MessageMapsContext";
 import { cn } from "@/lib/utils";
 import { useSignedUrl } from "@/hooks/useSignedUrl";
 import { getPollIdFromContent, isPollMessageContent } from "@/lib/poll";
@@ -363,42 +364,22 @@ export const MessageItem = memo(function MessageItem({
   const hasMessageDecoration = Boolean(messageUser?.avatar_decoration);
   const messageAvatarSizeClass = hasMessageDecoration ? "w-9 h-9" : "w-10 h-10";
 
-  // Memoize member lookups
-  const channels = useServerStore((state) => state.channels);
+  // Pre-built maps from context (computed once in MessageList, not per item)
+  const {
+    usersMap,
+    channelsMap,
+    memberNameById,
+  } = useMessageMaps();
 
-  const { currentMember, messageMember, usersMap, channelsMap } = useMemo(() => {
+  const { currentMember, messageMember } = useMemo(() => {
     if (isDM) {
-      return {
-        currentMember: undefined,
-        messageMember: undefined,
-        usersMap: new Map<string, { username: string; display_name?: string | null; nickname?: string | null }>(),
-        channelsMap: new Map<string, { name: string }>(),
-      };
+      return { currentMember: undefined, messageMember: undefined };
     }
-
-    const userMap = new Map<string, { username: string; display_name?: string | null; nickname?: string | null }>();
-    members.forEach((m) => {
-      if (m.user) {
-        userMap.set(m.user_id, {
-          username: m.user.username,
-          display_name: m.user.display_name,
-          nickname: m.nickname,
-        });
-      }
-    });
-
-    const channelMap = new Map<string, { name: string }>();
-    channels.forEach((c) => {
-      channelMap.set(c.id, { name: c.name });
-    });
-
     return {
       currentMember: members.find((m) => m.user_id === user?.id),
       messageMember: members.find((m) => m.user_id === message.user_id),
-      usersMap: userMap,
-      channelsMap: channelMap,
     };
-  }, [members, channels, user?.id, message.user_id, isDM]);
+  }, [members, user?.id, message.user_id, isDM]);
 
   const messageRoles = useMemo(
     () => (isDM ? [] : (messageMember?.roles ?? effectiveAuthorStyle?.roles ?? [])),
@@ -547,17 +528,7 @@ export const MessageItem = memo(function MessageItem({
     [fallbackEmojiUrls, resolveCustomEmojiUrl],
   );
 
-  const memberNameById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const m of members) {
-      const name = m.nickname ?? m.user?.display_name ?? m.user?.username ?? m.user_id;
-      map.set(m.user_id, name);
-    }
-    if (user?.id) {
-      map.set(user.id, "You");
-    }
-    return map;
-  }, [members, user?.id]);
+  // memberNameById is now provided by MessageMapsContext
 
   const getReactionUserNames = useCallback(
     (userIds: string[]) => {

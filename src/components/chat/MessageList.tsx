@@ -16,6 +16,7 @@ import { useRealtimePolls } from "@/hooks/useRealtimePolls";
 import { useConnectionStatus } from "@/hooks/useConnectionStatus";
 
 import { useAuthorStyles } from "@/hooks/useAuthorStyles";
+import { MessageMapsProvider } from "./MessageMapsContext";
 import type { Message } from "@/types";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
 import { getGlobalEmojiMap, type ResolvedEmoji } from "@/lib/globalEmojiResolver";
@@ -558,6 +559,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   }, [isLoading, messages.length]);
 
   return (
+    <MessageMapsProvider>
     <div className="flex-1 flex flex-col min-h-0 relative">
       {isLoading && messages.length === 0 && <MessageListSkeleton />}
 
@@ -632,5 +634,6 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
         onClick={scrollToBottom}
       />
     </div>
+    </MessageMapsProvider>
   );
 };
