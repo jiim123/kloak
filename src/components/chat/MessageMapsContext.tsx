@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo } from "react";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
+import { getTopEmojis } from "@/lib/emojiRecents";
 
 export interface UserInfo {
   username: string;
@@ -17,17 +18,20 @@ export interface MessageMapsContextValue {
   channelsMap: Map<string, ChannelInfo>;
   memberNameById: Map<string, string>;
   currentUserId: string | undefined;
+  topEmojis: string[];
 }
 
 const EMPTY_USERS_MAP = new Map<string, UserInfo>();
 const EMPTY_CHANNELS_MAP = new Map<string, ChannelInfo>();
 const EMPTY_MEMBER_NAME_MAP = new Map<string, string>();
+const EMPTY_TOP_EMOJIS: string[] = [];
 
 const defaultValue: MessageMapsContextValue = {
   usersMap: EMPTY_USERS_MAP,
   channelsMap: EMPTY_CHANNELS_MAP,
   memberNameById: EMPTY_MEMBER_NAME_MAP,
   currentUserId: undefined,
+  topEmojis: EMPTY_TOP_EMOJIS,
 };
 
 export const MessageMapsContext = createContext<MessageMapsContextValue>(defaultValue);
@@ -55,6 +59,9 @@ export function MessageMapsProvider({
   const channels = useServerStore((s) => s.channels);
   const userId = useAuthStore((s) => s.user?.id);
 
+  // Computed once per provider mount, shared across all MessageItems
+  const topEmojis = useMemo(() => getTopEmojis(3), []);
+
   const value = useMemo<MessageMapsContextValue>(() => {
     if (isDM) {
       return {
@@ -62,6 +69,7 @@ export function MessageMapsProvider({
         channelsMap: EMPTY_CHANNELS_MAP,
         memberNameById: EMPTY_MEMBER_NAME_MAP,
         currentUserId: userId,
+        topEmojis,
       };
     }
 
@@ -93,8 +101,8 @@ export function MessageMapsProvider({
       channelsMap.set(c.id, { name: c.name });
     }
 
-    return { usersMap, channelsMap, memberNameById, currentUserId: userId };
-  }, [members, channels, userId, isDM]);
+    return { usersMap, channelsMap, memberNameById, currentUserId: userId, topEmojis };
+  }, [members, channels, userId, isDM, topEmojis]);
 
   return (
     <MessageMapsContext.Provider value={value}>
