@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, memo, forwardRef } from "react";
-
+import { getTopEmojis } from "@/lib/emojiRecents";
 import { FluentEmoji } from "@/components/ui/FluentEmoji";
 import {
   Smile,
@@ -290,7 +290,7 @@ export const MessageItem = memo(function MessageItem({
   const openModal = useUIStore((state) => state.openModal);
   const getOptimisticStatus = useSyncStore((state) => state.getOptimisticStatus);
   const isMobile = useIsMobile();
-  
+  const topEmojis = useMemo(() => getTopEmojis(3), []);
 
   // Unified action wrappers — in DM mode, delegate to dmActions; in channel mode, use stores
   const editMessage = isDM
@@ -364,22 +364,8 @@ export const MessageItem = memo(function MessageItem({
   const hasMessageDecoration = Boolean(messageUser?.avatar_decoration);
   const messageAvatarSizeClass = hasMessageDecoration ? "w-9 h-9" : "w-10 h-10";
 
-  const messageContentUser = useMemo(() => {
-    if (!messageUser) return undefined;
-    return {
-      id: messageUser.id,
-      username: messageUser.username,
-      display_name: messageUser.display_name,
-    };
-  }, [messageUser?.id, messageUser?.username, messageUser?.display_name]);
-
   // Pre-built maps from context (computed once in MessageList, not per item)
-  const {
-    usersMap,
-    channelsMap,
-    memberNameById,
-    topEmojis,
-  } = useMessageMaps();
+  const { usersMap, channelsMap, memberNameById } = useMessageMaps();
 
   const { currentMember, messageMember } = useMemo(() => {
     if (isDM) {
@@ -1108,7 +1094,15 @@ export const MessageItem = memo(function MessageItem({
                             hideLinksPreview={!canEmbedLinks}
                             customEmojiMap={customEmojiMap}
                             globalEmojiMap={globalEmojiMap}
-                            messageUser={messageContentUser}
+                            messageUser={
+                              messageUser
+                                ? {
+                                    id: messageUser.id,
+                                    username: messageUser.username,
+                                    display_name: messageUser.display_name,
+                                  }
+                                : undefined
+                            }
                           />
                         </span>
                       </div>
@@ -1298,7 +1292,15 @@ export const MessageItem = memo(function MessageItem({
                                     hideLinksPreview={!canEmbedLinks}
                                     customEmojiMap={customEmojiMap}
                                     globalEmojiMap={globalEmojiMap}
-                                    messageUser={messageContentUser}
+                                    messageUser={
+                                      messageUser
+                                        ? {
+                                            id: messageUser.id,
+                                            username: messageUser.username,
+                                            display_name: messageUser.display_name,
+                                          }
+                                        : undefined
+                                    }
                                   />
                                 )}
                               </div>
@@ -1313,7 +1315,15 @@ export const MessageItem = memo(function MessageItem({
                             hideLinksPreview={!canEmbedLinks}
                             customEmojiMap={customEmojiMap}
                             globalEmojiMap={globalEmojiMap}
-                            messageUser={messageContentUser}
+                            messageUser={
+                              messageUser
+                                ? {
+                                    id: messageUser.id,
+                                    username: messageUser.username,
+                                    display_name: messageUser.display_name,
+                                  }
+                                : undefined
+                            }
                           />
                         )}
                       </div>
@@ -1397,7 +1407,7 @@ export const MessageItem = memo(function MessageItem({
                   {isOwnMessage && (
                     <button
                       className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                      onClick={() => handleStartEditing()}
+                      onClick={handleStartEditing}
                       aria-label="Edit"
                       title="Edit"
                     >
