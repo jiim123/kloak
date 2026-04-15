@@ -378,6 +378,7 @@ export const MessageItem = memo(function MessageItem({
     usersMap,
     channelsMap,
     memberNameById,
+    topEmojis,
   } = useMessageMaps();
 
   const { currentMember, messageMember } = useMemo(() => {
