@@ -528,17 +528,7 @@ export const MessageItem = memo(function MessageItem({
     [fallbackEmojiUrls, resolveCustomEmojiUrl],
   );
 
-  const memberNameById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const m of members) {
-      const name = m.nickname ?? m.user?.display_name ?? m.user?.username ?? m.user_id;
-      map.set(m.user_id, name);
-    }
-    if (user?.id) {
-      map.set(user.id, "You");
-    }
-    return map;
-  }, [members, user?.id]);
+  // memberNameById is now provided by MessageMapsContext
 
   const getReactionUserNames = useCallback(
     (userIds: string[]) => {
