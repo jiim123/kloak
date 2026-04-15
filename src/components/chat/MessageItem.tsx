@@ -364,6 +364,15 @@ export const MessageItem = memo(function MessageItem({
   const hasMessageDecoration = Boolean(messageUser?.avatar_decoration);
   const messageAvatarSizeClass = hasMessageDecoration ? "w-9 h-9" : "w-10 h-10";
 
+  const messageContentUser = useMemo(() => {
+    if (!messageUser) return undefined;
+    return {
+      id: messageUser.id,
+      username: messageUser.username,
+      display_name: messageUser.display_name,
+    };
+  }, [messageUser?.id, messageUser?.username, messageUser?.display_name]);
+
   // Pre-built maps from context (computed once in MessageList, not per item)
   const {
     usersMap,
@@ -1098,15 +1107,7 @@ export const MessageItem = memo(function MessageItem({
                             hideLinksPreview={!canEmbedLinks}
                             customEmojiMap={customEmojiMap}
                             globalEmojiMap={globalEmojiMap}
-                            messageUser={
-                              messageUser
-                                ? {
-                                    id: messageUser.id,
-                                    username: messageUser.username,
-                                    display_name: messageUser.display_name,
-                                  }
-                                : undefined
-                            }
+                            messageUser={messageContentUser}
                           />
                         </span>
                       </div>
@@ -1296,15 +1297,7 @@ export const MessageItem = memo(function MessageItem({
                                     hideLinksPreview={!canEmbedLinks}
                                     customEmojiMap={customEmojiMap}
                                     globalEmojiMap={globalEmojiMap}
-                                    messageUser={
-                                      messageUser
-                                        ? {
-                                            id: messageUser.id,
-                                            username: messageUser.username,
-                                            display_name: messageUser.display_name,
-                                          }
-                                        : undefined
-                                    }
+                                    messageUser={messageContentUser}
                                   />
                                 )}
                               </div>
@@ -1319,15 +1312,7 @@ export const MessageItem = memo(function MessageItem({
                             hideLinksPreview={!canEmbedLinks}
                             customEmojiMap={customEmojiMap}
                             globalEmojiMap={globalEmojiMap}
-                            messageUser={
-                              messageUser
-                                ? {
-                                    id: messageUser.id,
-                                    username: messageUser.username,
-                                    display_name: messageUser.display_name,
-                                  }
-                                : undefined
-                            }
+                            messageUser={messageContentUser}
                           />
                         )}
                       </div>
