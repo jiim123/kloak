@@ -64,6 +64,7 @@ import type { CustomServerRole, Message, ServerRole } from "@/types";
 import { format } from "date-fns";
 import { resolveEmojisByNameFallback, resolveQualifiedEmoji, type ResolvedEmoji } from "@/lib/globalEmojiResolver";
 import { useMessageUser, fetchAndCacheUser, getUserFromCache, getOrFetchUser } from "@/stores/userCacheStore";
+import { useMessageMaps } from "./MessageMapsContext";
 import { cn } from "@/lib/utils";
 import { useSignedUrl } from "@/hooks/useSignedUrl";
 import { getPollIdFromContent, isPollMessageContent } from "@/lib/poll";
