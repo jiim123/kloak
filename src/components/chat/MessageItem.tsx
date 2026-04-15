@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, memo, forwardRef } from "react";
-import { getTopEmojis } from "@/lib/emojiRecents";
+
 import { FluentEmoji } from "@/components/ui/FluentEmoji";
 import {
   Smile,
@@ -290,7 +290,7 @@ export const MessageItem = memo(function MessageItem({
   const openModal = useUIStore((state) => state.openModal);
   const getOptimisticStatus = useSyncStore((state) => state.getOptimisticStatus);
   const isMobile = useIsMobile();
-  const topEmojis = useMemo(() => getTopEmojis(3), []);
+  
 
   // Unified action wrappers — in DM mode, delegate to dmActions; in channel mode, use stores
   const editMessage = isDM
@@ -378,6 +378,7 @@ export const MessageItem = memo(function MessageItem({
     usersMap,
     channelsMap,
     memberNameById,
+    topEmojis,
   } = useMessageMaps();
 
   const { currentMember, messageMember } = useMemo(() => {
