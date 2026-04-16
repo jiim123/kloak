@@ -1634,8 +1634,6 @@ export const MessageItem = memo(function MessageItem({
                       onTouchStart={handleReactionTouchStart}
                       onTouchEnd={clearReactionLongPress}
                       onTouchMove={clearReactionLongPress}
-                        }
-                      }}
                       disabled={!effectiveCanAddReactions}
                       className={`flex items-center gap-1 bg-transparent border-none cursor-pointer transition-opacity duration-150 ${
                         reaction.hasReacted
