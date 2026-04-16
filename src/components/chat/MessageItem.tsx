@@ -288,7 +288,9 @@ export const MessageItem = memo(function MessageItem({
   const channelAddReaction = useMessageStore((state) => state.addReaction);
   const channelRemoveReaction = useMessageStore((state) => state.removeReaction);
   const setEmbedHidden = useMessageStore((state) => state.setEmbedHidden);
-  const members = useServerStore((state) => state.members);
+  // NOTE: `members` and `channels` are NOT subscribed to here — doing so would
+  // cascade-re-render every MessageItem when any member joins/leaves/presence-updates.
+  // Instead we read pre-built maps + specific records from MessageMapsContext below.
   const roles = useServerStore((state) => state.roles);
   const currentServer = useServerStore((state) => state.currentServer);
   const currentChannel = useServerStore((state) => state.currentChannel);
@@ -372,17 +374,17 @@ export const MessageItem = memo(function MessageItem({
   const messageAvatarSizeClass = hasMessageDecoration ? "w-9 h-9" : "w-10 h-10";
 
   // Pre-built maps from context (computed once in MessageList, not per item)
-  const { usersMap, channelsMap, memberNameById } = useMessageMaps();
+  const { usersMap, channelsMap, memberNameById, messageMemberByUserId, membersList } = useMessageMaps();
 
   const { currentMember, messageMember } = useMemo(() => {
     if (isDM) {
       return { currentMember: undefined, messageMember: undefined };
     }
     return {
-      currentMember: members.find((m) => m.user_id === user?.id),
-      messageMember: members.find((m) => m.user_id === message.user_id),
+      currentMember: messageMemberByUserId.get(user?.id ?? ""),
+      messageMember: messageMemberByUserId.get(message.user_id),
     };
-  }, [members, user?.id, message.user_id, isDM]);
+  }, [messageMemberByUserId, user?.id, message.user_id, isDM]);
 
   const messageRoles = useMemo(
     () => (isDM ? [] : (messageMember?.roles ?? effectiveAuthorStyle?.roles ?? [])),
@@ -686,10 +688,10 @@ export const MessageItem = memo(function MessageItem({
         : canRevealGhostIdentityForUser({
             isGhostMode,
             authorUserId: message.user_id,
-            members,
+            members: membersList,
             ownerId: currentServer?.owner_id,
           }),
-    [isGhostMode, message.user_id, members, currentServer?.owner_id],
+    [isGhostMode, message.user_id, membersList, currentServer?.owner_id],
   );
   const showGhostIdentity = isGhostMode && !showMessageAuthorIdentity;
 
@@ -700,10 +702,10 @@ export const MessageItem = memo(function MessageItem({
       canRevealGhostIdentityForUser({
         isGhostMode,
         authorUserId: message.reply_to?.user_id,
-        members,
+        members: membersList,
         ownerId: currentServer?.owner_id,
       }),
-    [isGhostMode, message.reply_to?.user_id, members, currentServer?.owner_id],
+    [isGhostMode, message.reply_to?.user_id, membersList, currentServer?.owner_id],
   );
 
   // Memoize formatted timestamps
@@ -837,6 +839,15 @@ export const MessageItem = memo(function MessageItem({
   }, [isDM, dmActions, message, setReplyingTo]);
 
   const MESSAGE_CHAR_LIMIT = 2000;
+
+  const messageContentUser = useMemo(() => {
+    if (!messageUser) return undefined;
+    return {
+      id: messageUser.id,
+      username: messageUser.username,
+      display_name: messageUser.display_name,
+    };
+  }, [messageUser?.id, messageUser?.username, messageUser?.display_name]);
 
   // Computed class names — Discord-style spacing:
   // Non-grouped (first in group): top margin for visual group separation
@@ -1169,15 +1180,7 @@ export const MessageItem = memo(function MessageItem({
                             hideLinksPreview={!canEmbedLinks}
                             customEmojiMap={customEmojiMap}
                             globalEmojiMap={globalEmojiMap}
-                            messageUser={
-                              messageUser
-                                ? {
-                                    id: messageUser.id,
-                                    username: messageUser.username,
-                                    display_name: messageUser.display_name,
-                                  }
-                                : undefined
-                            }
+                            messageUser={messageContentUser}
                           />
                         </span>
                       </div>
@@ -1385,15 +1388,7 @@ export const MessageItem = memo(function MessageItem({
                             hideLinksPreview={!canEmbedLinks}
                             customEmojiMap={customEmojiMap}
                             globalEmojiMap={globalEmojiMap}
-                            messageUser={
-                              messageUser
-                                ? {
-                                    id: messageUser.id,
-                                    username: messageUser.username,
-                                    display_name: messageUser.display_name,
-                                  }
-                                : undefined
-                            }
+                            messageUser={messageContentUser}
                           />
                         )}
                       </div>
@@ -1960,5 +1955,17 @@ export const MessageItem = memo(function MessageItem({
         </DialogContent>
       </Dialog>
     </>
+  );
+}, (prev, next) => {
+  return (
+    prev.message === next.message &&
+    prev.isGrouped === next.isGrouped &&
+    prev.showNewDivider === next.showNewDivider &&
+    prev.isHighlighted === next.isHighlighted &&
+    prev.customEmojiMap === next.customEmojiMap &&
+    prev.globalEmojiMap === next.globalEmojiMap &&
+    prev.authorStyleFallback === next.authorStyleFallback &&
+    prev.dmActions === next.dmActions &&
+    prev.onStartEdit === next.onStartEdit
   );
 });

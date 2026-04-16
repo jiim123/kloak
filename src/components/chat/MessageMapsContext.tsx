@@ -2,6 +2,7 @@ import { createContext, useContext, useMemo } from "react";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
 import { getTopEmojis } from "@/lib/emojiRecents";
+import type { ServerMember } from "@/types";
 
 export interface UserInfo {
   username: string;
@@ -17,6 +18,8 @@ export interface MessageMapsContextValue {
   usersMap: Map<string, UserInfo>;
   channelsMap: Map<string, ChannelInfo>;
   memberNameById: Map<string, string>;
+  messageMemberByUserId: Map<string, ServerMember>;
+  membersList: ServerMember[];
   currentUserId: string | undefined;
   topEmojis: string[];
 }
@@ -24,15 +27,21 @@ export interface MessageMapsContextValue {
 const EMPTY_USERS_MAP = new Map<string, UserInfo>();
 const EMPTY_CHANNELS_MAP = new Map<string, ChannelInfo>();
 const EMPTY_MEMBER_NAME_MAP = new Map<string, string>();
+const EMPTY_MEMBER_BY_USER_ID_MAP = new Map<string, ServerMember>();
+const EMPTY_MEMBERS_LIST: ServerMember[] = [];
 const EMPTY_TOP_EMOJIS: string[] = [];
 
-const defaultValue: MessageMapsContextValue = {
+const EMPTY_CONTEXT_VALUE: MessageMapsContextValue = {
   usersMap: EMPTY_USERS_MAP,
   channelsMap: EMPTY_CHANNELS_MAP,
   memberNameById: EMPTY_MEMBER_NAME_MAP,
+  messageMemberByUserId: EMPTY_MEMBER_BY_USER_ID_MAP,
+  membersList: EMPTY_MEMBERS_LIST,
   currentUserId: undefined,
   topEmojis: EMPTY_TOP_EMOJIS,
 };
+
+const defaultValue = EMPTY_CONTEXT_VALUE;
 
 export const MessageMapsContext = createContext<MessageMapsContextValue>(defaultValue);
 
@@ -68,14 +77,26 @@ export function MessageMapsProvider({
         usersMap: EMPTY_USERS_MAP,
         channelsMap: EMPTY_CHANNELS_MAP,
         memberNameById: EMPTY_MEMBER_NAME_MAP,
+        messageMemberByUserId: EMPTY_MEMBER_BY_USER_ID_MAP,
+        membersList: EMPTY_MEMBERS_LIST,
         currentUserId: userId,
         topEmojis,
       };
     }
 
-    // Build usersMap from members
+    // Short-circuit during channel switches to avoid context-value churn
+    if (members.length === 0 && channels.length === 0) {
+      return {
+        ...EMPTY_CONTEXT_VALUE,
+        currentUserId: userId,
+        topEmojis,
+      };
+    }
+
+    // Single loop builds all three member-derived maps
     const usersMap = new Map<string, UserInfo>();
     const memberNameById = new Map<string, string>();
+    const messageMemberByUserId = new Map<string, ServerMember>();
 
     for (const m of members) {
       if (m.user) {
@@ -88,6 +109,7 @@ export function MessageMapsProvider({
       const name =
         m.nickname ?? m.user?.display_name ?? m.user?.username ?? m.user_id;
       memberNameById.set(m.user_id, name);
+      messageMemberByUserId.set(m.user_id, m);
     }
 
     // Set current user as "You" in memberNameById
@@ -101,7 +123,15 @@ export function MessageMapsProvider({
       channelsMap.set(c.id, { name: c.name });
     }
 
-    return { usersMap, channelsMap, memberNameById, currentUserId: userId, topEmojis };
+    return {
+      usersMap,
+      channelsMap,
+      memberNameById,
+      messageMemberByUserId,
+      membersList: members,
+      currentUserId: userId,
+      topEmojis,
+    };
   }, [members, channels, userId, isDM, topEmojis]);
 
   return (

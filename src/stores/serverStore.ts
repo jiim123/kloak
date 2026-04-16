@@ -1957,10 +1957,10 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
       set((state) => ({
         roles: state.roles.filter((r) => r.id !== roleId),
-        members: state.members.map((m) => ({
-          ...m,
-          roles: m.roles?.filter((r) => r.id !== roleId),
-        })),
+        members: state.members.map((m) => {
+          if (!m.roles?.some((r) => r.id === roleId)) return m;
+          return { ...m, roles: m.roles.filter((r) => r.id !== roleId) };
+        }),
       }));
     } catch (error) {
       console.error("Failed to delete role:", error);
