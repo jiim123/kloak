@@ -1631,23 +1631,9 @@ export const MessageItem = memo(function MessageItem({
                       onClick={() =>
                         effectiveCanAddReactions && handleReactionClick(reaction.emoji, reaction.hasReacted)
                       }
-                      onTouchStart={(e) => {
-                        if (!isMobile) return;
-                        reactionLongPressRef.current = setTimeout(() => {
-                          e.preventDefault();
-                          setReactionDrawerOpen(true);
-                        }, 500);
-                      }}
-                      onTouchEnd={() => {
-                        if (reactionLongPressRef.current) {
-                          clearTimeout(reactionLongPressRef.current);
-                          reactionLongPressRef.current = null;
-                        }
-                      }}
-                      onTouchMove={() => {
-                        if (reactionLongPressRef.current) {
-                          clearTimeout(reactionLongPressRef.current);
-                          reactionLongPressRef.current = null;
+                      onTouchStart={handleReactionTouchStart}
+                      onTouchEnd={clearReactionLongPress}
+                      onTouchMove={clearReactionLongPress}
                         }
                       }}
                       disabled={!effectiveCanAddReactions}
@@ -1778,10 +1764,7 @@ export const MessageItem = memo(function MessageItem({
               {!isBlockedUser && (
                 <button
                   className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
-                  onClick={() => {
-                    handleReply();
-                    setShowMobileActions(false);
-                  }}
+                  onClick={handleMobileReply}
                 >
                   <Reply className="w-5 h-5 text-muted-foreground" />
                   <span className="font-medium">Reply</span>
@@ -1791,10 +1774,7 @@ export const MessageItem = memo(function MessageItem({
               {isOwnMessage && (
                 <button
                   className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
-                  onClick={() => {
-                    handleStartEditing();
-                    setShowMobileActions(false);
-                  }}
+                  onClick={handleMobileEdit}
                 >
                   <Pencil className="w-5 h-5 text-muted-foreground" />
                   <span className="font-medium">Edit</span>
