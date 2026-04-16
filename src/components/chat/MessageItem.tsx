@@ -1783,10 +1783,7 @@ export const MessageItem = memo(function MessageItem({
               {canPinMessages && (
                 <button
                   className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
-                  onClick={() => {
-                    handlePin();
-                    setShowMobileActions(false);
-                  }}
+                  onClick={handleMobilePin}
                 >
                   <Pin className={cn("w-5 h-5", message.is_pinned ? "text-primary" : "text-muted-foreground")} />
                   <span className="font-medium">{message.is_pinned ? "Unpin Message" : "Pin Message"}</span>
@@ -1830,10 +1827,7 @@ export const MessageItem = memo(function MessageItem({
                   <div className="my-2 h-px bg-border" />
                   <button
                     className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-destructive/10 active:bg-destructive/10 text-left text-destructive transition-colors"
-                    onClick={() => {
-                      setShowDeleteModal(true);
-                      setShowMobileActions(false);
-                    }}
+                    onClick={handleMobileDelete}
                   >
                     <Trash2 className="w-5 h-5" />
                     <span className="font-medium">Delete Message</span>
@@ -1848,10 +1842,7 @@ export const MessageItem = memo(function MessageItem({
                   {canKickUser && (
                     <button
                       className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-orange-500/10 active:bg-orange-500/10 text-left text-orange-400 transition-colors"
-                      onClick={() => {
-                        handleKickUser();
-                        setShowMobileActions(false);
-                      }}
+                      onClick={handleMobileKick}
                     >
                       <UserX className="w-5 h-5" />
                       <span className="font-medium">Kick {displayName}</span>
