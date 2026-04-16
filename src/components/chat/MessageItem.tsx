@@ -87,15 +87,22 @@ const getRoleColor = (role?: ServerRole): string => {
 
 const isGradientColor = (value?: string | null) => !!value && value.startsWith("linear-gradient");
 
-const getGradientTextStyle = (gradient: string): React.CSSProperties =>
-  ({
-    background: gradient,
-    WebkitBackgroundClip: "text",
-    backgroundClip: "text",
-    WebkitTextFillColor: "transparent",
-    color: "transparent",
-    display: "inline-block",
-  }) as React.CSSProperties;
+const gradientStyleCache = new Map<string, React.CSSProperties>();
+const getGradientTextStyle = (gradient: string): React.CSSProperties => {
+  let cached = gradientStyleCache.get(gradient);
+  if (!cached) {
+    cached = {
+      background: gradient,
+      WebkitBackgroundClip: "text",
+      backgroundClip: "text",
+      WebkitTextFillColor: "transparent",
+      color: "transparent",
+      display: "inline-block",
+    } as React.CSSProperties;
+    gradientStyleCache.set(gradient, cached);
+  }
+  return cached;
+};
 
 export interface DMActions {
   editMessage: (messageId: string, userId: string, content: string) => Promise<void>;
@@ -939,6 +946,74 @@ export const MessageItem = memo(function MessageItem({
 
   const handleRowMouseEnter = useCallback(() => setIsRowHovered(true), []);
   const handleRowMouseLeave = useCallback(() => setIsRowHovered(false), []);
+
+  // Stable callbacks for delete modal
+  const handleShowDeleteModal = useCallback(() => setShowDeleteModal(true), []);
+
+  // Stable touch propagation stopper
+  const stopTouchPropagation = useCallback((e: React.TouchEvent) => e.stopPropagation(), []);
+
+  // Stable reaction touch handlers
+  const handleReactionTouchStart = useCallback((e: React.TouchEvent) => {
+    if (!isMobile) return;
+    reactionLongPressRef.current = setTimeout(() => {
+      e.preventDefault();
+      setReactionDrawerOpen(true);
+    }, 500);
+  }, [isMobile]);
+
+  const clearReactionLongPress = useCallback(() => {
+    if (reactionLongPressRef.current) {
+      clearTimeout(reactionLongPressRef.current);
+      reactionLongPressRef.current = null;
+    }
+  }, []);
+
+  // Stable mobile action callbacks
+  const handleMobileReply = useCallback(() => {
+    handleReply();
+    setShowMobileActions(false);
+  }, [handleReply]);
+
+  const handleMobileEdit = useCallback(() => {
+    handleStartEditing();
+    setShowMobileActions(false);
+  }, [handleStartEditing]);
+
+  const handleMobilePin = useCallback(() => {
+    handlePin();
+    setShowMobileActions(false);
+  }, [handlePin]);
+
+  const handleMobileRemoveEmbed = useCallback(() => {
+    handleRemoveEmbed();
+    setShowMobileActions(false);
+  }, [handleRemoveEmbed]);
+
+  const handleMobileCopy = useCallback(() => {
+    handleCopyText();
+    setShowMobileActions(false);
+  }, [handleCopyText]);
+
+  const handleMobileCopyId = useCallback(() => {
+    handleCopyMessageId();
+    setShowMobileActions(false);
+  }, [handleCopyMessageId]);
+
+  const handleMobileDelete = useCallback(() => {
+    setShowDeleteModal(true);
+    setShowMobileActions(false);
+  }, []);
+
+  const handleMobileKick = useCallback(() => {
+    handleKickUser();
+    setShowMobileActions(false);
+  }, [handleKickUser]);
+
+  const handleMobileBan = useCallback(() => {
+    handleBanUser();
+    setShowMobileActions(false);
+  }, [handleBanUser]);
 
   const handleReplyClick = useCallback(
     (e: React.MouseEvent | React.TouchEvent) => {
