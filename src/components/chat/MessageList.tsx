@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, useMemo, Fragment, useLayoutEffect, memo } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo, Fragment, useLayoutEffect } from "react";
 
 import { Ghost } from "lucide-react";
 import { Loader2, Hash, Sparkles } from "lucide-react";
@@ -28,24 +28,7 @@ interface MessageListProps {
   manageCurrentChannel?: boolean;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// CONSTANTS (hoisted — zero per-render allocation)
-// ─────────────────────────────────────────────────────────────────────────────
-
 const CHANNEL_ENTRY_FORCE_REFETCH_MAX_AGE_MS = 5 * 60_000;
-
-// FIX #1: Empty arrays/maps — stable references to avoid churning downstream memos
-const EMPTY_MESSAGE_ARRAY: Message[] = [];
-const EMPTY_CUSTOM_EMOJI_MAP = new Map<string, string>();
-const EMPTY_GLOBAL_EMOJI_MAP = new Map<string, ResolvedEmoji>();
-
-// FIX #2: Static style objects — were inline object literals (3 occurrences)
-const OVERFLOW_ANCHOR_NONE = { overflowAnchor: "none" as const };
-const OVERFLOW_ANCHOR_AUTO = { overflowAnchor: "auto" as const };
-
-// ─────────────────────────────────────────────────────────────────────────────
-// UTILITIES (pure functions — stable references)
-// ─────────────────────────────────────────────────────────────────────────────
 
 const shouldGroupMessages = (current: Message, previous: Message | null): boolean => {
   if (!previous) return false;
@@ -67,165 +50,24 @@ const getDateDividerLabel = (date: Date): string => {
   return format(date, "EEEE, MMMM d, yyyy");
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TYPES
-// ─────────────────────────────────────────────────────────────────────────────
-
-type ListItem =
-  | { type: "message"; message: Message; previousMessage: Message | null; isNewMessagesDivider: boolean }
-  | { type: "dateDivider"; label: string; date: Date };
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SUB-COMPONENTS (memoized, hoisted — zero re-creation)
-// ─────────────────────────────────────────────────────────────────────────────
-
-// FIX #3: DateDivider was inline JSX recreated per render inside itemContent.
-// Extract to a memoized component — identical dates across re-renders stay mounted.
-const DateDivider = memo(({ label }: { label: string }) => (
-  <div className="flex items-center gap-3 px-6 my-4" style={OVERFLOW_ANCHOR_NONE}>
-    <div className="h-px flex-1 bg-border/70" />
-    <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">{label}</span>
-    <div className="h-px flex-1 bg-border/70" />
-  </div>
-));
-DateDivider.displayName = "DateDivider";
-
-// FIX #4: EmptyState JSX is large and was recreated per render. Extract to memo components.
-const GhostChannelEmpty = memo(({ channelName }: { channelName: string }) => (
-  <div className="flex flex-col px-6 pt-16 pb-8 items-center text-center">
-    <div className="relative mb-6">
-      <div className="absolute inset-0 rounded-full bg-muted/30 blur-xl scale-150" />
-      <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-muted/80 to-muted/40 border border-border/50 flex items-center justify-center">
-        <Ghost className="w-12 h-12 text-muted-foreground" />
-      </div>
-    </div>
-    <h2 className="text-2xl font-medium text-foreground mb-3">Anonymous Channel</h2>
-    <p className="text-muted-foreground max-w-sm leading-relaxed">
-      Messages in <span className="font-medium text-foreground">#{channelName}</span> are anonymous. Your identity stays
-      hidden from other members.
-    </p>
-  </div>
-));
-GhostChannelEmpty.displayName = "GhostChannelEmpty";
-
-const RegularChannelEmpty = memo(
-  ({ channelName, isVoiceAttached }: { channelName: string; isVoiceAttached: boolean }) => (
-    <div className="flex flex-col px-6 pt-16 pb-8 items-start">
-      <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-        <Hash className="w-10 h-10 text-primary" />
-      </div>
-      {isVoiceAttached ? (
-        <>
-          <h2 className="text-2xl font-medium text-foreground mb-2">No messages yet</h2>
-          <p className="text-muted-foreground">
-            Use <span className="font-medium">#{channelName}</span> to chat while in voice.
-          </p>
-        </>
-      ) : (
-        <>
-          <h2 className="text-3xl font-medium text-foreground mb-2">Welcome to #{channelName}!</h2>
-          <p className="text-muted-foreground mb-4">
-            This is the start of the <span className="font-medium">#{channelName}</span> channel.
-          </p>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Sparkles className="w-4 h-4 text-yellow-500" />
-            <span>Be the first to send a message!</span>
-          </div>
-        </>
-      )}
-    </div>
-  ),
-);
-RegularChannelEmpty.displayName = "RegularChannelEmpty";
-
-// FIX #5: LoadingOlder indicator extracted — was inline JSX with overflow anchor style
-const LoadingOlderIndicator = memo(() => (
-  <div className="pointer-events-none absolute top-2 left-1/2 -translate-x-1/2 z-20" style={OVERFLOW_ANCHOR_NONE}>
-    <div className="rounded-full border border-border/70 bg-background/90 p-1.5 shadow-sm backdrop-blur-sm">
-      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-    </div>
-  </div>
-));
-LoadingOlderIndicator.displayName = "LoadingOlderIndicator";
-
-// FIX #6: Header loader extracted
-const HeaderLoader = memo(() => (
-  <div className="flex justify-center py-4" style={OVERFLOW_ANCHOR_NONE}>
-    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-  </div>
-));
-HeaderLoader.displayName = "HeaderLoader";
-
-// FIX #7: The biggest win — memoize the MessageItem wrapper so that a single
-// message's props changing doesn't trigger a re-render of the entire list row.
-// React.Fragment doesn't support key-based memoization, but a wrapper component does.
-//
-// MessageItem is already memo'd. But when the parent (MessageList) re-renders,
-// React walks every child and calls MessageItem with its props. memo() does a
-// shallow compare — since props are stable (thanks to stableRefs below), MessageItem
-// will bail out of rendering. However, without a memoized row wrapper, React still
-// calls createElement for each item on every parent render. By wrapping in a memoized
-// Row component, we reduce that overhead too.
-interface RowProps {
-  item: ListItem;
-  authorStyle: any;
-  customEmojiMap: Map<string, string>;
-  globalEmojiMap: Map<string, ResolvedEmoji>;
-  highlightedMessageId: string | null;
-}
-const Row = memo(({ item, authorStyle, customEmojiMap, globalEmojiMap, highlightedMessageId }: RowProps) => {
-  if (item.type === "dateDivider") {
-    return <DateDivider label={item.label} />;
-  }
-  const { message, previousMessage, isNewMessagesDivider } = item;
-  const isGrouped = shouldGroupMessages(message, previousMessage);
-  return (
-    <MessageItem
-      message={message}
-      isGrouped={isGrouped}
-      showNewDivider={isNewMessagesDivider}
-      isHighlighted={message.id === highlightedMessageId}
-      authorStyleFallback={authorStyle}
-      customEmojiMap={customEmojiMap}
-      globalEmojiMap={globalEmojiMap}
-    />
-  );
-});
-Row.displayName = "Row";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// MAIN COMPONENT
-// ─────────────────────────────────────────────────────────────────────────────
-
 export const MessageList = ({ channelId, channelName, manageCurrentChannel = true }: MessageListProps) => {
-  // FIX #8: useAuthStore destructuring → individual selector
-  const user = useAuthStore((s) => s.user);
-
-  // FIX #9: useMessageStore was destructuring 5 fields — subscribes to the entire store.
-  // Every message-store change re-rendered MessageList. Split into individual selectors.
-  const isLoading = useMessageStore((s) => s.isLoading);
-  const fetchMessages = useMessageStore((s) => s.fetchMessages);
-  const setCurrentChannel = useMessageStore((s) => s.setCurrentChannel);
-  const channelData = useMessageStore((s) => s.messagesByChannel[channelId]);
-  const isFetchingOlder = useMessageStore((s) => !!s.fetchingChannels[channelId]);
-
+  const { user } = useAuthStore();
+  const { isLoading, fetchMessages, setCurrentChannel, messagesByChannel, fetchingChannels } = useMessageStore();
   const { isRealtimeConnected } = useConnectionStatus();
   const visibilityBlockedUserIds = useFriendStore((s) => s.visibilityBlockedUserIds);
   const currentChannel = useServerStore((s) => s.currentChannel);
-
-  // FIX #10: `channels` array was subscribed to just to compute isVoiceAttachedTextChannel.
-  // Replace with a narrow selector that returns only the boolean we need.
-  const isVoiceAttachedTextChannel = useServerStore(
-    useCallback((s) => !!s.channels.find((c) => c.id === channelId)?.linked_voice_channel_id, [channelId]),
-  );
-
+  const channels = useServerStore((s) => s.channels);
   const currentServerId = useServerStore((s) => s.currentChannel?.server_id ?? s.currentServer?.id ?? null);
+  const isVoiceAttachedTextChannel = useMemo(
+    () => !!channels.find((c) => c.id === channelId)?.linked_voice_channel_id,
+    [channels, channelId],
+  );
 
   useRealtimePolls(channelId);
 
-  // FIX #11: `rawMessages` was re-creating a new empty array when no messages exist.
-  // Use stable EMPTY_MESSAGE_ARRAY reference to short-circuit downstream memos.
-  const rawMessages = channelData?.messages ?? EMPTY_MESSAGE_ARRAY;
+  const channelData = messagesByChannel[channelId];
+  const isFetchingOlder = !!fetchingChannels[channelId];
+  const rawMessages = useMemo(() => channelData?.messages || [], [channelData?.messages]);
 
   const messages = useMemo(() => {
     if (!visibilityBlockedUserIds || visibilityBlockedUserIds.length === 0) return rawMessages;
@@ -250,40 +92,15 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     return messages.filter((m) => seen.get(getStableMessageKey(m)) === m);
   }, [messages]);
 
-  const msgCount = deduplicatedMessages.length;
+  type ListItem = { type: "message"; message: Message } | { type: "dateDivider"; label: string; date: Date };
 
-  // FIX #12: newMessagesDividerIndex was computed in a separate useMemo, then
-  // re-read inside itemContent. Compute it here and embed in flatItems to avoid
-  // index-based lookups during row rendering.
-  const { lastReadAt, firstUnreadMessageId } = useUnreadChannelsContext().getChannelUnread(channelId);
-  const { markAsRead } = useUnreadChannelsContext();
-
-  const newMessagesDividerIndex = useMemo(() => {
-    if (!lastReadAt || !firstUnreadMessageId) return -1;
-    const lastReadTime = new Date(lastReadAt).getTime();
-    for (let i = 0; i < deduplicatedMessages.length; i++) {
-      if (new Date(deduplicatedMessages[i].created_at).getTime() > lastReadTime) return i;
-    }
-    return -1;
-  }, [deduplicatedMessages, lastReadAt, firstUnreadMessageId]);
-
-  const lastMarkedMessageIdRef = useRef<string | null>(null);
-
-  // FIX #13: MERGE flatItems construction.
-  // Previously there were 3 passes: flatItems builds dividers+messages, then itemContent
-  // does .indexOf() for each message (O(n) per row = O(n²) total!!), then another map
-  // for rendering. Collapse into a single pass that embeds previousMessage and divider
-  // state directly into the item. Zero .indexOf() calls during render.
   const flatItems = useMemo(() => {
     const items: ListItem[] = [];
-    const hasInitialUnread = lastMarkedMessageIdRef.current === null;
-
     for (let i = 0; i < deduplicatedMessages.length; i++) {
       const msg = deduplicatedMessages[i];
       const msgDate = new Date(msg.created_at);
       const prevMsg = i > 0 ? deduplicatedMessages[i - 1] : null;
       const prevDate = prevMsg ? new Date(prevMsg.created_at) : null;
-
       if (!prevDate || !isSameDay(msgDate, prevDate)) {
         items.push({
           type: "dateDivider",
@@ -291,51 +108,77 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
           date: msgDate,
         });
       }
-
-      items.push({
-        type: "message",
-        message: msg,
-        previousMessage: prevMsg,
-        isNewMessagesDivider: i === newMessagesDividerIndex && hasInitialUnread,
-      });
+      items.push({ type: "message", message: msg });
     }
     return items;
-  }, [deduplicatedMessages, newMessagesDividerIndex]);
+  }, [deduplicatedMessages]);
 
-  // FIX #14: visibleAuthorUserIds — return the SAME ARRAY reference when the
-  // set of author IDs hasn't changed. The original `Array.from(new Set(...))`
-  // created a new array even when nothing changed, forcing useAuthorStyles to re-fetch.
-  const visibleAuthorUserIdsRef = useRef<string[]>([]);
   const visibleAuthorUserIds = useMemo(() => {
     const ids = new Set<string>();
     for (const msg of deduplicatedMessages) {
       if (msg.user_id) ids.add(msg.user_id);
     }
-    const next = Array.from(ids).sort(); // sort for stable comparison
-    const prev = visibleAuthorUserIdsRef.current;
-    if (prev.length === next.length && prev.every((id, i) => id === next[i])) {
-      return prev; // same content → return stable reference
-    }
-    visibleAuthorUserIdsRef.current = next;
-    return next;
+    return Array.from(ids);
   }, [deduplicatedMessages]);
+  const msgCount = deduplicatedMessages.length;
 
   const authorStyleMap = useAuthorStyles(currentServerId, visibleAuthorUserIds);
 
-  // ── State (separated for clarity) ──
+  useEffect(() => {
+    if (!currentServerId) {
+      setCustomEmojiMap(new Map());
+      return;
+    }
+    let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    const load = async (attempt: number) => {
+      try {
+        const emojis = await fetchServerEmojis(currentServerId, { force: attempt > 0 });
+        if (cancelled) return;
+        const next = new Map<string, string>();
+        emojis.forEach((e) => next.set(e.name, e.url));
+        setCustomEmojiMap(next);
+      } catch {
+        if (cancelled) return;
+        setCustomEmojiMap(new Map());
+        if (attempt < 2) {
+          retryTimer = setTimeout(() => load(attempt + 1), 700 * Math.pow(2, attempt));
+        }
+      }
+    };
+    load(0);
+    return () => {
+      cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
+    };
+  }, [currentServerId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getGlobalEmojiMap()
+      .then((map) => {
+        if (!cancelled) setGlobalEmojiMap(map);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [currentServerId]);
+
   const containerRef = useRef<HTMLDivElement>(null);
-  const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(EMPTY_CUSTOM_EMOJI_MAP);
-  const [globalEmojiMap, setGlobalEmojiMap] = useState<Map<string, ResolvedEmoji>>(EMPTY_GLOBAL_EMOJI_MAP);
+  const [_unused, _setUnused] = useState<string | null>(null); // kept for stable hook order
+  const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
+  const [globalEmojiMap, setGlobalEmojiMap] = useState<Map<string, ResolvedEmoji>>(new Map());
   const [showJumpToPresent, setShowJumpToPresent] = useState(false);
   const showJumpToPresentRef = useRef(false);
   const [newMessageCount, setNewMessageCount] = useState(0);
   const isNearBottomRef = useRef(true);
+  const lastMarkedMessageIdRef = useRef<string | null>(null);
   const prevMessagesLengthRef = useRef(0);
   const prevChannelIdRef = useRef<string>(channelId);
   const didInitialBottomScrollRef = useRef(false);
   const lastScrollHeightRef = useRef(0);
 
-  // Stable refs for callbacks that shouldn't trigger re-renders
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
   const channelIdRef = useRef(channelId);
@@ -345,7 +188,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   const deduplicatedMessagesRef = useRef(deduplicatedMessages);
   deduplicatedMessagesRef.current = deduplicatedMessages;
 
-  // Last-message-id for detecting genuinely new messages
+  // Stable last-message-id for detecting genuinely new messages
   const lastMessageId = useMemo(() => {
     if (messages.length === 0) return null;
     return messages[messages.length - 1].id;
@@ -357,17 +200,16 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     didInitialBottomScrollRef.current = false;
   }
 
+  const { getChannelUnread, markAsRead } = useUnreadChannelsContext();
+  const channelUnread = getChannelUnread(channelId);
+  const { lastReadAt, firstUnreadMessageId } = channelUnread;
+
   const { highlightedMessageId } = useScrollToMessage({
     messages: deduplicatedMessages,
     isLoading,
     containerRef,
   });
 
-  // FIX #15: The edit-last-message listener was importing the editStore dynamically
-  // (`import("@/stores/editStore")`) — this runs every keypress of ArrowUp in chat.
-  // Import it statically at the top of the file instead.
-  // NOTE: moved to top-level import — see import statement at top if you apply this.
-  // For now, leaving the dynamic import since refactoring imports is outside scope.
   useEffect(() => {
     const handleEditLastMessage = (e: CustomEvent<{ userId: string; channelId: string }>) => {
       if (e.detail.channelId !== channelIdRef.current || !e.detail.userId) return;
@@ -401,7 +243,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     const cacheEntry = useMessageStore.getState().messagesByChannel[channelId];
     const hasCached = (cacheEntry?.messages?.length ?? 0) > 0;
     const isFreshEnough = !!cacheEntry && Date.now() - cacheEntry.lastFetched < CHANNEL_ENTRY_FORCE_REFETCH_MAX_AGE_MS;
-    const unreadSnapshot = useUnreadChannelsContext().getChannelUnread(channelId);
+    const unreadSnapshot = getChannelUnread(channelId);
     const hasUnreadBacklog = (unreadSnapshot.unreadCount ?? 0) > 0;
 
     if (!hasCached || !isRealtimeConnected || !isFreshEnough || hasUnreadBacklog) {
@@ -473,13 +315,14 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }
   }, [messages, channelId, markAsRead]);
 
-  // New message nudge
+  // New message nudge — tracks lastMessageId for reliable detection
   useLayoutEffect(() => {
     const currentLength = messages.length;
     const prevLength = prevMessagesLengthRef.current;
     const currentLastId = lastMessageId;
     const prevLastId = lastNudgedMessageIdRef.current;
 
+    // Detect genuinely new message: either length increased or last ID changed
     const hasNewMessage =
       (currentLength > prevLength && prevLength > 0) ||
       (currentLastId !== null && prevLastId !== null && currentLastId !== prevLastId && prevLength > 0);
@@ -493,6 +336,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
         const added = Math.max(1, currentLength - prevLength);
         setNewMessageCount((prev) => prev + added);
       } else {
+        // Single immediate scroll — ResizeObserver handles subsequent size changes
         const n = containerRef.current;
         if (n) {
           n.scrollTop = n.scrollHeight;
@@ -505,6 +349,17 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     prevMessagesLengthRef.current = currentLength;
     if (currentLastId) lastNudgedMessageIdRef.current = currentLastId;
   }, [lastMessageId, messages.length]);
+
+  // Safety-net removed: it was forcing users back to bottom on small scrolls
+
+  const newMessagesDividerIndex = useMemo(() => {
+    if (!lastReadAt || !firstUnreadMessageId) return -1;
+    const lastReadTime = new Date(lastReadAt).getTime();
+    for (let i = 0; i < deduplicatedMessages.length; i++) {
+      if (new Date(deduplicatedMessages[i].created_at).getTime() > lastReadTime) return i;
+    }
+    return -1;
+  }, [deduplicatedMessages, lastReadAt, firstUnreadMessageId]);
 
   const scrollToBottom = useCallback(() => {
     const node = containerRef.current;
@@ -540,6 +395,10 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     return () => window.removeEventListener("channelMessageSent", listener);
   }, [scrollToBottom]);
 
+  const handleExternalEditHandled = useCallback((_messageId: string) => {
+    // No-op — editing now handled by editStore
+  }, []);
+
   const handleAtBottomStateChange = useCallback((atBottom: boolean) => {
     if (atBottom) {
       setShowJumpToPresent(false);
@@ -565,45 +424,35 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     });
   }, [hasMore, isLoading, isFetchingOlder, channelData?.oldestLoadedAt]);
 
-  // FIX #16: handleScroll runs on EVERY scroll event — potentially 60+/sec.
-  // Add throttling via requestAnimationFrame to coalesce reads and keep the
-  // main thread responsive. Scroll handlers should never fire more than 1/frame.
-  const scrollRafRef = useRef<number | null>(null);
   const handleScroll = useCallback(() => {
-    if (scrollRafRef.current !== null) return; // already scheduled
-    scrollRafRef.current = requestAnimationFrame(() => {
-      scrollRafRef.current = null;
-      const node = containerRef.current;
-      if (!node) return;
+    const node = containerRef.current;
+    if (!node) return;
 
-      const distanceFromBottom = node.scrollHeight - node.scrollTop - node.clientHeight;
-      const atBottom = distanceFromBottom <= 100;
-      const wasAtBottom = isNearBottomRef.current;
+    const distanceFromBottom = node.scrollHeight - node.scrollTop - node.clientHeight;
+    const atBottom = distanceFromBottom <= 100;
+    const wasAtBottom = isNearBottomRef.current;
 
-      isNearBottomRef.current = atBottom;
-      lastScrollHeightRef.current = node.scrollHeight;
+    // ALWAYS sync the ref so it never gets stuck
+    isNearBottomRef.current = atBottom;
 
-      if (node.scrollTop <= 96 && !atBottom && distanceFromBottom > 300) {
-        handleLoadOlder();
+    // Track scroll height for ResizeObserver
+    lastScrollHeightRef.current = node.scrollHeight;
+
+    // Load older — only when genuinely near top
+    if (node.scrollTop <= 96 && !atBottom && distanceFromBottom > 300) {
+      handleLoadOlder();
+    }
+
+    // State transitions only
+    if (atBottom && !wasAtBottom) {
+      handleAtBottomStateChange(true);
+    } else if (!atBottom && !wasAtBottom && distanceFromBottom >= 600) {
+      if (!showJumpToPresentRef.current && deduplicatedMessagesRef.current.length > 10) {
+        setShowJumpToPresent(true);
+        showJumpToPresentRef.current = true;
       }
-
-      if (atBottom && !wasAtBottom) {
-        handleAtBottomStateChange(true);
-      } else if (!atBottom && !wasAtBottom && distanceFromBottom >= 600) {
-        if (!showJumpToPresentRef.current && deduplicatedMessagesRef.current.length > 10) {
-          setShowJumpToPresent(true);
-          showJumpToPresentRef.current = true;
-        }
-      }
-    });
+    }
   }, [handleLoadOlder, handleAtBottomStateChange]);
-
-  // Cleanup pending RAF on unmount
-  useEffect(() => {
-    return () => {
-      if (scrollRafRef.current !== null) cancelAnimationFrame(scrollRafRef.current);
-    };
-  }, []);
 
   // Initial bottom scroll
   useEffect(() => {
@@ -620,6 +469,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     };
 
     scrollDown();
+    // Single retry after a frame for late-rendering content
     requestAnimationFrame(scrollDown);
   }, [isLoading, msgCount]);
 
@@ -644,7 +494,10 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       lastScrollHeightRef.current = newHeight;
     };
 
+    // ResizeObserver: catches element size changes (images loading, embeds expanding)
     const resizeObserver = new ResizeObserver(autoScrollIfNeeded);
+
+    // MutationObserver: catches new DOM nodes being added (new messages rendered)
     const mutationObserver = new MutationObserver(autoScrollIfNeeded);
 
     const wrapper = messagesWrapperRef.current;
@@ -657,102 +510,149 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       resizeObserver.disconnect();
       mutationObserver.disconnect();
     };
-  }, [channelId, msgCount > 0]);
+  }, [channelId, msgCount > 0]); // re-attach when channel changes or first messages arrive
 
-  // FIX #17: Emoji map loading — cancel previous fetch when channel changes.
-  // Original effect already had cancellation. Good. But the second effect (global emoji)
-  // depends on currentServerId which is unnecessary — global emojis are server-agnostic.
-  useEffect(() => {
-    if (!currentServerId) {
-      setCustomEmojiMap(EMPTY_CUSTOM_EMOJI_MAP);
-      return;
-    }
-    let cancelled = false;
-    let retryTimer: ReturnType<typeof setTimeout> | null = null;
-    const load = async (attempt: number) => {
-      try {
-        const emojis = await fetchServerEmojis(currentServerId, { force: attempt > 0 });
-        if (cancelled) return;
-        const next = new Map<string, string>();
-        emojis.forEach((e) => next.set(e.name, e.url));
-        setCustomEmojiMap(next);
-      } catch {
-        if (cancelled) return;
-        setCustomEmojiMap(EMPTY_CUSTOM_EMOJI_MAP);
-        if (attempt < 2) {
-          retryTimer = setTimeout(() => load(attempt + 1), 700 * Math.pow(2, attempt));
-        }
+  const authorStyleMapRef = useRef(authorStyleMap);
+  authorStyleMapRef.current = authorStyleMap;
+  const customEmojiMapRef = useRef(customEmojiMap);
+  customEmojiMapRef.current = customEmojiMap;
+  const globalEmojiMapRef = useRef(globalEmojiMap);
+  globalEmojiMapRef.current = globalEmojiMap;
+  const highlightedMessageIdRef = useRef(highlightedMessageId);
+  highlightedMessageIdRef.current = highlightedMessageId;
+  // externalEditTargetId removed — editing handled by editStore
+
+  const itemContent = useCallback(
+    (item: ListItem, index: number) => {
+      if (item.type === "dateDivider") {
+        return (
+          <div
+            key={`date-divider-${item.date.toISOString().slice(0, 10)}`}
+            className="flex items-center gap-3 px-6 my-4"
+            style={{ overflowAnchor: "none" }}
+          >
+            <div className="h-px flex-1 bg-border/70" />
+            <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">{item.label}</span>
+            <div className="h-px flex-1 bg-border/70" />
+          </div>
+        );
       }
-    };
-    load(0);
-    return () => {
-      cancelled = true;
-      if (retryTimer) clearTimeout(retryTimer);
-    };
-  }, [currentServerId]);
 
-  // FIX #18: Global emoji map load — removed currentServerId dependency.
-  // Global emojis don't depend on the server, so this was fetching on every channel switch.
-  useEffect(() => {
-    let cancelled = false;
-    getGlobalEmojiMap()
-      .then((map) => {
-        if (!cancelled) setGlobalEmojiMap(map);
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
+      const message = item.message;
+      // Find previous message in deduplicatedMessages for grouping
+      const msgs = deduplicatedMessagesRef.current;
+      const msgIdx = msgs.indexOf(message);
+      const previousMessage = msgIdx > 0 ? msgs[msgIdx - 1] : null;
+      const isGrouped = shouldGroupMessages(message, previousMessage);
+      const showNewDivider = msgIdx === newMessagesDividerIndex && lastMarkedMessageIdRef.current === null;
+
+      return (
+        <MessageItem
+          key={message.id}
+          message={message}
+          isGrouped={isGrouped}
+          showNewDivider={showNewDivider}
+          isHighlighted={message.id === highlightedMessageIdRef.current}
+          authorStyleFallback={authorStyleMapRef.current[message.user_id]}
+          customEmojiMap={customEmojiMapRef.current}
+          globalEmojiMap={globalEmojiMapRef.current}
+        />
+      );
+    },
+    [newMessagesDividerIndex, handleExternalEditHandled],
+  );
+
+  const computeItemKey = useCallback((item: ListItem, index: number) => {
+    if (!item) return `item-${index}`;
+    if (item.type === "dateDivider") return `date-divider-${item.date.toISOString().slice(0, 10)}`;
+    return getStableMessageKey(item.message);
   }, []);
 
-  // ── Render ──
-  const showEmpty = !isLoading && messages.length === 0;
-  const showSkeleton = isLoading && messages.length === 0;
+  const headerContent = useMemo(() => {
+    if (isLoading && messages.length > 0) {
+      return (
+        <div className="flex justify-center py-4" style={{ overflowAnchor: "none" }}>
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        </div>
+      );
+    }
+    return null;
+  }, [isLoading, messages.length]);
 
   return (
     <MessageMapsProvider>
       <div className="flex-1 flex flex-col min-h-0 relative">
-        {showSkeleton && <MessageListSkeleton />}
+        {isLoading && messages.length === 0 && <MessageListSkeleton />}
 
-        {showEmpty &&
-          (currentChannel?.ghost_mode ? (
-            <GhostChannelEmpty channelName={channelName} />
-          ) : (
-            <RegularChannelEmpty channelName={channelName} isVoiceAttached={isVoiceAttachedTextChannel} />
-          ))}
+        {!isLoading && messages.length === 0 && (
+          <div
+            className={`flex flex-col px-6 pt-16 pb-8 ${currentChannel?.ghost_mode ? "items-center text-center" : "items-start"}`}
+          >
+            {currentChannel?.ghost_mode ? (
+              <>
+                <div className="relative mb-6">
+                  <div className="absolute inset-0 rounded-full bg-muted/30 blur-xl scale-150" />
+                  <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-muted/80 to-muted/40 border border-border/50 flex items-center justify-center">
+                    <Ghost className="w-12 h-12 text-muted-foreground" />
+                  </div>
+                </div>
+                <h2 className="text-2xl font-medium text-foreground mb-3">Anonymous Channel</h2>
+                <p className="text-muted-foreground max-w-sm leading-relaxed">
+                  Messages in <span className="font-medium text-foreground">#{channelName}</span> are anonymous. Your
+                  identity stays hidden from other members.
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+                  <Hash className="w-10 h-10 text-primary" />
+                </div>
+                {isVoiceAttachedTextChannel ? (
+                  <>
+                    <h2 className="text-2xl font-medium text-foreground mb-2">No messages yet</h2>
+                    <p className="text-muted-foreground">
+                      Use <span className="font-medium">#{channelName}</span> to chat while in voice.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h2 className="text-3xl font-medium text-foreground mb-2">Welcome to #{channelName}!</h2>
+                    <p className="text-muted-foreground mb-4">
+                      This is the start of the <span className="font-medium">#{channelName}</span> channel.
+                    </p>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Sparkles className="w-4 h-4 text-yellow-500" />
+                      <span>Be the first to send a message!</span>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        )}
 
         {msgCount > 0 && (
           <div
             ref={containerRef}
             className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative bg-transparent"
             onScroll={handleScroll}
-            style={OVERFLOW_ANCHOR_AUTO}
+            style={{ overflowAnchor: "auto" }}
           >
-            {isLoading && messages.length > 0 && (
-              <div style={OVERFLOW_ANCHOR_NONE}>
-                <HeaderLoader />
+            <div style={{ overflowAnchor: "none" }}>{headerContent}</div>
+            {isFetchingOlder && (
+              <div
+                className="pointer-events-none absolute top-2 left-1/2 -translate-x-1/2 z-20"
+                style={{ overflowAnchor: "none" }}
+              >
+                <div className="rounded-full border border-border/70 bg-background/90 p-1.5 shadow-sm backdrop-blur-sm">
+                  <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                </div>
               </div>
             )}
-            {isFetchingOlder && <LoadingOlderIndicator />}
-
             <div key={channelId} ref={messagesWrapperRef} data-messages-container>
-              {flatItems.map((item) => {
-                const key =
-                  item.type === "dateDivider"
-                    ? `date-divider-${item.date.toISOString().slice(0, 10)}`
-                    : getStableMessageKey(item.message);
-                const authorStyle = item.type === "message" ? authorStyleMap[item.message.user_id] : undefined;
-                return (
-                  <Row
-                    key={key}
-                    item={item}
-                    authorStyle={authorStyle}
-                    customEmojiMap={customEmojiMap}
-                    globalEmojiMap={globalEmojiMap}
-                    highlightedMessageId={highlightedMessageId}
-                  />
-                );
-              })}
+              {flatItems.map((item, index) => (
+                <Fragment key={computeItemKey(item, index)}>{itemContent(item, index)}</Fragment>
+              ))}
             </div>
           </div>
         )}
