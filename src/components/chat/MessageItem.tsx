@@ -1797,10 +1797,7 @@ export const MessageItem = memo(function MessageItem({
               {isOwnMessage && hasEmbeddableUrls && !isEmbedHidden && (
                 <button
                   className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
-                  onClick={() => {
-                    handleRemoveEmbed();
-                    setShowMobileActions(false);
-                  }}
+                  onClick={handleMobileRemoveEmbed}
                 >
                   <EyeOff className="w-5 h-5 text-muted-foreground" />
                   <span className="font-medium">Remove Embed</span>
@@ -1812,10 +1809,7 @@ export const MessageItem = memo(function MessageItem({
               {/* Copy Text */}
               <button
                 className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
-                onClick={() => {
-                  handleCopyText();
-                  setShowMobileActions(false);
-                }}
+                onClick={handleMobileCopy}
               >
                 <Copy className="w-5 h-5 text-muted-foreground" />
                 <span className="font-medium">Copy Text</span>
@@ -1824,10 +1818,7 @@ export const MessageItem = memo(function MessageItem({
               {/* Copy Message ID */}
               <button
                 className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
-                onClick={() => {
-                  handleCopyMessageId();
-                  setShowMobileActions(false);
-                }}
+                onClick={handleMobileCopyId}
               >
                 <Copy className="w-5 h-5 text-muted-foreground" />
                 <span className="font-medium">Copy Message ID</span>
