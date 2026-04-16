@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState, useCallback, useMemo, Fragment, useLayoutEffect } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo, memo } from "react";
 
 import { Ghost } from "lucide-react";
 import { Loader2, Hash, Sparkles } from "lucide-react";
+import { VList, type VListHandle } from "virtua";
 
 import { MessageItem } from "./MessageItem";
 import { JumpToPresent } from "./JumpToPresent";
@@ -22,13 +23,23 @@ import { fetchServerEmojis } from "@/lib/serverEmojis";
 import { getGlobalEmojiMap, type ResolvedEmoji } from "@/lib/globalEmojiResolver";
 import { isSameDay, isToday, isYesterday, format } from "date-fns";
 
+// ─── Module-level constants ───────────────────────────────────────────────────
+
+const EMPTY_MESSAGE_ARRAY: Message[] = [];
+const EMPTY_CUSTOM_EMOJI_MAP = new Map<string, string>();
+const EMPTY_GLOBAL_EMOJI_MAP = new Map<string, ResolvedEmoji>();
+const OVERFLOW_ANCHOR_NONE = { overflowAnchor: "none" as const };
+const OVERFLOW_ANCHOR_AUTO = { overflowAnchor: "auto" as const };
+
+const CHANNEL_ENTRY_FORCE_REFETCH_MAX_AGE_MS = 5 * 60_000;
+
 interface MessageListProps {
   channelId: string;
   channelName: string;
   manageCurrentChannel?: boolean;
 }
 
-const CHANNEL_ENTRY_FORCE_REFETCH_MAX_AGE_MS = 5 * 60_000;
+// ─── Pure helpers ─────────────────────────────────────────────────────────────
 
 const shouldGroupMessages = (current: Message, previous: Message | null): boolean => {
   if (!previous) return false;
@@ -50,24 +61,147 @@ const getDateDividerLabel = (date: Date): string => {
   return format(date, "EEEE, MMMM d, yyyy");
 };
 
+// ─── List item types ──────────────────────────────────────────────────────────
+
+type DateDividerItem = { type: "dateDivider"; label: string; date: Date };
+type MessageListItem = {
+  type: "message";
+  message: Message;
+  previousMessage: Message | null;
+  isNewMessagesDivider: boolean;
+  msgIndex: number;
+};
+type ListItem = DateDividerItem | MessageListItem;
+
+// ─── Extracted memoized sub-components ────────────────────────────────────────
+
+const DateDivider = memo(({ label }: { label: string }) => (
+  <div className="flex items-center gap-3 px-6 my-4" style={OVERFLOW_ANCHOR_NONE}>
+    <div className="h-px flex-1 bg-border/70" />
+    <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">{label}</span>
+    <div className="h-px flex-1 bg-border/70" />
+  </div>
+));
+DateDivider.displayName = "DateDivider";
+
+const GhostChannelEmpty = memo(({ channelName }: { channelName: string }) => (
+  <div className="flex flex-col px-6 pt-16 pb-8 items-center text-center">
+    <div className="relative mb-6">
+      <div className="absolute inset-0 rounded-full bg-muted/30 blur-xl scale-150" />
+      <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-muted/80 to-muted/40 border border-border/50 flex items-center justify-center">
+        <Ghost className="w-12 h-12 text-muted-foreground" />
+      </div>
+    </div>
+    <h2 className="text-2xl font-medium text-foreground mb-3">Anonymous Channel</h2>
+    <p className="text-muted-foreground max-w-sm leading-relaxed">
+      Messages in <span className="font-medium text-foreground">#{channelName}</span> are anonymous. Your
+      identity stays hidden from other members.
+    </p>
+  </div>
+));
+GhostChannelEmpty.displayName = "GhostChannelEmpty";
+
+const RegularChannelEmpty = memo(({ channelName, isVoiceAttached }: { channelName: string; isVoiceAttached: boolean }) => (
+  <div className="flex flex-col px-6 pt-16 pb-8 items-start">
+    <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+      <Hash className="w-10 h-10 text-primary" />
+    </div>
+    {isVoiceAttached ? (
+      <>
+        <h2 className="text-2xl font-medium text-foreground mb-2">No messages yet</h2>
+        <p className="text-muted-foreground">
+          Use <span className="font-medium">#{channelName}</span> to chat while in voice.
+        </p>
+      </>
+    ) : (
+      <>
+        <h2 className="text-3xl font-medium text-foreground mb-2">Welcome to #{channelName}!</h2>
+        <p className="text-muted-foreground mb-4">
+          This is the start of the <span className="font-medium">#{channelName}</span> channel.
+        </p>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Sparkles className="w-4 h-4 text-yellow-500" />
+          <span>Be the first to send a message!</span>
+        </div>
+      </>
+    )}
+  </div>
+));
+RegularChannelEmpty.displayName = "RegularChannelEmpty";
+
+const LoadingOlderIndicator = memo(() => (
+  <div
+    className="pointer-events-none absolute top-2 left-1/2 -translate-x-1/2 z-20"
+    style={OVERFLOW_ANCHOR_NONE}
+  >
+    <div className="rounded-full border border-border/70 bg-background/90 p-1.5 shadow-sm backdrop-blur-sm">
+      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+    </div>
+  </div>
+));
+LoadingOlderIndicator.displayName = "LoadingOlderIndicator";
+
+const HeaderLoader = memo(() => (
+  <div className="flex justify-center py-4" style={OVERFLOW_ANCHOR_NONE}>
+    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+  </div>
+));
+HeaderLoader.displayName = "HeaderLoader";
+
+interface RowProps {
+  item: ListItem;
+  authorStyle: ReturnType<typeof useAuthorStyles>[string] | undefined;
+  customEmojiMap: Map<string, string>;
+  globalEmojiMap: Map<string, ResolvedEmoji>;
+  highlightedMessageId: string | null;
+  lastMarkedMessageIdIsNull: boolean;
+}
+
+const Row = memo(({ item, authorStyle, customEmojiMap, globalEmojiMap, highlightedMessageId, lastMarkedMessageIdIsNull }: RowProps) => {
+  if (item.type === "dateDivider") {
+    return <DateDivider label={item.label} />;
+  }
+
+  const { message, previousMessage, isNewMessagesDivider } = item;
+  const isGrouped = shouldGroupMessages(message, previousMessage);
+  const showNewDivider = isNewMessagesDivider && lastMarkedMessageIdIsNull;
+
+  return (
+    <MessageItem
+      message={message}
+      isGrouped={isGrouped}
+      showNewDivider={showNewDivider}
+      isHighlighted={message.id === highlightedMessageId}
+      authorStyleFallback={authorStyle}
+      customEmojiMap={customEmojiMap}
+      globalEmojiMap={globalEmojiMap}
+    />
+  );
+});
+Row.displayName = "Row";
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
 export const MessageList = ({ channelId, channelName, manageCurrentChannel = true }: MessageListProps) => {
-  const { user } = useAuthStore();
-  const { isLoading, fetchMessages, setCurrentChannel, messagesByChannel, fetchingChannels } = useMessageStore();
+  // ── Store selectors (narrow) ──────────────────────────────────────────────
+  const user = useAuthStore((s) => s.user);
+  const isLoading = useMessageStore((s) => s.isLoading);
+  const fetchMessages = useMessageStore((s) => s.fetchMessages);
+  const setCurrentChannel = useMessageStore((s) => s.setCurrentChannel);
+  const channelData = useMessageStore((s) => s.messagesByChannel[channelId]);
+  const isFetchingOlder = useMessageStore(useCallback((s) => !!s.fetchingChannels[channelId], [channelId]));
+
   const { isRealtimeConnected } = useConnectionStatus();
   const visibilityBlockedUserIds = useFriendStore((s) => s.visibilityBlockedUserIds);
   const currentChannel = useServerStore((s) => s.currentChannel);
-  const channels = useServerStore((s) => s.channels);
   const currentServerId = useServerStore((s) => s.currentChannel?.server_id ?? s.currentServer?.id ?? null);
-  const isVoiceAttachedTextChannel = useMemo(
-    () => !!channels.find((c) => c.id === channelId)?.linked_voice_channel_id,
-    [channels, channelId],
+  const isVoiceAttachedTextChannel = useServerStore(
+    useCallback((s) => !!s.channels.find((c) => c.id === channelId)?.linked_voice_channel_id, [channelId]),
   );
 
   useRealtimePolls(channelId);
 
-  const channelData = messagesByChannel[channelId];
-  const isFetchingOlder = !!fetchingChannels[channelId];
-  const rawMessages = useMemo(() => channelData?.messages || [], [channelData?.messages]);
+  const rawMessages = useMemo(() => channelData?.messages || EMPTY_MESSAGE_ARRAY, [channelData?.messages]);
 
   const messages = useMemo(() => {
     if (!visibilityBlockedUserIds || visibilityBlockedUserIds.length === 0) return rawMessages;
@@ -92,41 +226,32 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     return messages.filter((m) => seen.get(getStableMessageKey(m)) === m);
   }, [messages]);
 
-  type ListItem = { type: "message"; message: Message } | { type: "dateDivider"; label: string; date: Date };
-
-  const flatItems = useMemo(() => {
-    const items: ListItem[] = [];
-    for (let i = 0; i < deduplicatedMessages.length; i++) {
-      const msg = deduplicatedMessages[i];
-      const msgDate = new Date(msg.created_at);
-      const prevMsg = i > 0 ? deduplicatedMessages[i - 1] : null;
-      const prevDate = prevMsg ? new Date(prevMsg.created_at) : null;
-      if (!prevDate || !isSameDay(msgDate, prevDate)) {
-        items.push({
-          type: "dateDivider",
-          label: getDateDividerLabel(msgDate),
-          date: msgDate,
-        });
-      }
-      items.push({ type: "message", message: msg });
-    }
-    return items;
-  }, [deduplicatedMessages]);
-
+  // ── Stable author ID array (referential equality when content unchanged) ──
+  const prevAuthorIdsRef = useRef<string[]>([]);
   const visibleAuthorUserIds = useMemo(() => {
     const ids = new Set<string>();
     for (const msg of deduplicatedMessages) {
       if (msg.user_id) ids.add(msg.user_id);
     }
-    return Array.from(ids);
+    const sorted = Array.from(ids).sort();
+    const prev = prevAuthorIdsRef.current;
+    if (prev.length === sorted.length && prev.every((id, i) => id === sorted[i])) {
+      return prev;
+    }
+    prevAuthorIdsRef.current = sorted;
+    return sorted;
   }, [deduplicatedMessages]);
-  const msgCount = deduplicatedMessages.length;
 
+  const msgCount = deduplicatedMessages.length;
   const authorStyleMap = useAuthorStyles(currentServerId, visibleAuthorUserIds);
+
+  // ── Emoji maps ────────────────────────────────────────────────────────────
+  const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(EMPTY_CUSTOM_EMOJI_MAP);
+  const [globalEmojiMap, setGlobalEmojiMap] = useState<Map<string, ResolvedEmoji>>(EMPTY_GLOBAL_EMOJI_MAP);
 
   useEffect(() => {
     if (!currentServerId) {
-      setCustomEmojiMap(new Map());
+      setCustomEmojiMap(EMPTY_CUSTOM_EMOJI_MAP);
       return;
     }
     let cancelled = false;
@@ -140,7 +265,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
         setCustomEmojiMap(next);
       } catch {
         if (cancelled) return;
-        setCustomEmojiMap(new Map());
+        setCustomEmojiMap(EMPTY_CUSTOM_EMOJI_MAP);
         if (attempt < 2) {
           retryTimer = setTimeout(() => load(attempt + 1), 700 * Math.pow(2, attempt));
         }
@@ -153,6 +278,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     };
   }, [currentServerId]);
 
+  // Global emoji map — runs once on mount (server-agnostic)
   useEffect(() => {
     let cancelled = false;
     getGlobalEmojiMap()
@@ -163,12 +289,11 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     return () => {
       cancelled = true;
     };
-  }, [currentServerId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [_unused, _setUnused] = useState<string | null>(null); // kept for stable hook order
-  const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
-  const [globalEmojiMap, setGlobalEmojiMap] = useState<Map<string, ResolvedEmoji>>(new Map());
+  // ── Refs ──────────────────────────────────────────────────────────────────
+  const vlistRef = useRef<VListHandle>(null);
   const [showJumpToPresent, setShowJumpToPresent] = useState(false);
   const showJumpToPresentRef = useRef(false);
   const [newMessageCount, setNewMessageCount] = useState(0);
@@ -177,7 +302,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   const prevMessagesLengthRef = useRef(0);
   const prevChannelIdRef = useRef<string>(channelId);
   const didInitialBottomScrollRef = useRef(false);
-  const lastScrollHeightRef = useRef(0);
+  const scrollRafRef = useRef<number | null>(null);
 
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
@@ -188,7 +313,6 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   const deduplicatedMessagesRef = useRef(deduplicatedMessages);
   deduplicatedMessagesRef.current = deduplicatedMessages;
 
-  // Stable last-message-id for detecting genuinely new messages
   const lastMessageId = useMemo(() => {
     if (messages.length === 0) return null;
     return messages[messages.length - 1].id;
@@ -207,15 +331,17 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   const { highlightedMessageId } = useScrollToMessage({
     messages: deduplicatedMessages,
     isLoading,
-    containerRef,
+    vlistRef,
   });
 
+  // ── Edit last message handler ─────────────────────────────────────────────
   useEffect(() => {
     const handleEditLastMessage = (e: CustomEvent<{ userId: string; channelId: string }>) => {
       if (e.detail.channelId !== channelIdRef.current || !e.detail.userId) return;
       const userMessages = messagesRef.current.filter((m) => m.user_id === e.detail.userId);
       if (userMessages.length > 0) {
         const msg = userMessages[userMessages.length - 1];
+        // TODO: Move to a static top-level import instead of dynamic import on every ArrowUp press
         import("@/stores/editStore").then(({ useEditStore }) => {
           useEditStore.getState().startEditing({
             id: msg.id,
@@ -231,6 +357,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     return () => window.removeEventListener("editLastMessage", listener);
   }, []);
 
+  // ── Channel init ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (manageCurrentChannel) setCurrentChannel(channelId);
     prevMessagesLengthRef.current = 0;
@@ -252,6 +379,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelId, manageCurrentChannel]);
 
+  // ── Offline polling ───────────────────────────────────────────────────────
   useEffect(() => {
     if (isRealtimeConnected) return;
     const interval = setInterval(() => {
@@ -261,6 +389,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     return () => clearInterval(interval);
   }, [isRealtimeConnected]);
 
+  // ── Visibility refetch ────────────────────────────────────────────────────
   useEffect(() => {
     const MIN_HIDDEN_MS = 15_000;
     let hiddenTime: number | null = null;
@@ -301,6 +430,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     };
   }, []);
 
+  // ── Mark as read ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (messages.length > 0 && isNearBottomRef.current) {
       const latestMessage = messages[messages.length - 1];
@@ -315,34 +445,31 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }
   }, [messages, channelId, markAsRead]);
 
-  // New message nudge — tracks lastMessageId for reliable detection
-  useLayoutEffect(() => {
+  // ── New message nudge ─────────────────────────────────────────────────────
+  useEffect(() => {
     const currentLength = messages.length;
     const prevLength = prevMessagesLengthRef.current;
     const currentLastId = lastMessageId;
     const prevLastId = lastNudgedMessageIdRef.current;
 
-    // Detect genuinely new message: either length increased or last ID changed
     const hasNewMessage =
       (currentLength > prevLength && prevLength > 0) ||
       (currentLastId !== null && prevLastId !== null && currentLastId !== prevLastId && prevLength > 0);
 
     if (hasNewMessage) {
-      const node = containerRef.current;
-      const actualDistanceFromBottom = node ? node.scrollHeight - node.scrollTop - node.clientHeight : 0;
-      const effectivelyAtBottom = isNearBottomRef.current || actualDistanceFromBottom <= 150;
+      const vlist = vlistRef.current;
+      const effectivelyAtBottom = isNearBottomRef.current ||
+        (vlist ? (vlist.scrollSize - vlist.scrollOffset - vlist.viewportSize) <= 150 : false);
 
       if (!effectivelyAtBottom) {
         const added = Math.max(1, currentLength - prevLength);
         setNewMessageCount((prev) => prev + added);
       } else {
-        // Single immediate scroll — ResizeObserver handles subsequent size changes
-        const n = containerRef.current;
-        if (n) {
-          n.scrollTop = n.scrollHeight;
+        // Scroll to bottom
+        requestAnimationFrame(() => {
+          vlistRef.current?.scrollToIndex(flatItems.length - 1, { align: "end" });
           isNearBottomRef.current = true;
-          lastScrollHeightRef.current = n.scrollHeight;
-        }
+        });
       }
     }
 
@@ -350,8 +477,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     if (currentLastId) lastNudgedMessageIdRef.current = currentLastId;
   }, [lastMessageId, messages.length]);
 
-  // Safety-net removed: it was forcing users back to bottom on small scrolls
-
+  // ── Unread divider index ──────────────────────────────────────────────────
   const newMessagesDividerIndex = useMemo(() => {
     if (!lastReadAt || !firstUnreadMessageId) return -1;
     const lastReadTime = new Date(lastReadAt).getTime();
@@ -361,12 +487,35 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     return -1;
   }, [deduplicatedMessages, lastReadAt, firstUnreadMessageId]);
 
-  const scrollToBottom = useCallback(() => {
-    const node = containerRef.current;
-    if (!node) return;
+  // ── Flat items with embedded grouping data (single pass, no indexOf) ──────
+  const flatItems = useMemo(() => {
+    const items: ListItem[] = [];
+    for (let i = 0; i < deduplicatedMessages.length; i++) {
+      const msg = deduplicatedMessages[i];
+      const msgDate = new Date(msg.created_at);
+      const prevMsg = i > 0 ? deduplicatedMessages[i - 1] : null;
+      const prevDate = prevMsg ? new Date(prevMsg.created_at) : null;
+      if (!prevDate || !isSameDay(msgDate, prevDate)) {
+        items.push({
+          type: "dateDivider",
+          label: getDateDividerLabel(msgDate),
+          date: msgDate,
+        });
+      }
+      items.push({
+        type: "message",
+        message: msg,
+        previousMessage: prevMsg,
+        isNewMessagesDivider: i === newMessagesDividerIndex,
+        msgIndex: i,
+      });
+    }
+    return items;
+  }, [deduplicatedMessages, newMessagesDividerIndex]);
 
-    node.scrollTop = node.scrollHeight;
-    lastScrollHeightRef.current = node.scrollHeight;
+  // ── Scroll to bottom ──────────────────────────────────────────────────────
+  const scrollToBottom = useCallback(() => {
+    vlistRef.current?.scrollToIndex(flatItems.length - 1, { align: "end" });
     isNearBottomRef.current = true;
 
     setShowJumpToPresent(false);
@@ -381,7 +530,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
         lastMarkedMessageIdRef.current = latest.id;
       }
     }
-  }, [markAsRead]);
+  }, [markAsRead, flatItems.length]);
 
   useEffect(() => {
     const handleChannelMessageSent = (e: CustomEvent<{ channelId: string }>) => {
@@ -395,10 +544,6 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     return () => window.removeEventListener("channelMessageSent", listener);
   }, [scrollToBottom]);
 
-  const handleExternalEditHandled = useCallback((_messageId: string) => {
-    // No-op — editing now handled by editStore
-  }, []);
-
   const handleAtBottomStateChange = useCallback((atBottom: boolean) => {
     if (atBottom) {
       setShowJumpToPresent(false);
@@ -407,6 +552,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     }
   }, []);
 
+  // ── Load older ────────────────────────────────────────────────────────────
   const startReachedCooldownRef = useRef(false);
 
   const handleLoadOlder = useCallback(() => {
@@ -424,236 +570,124 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     });
   }, [hasMore, isLoading, isFetchingOlder, channelData?.oldestLoadedAt]);
 
-  const handleScroll = useCallback(() => {
-    const node = containerRef.current;
-    if (!node) return;
+  // ── VList onScroll — RAF-throttled ────────────────────────────────────────
+  const handleVListScroll = useCallback(
+    (offset: number) => {
+      if (scrollRafRef.current !== null) return;
+      scrollRafRef.current = requestAnimationFrame(() => {
+        scrollRafRef.current = null;
+        const vlist = vlistRef.current;
+        if (!vlist) return;
 
-    const distanceFromBottom = node.scrollHeight - node.scrollTop - node.clientHeight;
-    const atBottom = distanceFromBottom <= 100;
-    const wasAtBottom = isNearBottomRef.current;
+        const scrollSize = vlist.scrollSize;
+        const viewportSize = vlist.viewportSize;
+        const distanceFromBottom = scrollSize - offset - viewportSize;
+        const atBottom = distanceFromBottom <= 100;
+        const wasAtBottom = isNearBottomRef.current;
 
-    // ALWAYS sync the ref so it never gets stuck
-    isNearBottomRef.current = atBottom;
+        isNearBottomRef.current = atBottom;
 
-    // Track scroll height for ResizeObserver
-    lastScrollHeightRef.current = node.scrollHeight;
+        // State transitions
+        if (atBottom && !wasAtBottom) {
+          handleAtBottomStateChange(true);
+        } else if (!atBottom && !wasAtBottom && distanceFromBottom >= 600) {
+          if (!showJumpToPresentRef.current && deduplicatedMessagesRef.current.length > 10) {
+            setShowJumpToPresent(true);
+            showJumpToPresentRef.current = true;
+          }
+        }
+      });
+    },
+    [handleAtBottomStateChange],
+  );
 
-    // Load older — only when genuinely near top
-    if (node.scrollTop <= 96 && !atBottom && distanceFromBottom > 300) {
-      handleLoadOlder();
-    }
+  // Cleanup RAF on unmount
+  useEffect(() => {
+    return () => {
+      if (scrollRafRef.current !== null) cancelAnimationFrame(scrollRafRef.current);
+    };
+  }, []);
 
-    // State transitions only
-    if (atBottom && !wasAtBottom) {
-      handleAtBottomStateChange(true);
-    } else if (!atBottom && !wasAtBottom && distanceFromBottom >= 600) {
-      if (!showJumpToPresentRef.current && deduplicatedMessagesRef.current.length > 10) {
-        setShowJumpToPresent(true);
-        showJumpToPresentRef.current = true;
+  // ── VList onRangeChange — trigger load older when near top ────────────────
+  const handleRangeChange = useCallback(
+    (start: number, _end: number) => {
+      if (start <= 5) {
+        handleLoadOlder();
       }
-    }
-  }, [handleLoadOlder, handleAtBottomStateChange]);
+    },
+    [handleLoadOlder],
+  );
 
-  // Initial bottom scroll
+  // ── Initial bottom scroll ─────────────────────────────────────────────────
   useEffect(() => {
     if (isLoading || msgCount === 0 || didInitialBottomScrollRef.current) return;
     didInitialBottomScrollRef.current = true;
 
-    const scrollDown = () => {
-      const node = containerRef.current;
-      if (node) {
-        node.scrollTop = node.scrollHeight;
-        lastScrollHeightRef.current = node.scrollHeight;
-        isNearBottomRef.current = true;
-      }
-    };
+    requestAnimationFrame(() => {
+      vlistRef.current?.scrollToIndex(flatItems.length - 1, { align: "end" });
+      isNearBottomRef.current = true;
+    });
+  }, [isLoading, msgCount, flatItems.length]);
 
-    scrollDown();
-    // Single retry after a frame for late-rendering content
-    requestAnimationFrame(scrollDown);
-  }, [isLoading, msgCount]);
-
-  // ResizeObserver + MutationObserver — dual safety net for auto-scroll
-  const messagesWrapperRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const node = containerRef.current;
-    if (!node) return;
-
-    lastScrollHeightRef.current = node.scrollHeight;
-
-    const autoScrollIfNeeded = () => {
-      const n = containerRef.current;
-      if (!n || !isNearBottomRef.current) return;
-      const newHeight = n.scrollHeight;
-      const oldHeight = lastScrollHeightRef.current;
-      if (newHeight > oldHeight) {
-        n.scrollTop = n.scrollHeight;
-        isNearBottomRef.current = true;
-      }
-      lastScrollHeightRef.current = newHeight;
-    };
-
-    // ResizeObserver: catches element size changes (images loading, embeds expanding)
-    const resizeObserver = new ResizeObserver(autoScrollIfNeeded);
-
-    // MutationObserver: catches new DOM nodes being added (new messages rendered)
-    const mutationObserver = new MutationObserver(autoScrollIfNeeded);
-
-    const wrapper = messagesWrapperRef.current;
-    if (wrapper) {
-      resizeObserver.observe(wrapper);
-      mutationObserver.observe(wrapper, { childList: true, subtree: true });
-    }
-
-    return () => {
-      resizeObserver.disconnect();
-      mutationObserver.disconnect();
-    };
-  }, [channelId, msgCount > 0]); // re-attach when channel changes or first messages arrive
-
+  // ── Stable refs for render props ──────────────────────────────────────────
   const authorStyleMapRef = useRef(authorStyleMap);
   authorStyleMapRef.current = authorStyleMap;
-  const customEmojiMapRef = useRef(customEmojiMap);
-  customEmojiMapRef.current = customEmojiMap;
-  const globalEmojiMapRef = useRef(globalEmojiMap);
-  globalEmojiMapRef.current = globalEmojiMap;
   const highlightedMessageIdRef = useRef(highlightedMessageId);
   highlightedMessageIdRef.current = highlightedMessageId;
-  // externalEditTargetId removed — editing handled by editStore
 
-  const itemContent = useCallback(
-    (item: ListItem, index: number) => {
-      if (item.type === "dateDivider") {
-        return (
-          <div
-            key={`date-divider-${item.date.toISOString().slice(0, 10)}`}
-            className="flex items-center gap-3 px-6 my-4"
-            style={{ overflowAnchor: "none" }}
-          >
-            <div className="h-px flex-1 bg-border/70" />
-            <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">{item.label}</span>
-            <div className="h-px flex-1 bg-border/70" />
-          </div>
-        );
-      }
+  const lastMarkedIsNull = lastMarkedMessageIdRef.current === null;
 
-      const message = item.message;
-      // Find previous message in deduplicatedMessages for grouping
-      const msgs = deduplicatedMessagesRef.current;
-      const msgIdx = msgs.indexOf(message);
-      const previousMessage = msgIdx > 0 ? msgs[msgIdx - 1] : null;
-      const isGrouped = shouldGroupMessages(message, previousMessage);
-      const showNewDivider = msgIdx === newMessagesDividerIndex && lastMarkedMessageIdRef.current === null;
+  // ── Header content ────────────────────────────────────────────────────────
+  const showHeaderLoader = isLoading && messages.length > 0;
 
-      return (
-        <MessageItem
-          key={message.id}
-          message={message}
-          isGrouped={isGrouped}
-          showNewDivider={showNewDivider}
-          isHighlighted={message.id === highlightedMessageIdRef.current}
-          authorStyleFallback={authorStyleMapRef.current[message.user_id]}
-          customEmojiMap={customEmojiMapRef.current}
-          globalEmojiMap={globalEmojiMapRef.current}
-        />
-      );
-    },
-    [newMessagesDividerIndex, handleExternalEditHandled],
-  );
-
-  const computeItemKey = useCallback((item: ListItem, index: number) => {
-    if (!item) return `item-${index}`;
-    if (item.type === "dateDivider") return `date-divider-${item.date.toISOString().slice(0, 10)}`;
-    return getStableMessageKey(item.message);
-  }, []);
-
-  const headerContent = useMemo(() => {
-    if (isLoading && messages.length > 0) {
-      return (
-        <div className="flex justify-center py-4" style={{ overflowAnchor: "none" }}>
-          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-        </div>
-      );
-    }
-    return null;
-  }, [isLoading, messages.length]);
-
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <MessageMapsProvider>
       <div className="flex-1 flex flex-col min-h-0 relative">
         {isLoading && messages.length === 0 && <MessageListSkeleton />}
 
         {!isLoading && messages.length === 0 && (
-          <div
-            className={`flex flex-col px-6 pt-16 pb-8 ${currentChannel?.ghost_mode ? "items-center text-center" : "items-start"}`}
-          >
-            {currentChannel?.ghost_mode ? (
-              <>
-                <div className="relative mb-6">
-                  <div className="absolute inset-0 rounded-full bg-muted/30 blur-xl scale-150" />
-                  <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-muted/80 to-muted/40 border border-border/50 flex items-center justify-center">
-                    <Ghost className="w-12 h-12 text-muted-foreground" />
-                  </div>
-                </div>
-                <h2 className="text-2xl font-medium text-foreground mb-3">Anonymous Channel</h2>
-                <p className="text-muted-foreground max-w-sm leading-relaxed">
-                  Messages in <span className="font-medium text-foreground">#{channelName}</span> are anonymous. Your
-                  identity stays hidden from other members.
-                </p>
-              </>
-            ) : (
-              <>
-                <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-                  <Hash className="w-10 h-10 text-primary" />
-                </div>
-                {isVoiceAttachedTextChannel ? (
-                  <>
-                    <h2 className="text-2xl font-medium text-foreground mb-2">No messages yet</h2>
-                    <p className="text-muted-foreground">
-                      Use <span className="font-medium">#{channelName}</span> to chat while in voice.
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <h2 className="text-3xl font-medium text-foreground mb-2">Welcome to #{channelName}!</h2>
-                    <p className="text-muted-foreground mb-4">
-                      This is the start of the <span className="font-medium">#{channelName}</span> channel.
-                    </p>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Sparkles className="w-4 h-4 text-yellow-500" />
-                      <span>Be the first to send a message!</span>
-                    </div>
-                  </>
-                )}
-              </>
-            )}
-          </div>
+          currentChannel?.ghost_mode ? (
+            <GhostChannelEmpty channelName={channelName} />
+          ) : (
+            <RegularChannelEmpty channelName={channelName} isVoiceAttached={isVoiceAttachedTextChannel} />
+          )
         )}
 
         {msgCount > 0 && (
-          <div
-            ref={containerRef}
-            className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative bg-transparent"
-            onScroll={handleScroll}
-            style={{ overflowAnchor: "auto" }}
-          >
-            <div style={{ overflowAnchor: "none" }}>{headerContent}</div>
-            {isFetchingOlder && (
-              <div
-                className="pointer-events-none absolute top-2 left-1/2 -translate-x-1/2 z-20"
-                style={{ overflowAnchor: "none" }}
-              >
-                <div className="rounded-full border border-border/70 bg-background/90 p-1.5 shadow-sm backdrop-blur-sm">
-                  <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                </div>
-              </div>
-            )}
-            <div key={channelId} ref={messagesWrapperRef} data-messages-container>
-              {flatItems.map((item, index) => (
-                <Fragment key={computeItemKey(item, index)}>{itemContent(item, index)}</Fragment>
-              ))}
-            </div>
+          <div className="flex-1 min-h-0 overflow-hidden relative bg-transparent">
+            {showHeaderLoader && <HeaderLoader />}
+            {isFetchingOlder && <LoadingOlderIndicator />}
+            <VList
+              ref={vlistRef}
+              shift
+              style={{ flex: 1, height: "100%" }}
+              onScroll={handleVListScroll}
+              onRangeChange={handleRangeChange}
+            >
+              {flatItems.map((item, index) => {
+                const key =
+                  item.type === "dateDivider"
+                    ? `date-divider-${item.date.toISOString().slice(0, 10)}`
+                    : getStableMessageKey(item.message);
+
+                return (
+                  <Row
+                    key={key}
+                    item={item}
+                    authorStyle={
+                      item.type === "message"
+                        ? authorStyleMapRef.current[item.message.user_id]
+                        : undefined
+                    }
+                    customEmojiMap={customEmojiMap}
+                    globalEmojiMap={globalEmojiMap}
+                    highlightedMessageId={highlightedMessageIdRef.current}
+                    lastMarkedMessageIdIsNull={lastMarkedIsNull}
+                  />
+                );
+              })}
+            </VList>
           </div>
         )}
 
