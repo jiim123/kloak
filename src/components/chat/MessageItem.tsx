@@ -87,15 +87,22 @@ const getRoleColor = (role?: ServerRole): string => {
 
 const isGradientColor = (value?: string | null) => !!value && value.startsWith("linear-gradient");
 
-const getGradientTextStyle = (gradient: string): React.CSSProperties =>
-  ({
-    background: gradient,
-    WebkitBackgroundClip: "text",
-    backgroundClip: "text",
-    WebkitTextFillColor: "transparent",
-    color: "transparent",
-    display: "inline-block",
-  }) as React.CSSProperties;
+const gradientStyleCache = new Map<string, React.CSSProperties>();
+const getGradientTextStyle = (gradient: string): React.CSSProperties => {
+  let cached = gradientStyleCache.get(gradient);
+  if (!cached) {
+    cached = {
+      background: gradient,
+      WebkitBackgroundClip: "text",
+      backgroundClip: "text",
+      WebkitTextFillColor: "transparent",
+      color: "transparent",
+      display: "inline-block",
+    } as React.CSSProperties;
+    gradientStyleCache.set(gradient, cached);
+  }
+  return cached;
+};
 
 export interface DMActions {
   editMessage: (messageId: string, userId: string, content: string) => Promise<void>;
@@ -940,6 +947,74 @@ export const MessageItem = memo(function MessageItem({
   const handleRowMouseEnter = useCallback(() => setIsRowHovered(true), []);
   const handleRowMouseLeave = useCallback(() => setIsRowHovered(false), []);
 
+  // Stable callbacks for delete modal
+  const handleShowDeleteModal = useCallback(() => setShowDeleteModal(true), []);
+
+  // Stable touch propagation stopper
+  const stopTouchPropagation = useCallback((e: React.TouchEvent) => e.stopPropagation(), []);
+
+  // Stable reaction touch handlers
+  const handleReactionTouchStart = useCallback((e: React.TouchEvent) => {
+    if (!isMobile) return;
+    reactionLongPressRef.current = setTimeout(() => {
+      e.preventDefault();
+      setReactionDrawerOpen(true);
+    }, 500);
+  }, [isMobile]);
+
+  const clearReactionLongPress = useCallback(() => {
+    if (reactionLongPressRef.current) {
+      clearTimeout(reactionLongPressRef.current);
+      reactionLongPressRef.current = null;
+    }
+  }, []);
+
+  // Stable mobile action callbacks
+  const handleMobileReply = useCallback(() => {
+    handleReply();
+    setShowMobileActions(false);
+  }, [handleReply]);
+
+  const handleMobileEdit = useCallback(() => {
+    handleStartEditing();
+    setShowMobileActions(false);
+  }, [handleStartEditing]);
+
+  const handleMobilePin = useCallback(() => {
+    handlePin();
+    setShowMobileActions(false);
+  }, [handlePin]);
+
+  const handleMobileRemoveEmbed = useCallback(() => {
+    handleRemoveEmbed();
+    setShowMobileActions(false);
+  }, [handleRemoveEmbed]);
+
+  const handleMobileCopy = useCallback(() => {
+    handleCopyText();
+    setShowMobileActions(false);
+  }, [handleCopyText]);
+
+  const handleMobileCopyId = useCallback(() => {
+    handleCopyMessageId();
+    setShowMobileActions(false);
+  }, [handleCopyMessageId]);
+
+  const handleMobileDelete = useCallback(() => {
+    setShowDeleteModal(true);
+    setShowMobileActions(false);
+  }, []);
+
+  const handleMobileKick = useCallback(() => {
+    handleKickUser();
+    setShowMobileActions(false);
+  }, [handleKickUser]);
+
+  const handleMobileBan = useCallback(() => {
+    handleBanUser();
+    setShowMobileActions(false);
+  }, [handleBanUser]);
+
   const handleReplyClick = useCallback(
     (e: React.MouseEvent | React.TouchEvent) => {
       e.preventDefault();
@@ -1191,13 +1266,8 @@ export const MessageItem = memo(function MessageItem({
                       <div
                         className="flex items-center gap-2 text-[11px] sm:text-[12px] text-foreground/70 cursor-pointer hover:text-foreground/90 flex-nowrap overflow-hidden transition-colors duration-150 pl-0.5"
                         onClick={handleReplyClick}
-                        onTouchStart={(e) => {
-                          // Stop parent long-press timer from starting when tapping reply preview
-                          e.stopPropagation();
-                        }}
-                        onTouchEnd={(e) => {
-                          e.stopPropagation();
-                        }}
+                        onTouchStart={stopTouchPropagation}
+                        onTouchEnd={stopTouchPropagation}
                       >
                         <CornerLeftDown className="w-3.5 h-3.5 flex-shrink-0" />
                         {showReplyAuthorIdentity && replyUser ? (
@@ -1467,7 +1537,7 @@ export const MessageItem = memo(function MessageItem({
                       <div className="w-px h-5 bg-border mx-0.5" />
                       <button
                         className="p-2 rounded-lg bg-transparent hover:bg-destructive/10 transition-colors text-destructive"
-                        onClick={() => setShowDeleteModal(true)}
+                  onClick={handleShowDeleteModal}
                         aria-label="Delete"
                         title="Delete"
                       >
@@ -1522,7 +1592,7 @@ export const MessageItem = memo(function MessageItem({
               <>
                 <ContextMenuSeparator />
                 <ContextMenuItem
-                  onClick={() => setShowDeleteModal(true)}
+                  onClick={handleShowDeleteModal}
                   className="text-destructive focus:text-destructive"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -1561,25 +1631,9 @@ export const MessageItem = memo(function MessageItem({
                       onClick={() =>
                         effectiveCanAddReactions && handleReactionClick(reaction.emoji, reaction.hasReacted)
                       }
-                      onTouchStart={(e) => {
-                        if (!isMobile) return;
-                        reactionLongPressRef.current = setTimeout(() => {
-                          e.preventDefault();
-                          setReactionDrawerOpen(true);
-                        }, 500);
-                      }}
-                      onTouchEnd={() => {
-                        if (reactionLongPressRef.current) {
-                          clearTimeout(reactionLongPressRef.current);
-                          reactionLongPressRef.current = null;
-                        }
-                      }}
-                      onTouchMove={() => {
-                        if (reactionLongPressRef.current) {
-                          clearTimeout(reactionLongPressRef.current);
-                          reactionLongPressRef.current = null;
-                        }
-                      }}
+                      onTouchStart={handleReactionTouchStart}
+                      onTouchEnd={clearReactionLongPress}
+                      onTouchMove={clearReactionLongPress}
                       disabled={!effectiveCanAddReactions}
                       className={`flex items-center gap-1 bg-transparent border-none cursor-pointer transition-opacity duration-150 ${
                         reaction.hasReacted
@@ -1708,10 +1762,7 @@ export const MessageItem = memo(function MessageItem({
               {!isBlockedUser && (
                 <button
                   className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
-                  onClick={() => {
-                    handleReply();
-                    setShowMobileActions(false);
-                  }}
+                  onClick={handleMobileReply}
                 >
                   <Reply className="w-5 h-5 text-muted-foreground" />
                   <span className="font-medium">Reply</span>
@@ -1721,10 +1772,7 @@ export const MessageItem = memo(function MessageItem({
               {isOwnMessage && (
                 <button
                   className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
-                  onClick={() => {
-                    handleStartEditing();
-                    setShowMobileActions(false);
-                  }}
+                  onClick={handleMobileEdit}
                 >
                   <Pencil className="w-5 h-5 text-muted-foreground" />
                   <span className="font-medium">Edit</span>
@@ -1735,10 +1783,7 @@ export const MessageItem = memo(function MessageItem({
               {canPinMessages && (
                 <button
                   className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
-                  onClick={() => {
-                    handlePin();
-                    setShowMobileActions(false);
-                  }}
+                  onClick={handleMobilePin}
                 >
                   <Pin className={cn("w-5 h-5", message.is_pinned ? "text-primary" : "text-muted-foreground")} />
                   <span className="font-medium">{message.is_pinned ? "Unpin Message" : "Pin Message"}</span>
@@ -1749,10 +1794,7 @@ export const MessageItem = memo(function MessageItem({
               {isOwnMessage && hasEmbeddableUrls && !isEmbedHidden && (
                 <button
                   className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
-                  onClick={() => {
-                    handleRemoveEmbed();
-                    setShowMobileActions(false);
-                  }}
+                  onClick={handleMobileRemoveEmbed}
                 >
                   <EyeOff className="w-5 h-5 text-muted-foreground" />
                   <span className="font-medium">Remove Embed</span>
@@ -1764,10 +1806,7 @@ export const MessageItem = memo(function MessageItem({
               {/* Copy Text */}
               <button
                 className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
-                onClick={() => {
-                  handleCopyText();
-                  setShowMobileActions(false);
-                }}
+                onClick={handleMobileCopy}
               >
                 <Copy className="w-5 h-5 text-muted-foreground" />
                 <span className="font-medium">Copy Text</span>
@@ -1776,10 +1815,7 @@ export const MessageItem = memo(function MessageItem({
               {/* Copy Message ID */}
               <button
                 className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
-                onClick={() => {
-                  handleCopyMessageId();
-                  setShowMobileActions(false);
-                }}
+                onClick={handleMobileCopyId}
               >
                 <Copy className="w-5 h-5 text-muted-foreground" />
                 <span className="font-medium">Copy Message ID</span>
@@ -1791,10 +1827,7 @@ export const MessageItem = memo(function MessageItem({
                   <div className="my-2 h-px bg-border" />
                   <button
                     className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-destructive/10 active:bg-destructive/10 text-left text-destructive transition-colors"
-                    onClick={() => {
-                      setShowDeleteModal(true);
-                      setShowMobileActions(false);
-                    }}
+                    onClick={handleMobileDelete}
                   >
                     <Trash2 className="w-5 h-5" />
                     <span className="font-medium">Delete Message</span>
@@ -1809,10 +1842,7 @@ export const MessageItem = memo(function MessageItem({
                   {canKickUser && (
                     <button
                       className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-orange-500/10 active:bg-orange-500/10 text-left text-orange-400 transition-colors"
-                      onClick={() => {
-                        handleKickUser();
-                        setShowMobileActions(false);
-                      }}
+                      onClick={handleMobileKick}
                     >
                       <UserX className="w-5 h-5" />
                       <span className="font-medium">Kick {displayName}</span>
@@ -1821,10 +1851,7 @@ export const MessageItem = memo(function MessageItem({
                   {canBanUser && (
                     <button
                       className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-destructive/10 active:bg-destructive/10 text-left text-destructive transition-colors"
-                      onClick={() => {
-                        handleBanUser();
-                        setShowMobileActions(false);
-                      }}
+                      onClick={handleMobileBan}
                     >
                       <Ban className="w-5 h-5" />
                       <span className="font-medium">Ban {displayName}</span>
