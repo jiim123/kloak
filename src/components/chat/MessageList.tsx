@@ -587,6 +587,11 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
 
         isNearBottomRef.current = atBottom;
 
+        // Load older when near top
+        if (offset <= 96 && !atBottom && distanceFromBottom > 300) {
+          handleLoadOlder();
+        }
+
         // State transitions
         if (atBottom && !wasAtBottom) {
           handleAtBottomStateChange(true);
