@@ -3,19 +3,17 @@ import { useSearchParams } from 'react-router-dom';
 import { useMessageStore } from '@/stores/messageStore';
 
 interface VirtualListHandle {
-  scrollToIndex: (options: {
-    index?: number;
-    alignToTop?: boolean;
-    offset?: number;
-    delay?: number;
-    prerender?: number;
-  }) => void;
+  scrollToIndex: (index: number, opts?: { align?: string; smooth?: boolean }) => void;
+  readonly scrollOffset: number;
+  readonly scrollSize: number;
+  readonly viewportSize: number;
 }
 
 interface UseScrollToMessageOptions {
   messages: { id: string; created_at: string }[];
   isLoading: boolean;
   virtuosoRef?: RefObject<VirtualListHandle | null>;
+  vlistRef?: RefObject<VirtualListHandle | null>;
   containerRef?: RefObject<HTMLElement | null>;
 }
 
