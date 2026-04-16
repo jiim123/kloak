@@ -29,7 +29,7 @@ function centerMessageInView(targetId: string, smooth: boolean): boolean {
   return true;
 }
 
-export const useScrollToMessage = ({ messages, isLoading, virtuosoRef, containerRef }: UseScrollToMessageOptions) => {
+export const useScrollToMessage = ({ messages, isLoading, virtuosoRef, vlistRef, containerRef }: UseScrollToMessageOptions) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const urlTargetId = searchParams.get('message');
   const [eventTargetId, setEventTargetId] = useState<string | null>(null);
@@ -144,12 +144,12 @@ export const useScrollToMessage = ({ messages, isLoading, virtuosoRef, container
   // Main scroll effect
   const performScroll = useCallback((targetIndex: number, targetId: string) => {
     // Step 1: Use scrollToIndex to ensure the virtual list renders the item
-    if (virtuosoRef?.current) {
-      virtuosoRef.current.scrollToIndex({
-        index: targetIndex,
-        alignToTop: true,
-        prerender: 10,
-      });
+    const listRef = vlistRef ?? virtuosoRef;
+    if (listRef?.current) {
+      if ('scrollToIndex' in listRef.current) {
+        // virtua VListHandle uses (index, opts) signature
+        listRef.current.scrollToIndex(targetIndex, { align: 'center', smooth: false });
+      }
     }
 
     // Step 2: After a frame, find the actual DOM element and center it
@@ -165,7 +165,7 @@ export const useScrollToMessage = ({ messages, isLoading, virtuosoRef, container
         centerWithRetry(targetId, 0);
       }
     });
-  }, [virtuosoRef, applyHighlight, centerWithRetry]);
+  }, [virtuosoRef, vlistRef, applyHighlight, centerWithRetry]);
 
   // Scroll to message when it's available in the messages array
   useEffect(() => {

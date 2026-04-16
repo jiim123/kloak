@@ -663,7 +663,6 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
               shift
               style={{ flex: 1, height: "100%" }}
               onScroll={handleVListScroll}
-              onRangeChange={handleRangeChange}
             >
               {flatItems.map((item, index) => {
                 const key =
