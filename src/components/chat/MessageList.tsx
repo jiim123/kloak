@@ -608,15 +608,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     };
   }, []);
 
-  // ── VList onRangeChange — trigger load older when near top ────────────────
-  const handleRangeChange = useCallback(
-    (start: number, _end: number) => {
-      if (start <= 5) {
-        handleLoadOlder();
-      }
-    },
-    [handleLoadOlder],
-  );
+  // (load-older detection moved into handleVListScroll)
 
   // ── Initial bottom scroll ─────────────────────────────────────────────────
   useEffect(() => {
