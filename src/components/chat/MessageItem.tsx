@@ -1266,13 +1266,8 @@ export const MessageItem = memo(function MessageItem({
                       <div
                         className="flex items-center gap-2 text-[11px] sm:text-[12px] text-foreground/70 cursor-pointer hover:text-foreground/90 flex-nowrap overflow-hidden transition-colors duration-150 pl-0.5"
                         onClick={handleReplyClick}
-                        onTouchStart={(e) => {
-                          // Stop parent long-press timer from starting when tapping reply preview
-                          e.stopPropagation();
-                        }}
-                        onTouchEnd={(e) => {
-                          e.stopPropagation();
-                        }}
+                        onTouchStart={stopTouchPropagation}
+                        onTouchEnd={stopTouchPropagation}
                       >
                         <CornerLeftDown className="w-3.5 h-3.5 flex-shrink-0" />
                         {showReplyAuthorIdentity && replyUser ? (
@@ -1542,7 +1537,7 @@ export const MessageItem = memo(function MessageItem({
                       <div className="w-px h-5 bg-border mx-0.5" />
                       <button
                         className="p-2 rounded-lg bg-transparent hover:bg-destructive/10 transition-colors text-destructive"
-                        onClick={() => setShowDeleteModal(true)}
+                  onClick={handleShowDeleteModal}
                         aria-label="Delete"
                         title="Delete"
                       >
@@ -1597,7 +1592,7 @@ export const MessageItem = memo(function MessageItem({
               <>
                 <ContextMenuSeparator />
                 <ContextMenuItem
-                  onClick={() => setShowDeleteModal(true)}
+                  onClick={handleShowDeleteModal}
                   className="text-destructive focus:text-destructive"
                 >
                   <Trash2 className="w-4 h-4" />
