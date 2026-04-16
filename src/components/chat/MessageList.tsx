@@ -603,7 +603,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
         }
       });
     },
-    [handleAtBottomStateChange],
+    [handleAtBottomStateChange, handleLoadOlder],
   );
 
   // Cleanup RAF on unmount
