@@ -1,4 +1,4 @@
-import { Check, CheckCircle, Circle, ClipboardText, DotsThree, FileText, Plus, User, UserPlus } from "@phosphor-icons/react";
+import { Check, CheckCircle, Circle, ClipboardText, DotsThree, FileText, Plus, User as UserIcon, UserPlus } from "@phosphor-icons/react";
 import { KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 

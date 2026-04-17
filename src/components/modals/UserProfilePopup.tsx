@@ -1,4 +1,4 @@
-import { Calendar, ChatCircle, Check, CircleNotch, Clock, Plus, Prohibit, User, UserMinus, UserPlus, X } from "@phosphor-icons/react";
+import { Calendar, ChatCircle, Check, CircleNotch, Clock, Plus, Prohibit, User as UserIcon, UserMinus, UserPlus, X } from "@phosphor-icons/react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { format } from "date-fns";
 
@@ -211,7 +211,7 @@ export const UserProfilePopup = () => {
  } = useFriendStore();
  const { openConversation, setCurrentConversation } = useDMStore();
 
- const [profileUser, setProfileUser] = useState<User | null>(null);
+ const [profileUser, setProfileUser] = useState<UserIcon | null>(null);
  const [userBadges, setUserBadges] = useState<Badge[]>([]);
  const [isLoading, setIsLoading] = useState(false);
  const [sharedServers, setSharedServers] = useState<typeof servers>([]);

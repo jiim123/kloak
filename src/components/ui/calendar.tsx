@@ -1,4 +1,4 @@
-import { Calendar, CaretLeft, CaretRight } from "@phosphor-icons/react";
+import { Calendar as CalendarIcon, CaretLeft, CaretRight } from "@phosphor-icons/react";
 import * as React from "react";
 
 import { DayPicker } from "react-day-picker";

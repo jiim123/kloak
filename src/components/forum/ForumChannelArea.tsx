@@ -1,4 +1,4 @@
-import { ArrowBendUpLeft, ArrowRight, ArrowUp, ChatTeardrop, CircleNotch, Clock, Hash, Lock, LockOpen, Paperclip, PencilSimple, Plus, PushPin, Smiley, Stack, Trash, User, Users, X } from "@phosphor-icons/react";
+import { ArrowBendUpLeft, ArrowRight, ArrowUp, ChatTeardrop, CircleNotch, Clock, Hash, Lock, LockOpen, Paperclip, PencilSimple, Plus, PushPin, Smiley, Stack, Trash, User as UserIcon, Users, X } from "@phosphor-icons/react";
 import { useState, useEffect, useCallback, useRef, useMemo, type CSSProperties } from "react";
 import { FluentEmoji } from "@/components/ui/FluentEmoji";
 import { useSignedUrl } from "@/hooks/useSignedUrl";

@@ -1,4 +1,4 @@
-import { ArrowBendUpLeft, ArrowsClockwise, At, Bell, ChatTeardrop, Check, CircleNotch, Clock, Copy, DownloadSimple, Envelope, Eye, Globe, Key, Link, Microphone, Monitor, Palette, PaperPlaneTilt, Shield, SignOut, Sparkle, SpeakerHigh, Trash, User, UserMinus, UserPlus, Users, Warning, WarningCircle, X } from "@phosphor-icons/react";
+import { ArrowBendUpLeft, ArrowsClockwise, At, Bell, ChatTeardrop, Check, CircleNotch, Clock, Copy, DownloadSimple, Envelope, Eye, Globe, Key, Link, Microphone, Monitor, Palette, PaperPlaneTilt, Shield, SignOut, Sparkle, SpeakerHigh, Trash, User as UserIcon, UserMinus, UserPlus, Users, Warning, WarningCircle, X } from "@phosphor-icons/react";
 import { useEffect, useState, useRef } from "react";
 
 import {
@@ -541,7 +541,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
  <Label className="text-sm font-medium">Username</Label>
  <div className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-secondary/30">
  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
- <User className="w-5 h-5 text-primary" />
+ <UserIcon className="w-5 h-5 text-primary" />
  </div>
  <div>
  <span className="text-sm font-medium">{user?.username}</span>

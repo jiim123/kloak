@@ -1,4 +1,4 @@
-import { ArrowBendUpLeft, ChatTeardrop, CircleNotch, PaperPlaneTilt, PencilSimple, Smiley, Trash, User, X } from "@phosphor-icons/react";
+import { ArrowBendUpLeft, ChatTeardrop, CircleNotch, PaperPlaneTilt, PencilSimple, Smiley, Trash, User as UserIcon, X } from "@phosphor-icons/react";
 import React, { useState, useEffect, useCallback, useRef, forwardRef, useMemo } from "react";
 import { FluentEmoji } from "@/components/ui/FluentEmoji";
 import { useAuthStore } from "@/stores/authStore";

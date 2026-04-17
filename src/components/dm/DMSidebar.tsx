@@ -1,4 +1,4 @@
-import { ChatTeardrop, MagnifyingGlass, Prohibit, Scan, SignOut, User, UserPlus, Users } from "@phosphor-icons/react";
+import { ChatTeardrop, MagnifyingGlass, Prohibit, Scan, SignOut, User as UserIcon, UserPlus, Users } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 

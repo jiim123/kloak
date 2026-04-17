@@ -1,4 +1,4 @@
-import { Check, CircleNotch, MagnifyingGlass, User, UserPlus, X } from "@phosphor-icons/react";
+import { Check, CircleNotch, MagnifyingGlass, User as UserIcon, UserPlus, X } from "@phosphor-icons/react";
 import { useState, useEffect, useMemo } from "react";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
