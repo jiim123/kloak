@@ -1,4 +1,4 @@
-import { CalendarDots, Crown, Hash, Megaphone, User as UserIcon, Users } from "@phosphor-icons/react";
+import { CalendarDots, Crown, Hash, Megaphone, User as User, Users } from "@phosphor-icons/react";
 import { useMemo, useState, useEffect } from "react";
 import { format, formatDistanceToNow } from "date-fns";
 
@@ -30,7 +30,7 @@ export const ServerOverviewView = () => {
  const [recentAnnouncements, setRecentAnnouncements] = useState<AnnouncementCard[]>([]);
  const [isLoadingAnnouncements, setIsLoadingAnnouncements] = useState(false);
  const [totalMemberCount, setTotalMemberCount] = useState<number | null>(null);
- const [ownerFallbackUser, setOwnerFallbackUser] = useState<UserIcon | null>(null);
+ const [ownerFallbackUser, setOwnerFallbackUser] = useState<User | null>(null);
 
  const ownerMember = useMemo(() => {
  if (!currentServer) return null;

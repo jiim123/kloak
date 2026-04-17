@@ -92,7 +92,7 @@ export const LoggedInUserPanel = ({
  </button>
  </StatusSelector>
 
- {/* User info */}
+ {/* UserIcon info */}
  <div className="flex-1 min-w-0">
  <p className="truncate text-sm font-medium leading-tight text-foreground">{user?.display_name || user?.username}</p>
  <button
@@ -156,7 +156,7 @@ export const LoggedInUserPanel = ({
  <Gear className="w-4 h-4" />
  </Button>
  </TooltipTrigger>
- <TooltipContent>User Gear</TooltipContent>
+ <TooltipContent>UserIcon Gear</TooltipContent>
  </Tooltip>
  </div>
  </motion.div>

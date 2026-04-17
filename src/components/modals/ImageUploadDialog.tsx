@@ -123,7 +123,7 @@ export const ImageUploadDialog = ({ open, onOpenChange, onUpload }: ImageUploadD
  <DialogContent className="sm:max-w-md">
  <DialogHeader>
  <DialogTitle className="flex items-center gap-2">
- <Image className="w-5 h-5" />
+ <ImageIcon className="w-5 h-5" />
  UploadSimple Images
  </DialogTitle>
  <DialogDescription>
@@ -202,7 +202,7 @@ export const ImageUploadDialog = ({ open, onOpenChange, onUpload }: ImageUploadD
  onClick={handleUpload} 
  disabled={selectedFiles.length === 0 || isUploading}
  >
- {isUploading ? 'Uploading...' : `Attach ${selectedFiles.length > 0 ? selectedFiles.length : ''} Image${selectedFiles.length !== 1 ? 's' : ''}`}
+ {isUploading ? 'Uploading...' : `Attach ${selectedFiles.length > 0 ? selectedFiles.length : ''} ImageIcon${selectedFiles.length !== 1 ? 's' : ''}`}
  </Button>
  </DialogFooter>
  </DialogContent>

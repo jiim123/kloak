@@ -1,4 +1,4 @@
-import { MagnifyingGlass, User as UserIcon, Users, X } from "@phosphor-icons/react";
+import { MagnifyingGlass, User as User, Users, X } from "@phosphor-icons/react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";

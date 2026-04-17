@@ -1,4 +1,4 @@
-import { ChatTeardrop, MagnifyingGlass, Prohibit, Scan, SignOut, User as UserIcon, UserPlus, Users } from "@phosphor-icons/react";
+import { ChatTeardrop, MagnifyingGlass, Prohibit, Scan, SignOut, User as User, UserPlus, Users } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -168,7 +168,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
  </div>
  </div>
 
- {/* User search results (when searching) */}
+ {/* UserIcon search results (when searching) */}
  {searchQuery.length >= 2 && <UserSearchResults query={searchQuery} />}
 
  {/* Section header with Create Group */}
@@ -321,7 +321,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
  onClick={() => handleBlockUser(conversation.other_user!.id)}
  >
  <Prohibit className="w-4 h-4" />
- Block User
+ Block UserIcon
  </ContextMenuItem>
  )}
  <ContextMenuItem

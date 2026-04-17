@@ -26,7 +26,7 @@ const prefixIconMap: [string, IconComponent][] = [
 ];
 
 export function getFileIcon(mimeType?: string | null): IconComponent {
- if (!mimeType) return File;
+ if (!mimeType) return FileIcon;
 
  if (mimeIconMap[mimeType]) return mimeIconMap[mimeType];
 
@@ -34,5 +34,5 @@ export function getFileIcon(mimeType?: string | null): IconComponent {
  if (mimeType.startsWith(prefix)) return icon;
  }
 
- return File;
+ return FileIcon;
 }

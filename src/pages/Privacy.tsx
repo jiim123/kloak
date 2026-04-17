@@ -59,7 +59,7 @@ const privacyCategories = [
  },
  {
  q: "What are my rights?",
- a: "You have the right to: access and view all data associated with your account, correct and update your profile information at any time, delete your account and all associated data permanently, and export your data in a standard format. To exercise these rights, go to User Settings in the app. Most actions can be performed directly without contacting us.",
+ a: "You have the right to: access and view all data associated with your account, correct and update your profile information at any time, delete your account and all associated data permanently, and export your data in a standard format. To exercise these rights, go to UserIcon Settings in the app. Most actions can be performed directly without contacting us.",
  },
  ],
  },
@@ -69,7 +69,7 @@ const privacyCategories = [
  questions: [
  {
  q: "How do I delete my data?",
- a: "You can delete your account at any time from User Settings. When you delete your account: your profile and personal data are permanently removed, your messages remain in servers but show as from 'Deleted User,' and this action is immediate and irreversible. We don't hide the delete button or make you jump through hoops. Your data, your choice, immediately.",
+ a: "You can delete your account at any time from UserIcon Settings. When you delete your account: your profile and personal data are permanently removed, your messages remain in servers but show as from 'Deleted UserIcon,' and this action is immediate and irreversible. We don't hide the delete button or make you jump through hoops. Your data, your choice, immediately.",
  },
  {
  q: "Is deletion really permanent?",

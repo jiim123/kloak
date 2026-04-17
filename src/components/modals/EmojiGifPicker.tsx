@@ -264,7 +264,7 @@ export const EmojiGifPicker = ({
  value="gif" 
  className="flex-1 gap-1.5 data-[state=active]:bg-accent rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
  >
- <Image className="w-4 h-4" />
+ <ImageIcon className="w-4 h-4" />
  GIF
  </TabsTrigger>
  </TabsList>

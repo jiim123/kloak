@@ -119,7 +119,7 @@ const faqCategories = [
  },
  {
  q: "How do I delete my account?",
- a: "You can delete your account at any time from User Settings. When you delete your account, your profile and personal data are permanently removed. Your messages may remain in servers but will show as from a deleted user. This action is immediate and irreversible.",
+ a: "You can delete your account at any time from UserIcon Settings. When you delete your account, your profile and personal data are permanently removed. Your messages may remain in servers but will show as from a deleted user. This action is immediate and irreversible.",
  },
  {
  q: "Who owns the content I create on Kloak?",

@@ -1,6 +1,6 @@
 import { CheckCircle, CircleNotch, Eye, EyeSlash, Info, Key, Link as LinkIcon, Sparkle, UserCircle, Warning, WarningCircle, XCircle } from "@phosphor-icons/react";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useNavigate, Link, useLocation } from "react-router-dom";
+import { useNavigate, LinkIcon, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import HCaptcha from "@hcaptcha/react-hcaptcha";
 import { useAuthStore, initializeAuth } from "@/stores/authStore";

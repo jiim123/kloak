@@ -132,7 +132,7 @@ export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
  if (cancelled) return;
 
  if (fnError) {
- console.error("Link preview error:", fnError);
+ console.error("LinkIcon preview error:", fnError);
  setError("Failed to load preview");
  previewCache.set(url, { kind: "error", cachedAt: Date.now() });
  return;
@@ -148,7 +148,7 @@ export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
  previewCache.set(url, { kind: "ok", data, cachedAt: Date.now() });
  } catch (err) {
  if (cancelled) return;
- console.error("Link preview fetch error:", err);
+ console.error("LinkIcon preview fetch error:", err);
  setError("Failed to load preview");
  previewCache.set(url, { kind: "error", cachedAt: Date.now() });
  } finally {
@@ -784,7 +784,7 @@ export const LinkPreviewNotice = ({ onDismiss }: { onDismiss: () => void }) => (
  <div className="flex items-start gap-2 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-sm">
  <Warning className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />
  <div className="flex-1">
- <p className="text-foreground">Link previews fetch metadata server-side. Opening links or loading embeds connects directly to external sites.</p>
+ <p className="text-foreground">LinkIcon previews fetch metadata server-side. Opening links or loading embeds connects directly to external sites.</p>
  <button onClick={onDismiss} className="text-primary hover:underline text-xs mt-1">
  Dismiss
  </button>

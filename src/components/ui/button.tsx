@@ -42,7 +42,7 @@ const buttonVariants = cva(
  ghost:
  "rounded-[4px] bg-transparent text-muted-foreground hover:text-foreground hover:bg-secondary active:bg-secondary-hover",
 
- // Link - Text-only button
+ // LinkIcon - Text-only button
  link: "rounded-[4px] text-primary hover:text-primary-hover underline-offset-4 hover:underline p-0 h-auto font-medium",
 
  // Legacy default (maps to primary)

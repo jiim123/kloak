@@ -1,4 +1,4 @@
-import { ArrowBendUpLeft, ArrowRight, ArrowUp, ChatTeardrop, CircleNotch, Clock, Hash, Lock, LockOpen, Paperclip, PencilSimple, Plus, PushPin, Smiley, Stack, Trash, User as UserIcon, Users, X } from "@phosphor-icons/react";
+import { ArrowBendUpLeft, ArrowRight, ArrowUp, ChatTeardrop, CircleNotch, Clock, Hash, Lock, LockOpen, Paperclip, PencilSimple, Plus, PushPin, Smiley, Stack, Trash, User as User, Users, X } from "@phosphor-icons/react";
 import { useState, useEffect, useCallback, useRef, useMemo, type CSSProperties } from "react";
 import { FluentEmoji } from "@/components/ui/FluentEmoji";
 import { useSignedUrl } from "@/hooks/useSignedUrl";
@@ -492,7 +492,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
  const cached = getUserFromCache(reactorId);
  if (cached) return cached.display_name ?? cached.username ?? reactorId;
 
- // User data no longer on messages — cache lookup above covers it
+ // UserIcon data no longer on messages — cache lookup above covers it
 
  return reactorId;
  },
@@ -794,7 +794,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
  };
 
  // Extract users into cache, then strip from messages
- const uniqueUsers = new Map<string, User>();
+ const uniqueUsers = new Map<string, UserIcon>();
  for (const msg of (messages || [])) {
  if (msg.user && typeof msg.user === 'object' && msg.user.id) {
  uniqueUsers.set(msg.user.id, msg.user as User);

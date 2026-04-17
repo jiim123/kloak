@@ -1142,7 +1142,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
  <div className="flex items-center justify-between py-1.5">
  <div className="flex items-center gap-2">
  <At className="w-4 h-4 text-muted-foreground" />
- <span className="text-sm">User Mentions (@you)</span>
+ <span className="text-sm">UserIcon Mentions (@you)</span>
  </div>
  <Switch checked={notificationSoundUserMentions} onCheckedChange={setNotificationSoundUserMentions} />
  </div>
@@ -1186,7 +1186,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
  <div className="flex items-center justify-between py-1.5">
  <div className="flex items-center gap-2">
  <At className="w-4 h-4 text-muted-foreground" />
- <span className="text-sm">User Mentions</span>
+ <span className="text-sm">UserIcon Mentions</span>
  </div>
  <Switch checked={showPreviewUserMentions} onCheckedChange={setShowPreviewUserMentions} />
  </div>
@@ -1261,8 +1261,8 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
  <div className="border-t border-border/50" />
 
  <SettingsToggle
- icon={Link}
- label="Link Previews"
+ icon={LinkIcon}
+ label="LinkIcon Previews"
  description="Show rich previews for links in messages"
  checked={linkPreviewsEnabled}
  onCheckedChange={setLinkPreviewsEnabled}
@@ -1322,7 +1322,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
  {/* Settings Title Header */}
  <div className="px-4 pt-5 pb-3">
  <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground truncate">
- User Settings
+ UserIcon Settings
  </h2>
  </div>
 

@@ -323,7 +323,7 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
  const isVideo = ALLOWED_VIDEO_TYPES.includes(file.type);
 
  if (isImage && file.size > MAX_IMAGE_SIZE) {
- toast.error("Image size must be less than 3MB");
+ toast.error("ImageIcon size must be less than 3MB");
  return;
  }
  if (isVideo && file.size > MAX_VIDEO_SIZE) {
@@ -403,7 +403,7 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
  }
 
  if (filePreview) {
- const img = new Image();
+ const img = new ImageIcon();
  img.src = filePreview;
  await new Promise<void>((resolve) => {
  img.onload = () => {
@@ -510,7 +510,7 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
  const isImage = ALLOWED_IMAGE_TYPES.includes(mediaFile.type);
  const isVideo = ALLOWED_VIDEO_TYPES.includes(mediaFile.type);
  if (isImage && mediaFile.size > MAX_IMAGE_SIZE) {
- toast.error("Image size must be less than 3MB");
+ toast.error("ImageIcon size must be less than 3MB");
  return;
  }
  if (isVideo && mediaFile.size > MAX_VIDEO_SIZE) {
@@ -616,7 +616,7 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
  onClick={() => setUploadType("url")}
  className="gap-2"
  >
- <Link className="w-4 h-4" />
+ <LinkIcon className="w-4 h-4" />
  Paste URL
  </Button>
  </div>
@@ -663,7 +663,7 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
  </div>
  ) : (
  <div className="space-y-2">
- <Label>YouTube URL or Image Link</Label>
+ <Label>YouTube URL or ImageIcon LinkIcon</Label>
  <Input
  placeholder="https://youtube.com/watch?v=... or https://example.com/image.jpg"
  value={urlInput}
