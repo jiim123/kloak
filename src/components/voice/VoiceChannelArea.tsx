@@ -1,4 +1,4 @@
-import { Clock, Eye, Microphone, MicrophoneSlash, PhoneSlash, SpeakerHigh, SpeakerSlash, X } from "@phosphor-icons/react";
+import { ArrowsIn, ArrowsOut, Camera, ChatText, Clock, Eye, Microphone, MicrophoneSlash, MonitorArrowUp, MonitorPlay, PhoneSlash, SpeakerHigh, SpeakerSlash, VideoCamera, VideoCameraSlash, X } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,7 @@ function formatSlowmodeDuration(totalSeconds: number): string {
  return `${minutes}m ${seconds}s`;
 }
 
-// Video player for screen share
+// VideoCamera player for screen share
 function VideoPlayer({ track, className }: { track: VideoTrack; className?: string }) {
  const ref = useRef<HTMLVideoElement | null>(null);
 
@@ -183,8 +183,8 @@ function ParticipantTile({
  {!isYou && <VolumeIndicator userId={participant.identity} />}
  {isDeafened && isYou ? <SpeakerSlash className="w-3.5 h-3.5" /> : null}
  {participant.isMuted ? <MicrophoneSlash className="w-3.5 h-3.5" /> : <Microphone className="w-3.5 h-3.5" />}
- {isScreenSharing ? <MonitorUp className="w-3.5 h-3.5" /> : null}
- {!isScreenSharing && isCameraSharing ? <Video className="w-3.5 h-3.5" /> : null}
+ {isScreenSharing ? <MonitorArrowUp className="w-3.5 h-3.5" /> : null}
+ {!isScreenSharing && isCameraSharing ? <VideoCamera className="w-3.5 h-3.5" /> : null}
  </div>
  </div>
 
@@ -502,7 +502,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
  : "Join voice to open attached text chat"
  }
  >
- <MessageSquareText className="w-4 h-4" />
+ <ChatText className="w-4 h-4" />
  </Button>
  );
 
@@ -538,7 +538,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
  : "Join voice to open attached text chat"
  }
  >
- <MessageSquareText className="h-4 w-4" />
+ <ChatText className="h-4 w-4" />
  </Button>
  </div>
 
@@ -618,9 +618,9 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
  onClick={handleToggleStageFullscreen}
  >
  {isStageFullscreen ? (
- <Minimize2 className="w-3 h-3 mr-1" />
+ <ArrowsIn className="w-3 h-3 mr-1" />
  ) : (
- <Maximize2 className="w-3 h-3 mr-1" />
+ <ArrowsOut className="w-3 h-3 mr-1" />
  )}
  {isStageFullscreen ? "Exit" : "Full Screen"}
  </Button>
@@ -773,7 +773,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
  onClick={() => (voice.localState.sharing ? voice.stopScreenShare() : setShowQualityModal(true))}
  title={voice.localState.sharing ? "Stop sharing" : "Share screen"}
  >
- {voice.localState.sharing ? <MonitorOff className="w-5 h-5" /> : <MonitorUp className="w-5 h-5" />}
+ {voice.localState.sharing ? <MonitorPlay className="w-5 h-5" /> : <MonitorArrowUp className="w-5 h-5" />}
  </button>
 
  <button
@@ -789,7 +789,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
  }
  title={voice.localState.cameraSharing ? "Stop camera" : "Share camera"}
  >
- {voice.localState.cameraSharing ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+ {voice.localState.cameraSharing ? <VideoCameraSlash className="w-5 h-5" /> : <VideoCamera className="w-5 h-5" />}
  </button>
 
  <button

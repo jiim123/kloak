@@ -1,4 +1,4 @@
-import { X } from "@phosphor-icons/react";
+import { User, X } from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from 'react';
 
 import { cn } from '@/lib/utils';

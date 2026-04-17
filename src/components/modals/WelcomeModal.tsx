@@ -1,4 +1,4 @@
-import { FileText, Gear, Key, Question, Shield, Sparkle } from "@phosphor-icons/react";
+import { FileText, Gear, Key, Link, Question, Shield, Sparkle } from "@phosphor-icons/react";
 import { useState } from "react";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";

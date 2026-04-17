@@ -1,4 +1,4 @@
-import { ArrowSquareOut, ArrowUp, ChatTeardrop, Heart, Play, ShoppingCart, Warning, X } from "@phosphor-icons/react";
+import { ArrowSquareOut, ArrowUp, ChatTeardrop, Heart, Link, Play, ShoppingCart, VideoCamera, Warning, X } from "@phosphor-icons/react";
 import { useState, useEffect, useRef } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -549,7 +549,7 @@ export const LinkPreview = ({ url, disabled, messageId }: LinkPreviewProps) => {
  className="w-full h-full object-cover"
  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
  />
- {/* Video play overlay on first image */}
+ {/* VideoCamera play overlay on first image */}
  {hasVideo && i === 0 && (
  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
  <div className="w-12 h-12 rounded-full bg-foreground/90 flex items-center justify-center">

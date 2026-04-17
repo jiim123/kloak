@@ -1,4 +1,4 @@
-import { CalendarDots, Crown, Hash, Megaphone, Users } from "@phosphor-icons/react";
+import { CalendarDots, Crown, Hash, Megaphone, User, Users } from "@phosphor-icons/react";
 import { useMemo, useState, useEffect } from "react";
 import { format, formatDistanceToNow } from "date-fns";
 

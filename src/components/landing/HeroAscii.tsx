@@ -1,4 +1,4 @@
-import { ArrowRight } from "@phosphor-icons/react";
+import { ArrowRight, Link } from "@phosphor-icons/react";
 import { useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";

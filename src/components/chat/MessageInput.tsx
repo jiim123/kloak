@@ -1,4 +1,4 @@
-import { Check, CircleNotch, Info, Lock, PencilSimple, Smiley, WifiSlash, X } from "@phosphor-icons/react";
+import { ArrowBendUpLeft, ChartBar, Check, CircleNotch, FilmReel, Info, Lock, PaperPlaneTilt, Paperclip, PencilSimple, Smiley, WifiSlash, X } from "@phosphor-icons/react";
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMessageUser } from "@/stores/userCacheStore";
@@ -159,7 +159,7 @@ const ActionBar = memo(
  disabled={!canSendMessage}
  className={iconBtnClass}
  >
- <SquareChartGantt className="w-5 h-5" />
+ <ChartBar className="w-5 h-5" />
  </button>
  </>
  )}
@@ -181,7 +181,7 @@ const ActionBar = memo(
  {setShowGifPicker && (
  <GifPicker open={showGifPicker} onOpenChange={setShowGifPicker} onSelect={onGifSelect}>
  <button type="button" className={iconBtnClass} onMouseDown={(e) => e.preventDefault()}>
- <ImagePlay className="w-5 h-5" />
+ <FilmReel className="w-5 h-5" />
  </button>
  </GifPicker>
  )}
@@ -232,7 +232,7 @@ const ActionBar = memo(
  transition={{ duration: 0.2, ease: "easeOut" }}
  className="flex items-center justify-center"
  >
- <Send className="w-4 h-4" />
+ <PaperPlaneTilt className="w-4 h-4" />
  </motion.span>
  )}
  </AnimatePresence>

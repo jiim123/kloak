@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, CircleNotch, Copy, Crown, DotsSixVertical, DownloadSimple, FloppyDisk, Gear, Link, MagnifyingGlass, PencilSimple, Plus, Prohibit, Shield, Smiley, Trash, UploadSimple, Users, X } from "@phosphor-icons/react";
+import { ArrowLeft, Check, CircleNotch, Copy, Crown, DotsSixVertical, DownloadSimple, FloppyDisk, Gear, Link, MagnifyingGlass, Palette, PaperPlaneTilt, PencilSimple, Plug, Plus, Prohibit, Shield, ShieldCheck, Smiley, Trash, UploadSimple, User, UserCircle, Users, X } from "@phosphor-icons/react";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useForm } from "react-hook-form";
@@ -885,7 +885,7 @@ export const ServerSettingsPage = () => {
  <TooltipProvider delayDuration={300}>
  <Tooltip>
  <TooltipTrigger asChild>
- <CircleUser className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+ <UserCircle className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
  </TooltipTrigger>
  <TooltipContent side="left">
  <p>This is a self assignable role</p>

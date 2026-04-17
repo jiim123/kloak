@@ -1,4 +1,4 @@
-import { Check, CircleNotch, Crown, DotsSixVertical, Gear, Link, MagnifyingGlass, PencilSimple, Plus, Prohibit, Shield, Smiley, Trash, UploadSimple, Users, X, type Icon } from "@phosphor-icons/react";
+import { Check, CircleNotch, Crown, DotsSixVertical, Gear, Icon, Key, Link, MagnifyingGlass, Palette, PencilSimple, Plus, Prohibit, Shield, Smiley, Trash, UploadSimple, User, Users, X } from "@phosphor-icons/react";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { FluentEmoji } from "@/components/ui/FluentEmoji";
 import { useForm } from "react-hook-form";
@@ -360,7 +360,7 @@ export const ServerSettingsModal = () => {
  className="text-[10px] sm:text-xs h-8 px-2 sm:px-3"
  title="Edit Permissions"
  >
- <KeyRound className="w-3 h-3" />
+ <Key className="w-3 h-3" />
  </Button>
  <Button
  variant="ghost"

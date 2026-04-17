@@ -1,4 +1,4 @@
-import { CaretDown, ChatTeardrop, Check, CircleNotch, Crown, MagnifyingGlass, Prohibit, Shield, SpeakerSlash, UserMinus, Users, X } from "@phosphor-icons/react";
+import { CaretDown, ChatTeardrop, Check, CircleNotch, Crown, ListChecks, MagnifyingGlass, PencilLine, Prohibit, Shield, SpeakerSlash, UserMinus, Users, X } from "@phosphor-icons/react";
 import { useMemo, useEffect, memo, useState, useRef, forwardRef, useCallback } from "react";
 import { ViewportList } from "react-viewport-list";
 import { cn, pickFirstNonBlank } from "@/lib/utils";
@@ -891,7 +891,7 @@ export const MembersSidebar = () => {
 
  {canChangeNickname && (
  <ContextMenuItem onClick={() => handleChangeNickname(member)}>
- <Edit3 className="w-4 h-4" />
+ <PencilLine className="w-4 h-4" />
  Change Nickname
  </ContextMenuItem>
  )}

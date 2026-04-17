@@ -1,4 +1,4 @@
-import { CaretDown, ChatTeardrop, Code, Database, Envelope, Eye, FileText, HardDrives, Heart, Image, Key, Lock, MagnifyingGlass, Megaphone, Microphone, Monitor, Scales, Shield, Sparkle, Stack, Users } from "@phosphor-icons/react";
+import { AppWindow, ArrowsOutCardinal, BookOpen, Bug, CaretDown, ChatTeardrop, Cloud, Code, Database, Envelope, Eye, FileText, HardDrives, Heart, Image, Key, Lock, MagnifyingGlass, Megaphone, Microphone, Monitor, Palette, Pen, PenNib, Radio, Scales, Share, Shield, ShieldCheck, Sparkle, Stack, Users } from "@phosphor-icons/react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -181,7 +181,7 @@ const categories: CategoryData[] = [
  subtitle: "Shape the visual identity of a privacy-preserved platform.",
  positions: [
  {
- icon: PenTool,
+ icon: PenNib,
  title: "UX Designer",
  description:
  "Design the information architecture, user flows, and interaction patterns for encrypted real-time communication. This means solving problems most messaging platforms never face: key verification flows, device linking, secret key onboarding, and making privacy architecture feel invisible to everyday users.",
@@ -234,7 +234,7 @@ const categories: CategoryData[] = [
  ],
  },
  {
- icon: Move3D,
+ icon: ArrowsOutCardinal,
  title: "Motion Designer",
  description:
  "Design and implement animations, transitions, and micro-interactions that give Kloak's interface a sense of life and responsiveness. This includes page transitions, loading states, notification animations, hover effects, and the subtle motion language that makes a real-time app feel fluid.",
@@ -412,7 +412,7 @@ const categories: CategoryData[] = [
  ],
  },
  {
- icon: Share2,
+ icon: Share,
  title: "Social Media & Content Coordinator",
  description:
  "Manage Kloak's presence across social media and content channels. Create announcements, feature highlights, educational posts, and community updates in a tone that is direct, honest, and free of marketing fluff. Build Kloak's public voice.",

@@ -1,4 +1,4 @@
-import { ArrowRight, ChatCircle, Headphones, Key, Lock, Megaphone, Users, type Icon } from "@phosphor-icons/react";
+import { ArrowBendUpLeft, ArrowRight, ChatCircle, ChatsTeardrop, Headphones, Icon, Images, Key, ListChecks, Lock, Megaphone, PaperPlaneTilt, SmileyWink, UserGear, Users, VideoCamera } from "@phosphor-icons/react";
 import { lazy, Suspense, useRef, useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 
@@ -139,11 +139,11 @@ const Index = () => {
  Chat: {
  tagline: "Conversation without the surveillance.",
  description:
- "Chat channels are the heart of every Kloak server. Send messages, reply to friends, mention people, share files, create polls, and pin important stuff so it never gets lost. Everything happens instantly.",
+ "Chat channels are the heart of every Kloak server. PaperPlaneTilt messages, reply to friends, mention people, share files, create polls, and pin important stuff so it never gets lost. Everything happens instantly.",
  controversial:
  "Most chat apps read your conversations to sell ads or recommend content. Kloak does none of that. We do not scan, index, or monetize your messages. No recommendations, no trending topics pulled from your private chats. Your words stay yours.",
  },
- "Voice & Video": {
+ "Voice & VideoCamera": {
  tagline: "Talk freely, without anyone listening in.",
  description:
  "Voice and video channels let you hop into a call whenever you want. No meeting links, no calendar invites, no extra steps. Just click a channel and start talking with your friends.",
@@ -245,7 +245,7 @@ const Index = () => {
  contrastSub: "10, 50, 25, 0.6",
  },
  {
- icon: SmilePlus,
+ icon: SmileyWink,
  title: "Reactions",
  description:
  "React to any message with emoji. Servers can upload custom emoji packs that every member can use across channels.",
@@ -254,7 +254,7 @@ const Index = () => {
  contrastSub: "60, 45, 5, 0.65",
  },
  {
- icon: UserRoundCog,
+ icon: UserGear,
  title: "Roles & Permissions",
  description:
  "Create custom roles with colors and icons. Over 30 granular permissions control who can post, pin, manage channels, and more.",
@@ -287,15 +287,15 @@ const Index = () => {
  icon: ChatCircle,
  title: "Chat",
  description:
- "Text channels for everyday conversation. Reply to messages, mention friends, share files, run polls, and pin what matters most.",
+ "Text channels for everyday conversation. ArrowBendUpLeft to messages, mention friends, share files, run polls, and pin what matters most.",
  },
  {
  icon: Headphones,
- title: "Voice & Video",
+ title: "Voice & VideoCamera",
  description: "Jump into a voice or video call with your friends. No links, no scheduling. Just join a channel and start talking.",
  },
  {
- icon: MessagesSquare,
+ icon: ChatsTeardrop,
  title: "Forum",
  description:
  "Give bigger topics their own space. Start a post, let people reply in threads, and keep everything easy to find later.",

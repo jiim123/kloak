@@ -1,4 +1,4 @@
-import { Bell, CaretRight, Check, Clock, Copy, Eye, Gear, Hash, PushPin, SpeakerHigh, SpeakerSlash, Trash } from "@phosphor-icons/react";
+import { Archive, Bell, BellRinging, BellSlash, CaretRight, Check, Clock, Copy, CopySimple, Eye, EyeSlash, FolderSimplePlus, Gear, Hash, Link, PushPin, PushPinSlash, SpeakerHigh, SpeakerSlash, Trash } from "@phosphor-icons/react";
 import { useState } from "react";
 
 import { toast } from "sonner";
@@ -233,14 +233,14 @@ export const ChannelContextDrawer = ({
  <DrawerItem icon={Check} label="Mark as Read" onClick={() => act(onMarkAsRead)} />
  )}
  <DrawerItem
- icon={channelMuted ? SpeakerHigh : BellOff}
+ icon={channelMuted ? SpeakerHigh : BellSlash}
  label={channelMuted ? "Unmute Channel" : "Mute Channel"}
  onClick={handleToggleMute}
  />
 
  <DrawerSeparator />
 
- <DrawerItem icon={CopyPlus} label="Duplicate Channel" onClick={handleDuplicate} />
+ <DrawerItem icon={CopySimple} label="Duplicate Channel" onClick={handleDuplicate} />
  <DrawerItem
  icon={Archive}
  label="Archive Channel"
@@ -251,7 +251,7 @@ export const ChannelContextDrawer = ({
  {(otherCategories.length > 0 || channel.category_id) && (
  <>
  <DrawerSeparator />
- <DrawerSubmenu icon={FolderInput} label="Move to Category">
+ <DrawerSubmenu icon={FolderSimplePlus} label="Move to Category">
  {channel.category_id && (
  <DrawerItem
  icon={Hash}
@@ -262,7 +262,7 @@ export const ChannelContextDrawer = ({
  {otherCategories.map((cat) => (
  <DrawerItem
  key={cat.id}
- icon={FolderInput}
+ icon={FolderSimplePlus}
  label={cat.name}
  onClick={() => handleMoveToCategory(cat.id)}
  />
@@ -290,17 +290,17 @@ export const ChannelContextDrawer = ({
  <DrawerItem icon={Check} label="Mark as Read" onClick={() => act(onMarkAsRead)} />
  )}
  <DrawerItem
- icon={channelMuted ? SpeakerHigh : BellOff}
+ icon={channelMuted ? SpeakerHigh : BellSlash}
  label={channelMuted ? "Unmute Channel" : "Mute Channel"}
  onClick={handleToggleMute}
  />
  <DrawerItem
- icon={channelPinned ? PinOff : PushPin}
+ icon={channelPinned ? PushPinSlash : PushPin}
  label={channelPinned ? "Unpin Channel" : "PushPin Channel"}
  onClick={handleTogglePin}
  />
  <DrawerItem
- icon={channelHidden ? Eye : EyeOff}
+ icon={channelHidden ? Eye : EyeSlash}
  label={channelHidden ? "Unhide Channel" : "Hide Channel"}
  onClick={handleToggleHide}
  />
@@ -310,7 +310,7 @@ export const ChannelContextDrawer = ({
  {/* Notifications submenu */}
  <DrawerSubmenu icon={Bell} label="Notifications">
  <DrawerItem
- icon={BellRing}
+ icon={BellRinging}
  label="All Messages"
  onClick={() => handleSetNotifLevel("all")}
  suffix={notifLevel === "all" ? <Check className="w-3 h-3 text-muted-foreground" /> : undefined}
@@ -322,7 +322,7 @@ export const ChannelContextDrawer = ({
  suffix={notifLevel === "mentions" ? <Check className="w-3 h-3 text-muted-foreground" /> : undefined}
  />
  <DrawerItem
- icon={BellOff}
+ icon={BellSlash}
  label="Nothing"
  onClick={() => handleSetNotifLevel("nothing")}
  suffix={notifLevel === "nothing" ? <Check className="w-3 h-3 text-muted-foreground" /> : undefined}

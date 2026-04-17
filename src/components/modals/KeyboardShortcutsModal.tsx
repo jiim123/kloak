@@ -1,5 +1,5 @@
 
-import { Keyboard } from "@phosphor-icons/react";
+import { Keyboard, PaperPlaneTilt } from "@phosphor-icons/react";
 import {
  Dialog,
  DialogContent,

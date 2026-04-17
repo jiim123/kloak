@@ -1,4 +1,4 @@
-import { ChatTeardrop, Check, DotsThree, Prohibit, Tray, UserMinus, UserPlus, Users, X } from "@phosphor-icons/react";
+import { ChatTeardrop, Check, DotsThree, PaperPlaneTilt, Prohibit, Tray, UserMinus, UserPlus, Users, X } from "@phosphor-icons/react";
 import { useEffect, useState, useMemo } from "react";
 
 import { cn } from "@/lib/utils";

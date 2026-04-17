@@ -1,4 +1,4 @@
-import { CircleNotch, FloppyDisk } from "@phosphor-icons/react";
+import { CircleNotch, FloppyDisk, PaperPlaneTilt } from "@phosphor-icons/react";
 import { useState, useEffect } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';

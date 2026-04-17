@@ -1,4 +1,4 @@
-import { CaretLeft, DotsThree, Flag, Phone, Prohibit } from "@phosphor-icons/react";
+import { CaretLeft, DotsThree, Flag, Phone, Prohibit, User } from "@phosphor-icons/react";
 import { useState, type MouseEvent } from "react";
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";

@@ -1,4 +1,4 @@
-import { ArrowsClockwise, At, Bell, ChatTeardrop, Check, CircleNotch, Clock, Copy, DownloadSimple, Envelope, Eye, Globe, Key, Microphone, Monitor, Shield, SignOut, Sparkle, SpeakerHigh, Trash, UserMinus, UserPlus, Users, Warning, X } from "@phosphor-icons/react";
+import { ArrowBendUpLeft, ArrowsClockwise, At, Bell, ChatTeardrop, Check, CircleNotch, Clock, Copy, DownloadSimple, Envelope, Eye, Globe, Key, Link, Microphone, Monitor, Palette, PaperPlaneTilt, Shield, SignOut, Sparkle, SpeakerHigh, Trash, User, UserMinus, UserPlus, Users, Warning, WarningCircle, X } from "@phosphor-icons/react";
 import { useEffect, useState, useRef } from "react";
 
 import {
@@ -852,7 +852,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
  <div className="space-y-5">
  <div className="p-4 rounded-xl bg-secondary/30 border border-border/50 space-y-2">
  <div className="flex items-center gap-2 mb-1">
- <MessageCircleWarning className="w-4 h-4 text-muted-foreground" />
+ <WarningCircle className="w-4 h-4 text-muted-foreground" />
  <h3 className="text-sm font-medium">Direct Message Privacy</h3>
  </div>
  <p className="text-[12px] text-muted-foreground mb-2">Control who can start a new DM conversation with you.</p>
@@ -1022,7 +1022,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
  }
  }}
  >
- Send test notification
+ PaperPlaneTilt test notification
  </Button>
  </div>
  </div>
@@ -1148,7 +1148,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
  </div>
  <div className="flex items-center justify-between py-1.5">
  <div className="flex items-center gap-2">
- <Reply className="w-4 h-4 text-muted-foreground" />
+ <ArrowBendUpLeft className="w-4 h-4 text-muted-foreground" />
  <span className="text-sm">Replies</span>
  </div>
  <Switch checked={notificationSoundReplies} onCheckedChange={setNotificationSoundReplies} />
@@ -1192,7 +1192,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
  </div>
  <div className="flex items-center justify-between py-1.5">
  <div className="flex items-center gap-2">
- <Reply className="w-4 h-4 text-muted-foreground" />
+ <ArrowBendUpLeft className="w-4 h-4 text-muted-foreground" />
  <span className="text-sm">Replies</span>
  </div>
  <Switch checked={showPreviewReplies} onCheckedChange={setShowPreviewReplies} />

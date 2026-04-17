@@ -1,4 +1,4 @@
-import { CheckCircle, CircleNotch, Eye, Info, Key, Sparkle, Warning, WarningCircle, XCircle } from "@phosphor-icons/react";
+import { CheckCircle, CircleNotch, Eye, EyeSlash, Info, Key, Link, Sparkle, UserCircle, Warning, WarningCircle, XCircle } from "@phosphor-icons/react";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
@@ -449,7 +449,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
  value="create"
  className="rounded-xl py-2.5 px-4 text-sm font-normal transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
  >
- <CircleUserRound className="w-4 h-4 mr-2" />
+ <UserCircle className="w-4 h-4 mr-2" />
  Create Account
  </TabsTrigger>
  <TabsTrigger
@@ -659,7 +659,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
  onClick={() => setShowSecretKey(!showSecretKey)}
  >
- {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+ {showSecretKey ? <EyeSlash className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
  </Button>
  </div>
  </div>
@@ -708,7 +708,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
  value="create"
  className="rounded-xl py-2.5 px-4 text-sm font-normal transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
  >
- <CircleUserRound className="w-4 h-4 mr-2" />
+ <UserCircle className="w-4 h-4 mr-2" />
  Create Account
  </TabsTrigger>
  <TabsTrigger
@@ -911,7 +911,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
  onClick={() => setShowSecretKey(!showSecretKey)}
  >
- {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+ {showSecretKey ? <EyeSlash className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
  </Button>
  </div>
  </div>

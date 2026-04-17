@@ -1,4 +1,4 @@
-import { CaretLeft, Gear, SignOut } from "@phosphor-icons/react";
+import { CaretLeft, Gear, SignOut, User } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 

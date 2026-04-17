@@ -1,4 +1,4 @@
-import { CheckCircle, CircleNotch, Hash, Info, Shield, Users, XCircle } from "@phosphor-icons/react";
+import { CheckCircle, CircleNotch, Hash, Info, PaperPlaneTilt, Shield, Users, XCircle } from "@phosphor-icons/react";
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';

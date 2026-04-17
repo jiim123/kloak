@@ -1,4 +1,4 @@
-import { Check, CircleNotch, Clock, UserPlus } from "@phosphor-icons/react";
+import { Check, CircleNotch, Clock, PaperPlaneTilt, UserPlus } from "@phosphor-icons/react";
 import { useState, useEffect, useRef } from "react";
 
 import { cn } from "@/lib/utils";

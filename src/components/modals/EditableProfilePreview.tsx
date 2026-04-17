@@ -1,4 +1,4 @@
-import { CircleNotch, PencilSimple, Plus, Sparkle, Trash, UploadSimple, X } from "@phosphor-icons/react";
+import { Camera, CircleNotch, PencilSimple, Plus, Sparkle, Trash, UploadSimple, User, X } from "@phosphor-icons/react";
 import { useState, useRef, useEffect, useMemo } from "react";
 
 import { Button } from "@/components/ui/button";

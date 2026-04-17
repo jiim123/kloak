@@ -1,17 +1,17 @@
 
 
 
-import { FileArchive, FileText, FilmStrip, IconProps, MusicNote } from "@phosphor-icons/react";
+import { File, FileArchive, FileCode, FileImage, FileText, FileXls, FilmStrip, IconProps, MusicNote } from "@phosphor-icons/react";
 type IconComponent = React.FC<IconProps>;
 
 const mimeIconMap: Record<string, IconComponent> = {
  "application/pdf": FileText,
  "text/plain": FileType,
- "application/json": FileJson,
+ "application/json": FileCode,
  "application/msword": FileText,
  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": FileText,
- "application/vnd.ms-excel": FileSpreadsheet,
- "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": FileSpreadsheet,
+ "application/vnd.ms-excel": FileXls,
+ "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": FileXls,
  "application/zip": FileArchive,
  "application/x-rar-compressed": FileArchive,
  "application/gzip": FileArchive,
@@ -25,7 +25,7 @@ const prefixIconMap: [string, IconComponent][] = [
 ];
 
 export function getFileIcon(mimeType?: string | null): IconComponent {
- if (!mimeType) return FileIcon;
+ if (!mimeType) return File;
 
  if (mimeIconMap[mimeType]) return mimeIconMap[mimeType];
 
@@ -33,5 +33,5 @@ export function getFileIcon(mimeType?: string | null): IconComponent {
  if (mimeType.startsWith(prefix)) return icon;
  }
 
- return FileIcon;
+ return File;
 }

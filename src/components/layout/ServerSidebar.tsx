@@ -1,4 +1,4 @@
-import { Bell, CaretDown, CaretRight, Checks, DotsSixVertical, Envelope, Gear, House, Plus, SignOut, Trash } from "@phosphor-icons/react";
+import { Bell, BellSlash, CaretDown, CaretRight, Checks, DotsSixVertical, Envelope, Folder, FolderPlus, Gear, House, Palette, PencilSimple, Plus, SignOut, Trash, User } from "@phosphor-icons/react";
 import { useState, useMemo, useEffect, useCallback, forwardRef, memo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -314,7 +314,7 @@ const FolderItem = memo(
 
  <ContextMenuContent className="w-52">
  <ContextMenuItem onSelect={handleRename}>
- <Edit2 className="w-4 h-4" />
+ <PencilSimple className="w-4 h-4" />
  Rename folder
  </ContextMenuItem>
  <ContextMenuItem onSelect={handleChangeColor}>
@@ -533,7 +533,7 @@ const DraggableServerItem = memo(
  </>
  ) : (
  <>
- <BellOff className="w-4 h-4" />
+ <BellSlash className="w-4 h-4" />
  Mute Server
  </>
  )}

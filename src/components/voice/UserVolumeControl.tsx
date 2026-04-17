@@ -1,4 +1,4 @@
-import { ArrowCounterClockwise, SpeakerHigh, SpeakerSlash } from "@phosphor-icons/react";
+import { ArrowCounterClockwise, SpeakerHigh, SpeakerSlash, User } from "@phosphor-icons/react";
 /**
  * User Volume Control Component
  * Per-user volume slider for voice channels (context menu)

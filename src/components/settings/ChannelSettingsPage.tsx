@@ -1,4 +1,4 @@
-import { CircleNotch, Clock, Eye, Gear, Hash, Info, Link, Lock, Plus, Shield, Timer, Trash, Users, Warning, X } from "@phosphor-icons/react";
+import { ChartBar, ChatTeardropSlash, CircleNotch, Clock, Eye, FolderOpen, Gear, Hash, Info, Link, Lock, Paperclip, Plus, Shield, Timer, Trash, User, Users, Warning, X } from "@phosphor-icons/react";
 import { useState, useEffect } from "react";
 import { useUIStore } from "@/stores/uiStore";
 import { useServerStore } from "@/stores/serverStore";
@@ -531,7 +531,7 @@ export const ChannelSettingsPage = () => {
  />
 
  <ToggleCard
- icon={MessageSquareOff}
+ icon={ChatTeardropSlash}
  label="Disable Reactions"
  description="Prevent members from adding emoji reactions to messages. Admins and owners can still react."
  checked={disableReactions}
@@ -539,7 +539,7 @@ export const ChannelSettingsPage = () => {
  />
 
  <ToggleCard
- icon={BarChartHorizontal}
+ icon={ChartBar}
  label="Disable Polls"
  description="Prevent members from creating polls in this channel. Admins and owners can still create polls."
  checked={disablePolls}

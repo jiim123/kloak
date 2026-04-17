@@ -1,4 +1,4 @@
-import { ArrowRight, ArrowUp, ChatTeardrop, CircleNotch, Clock, Hash, Lock, PencilSimple, Plus, PushPin, Smiley, Stack, Trash, Users, X } from "@phosphor-icons/react";
+import { ArrowBendUpLeft, ArrowRight, ArrowUp, ChatTeardrop, CircleNotch, Clock, Hash, Lock, LockOpen, Paperclip, PencilSimple, Plus, PushPin, Smiley, Stack, Trash, User, Users, X } from "@phosphor-icons/react";
 import { useState, useEffect, useCallback, useRef, useMemo, type CSSProperties } from "react";
 import { FluentEmoji } from "@/components/ui/FluentEmoji";
 import { useSignedUrl } from "@/hooks/useSignedUrl";
@@ -2621,10 +2621,10 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
  {msg.edited_at && <span className="text-[10px] text-muted-foreground">(edited)</span>}
  </div>
 
- {/* Reply reference */}
+ {/* ArrowBendUpLeft reference */}
  {msg.reply_to && (
  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
- <CornerUpLeft className="w-3 h-3 flex-shrink-0" />
+ <ArrowBendUpLeft className="w-3 h-3 flex-shrink-0" />
  <span>Replying to</span>
  <span className="font-medium text-primary">
  @{getUserFromCache(msg.reply_to.user_id)?.username || msg.reply_to.user?.username || "unknown"}
@@ -2799,7 +2799,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
  </button>
  </EmojiGifPicker>
 
- {/* Reply */}
+ {/* ArrowBendUpLeft */}
  {canReplyToSelectedThread && (
  <button
  type="button"
@@ -2816,7 +2816,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
  aria-label="Reply"
  title="Reply"
  >
- <Reply className="w-4 h-4" />
+ <ArrowBendUpLeft className="w-4 h-4" />
  </button>
  )}
 
@@ -2874,7 +2874,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
  )}
  </div>
 
- {/* Reply Input */}
+ {/* ArrowBendUpLeft Input */}
  {selectedThreadId && renderThreadReplyComposer(selectedThreadId)}
  </div>
  )}
@@ -3176,10 +3176,10 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
  {msg.edited_at && <span className="text-[10px] text-muted-foreground">(edited)</span>}
  </div>
 
- {/* Reply reference */}
+ {/* ArrowBendUpLeft reference */}
  {msg.reply_to && (
  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
- <CornerUpLeft className="w-3 h-3 flex-shrink-0" />
+ <ArrowBendUpLeft className="w-3 h-3 flex-shrink-0" />
  <span>Replying to</span>
  <span className="font-medium text-primary">
  @{getUserFromCache(msg.reply_to.user_id)?.username || msg.reply_to.user?.username || "unknown"}
@@ -3258,7 +3258,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
  }
  />
  </div>
- {/* Reply attachment gallery */}
+ {/* ArrowBendUpLeft attachment gallery */}
  <ThreadAttachmentGallery
  content={msg.content}
  onImageOpen={setThreadAttachmentLightboxUrl}
@@ -3359,7 +3359,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
  </button>
  </EmojiGifPicker>
 
- {/* Reply */}
+ {/* ArrowBendUpLeft */}
  {canReplyToSelectedThread && (
  <button
  type="button"
@@ -3376,7 +3376,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
  aria-label="Reply"
  title="Reply"
  >
- <Reply className="w-4 h-4" />
+ <ArrowBendUpLeft className="w-4 h-4" />
  </button>
  )}
 
@@ -3434,7 +3434,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
  )}
  </div>
 
- {/* Reply Input */}
+ {/* ArrowBendUpLeft Input */}
  {selectedThreadId && renderThreadReplyComposer(selectedThreadId)}
  </div>
  </div>

@@ -1,4 +1,4 @@
-import { Bell, Check, ClipboardText, Clock, Copy, Eye, Gear, Hash, PushPin, SpeakerHigh, SpeakerSlash, Trash, UserPlus } from "@phosphor-icons/react";
+import { Archive, Bell, BellRinging, BellSlash, Check, ClipboardText, Clock, Copy, CopySimple, Eye, EyeSlash, FolderSimplePlus, Gear, Hash, Link, PushPin, PushPinSlash, SpeakerHigh, SpeakerSlash, Trash, UserPlus } from "@phosphor-icons/react";
 import { useMemo } from "react";
 
 import { toast } from "sonner";
@@ -148,14 +148,14 @@ export const ChannelContextMenu = ({
  </ContextMenuItem>
  )}
  <ContextMenuItem onClick={handleToggleMute}>
- {channelMuted ? <SpeakerHigh className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+ {channelMuted ? <SpeakerHigh className="w-4 h-4" /> : <BellSlash className="w-4 h-4" />}
  {channelMuted ? "Unmute Channel" : "Mute Channel"}
  </ContextMenuItem>
 
  <ContextMenuSeparator />
 
  <ContextMenuItem onClick={handleDuplicateChannel}>
- <CopyPlus className="w-4 h-4" />
+ <CopySimple className="w-4 h-4" />
  Duplicate Channel
  </ContextMenuItem>
  <ContextMenuItem onClick={() => handleNotImplemented("Archive Channel")}>
@@ -167,7 +167,7 @@ export const ChannelContextMenu = ({
  {(otherCategories.length > 0 || channel.category_id) && (
  <ContextMenuSub>
  <ContextMenuSubTrigger>
- <FolderInput className="w-4 h-4" />
+ <FolderSimplePlus className="w-4 h-4" />
  Change Category
  </ContextMenuSubTrigger>
  <ContextMenuSubContent className="w-48">
@@ -179,7 +179,7 @@ export const ChannelContextMenu = ({
  )}
  {otherCategories.map((cat) => (
  <ContextMenuItem key={cat.id} onClick={() => handleMoveToCategory(cat.id)}>
- <FolderInput className="w-4 h-4 text-muted-foreground" />
+ <FolderSimplePlus className="w-4 h-4 text-muted-foreground" />
  {cat.name}
  </ContextMenuItem>
  ))}
@@ -225,15 +225,15 @@ export const ChannelContextMenu = ({
  </ContextMenuItem>
  )}
  <ContextMenuItem onClick={handleToggleMute}>
- {channelMuted ? <SpeakerHigh className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+ {channelMuted ? <SpeakerHigh className="w-4 h-4" /> : <BellSlash className="w-4 h-4" />}
  {channelMuted ? "Unmute Channel" : "Mute Channel"}
  </ContextMenuItem>
  <ContextMenuItem onClick={handleTogglePin}>
- {channelPinned ? <PinOff className="w-4 h-4" /> : <PushPin className="w-4 h-4" />}
+ {channelPinned ? <PushPinSlash className="w-4 h-4" /> : <PushPin className="w-4 h-4" />}
  {channelPinned ? "Unpin Channel" : "PushPin Channel"}
  </ContextMenuItem>
  <ContextMenuItem onClick={handleToggleHide}>
- {channelHidden ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+ {channelHidden ? <Eye className="w-4 h-4" /> : <EyeSlash className="w-4 h-4" />}
  {channelHidden ? "Unhide Channel" : "Hide Channel"}
  </ContextMenuItem>
 
@@ -248,7 +248,7 @@ export const ChannelContextMenu = ({
  <ContextMenuSubContent className="w-48">
  <ContextMenuLabel className="font-normal text-xs text-muted-foreground">Notification Level</ContextMenuLabel>
  <ContextMenuItem onClick={() => handleSetNotifLevel("all")}>
- <BellRing className="w-4 h-4" />
+ <BellRinging className="w-4 h-4" />
  All Messages
  {notifLevel === "all" && <Check className="w-3 h-3 ml-auto" />}
  </ContextMenuItem>
@@ -258,7 +258,7 @@ export const ChannelContextMenu = ({
  {notifLevel === "mentions" && <Check className="w-3 h-3 ml-auto" />}
  </ContextMenuItem>
  <ContextMenuItem onClick={() => handleSetNotifLevel("nothing")}>
- <BellOff className="w-4 h-4" />
+ <BellSlash className="w-4 h-4" />
  Nothing
  {notifLevel === "nothing" && <Check className="w-3 h-3 ml-auto" />}
  </ContextMenuItem>

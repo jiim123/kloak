@@ -1,4 +1,4 @@
-import { CircleNotch, Copy, DotsThree, Eye, PencilSimple, Prohibit, PushPin, Smiley, Trash, UserMinus, X } from "@phosphor-icons/react";
+import { ArrowBendDownLeft, ArrowBendUpLeft, CircleNotch, Copy, DotsThree, Eye, EyeSlash, Paperclip, PencilSimple, Prohibit, PushPin, Smiley, Trash, UserMinus, X } from "@phosphor-icons/react";
 import React, { useState, useEffect, useRef, useCallback, useMemo, memo, forwardRef } from "react";
 import { getTopEmojis } from "@/lib/emojiRecents";
 import { FluentEmoji } from "@/components/ui/FluentEmoji";
@@ -1249,7 +1249,7 @@ export const MessageItem = memo(function MessageItem({
  )
  )}
 
- {/* Reply reference */}
+ {/* ArrowBendUpLeft reference */}
  {message.reply_to && (
  <div
  className="flex items-center gap-2 text-[11px] sm:text-[12px] text-foreground/70 cursor-pointer hover:text-foreground/90 flex-nowrap overflow-hidden transition-colors duration-150 pl-0.5"
@@ -1257,7 +1257,7 @@ export const MessageItem = memo(function MessageItem({
  onTouchStart={stopTouchPropagation}
  onTouchEnd={stopTouchPropagation}
  >
- <CornerLeftDown className="w-3.5 h-3.5 flex-shrink-0" />
+ <ArrowBendDownLeft className="w-3.5 h-3.5 flex-shrink-0" />
  {showReplyAuthorIdentity && replyUser ? (
  <>
  <img
@@ -1441,7 +1441,7 @@ export const MessageItem = memo(function MessageItem({
  </EmojiPicker>
  )}
 
- {/* Reply - Hide for blocked users */}
+ {/* ArrowBendUpLeft - Hide for blocked users */}
  {!isBlockedUser && (
  <button
  className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
@@ -1449,7 +1449,7 @@ export const MessageItem = memo(function MessageItem({
  aria-label="Reply"
  title="Reply"
  >
- <Reply className="w-4 h-4" />
+ <ArrowBendUpLeft className="w-4 h-4" />
  </button>
  )}
 
@@ -1533,8 +1533,8 @@ export const MessageItem = memo(function MessageItem({
  <ContextMenuContent>
  {!isBlockedUser && (
  <ContextMenuItem onClick={handleReply}>
- <Reply className="w-4 h-4" />
- Reply
+ <ArrowBendUpLeft className="w-4 h-4" />
+ ArrowBendUpLeft
  </ContextMenuItem>
  )}
  <ContextMenuItem onClick={handleCopyText}>
@@ -1563,7 +1563,7 @@ export const MessageItem = memo(function MessageItem({
  <>
  <ContextMenuSeparator />
  <ContextMenuItem onClick={handleRemoveEmbed}>
- <EyeOff className="w-4 h-4" />
+ <EyeSlash className="w-4 h-4" />
  Remove Embed
  </ContextMenuItem>
  </>
@@ -1738,14 +1738,14 @@ export const MessageItem = memo(function MessageItem({
 
  {/* Action buttons list */}
  <div className="space-y-1">
- {/* Reply */}
+ {/* ArrowBendUpLeft */}
  {!isBlockedUser && (
  <button
  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
  onClick={handleMobileReply}
  >
- <Reply className="w-5 h-5 text-muted-foreground" />
- <span className="font-medium">Reply</span>
+ <ArrowBendUpLeft className="w-5 h-5 text-muted-foreground" />
+ <span className="font-medium">ArrowBendUpLeft</span>
  </button>
  )}
  {/* Edit (own messages) */}
@@ -1776,7 +1776,7 @@ export const MessageItem = memo(function MessageItem({
  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
  onClick={handleMobileRemoveEmbed}
  >
- <EyeOff className="w-5 h-5 text-muted-foreground" />
+ <EyeSlash className="w-5 h-5 text-muted-foreground" />
  <span className="font-medium">Remove Embed</span>
  </button>
  )}

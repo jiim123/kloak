@@ -1,4 +1,4 @@
-import { ArrowDown, Prohibit } from "@phosphor-icons/react";
+import { ArrowDown, Prohibit, User } from "@phosphor-icons/react";
 import { useEffect, useRef, useState, useCallback, useMemo, useLayoutEffect } from "react";
 
 import { Button } from "@/components/ui/button";

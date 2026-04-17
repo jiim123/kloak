@@ -1,4 +1,4 @@
-import { Database, Eye, Globe, Lock, Shield, Trash } from "@phosphor-icons/react";
+import { Database, Eye, Globe, Lock, Shield, Trash, User } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
 import { NavigationMenu } from "@/components/layout/NavigationMenu";
 import { Footer } from "@/components/ui/footer-section";

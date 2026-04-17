@@ -1,4 +1,4 @@
-import { ChatTeardrop, CircleNotch, DotsThree, FilmStrip, Image, Link, Play, Trash, UploadSimple, X } from "@phosphor-icons/react";
+import { ChatTeardrop, CircleNotch, DotsThree, FilmStrip, Image, ImageSquare, Images, Link, Play, Trash, UploadSimple, VideoCamera, X } from "@phosphor-icons/react";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -541,7 +541,7 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
  <div className="p-4">
  {canSendMessages && (
  <Button onClick={() => setIsUploadModalOpen(true)} className="mb-4 gap-2" variant="secondary">
- <ImagePlus className="w-4 h-4" />
+ <ImageSquare className="w-4 h-4" />
  Add Media
  </Button>
  )}

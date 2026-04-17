@@ -1,4 +1,4 @@
-import { ChatTeardrop, ClipboardText, Eye, FilmStrip, Ghost, Hash, Lock, Megaphone, SpeakerHigh, Timer, Trash } from "@phosphor-icons/react";
+import { ChatTeardrop, CheckCircle, ClipboardText, Eye, FilmStrip, Ghost, Hash, Link, Lock, Megaphone, SpeakerHigh, Timer, Trash } from "@phosphor-icons/react";
 import { useMemo } from "react";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -100,7 +100,7 @@ export const ChannelInfoModal = () => {
  <div className="space-y-1.5">
  {settings.map((s) => (
  <div key={s.label} className="flex items-center gap-2 text-sm text-foreground">
- <CircleCheck className="w-4 h-4 shrink-0 text-[hsl(var(--kloak-online))]" />
+ <CheckCircle className="w-4 h-4 shrink-0 text-[hsl(var(--kloak-online))]" />
  <span>{s.label}</span>
  </div>
  ))}

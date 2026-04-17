@@ -1,4 +1,4 @@
-import { CaretRight, Check, Copy, Eye } from "@phosphor-icons/react";
+import { CaretRight, Check, Copy, Eye, EyeSlash } from "@phosphor-icons/react";
 import { useState } from "react";
 
 import {
@@ -191,7 +191,7 @@ export const OnboardingModal = ({
  className="absolute right-2 top-2 h-7 w-7 p-0"
  onClick={() => setShowKey(!showKey)}
  >
- {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+ {showKey ? <EyeSlash className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
  </Button>
  </div>
 

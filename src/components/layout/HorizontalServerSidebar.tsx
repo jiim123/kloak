@@ -1,4 +1,4 @@
-import { Bell, CaretDown, Checks, DotsSixVertical, Gear, House, Plus, SignOut, Trash } from "@phosphor-icons/react";
+import { Bell, BellSlash, CaretDown, Checks, DotsSixVertical, Folder, FolderPlus, Gear, House, Palette, PencilSimple, Plus, SignOut, Trash } from "@phosphor-icons/react";
 import { useState, useMemo, useEffect, useCallback, forwardRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -363,7 +363,7 @@ const HorizontalFolderItem = ({
  </>
  ) : (
  <>
- <BellOff className="w-4 h-4" />
+ <BellSlash className="w-4 h-4" />
  Mute Server
  </>
  )}
@@ -397,7 +397,7 @@ const HorizontalFolderItem = ({
 
  <ContextMenuContent className="w-52">
  <ContextMenuItem onSelect={() => onRename(folder.id)}>
- <Edit2 className="w-4 h-4" />
+ <PencilSimple className="w-4 h-4" />
  Rename folder
  </ContextMenuItem>
  <ContextMenuItem onSelect={() => onChangeColor(folder.id)}>
@@ -582,7 +582,7 @@ const HorizontalSortableServerItem = forwardRef<
  </>
  ) : (
  <>
- <BellOff className="w-4 h-4" />
+ <BellSlash className="w-4 h-4" />
  Mute Server
  </>
  )}

@@ -1,4 +1,4 @@
-import { Gear, Headphones, Microphone, MicrophoneSlash, SpeakerSlash } from "@phosphor-icons/react";
+import { Gear, Headphones, Microphone, MicrophoneSlash, SpeakerSlash, User } from "@phosphor-icons/react";
 import { useState } from "react";
 import { motion } from "framer-motion";
 
