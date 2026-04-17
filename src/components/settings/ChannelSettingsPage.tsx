@@ -596,7 +596,7 @@ export const ChannelSettingsPage = () => {
 
   // Permissions Tab Content
   const channelPermissionsContent = (
-    <div>
+    <div className="h-full">
       {channelId && currentServer ? (
         <ChannelPermissionsEditor channelId={channelId} serverId={currentServer.id} onClose={handleClose} />
       ) : (
@@ -672,7 +672,7 @@ export const ChannelSettingsPage = () => {
 
   // Category Permissions Content
   const categoryPermissionsContent = (
-    <div>
+    <div className="h-full">
       {categoryId && currentServer ? (
         <CategoryPermissionsEditor categoryId={categoryId} serverId={currentServer.id} onClose={handleClose} />
       ) : (
@@ -776,7 +776,7 @@ export const ChannelSettingsPage = () => {
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 overflow-y-auto relative">
+        <div className="flex-1 overflow-hidden relative flex flex-col">
           {/* Close Button (ESC) */}
           <button
             type="button"
@@ -789,46 +789,53 @@ export const ChannelSettingsPage = () => {
             <span className="text-[10px] font-medium uppercase tracking-wider">ESC</span>
           </button>
 
-          {/* Content */}
-          <div className="p-6 pr-16">
-            <h2 className="text-xl font-medium mb-1">{navItems.find((n) => n.id === activeTab)?.label}</h2>
-            <p className="text-sm text-muted-foreground mb-6">
-              {activeTab === "overview" && (isCategory ? "Basic category information" : "Basic channel information")}
-              {activeTab === "settings" &&
-                (isCategory ? "Category configuration options" : "Channel configuration options")}
-              {activeTab === "members" && "Manage who can access this private channel"}
-              {activeTab === "permissions" &&
-                (isCategory ? "Control category access and abilities" : "Control channel access and abilities")}
-            </p>
-
-            <div className="max-w-3xl">
-              {/* Tab Content */}
-              {isCategory ? renderCategoryContent() : renderChannelContent()}
-
-              {/* Save Button for overview and settings (channel) */}
-              {showSaveButton && (
-                <div className="flex gap-3 pt-6 mt-6 border-t border-border/50">
-                  <Button type="button" variant="outline" onClick={handleClose} className="h-11 rounded-xl px-8">
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleSubmit}
-                    disabled={isSubmitting || !name.trim()}
-                    className="h-11 rounded-xl px-8"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      "Save Changes"
-                    )}
-                  </Button>
-                </div>
-              )}
+          {activeTab === "permissions" ? (
+            /* Permissions tab renders full-bleed with its own master/detail layout */
+            <div className="flex-1 min-h-0 pr-16">
+              {isCategory ? categoryPermissionsContent : channelPermissionsContent}
             </div>
-          </div>
+          ) : (
+            /* Other tabs: titled scrollable content */
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-6 pr-16">
+                <h2 className="text-xl font-medium mb-1">{navItems.find((n) => n.id === activeTab)?.label}</h2>
+                <p className="text-sm text-muted-foreground mb-6">
+                  {activeTab === "overview" && (isCategory ? "Basic category information" : "Basic channel information")}
+                  {activeTab === "settings" &&
+                    (isCategory ? "Category configuration options" : "Channel configuration options")}
+                  {activeTab === "members" && "Manage who can access this private channel"}
+                </p>
+
+                <div className="max-w-3xl">
+                  {/* Tab Content */}
+                  {isCategory ? renderCategoryContent() : renderChannelContent()}
+
+                  {/* Save Button for overview and settings (channel) */}
+                  {showSaveButton && (
+                    <div className="flex gap-3 pt-6 mt-6 border-t border-border/50">
+                      <Button type="button" variant="outline" onClick={handleClose} className="h-11 rounded-xl px-8">
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleSubmit}
+                        disabled={isSubmitting || !name.trim()}
+                        className="h-11 rounded-xl px-8"
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          "Save Changes"
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
