@@ -7,7 +7,7 @@ type IconComponent = React.FC<IconProps>;
 
 const mimeIconMap: Record<string, IconComponent> = {
  "application/pdf": FileText,
- "text/plain": FileType,
+ "text/plain": FileText,
  "application/json": FileCode,
  "application/msword": FileText,
  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": FileText,

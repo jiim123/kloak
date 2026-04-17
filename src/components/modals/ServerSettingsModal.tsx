@@ -376,7 +376,7 @@ export const ServerSettingsModal = () => {
  className="text-[10px] sm:text-xs h-8 px-2 sm:px-3"
  title="Edit Role"
  >
- <Edit2 className="w-3 h-3" />
+ <PencilSimple className="w-3 h-3" />
  </Button>
  {role.name !== "@everyone" && (
  <Button
@@ -2096,7 +2096,7 @@ export const ServerSettingsModal = () => {
  onClick={() => handleEditRole(role)}
  className="h-7 px-2 rounded-lg"
  >
- <Edit2 className="w-3 h-3" />
+ <PencilSimple className="w-3 h-3" />
  </Button>
  {role.name !== "@everyone" && (
  <Button
@@ -2998,7 +2998,7 @@ export const ServerSettingsModal = () => {
  >
  {editingRole ? (
  <>
- <Edit2 className="w-4 h-4 mr-2" />
+ <PencilSimple className="w-4 h-4 mr-2" />
  Update Role
  </>
  ) : (

@@ -2700,7 +2700,7 @@ export const ServerSettingsPage = () => {
 
  <div className="flex items-center gap-2 pt-2">
  <Button onClick={handleUpdateRole} disabled={!roleName.trim()} size="sm">
- <Edit2 className="w-4 h-4 mr-2" />
+ <PencilSimple className="w-4 h-4 mr-2" />
  FloppyDisk Details
  </Button>
  <Button

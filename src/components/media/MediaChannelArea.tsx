@@ -1,4 +1,4 @@
-import { ChatTeardrop, CircleNotch, DotsThree, FilmStrip, Image, ImageSquare, Images, Link, Play, Trash, UploadSimple, VideoCamera, X } from "@phosphor-icons/react";
+import { ChatTeardrop, CircleNotch, DotsThree, FilmStrip, Image as ImageIcon, ImageSquare, Images, Link, Play, Trash, UploadSimple, VideoCamera, X } from "@phosphor-icons/react";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -645,7 +645,7 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
  className="border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
  onClick={() => fileInputRef.current?.click()}
  >
- <Image className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
+ <ImageIcon className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
  <p className="text-sm text-muted-foreground">Click to select or drag and drop</p>
  <p className="text-xs text-muted-foreground/70 mt-1">Images up to 3MB · Videos up to 10MB</p>
  <p className="text-xs text-muted-foreground/50 mt-1">

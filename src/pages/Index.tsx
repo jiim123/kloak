@@ -273,7 +273,7 @@ const Index = () => {
  contrastSub: "65, 10, 10, 0.6",
  },
  {
- icon: KeySquare,
+ icon: Key,
  title: "Secret Key Auth",
  description:
  "No email, phone, or password. One cryptographic key is all you need. Generated on your device, hashed before it ever touches a server.",
