@@ -187,7 +187,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
  const navItems = [
  { id: "account", label: "Account", icon: Key },
- { id: "profile", label: "Profile", icon: User },
+ { id: "profile", label: "Profile", icon: UserIcon },
  { id: "privacy", label: "Privacy", icon: Shield },
  { id: "voice", label: "Voice & Audio", icon: Microphone },
  { id: "notifications", label: "Notifications", icon: Bell },
