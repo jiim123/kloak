@@ -44,8 +44,8 @@ export const ChannelInfoModal = () => {
  const domains = channel.allowed_link_domains;
  items.push({
  label: domains?.length
- ? `Link Blocking (allowed: ${domains.join(", ")})`
- : "Link Blocking",
+ ? `LinkIcon Blocking (allowed: ${domains.join(", ")})`
+ : "LinkIcon Blocking",
  });
  }
  if (channel.block_attachments) items.push({ label: "Attachments Disabled" });

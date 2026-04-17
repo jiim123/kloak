@@ -208,8 +208,8 @@ export const InviteModal = () => {
  className="w-full h-11 rounded-xl"
  disabled={!inviteLink}
  >
- {linkCopied ? <Check className="w-4 h-4 mr-2" /> : <Link className="w-4 h-4 mr-2" />}
- Copy Invite Link
+ {linkCopied ? <Check className="w-4 h-4 mr-2" /> : <LinkIcon className="w-4 h-4 mr-2" />}
+ Copy Invite LinkIcon
  </Button>
  </div>
  </div>

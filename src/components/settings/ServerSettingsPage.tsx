@@ -102,7 +102,7 @@ const getRoleIcon = (role: ServerRole) => {
  case "moderator":
  return <Shield className="w-4 h-4 text-blue-500" />;
  default:
- return <User className="w-4 h-4 text-muted-foreground" />;
+ return <UserIcon className="w-4 h-4 text-muted-foreground" />;
  }
 };
 
@@ -1736,7 +1736,7 @@ export const ServerSettingsPage = () => {
 
  try {
  await kickMember(server.id, member.user_id);
- toast.success(`${member.user?.username || "User"} has been kicked`);
+ toast.success(`${member.user?.username || "UserIcon"} has been kicked`);
  } catch (error: any) {
  toast.error(error?.message || "Failed to kick member");
  }
@@ -1747,7 +1747,7 @@ export const ServerSettingsPage = () => {
 
  try {
  await banMember(server.id, member.user_id);
- toast.success(`${member.user?.username || "User"} has been banned`);
+ toast.success(`${member.user?.username || "UserIcon"} has been banned`);
  } catch (error: any) {
  toast.error(error?.message || "Failed to ban member");
  }
@@ -1961,10 +1961,10 @@ export const ServerSettingsPage = () => {
  </>
  )}
 
- {/* User Management Section */}
+ {/* UserIcon Management Section */}
  <div className="px-3 pt-4 pb-1.5 w-full">
  <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">
- User Management
+ UserIcon Management
  </span>
  </div>
  <TabsTrigger
@@ -1979,7 +1979,7 @@ export const ServerSettingsPage = () => {
  value="invites"
  className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-secondary/60 data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
  >
- <Link className="w-4 h-4" />
+ <LinkIcon className="w-4 h-4" />
  Invites
  </TabsTrigger>
  )}
@@ -2265,13 +2265,13 @@ export const ServerSettingsPage = () => {
  </div>
  )}
 
- {/* User Messages */}
+ {/* UserIcon Messages */}
  {canManageServer && (
  <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
- <Label className="text-sm font-medium">User Messages</Label>
+ <Label className="text-sm font-medium">UserIcon Messages</Label>
 
  <div className="flex items-center justify-between gap-4">
- <Label className="text-sm text-muted-foreground">User Joined Messages</Label>
+ <Label className="text-sm text-muted-foreground">UserIcon Joined Messages</Label>
  <Select
  value={systemChannelJoinId || "none"}
  onValueChange={(value) => setSystemChannelJoinId(value === "none" ? "" : value)}
@@ -2297,7 +2297,7 @@ export const ServerSettingsPage = () => {
  </div>
 
  <div className="flex items-center justify-between gap-4">
- <Label className="text-sm text-muted-foreground">User Left Messages</Label>
+ <Label className="text-sm text-muted-foreground">UserIcon Left Messages</Label>
  <Select
  value={systemChannelLeaveId || "none"}
  onValueChange={(value) => setSystemChannelLeaveId(value === "none" ? "" : value)}
@@ -3050,7 +3050,7 @@ export const ServerSettingsPage = () => {
  </ScrollArea>
  ) : (
  <div className="flex flex-col items-center justify-center py-8 text-center">
- <Link className="w-12 h-12 text-muted-foreground/50 mb-3" />
+ <LinkIcon className="w-12 h-12 text-muted-foreground/50 mb-3" />
  <p className="text-sm text-muted-foreground">No invites created yet</p>
  <p className="text-xs text-muted-foreground mt-1">Create an invite to share a join link.</p>
  </div>
@@ -3136,7 +3136,7 @@ export const ServerSettingsPage = () => {
  onClick={() => openModal("import-emoji-pack")}
  className="bg-white/20 hover:bg-white/30 text-white border-0"
  >
- <Link className="w-4 h-4 mr-2" />
+ <LinkIcon className="w-4 h-4 mr-2" />
  Import Pack
  </Button>
  </div>

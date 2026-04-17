@@ -1,4 +1,4 @@
-import { CaretLeft, DotsThree, Flag, Phone, Prohibit, User as UserIcon } from "@phosphor-icons/react";
+import { CaretLeft, DotsThree, Flag, Phone, Prohibit, User as User } from "@phosphor-icons/react";
 import { useState, type MouseEvent } from "react";
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -85,7 +85,7 @@ export const DMHeader = ({ otherUser }: DMHeaderProps) => {
  return (
  <div className="w-full bg-card rounded-[10px] border border-border/50 sticky top-0 z-40" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
  <div className="flex items-center justify-between px-4 py-3">
- {/* Left side - Back button (mobile) + User info */}
+ {/* Left side - Back button (mobile) + UserIcon info */}
  <div className="flex items-center gap-2 min-w-0 flex-1">
  <button
  onClick={() => setMobileSidebarOpen(true)}
@@ -139,7 +139,7 @@ export const DMHeader = ({ otherUser }: DMHeaderProps) => {
  className="cursor-pointer"
  >
  <Phone className="w-4 h-4" />
- Call User
+ Call UserIcon
  </DropdownMenuItem>
 
  <DropdownMenuSeparator />
@@ -149,7 +149,7 @@ export const DMHeader = ({ otherUser }: DMHeaderProps) => {
  className="cursor-pointer"
  >
  <Flag className="w-4 h-4" />
- Report User
+ Report UserIcon
  </DropdownMenuItem>
 
  <DropdownMenuItem
@@ -157,7 +157,7 @@ export const DMHeader = ({ otherUser }: DMHeaderProps) => {
  className="cursor-pointer text-destructive focus:text-destructive"
  >
  <Prohibit className="w-4 h-4" />
- Block User
+ Block UserIcon
  </DropdownMenuItem>
  </DropdownMenuContent>
  </DropdownMenu>

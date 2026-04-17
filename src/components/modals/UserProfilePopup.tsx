@@ -1,4 +1,4 @@
-import { Calendar as CalendarIcon, ChatCircle, Check, CircleNotch, Clock, Plus, Prohibit, User as UserIcon, UserMinus, UserPlus, X } from "@phosphor-icons/react";
+import { Calendar as CalendarIcon, ChatCircle, Check, CircleNotch, Clock, Plus, Prohibit, User as User, UserMinus, UserPlus, X } from "@phosphor-icons/react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { format } from "date-fns";
 
@@ -211,7 +211,7 @@ export const UserProfilePopup = () => {
  } = useFriendStore();
  const { openConversation, setCurrentConversation } = useDMStore();
 
- const [profileUser, setProfileUser] = useState<UserIcon | null>(null);
+ const [profileUser, setProfileUser] = useState<User | null>(null);
  const [userBadges, setUserBadges] = useState<Badge[]>([]);
  const [isLoading, setIsLoading] = useState(false);
  const [sharedServers, setSharedServers] = useState<typeof servers>([]);
@@ -776,7 +776,7 @@ export const UserProfilePopup = () => {
  className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium"
  style={{ backgroundColor: divider }}
  >
- <Calendar className="h-3 w-3" />
+ <CalendarIcon className="h-3 w-3" />
  {joinedAt}
  </span>
  </div>

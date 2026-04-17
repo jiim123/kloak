@@ -446,7 +446,7 @@ export const ServerSettingsModal = () => {
  if (canManageInvites) {
  categories.push({
  label: "Integrations",
- items: [{ id: "invites", label: "Invites", icon: Link }],
+ items: [{ id: "invites", label: "Invites", icon: LinkIcon }],
  });
  }
 
@@ -1209,7 +1209,7 @@ export const ServerSettingsModal = () => {
 
  try {
  await kickMember(server.id, member.user_id);
- toast.success(`${member.user?.username || "User"} has been kicked`);
+ toast.success(`${member.user?.username || "UserIcon"} has been kicked`);
  } catch (error) {
  toast.error("Failed to kick member");
  }
@@ -1220,7 +1220,7 @@ export const ServerSettingsModal = () => {
 
  try {
  await banMember(server.id, member.user_id);
- toast.success(`${member.user?.username || "User"} has been banned`);
+ toast.success(`${member.user?.username || "UserIcon"} has been banned`);
  } catch (error) {
  toast.error("Failed to ban member");
  }
@@ -1675,7 +1675,7 @@ export const ServerSettingsModal = () => {
  {copiedInviteId === invite.id ? (
  <Check className="w-4 h-4" />
  ) : (
- <Link className="w-4 h-4" />
+ <LinkIcon className="w-4 h-4" />
  )}
  </Button>
  <Button
@@ -1693,7 +1693,7 @@ export const ServerSettingsModal = () => {
  </div>
  ) : (
  <div className="flex flex-col items-center justify-center py-8 text-center">
- <Link className="w-10 h-10 text-muted-foreground mb-3" />
+ <LinkIcon className="w-10 h-10 text-muted-foreground mb-3" />
  <p className="text-sm text-muted-foreground">No active invites</p>
  </div>
  )}
@@ -2745,7 +2745,7 @@ export const ServerSettingsModal = () => {
  {copiedInviteId === invite.id ? (
  <Check className="w-4 h-4" />
  ) : (
- <Link className="w-4 h-4" />
+ <LinkIcon className="w-4 h-4" />
  )}
  </Button>
  <Button
@@ -2764,7 +2764,7 @@ export const ServerSettingsModal = () => {
  </div>
  ) : (
  <div className="flex flex-col items-center justify-center py-10 text-center">
- <Link className="w-10 h-10 text-muted-foreground mb-3" />
+ <LinkIcon className="w-10 h-10 text-muted-foreground mb-3" />
  <p className="text-sm text-muted-foreground">No active invites</p>
  </div>
  )}
@@ -3142,7 +3142,7 @@ export const ServerSettingsModal = () => {
  onClick={() => openModal("import-emoji-pack")}
  className="h-9 flex-shrink-0"
  >
- <Link className="w-4 h-4 mr-2" />
+ <LinkIcon className="w-4 h-4 mr-2" />
  Import Pack
  </Button>
  </div>

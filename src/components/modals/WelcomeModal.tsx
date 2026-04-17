@@ -117,7 +117,7 @@ export const WelcomeModal = ({ open, onClose }: WelcomeModalProps) => {
  </div>
  </div>
 
- {/* FAQ Link - Subtle Card */}
+ {/* FAQ LinkIcon - Subtle Card */}
  <div className="flex items-center gap-3 p-3 rounded-xl bg-secondary/20 border border-border/20">
  <div className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center flex-shrink-0">
  <Question className="w-4 h-4 text-muted-foreground" />

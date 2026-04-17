@@ -59,7 +59,7 @@ import { motion } from "framer-motion";
  },
  {
  q: "What happens to my content if I leave?",
- a: "Your messages may remain in servers after account deletion but will show as from a 'Deleted User.' This preserves conversation context for other participants while removing your personal association with the content.",
+ a: "Your messages may remain in servers after account deletion but will show as from a 'Deleted UserIcon.' This preserves conversation context for other participants while removing your personal association with the content.",
  },
  ],
  },
@@ -69,7 +69,7 @@ import { motion } from "framer-motion";
  questions: [
  {
  q: "What happens when you delete your account?",
- a: "You can delete your account at any time from User Settings. When you do: your profile and personal data are permanently deleted, your messages remain in servers but show as from 'Deleted User,' and servers you own may be transferred or deleted. This action is immediate and irreversible. We don't keep backups of deleted accounts.",
+ a: "You can delete your account at any time from UserIcon Settings. When you do: your profile and personal data are permanently deleted, your messages remain in servers but show as from 'Deleted UserIcon,' and servers you own may be transferred or deleted. This action is immediate and irreversible. We don't keep backups of deleted accounts.",
  },
  {
  q: "Can Kloak terminate my account?",

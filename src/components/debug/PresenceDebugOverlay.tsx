@@ -1,4 +1,4 @@
-import { User as UserIcon, X } from "@phosphor-icons/react";
+import { User as User, X } from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from 'react';
 
 import { cn } from '@/lib/utils';
@@ -32,7 +32,7 @@ export function PresenceDebugOverlay() {
  }
  });
 
- const [serverUser, setServerUser] = useState<UserIcon | null>(null);
+ const [serverUser, setServerUser] = useState<User | null>(null);
  const [lastFetchAt, setLastFetchAt] = useState<number | null>(null);
  const [fetchError, setFetchError] = useState<string | null>(null);
 

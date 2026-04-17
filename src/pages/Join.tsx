@@ -216,7 +216,7 @@ const categories: CategoryData[] = [
  ],
  },
  {
- icon: Image,
+ icon: ImageIcon,
  title: "Icon & Asset Designer",
  description:
  "Create Kloak's custom visual assets: emoji sets, avatar decorations, badges, rank icons, achievement graphics, and any illustrative elements used across the platform and marketing materials. Every asset must read clearly at sizes ranging from 16 pixels to full resolution.",

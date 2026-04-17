@@ -340,7 +340,7 @@ export const ChannelSettingsPage = () => {
  {channel?.type === "voice" && (
  <div className="space-y-3">
  <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
- Voice User Limit
+ Voice UserIcon Limit
  </Label>
  <div className="p-3 rounded-xl border border-border/50 bg-secondary/20 flex items-start gap-2.5">
  <Users className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
@@ -439,7 +439,7 @@ export const ChannelSettingsPage = () => {
  {/* Content & Media Restrictions */}
  <SettingsGroup title="Content & Media Restrictions">
  <ToggleCard
- icon={Link}
+ icon={LinkIcon}
  label="Block Links"
  description="Only admins can post URLs in this channel"
  checked={blockLinks}

@@ -274,8 +274,8 @@ export const ChannelContextDrawer = ({
  <DrawerSeparator />
 
  {/* Sharing submenu */}
- <DrawerSubmenu icon={Link} label="Sharing">
- <DrawerItem icon={Link} label="Copy Channel Link" onClick={() => act(onCopyLink)} />
+ <DrawerSubmenu icon={LinkIcon} label="Sharing">
+ <DrawerItem icon={LinkIcon} label="Copy Channel LinkIcon" onClick={() => act(onCopyLink)} />
  <DrawerItem icon={Copy} label="Copy Channel ID" onClick={handleCopyChannelId} />
  </DrawerSubmenu>
 
@@ -338,8 +338,8 @@ export const ChannelContextDrawer = ({
  <DrawerSeparator />
 
  {/* Sharing submenu */}
- <DrawerSubmenu icon={Link} label="Sharing">
- <DrawerItem icon={Link} label="Copy Channel Link" onClick={() => act(onCopyLink)} />
+ <DrawerSubmenu icon={LinkIcon} label="Sharing">
+ <DrawerItem icon={LinkIcon} label="Copy Channel LinkIcon" onClick={() => act(onCopyLink)} />
  <DrawerItem icon={Copy} label="Copy Channel ID" onClick={handleCopyChannelId} />
  </DrawerSubmenu>
  </>

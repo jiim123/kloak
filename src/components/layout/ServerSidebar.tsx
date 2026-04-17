@@ -566,7 +566,7 @@ const UnreadDMShortcut = memo(
  const unreadCount = getUnreadCount(conv.id);
  const isGroup = conv.is_group;
  const otherUser = conv.other_user;
- const displayName = isGroup ? conv.name || "Group Chat" : otherUser?.display_name || otherUser?.username || "User";
+ const displayName = isGroup ? conv.name || "Group Chat" : otherUser?.display_name || otherUser?.username || "UserIcon";
  const avatarUrl = isGroup ? null : otherUser?.avatar_url;
  const initials = isGroup ? conv.name?.[0] || "G" : otherUser?.display_name?.[0] || otherUser?.username?.[0] || "?";
 

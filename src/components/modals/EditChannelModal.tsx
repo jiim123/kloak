@@ -403,12 +403,12 @@ export const EditChannelModal = () => {
  />
  </div>
 
- {/* Link Restrictions */}
+ {/* LinkIcon Restrictions */}
  <div className="space-y-3">
- <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Link Restrictions</Label>
+ <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">LinkIcon Restrictions</Label>
 
  <ToggleCard
- icon={Link}
+ icon={LinkIcon}
  label="Block Links"
  description="Only admins can post URLs in this channel"
  checked={blockLinks}

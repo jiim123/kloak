@@ -1,4 +1,4 @@
-import { Camera, CircleNotch, PencilSimple, Plus, Sparkle, Trash, UploadSimple, User as UserIcon, X } from "@phosphor-icons/react";
+import { Camera, CircleNotch, PencilSimple, Plus, Sparkle, Trash, UploadSimple, User as User, X } from "@phosphor-icons/react";
 import { useState, useRef, useEffect, useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -145,7 +145,7 @@ export const EditableProfilePreview = ({
  };
 
  // Build preview user with local edits
- const previewUser = useMemo<UserIcon | null>(() => {
+ const previewUser = useMemo<User | null>(() => {
  if (!user) return null;
  return {
  ...user,

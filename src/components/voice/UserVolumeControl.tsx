@@ -1,6 +1,6 @@
 import { ArrowCounterClockwise, SpeakerHigh, SpeakerSlash, User as UserIcon } from "@phosphor-icons/react";
 /**
- * User Volume Control Component
+ * UserIcon Volume Control Component
  * Per-user volume slider for voice channels (context menu)
  */
 

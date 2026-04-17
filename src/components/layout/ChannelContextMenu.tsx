@@ -190,13 +190,13 @@ export const ChannelContextMenu = ({
  {/* Administration submenu */}
  <ContextMenuSub>
  <ContextMenuSubTrigger>
- <Link className="w-4 h-4" />
+ <LinkIcon className="w-4 h-4" />
  Administration
  </ContextMenuSubTrigger>
  <ContextMenuSubContent className="w-52">
  <ContextMenuItem onClick={onCopyLink}>
- <Link className="w-4 h-4" />
- Copy Channel Link
+ <LinkIcon className="w-4 h-4" />
+ Copy Channel LinkIcon
  </ContextMenuItem>
  <ContextMenuItem onClick={handleCopyChannelId}>
  <Copy className="w-4 h-4" />
@@ -291,13 +291,13 @@ export const ChannelContextMenu = ({
  {/* Sharing submenu */}
  <ContextMenuSub>
  <ContextMenuSubTrigger>
- <Link className="w-4 h-4" />
+ <LinkIcon className="w-4 h-4" />
  Sharing
  </ContextMenuSubTrigger>
  <ContextMenuSubContent className="w-48">
  <ContextMenuItem onClick={onCopyLink}>
- <Link className="w-4 h-4" />
- Copy Channel Link
+ <LinkIcon className="w-4 h-4" />
+ Copy Channel LinkIcon
  </ContextMenuItem>
  <ContextMenuItem onClick={handleCopyChannelId}>
  <Copy className="w-4 h-4" />

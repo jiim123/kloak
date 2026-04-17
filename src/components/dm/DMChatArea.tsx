@@ -1,4 +1,4 @@
-import { ArrowDown, Prohibit, User as UserIcon } from "@phosphor-icons/react";
+import { ArrowDown, Prohibit, User as User } from "@phosphor-icons/react";
 import { useEffect, useRef, useState, useCallback, useMemo, useLayoutEffect } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -170,7 +170,7 @@ export const DMChatArea = () => {
  return currentConversation.participants
  .filter((p) => p.user_id !== user?.id)
  .map((p) => p.user)
- .filter((u): u is User => u != null);
+ .filter((u): u is UserIcon => u != null);
  }, [isGroup, currentConversation?.participants, user?.id]);
 
  const getGroupDisplayName = useCallback(() => {

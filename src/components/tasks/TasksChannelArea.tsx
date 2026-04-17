@@ -1,4 +1,4 @@
-import { Check, CheckCircle, Circle, ClipboardText, DotsThree, FileText, Plus, User as UserIcon, UserPlus } from "@phosphor-icons/react";
+import { Check, CheckCircle, Circle, ClipboardText, DotsThree, FileText, Plus, User as User, UserPlus } from "@phosphor-icons/react";
 import { KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 
@@ -499,7 +499,7 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
  return [] as User[];
  }
 
- const byId = new Map<string, User>();
+ const byId = new Map<string, UserIcon>();
 
  members.forEach((member) => {
  if (member.is_banned) return;
@@ -516,7 +516,7 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
  }, [members, currentChannel?.is_private, currentChannelMemberUserIds]);
 
  const selectedAssigneeUsers = useMemo(() => {
- const byId = new Map<string, User>();
+ const byId = new Map<string, UserIcon>();
 
  assignTask?.assignees.forEach((assignee) => {
  if (assignee.user) {
@@ -530,7 +530,7 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
 
  return selectedAssigneeIds
  .map((id) => byId.get(id))
- .filter((entry): entry is User => !!entry);
+ .filter((entry): entry is UserIcon => !!entry);
  }, [assignTask?.assignees, assignableUsers, selectedAssigneeIds]);
 
  const filteredAssignableUsers = useMemo(() => {
