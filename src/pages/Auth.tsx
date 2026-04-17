@@ -615,13 +615,13 @@ const Auth = ({ formOnly = false }: AuthProps) => {
 
  <p className="text-center text-xs text-muted-foreground mt-3">
  By creating an account, you agree to our{" "}
- <LinkIcon to="/terms" className="text-foreground hover:underline">
+ <RouterLink to="/terms" className="text-foreground hover:underline">
  Terms of Service
- </LinkIcon>{" "}
+ </RouterLink>{" "}
  and{" "}
- <LinkIcon to="/privacy" className="text-foreground hover:underline">
+ <RouterLink to="/privacy" className="text-foreground hover:underline">
  Privacy Policy
- </LinkIcon>
+ </RouterLink>
  </p>
  </form>
  )}
@@ -867,13 +867,13 @@ const Auth = ({ formOnly = false }: AuthProps) => {
 
  <p className="text-center text-xs text-muted-foreground mt-3">
  By creating an account, you agree to our{" "}
- <LinkIcon to="/terms" className="text-foreground hover:underline">
+ <RouterLink to="/terms" className="text-foreground hover:underline">
  Terms of Service
- </LinkIcon>{" "}
+ </RouterLink>{" "}
  and{" "}
- <LinkIcon to="/privacy" className="text-foreground hover:underline">
+ <RouterLink to="/privacy" className="text-foreground hover:underline">
  Privacy Policy
- </LinkIcon>
+ </RouterLink>
  </p>
  </form>
  )}
