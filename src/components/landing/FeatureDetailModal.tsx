@@ -1,4 +1,5 @@
-import { X, type Icon } from "@phosphor-icons/react";
+import { X } from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 

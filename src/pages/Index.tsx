@@ -1,4 +1,5 @@
-import { ArrowBendUpLeft, ArrowRight, ChatCircle, ChatsTeardrop, Headphones, Icon, Images, Key, ListChecks, Lock, Megaphone, PaperPlaneTilt, SmileyWink, UserGear, Users, VideoCamera } from "@phosphor-icons/react";
+import { ArrowBendUpLeft, ArrowRight, ChatCircle, ChatsTeardrop, Headphones, Images, Key, ListChecks, Lock, Megaphone, PaperPlaneTilt, SmileyWink, UserGear, Users, VideoCamera } from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react";
 import { lazy, Suspense, useRef, useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 

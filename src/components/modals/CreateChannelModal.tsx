@@ -1,4 +1,5 @@
-import { ChatTeardrop, CircleNotch, ClipboardText, FilmStrip, Hash, Megaphone, SpeakerHigh, type Icon } from "@phosphor-icons/react";
+import { ChatTeardrop, CircleNotch, ClipboardText, FilmStrip, Hash, Megaphone, SpeakerHigh } from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react";
 import { useState, useEffect } from "react";
 import { useUIStore } from "@/stores/uiStore";
 import { useServerStore } from "@/stores/serverStore";

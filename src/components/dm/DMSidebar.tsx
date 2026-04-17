@@ -1,4 +1,4 @@
-import { ChatTeardrop, MagnifyingGlass, Prohibit, Radar, SignOut, User, UserPlus, Users } from "@phosphor-icons/react";
+import { ChatTeardrop, MagnifyingGlass, Prohibit, Scan, SignOut, User, UserPlus, Users } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -149,7 +149,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
  onShowExploreChange(true);
  }}
  >
- <Radar className="w-5 h-5" />
+ <Scan className="w-5 h-5" />
  <span>Explore</span>
  </Button>
  </div>

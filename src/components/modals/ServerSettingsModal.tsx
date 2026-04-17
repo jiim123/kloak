@@ -1,4 +1,5 @@
-import { Check, CircleNotch, Crown, DotsSixVertical, Gear, Icon, Key, Link, MagnifyingGlass, Palette, PencilSimple, Plus, Prohibit, Shield, Smiley, Trash, UploadSimple, User, Users, X } from "@phosphor-icons/react";
+import { Check, CircleNotch, Crown, DotsSixVertical, Gear, Key, Link, MagnifyingGlass, Palette, PencilSimple, Plus, Prohibit, Shield, Smiley, Trash, UploadSimple, User, Users, X } from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { FluentEmoji } from "@/components/ui/FluentEmoji";
 import { useForm } from "react-hook-form";

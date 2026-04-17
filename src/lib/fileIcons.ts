@@ -1,7 +1,8 @@
 
 
 
-import { File, FileArchive, FileCode, FileImage, FileText, FileXls, FilmStrip, IconProps, MusicNote } from "@phosphor-icons/react";
+import { File, FileArchive, FileCode, FileImage, FileText, FileXls, FilmStrip, MusicNote } from "@phosphor-icons/react";
+import type { IconProps } from "@phosphor-icons/react";
 type IconComponent = React.FC<IconProps>;
 
 const mimeIconMap: Record<string, IconComponent> = {
