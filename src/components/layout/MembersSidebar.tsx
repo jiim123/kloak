@@ -1,23 +1,22 @@
-import {
-  CaretDown,
-  ChatTeardrop,
-  Check,
-  CircleNotch,
-  Crown,
-  ListChecks,
-  MagnifyingGlass,
-  PencilLine,
-  Prohibit,
-  Shield,
-  SpeakerSlash,
-  UserMinus,
-  Users,
-  X,
-} from "@phosphor-icons/react";
 import { useMemo, useEffect, memo, useState, useRef, forwardRef, useCallback } from "react";
 import { ViewportList } from "react-viewport-list";
 import { cn, pickFirstNonBlank } from "@/lib/utils";
-
+import {
+  Crown,
+  MessageSquare,
+  Edit3,
+  UserX,
+  Ban,
+  VolumeX,
+  Shield,
+  Users,
+  ChevronDown,
+  Loader2,
+  ListChecks,
+  X,
+  Check,
+  Search,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -285,7 +284,7 @@ const MemberListItemContent = forwardRef<HTMLDivElement, MemberListItemContentPr
               {displayName}
             </span>
             {member.user?.is_bot && <BotTag className="flex-shrink-0" />}
-            {member.is_muted && <SpeakerSlash className="w-3 h-3 text-muted-foreground/50 flex-shrink-0" />}
+            {member.is_muted && <VolumeX className="w-3 h-3 text-muted-foreground/50 flex-shrink-0" />}
           </div>
 
           {member.user?.custom_status && (
@@ -356,7 +355,7 @@ EmptyState.displayName = "EmptyState";
 // FIX #7: Extract offline loading indicator — static, no need to re-create JSX
 const OfflineLoadingRow = memo(() => (
   <div className="px-3 py-2 text-[11px] text-muted-foreground flex items-center gap-2">
-    <CircleNotch className="w-3.5 h-3.5 animate-spin" />
+    <Loader2 className="w-3.5 h-3.5 animate-spin" />
     Loading offline members...
   </div>
 ));
@@ -636,7 +635,7 @@ export const MembersSidebar = () => {
     openModal("confirmAction", {
       action: "massBan",
       members: selectedMembers,
-      title: `Prohibit ${massBanSelected.size} member${massBanSelected.size > 1 ? "s" : ""}`,
+      title: `Ban ${massBanSelected.size} member${massBanSelected.size > 1 ? "s" : ""}`,
       message: `Are you sure you want to ban ${massBanSelected.size} member${massBanSelected.size > 1 ? "s" : ""} from the server?`,
     });
     exitMassBanMode();
@@ -759,7 +758,7 @@ export const MembersSidebar = () => {
       openModal("confirmAction", {
         action: "ban",
         member,
-        title: `Prohibit ${member.nickname || member.user?.username}`,
+        title: `Ban ${member.nickname || member.user?.username}`,
         message: `Are you sure you want to ban ${member.nickname || member.user?.username} from the server? They will not be able to rejoin.`,
       });
     },
@@ -900,13 +899,13 @@ export const MembersSidebar = () => {
           <ContextMenuTrigger asChild>{content}</ContextMenuTrigger>
           <ContextMenuContent className="w-52 z-[60]">
             <ContextMenuItem onClick={() => handleMessage(member)}>
-              <ChatTeardrop className="w-4 h-4" />
+              <MessageSquare className="w-4 h-4" />
               Message
             </ContextMenuItem>
 
             {canChangeNickname && (
               <ContextMenuItem onClick={() => handleChangeNickname(member)}>
-                <PencilLine className="w-4 h-4" />
+                <Edit3 className="w-4 h-4" />
                 Change Nickname
               </ContextMenuItem>
             )}
@@ -916,7 +915,7 @@ export const MembersSidebar = () => {
                 <ContextMenuSeparator />
                 {canKick && (
                   <ContextMenuItem onClick={() => handleKick(member)} className="text-orange-400 focus:text-orange-400">
-                    <UserMinus className="w-4 h-4" />
+                    <UserX className="w-4 h-4" />
                     Kick
                   </ContextMenuItem>
                 )}
@@ -925,8 +924,8 @@ export const MembersSidebar = () => {
                     onClick={() => handleBan(member)}
                     className="text-destructive focus:text-destructive"
                   >
-                    <Prohibit className="w-4 h-4" />
-                    Prohibit
+                    <Ban className="w-4 h-4" />
+                    Ban
                   </ContextMenuItem>
                 )}
                 {canBan && (
@@ -938,7 +937,7 @@ export const MembersSidebar = () => {
                     className="text-destructive focus:text-destructive"
                   >
                     <ListChecks className="w-4 h-4" />
-                    Select for Mass Prohibit
+                    Select for Mass Ban
                   </ContextMenuItem>
                 )}
               </>
@@ -1138,7 +1137,7 @@ export const MembersSidebar = () => {
               className="w-full flex items-center gap-2 px-3 py-2 hover:bg-secondary/40 transition-colors mt-2"
               onClick={handleToggleOfflineSection}
             >
-              <CaretDown
+              <ChevronDown
                 className={cn(
                   "w-3.5 h-3.5 text-muted-foreground transition-transform",
                   isOfflineExpanded && "rotate-180",
@@ -1216,7 +1215,7 @@ export const MembersSidebar = () => {
         ) : (
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
-              <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50 pointer-events-none" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search members..."
@@ -1273,7 +1272,7 @@ export const MembersSidebar = () => {
               disabled={massBanSelected.size === 0}
               className="px-3 py-1.5 text-xs font-medium bg-white text-destructive rounded-lg hover:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Prohibit {massBanSelected.size > 0 ? massBanSelected.size : ""}
+              Ban {massBanSelected.size > 0 ? massBanSelected.size : ""}
             </button>
           </div>
         </div>

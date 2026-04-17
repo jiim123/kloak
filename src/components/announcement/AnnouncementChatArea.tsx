@@ -1,4 +1,3 @@
-import { Clock, PushPin } from "@phosphor-icons/react";
 import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { ChannelHeader } from "@/components/chat/ChannelHeader";
 import { MessageList } from "@/components/chat/MessageList";
@@ -11,7 +10,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { useTyping } from "@/hooks/useTyping";
 import { useSwipeGestureRef } from "@/hooks/useSwipeGesture";
 import { useIsMobile } from "@/hooks/use-mobile";
-
+import { Pin, Clock3 } from "lucide-react";
 import { parseTextContent } from "@/components/chat/MessageContent";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
 import { useUserCacheStore } from "@/stores/userCacheStore";
@@ -22,76 +21,76 @@ import type { Message } from "@/types";
 const EMPTY_MESSAGES: Message[] = [];
 
 const formatSlowmodeDuration = (totalSeconds: number): string => {
- const minutes = Math.floor(totalSeconds / 60);
- const seconds = totalSeconds % 60;
- if (minutes <= 0) return `${seconds}s`;
- return `${minutes}m ${seconds}s`;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes <= 0) return `${seconds}s`;
+  return `${minutes}m ${seconds}s`;
 };
 
 // ── Pinned‑message bar ──
 
 interface PinnedBarProps {
- pinnedMessages: any[];
- userId: string | undefined;
- customEmojiMap: Record<string, string>;
- channelId: string;
- openModal: (modal: string, data?: any) => void;
+  pinnedMessages: any[];
+  userId: string | undefined;
+  customEmojiMap: Record<string, string>;
+  channelId: string;
+  openModal: (modal: string, data?: any) => void;
 }
 
 const AnnouncementPinnedMessageBar = React.memo(function AnnouncementPinnedMessageBar({
- pinnedMessages,
- userId,
- customEmojiMap,
- channelId,
- openModal,
+  pinnedMessages,
+  userId,
+  customEmojiMap,
+  channelId,
+  openModal,
 }: PinnedBarProps) {
- if (pinnedMessages.length === 0) return null;
+  if (pinnedMessages.length === 0) return null;
 
- const latest = pinnedMessages[0];
- const latestUser = useUserCacheStore.getState().getUser(latest.user_id) ?? latest.user;
+  const latest = pinnedMessages[0];
+  const latestUser = useUserCacheStore.getState().getUser(latest.user_id) ?? latest.user;
 
- const rawContent = (latest.content || "")
- .replace(/```[\s\S]*?```/g, "[code]")
- .replace(/`[^`]+`/g, "[code]")
- .replace(/\n/g, " ")
- .trim();
+  const rawContent = (latest.content || "")
+    .replace(/```[\s\S]*?```/g, "[code]")
+    .replace(/`[^`]+`/g, "[code]")
+    .replace(/\n/g, " ")
+    .trim();
 
- const truncatedContent = rawContent.slice(0, 100);
- const emojiMap = useMemo(() => new Map(Object.entries(customEmojiMap)), [customEmojiMap]);
- const parsedSnippet = parseTextContent(truncatedContent, userId, undefined, emojiMap);
- const hasAttachments = (latest.attachments?.length ?? 0) > 0;
- const isNew = latest.created_at && Date.now() - new Date(latest.created_at).getTime() < 24 * 60 * 60 * 1000;
+  const truncatedContent = rawContent.slice(0, 100);
+  const emojiMap = useMemo(() => new Map(Object.entries(customEmojiMap)), [customEmojiMap]);
+  const parsedSnippet = parseTextContent(truncatedContent, userId, undefined, emojiMap);
+  const hasAttachments = (latest.attachments?.length ?? 0) > 0;
+  const isNew = latest.created_at && Date.now() - new Date(latest.created_at).getTime() < 24 * 60 * 60 * 1000;
 
- const handleSeeAll = useCallback(() => openModal("pinned-messages", { channelId }), [openModal, channelId]);
+  const handleSeeAll = useCallback(() => openModal("pinned-messages", { channelId }), [openModal, channelId]);
 
- return (
- <div className="flex items-center gap-2 px-4 py-2 bg-muted/50 border-b border-border/50 flex-shrink-0 min-w-0 overflow-hidden">
- <PushPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
- <Avatar className="w-5 h-5 flex-shrink-0">
- <AvatarImage src={latestUser?.avatar_url} />
- <AvatarFallback style={{ backgroundColor: latestUser?.banner_color || "#5865F2" }} className="text-[10px]">
- {latestUser?.username?.[0]?.toUpperCase() || "?"}
- </AvatarFallback>
- </Avatar>
- {isNew && (
- <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-primary/20 text-primary flex-shrink-0">
- new
- </span>
- )}
- <span
- className="text-sm text-muted-foreground truncate min-w-0 flex-1 inline-flex items-center gap-1 [&_img]:w-4 [&_img]:h-4 [&_img]:inline-block [&_img]:align-middle"
- dangerouslySetInnerHTML={{ __html: parsedSnippet || "Pinned message" }}
- />
- {hasAttachments && (
- <span className="text-sm text-muted-foreground/80 flex-shrink-0">
- {latest.attachments!.length === 1 ? "1 attachment" : `${latest.attachments!.length} attachments`}
- </span>
- )}
- <Button variant="secondary" size="sm" className="rounded-full flex-shrink-0 text-xs" onClick={handleSeeAll}>
- See All Pins
- </Button>
- </div>
- );
+  return (
+    <div className="flex items-center gap-2 px-4 py-2 bg-muted/50 border-b border-border/50 flex-shrink-0 min-w-0 overflow-hidden">
+      <Pin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+      <Avatar className="w-5 h-5 flex-shrink-0">
+        <AvatarImage src={latestUser?.avatar_url} />
+        <AvatarFallback style={{ backgroundColor: latestUser?.banner_color || "#5865F2" }} className="text-[10px]">
+          {latestUser?.username?.[0]?.toUpperCase() || "?"}
+        </AvatarFallback>
+      </Avatar>
+      {isNew && (
+        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-primary/20 text-primary flex-shrink-0">
+          new
+        </span>
+      )}
+      <span
+        className="text-sm text-muted-foreground truncate min-w-0 flex-1 inline-flex items-center gap-1 [&_img]:w-4 [&_img]:h-4 [&_img]:inline-block [&_img]:align-middle"
+        dangerouslySetInnerHTML={{ __html: parsedSnippet || "Pinned message" }}
+      />
+      {hasAttachments && (
+        <span className="text-sm text-muted-foreground/80 flex-shrink-0">
+          {latest.attachments!.length === 1 ? "1 attachment" : `${latest.attachments!.length} attachments`}
+        </span>
+      )}
+      <Button variant="secondary" size="sm" className="rounded-full flex-shrink-0 text-xs" onClick={handleSeeAll}>
+        See All Pins
+      </Button>
+    </div>
+  );
 });
 
 // ── Selectors ──
@@ -106,133 +105,133 @@ const selectOpenModal = (s: ReturnType<typeof useUIStore.getState>) => s.openMod
 // ── Main component ──
 
 interface AnnouncementChatAreaProps {
- showHeader?: boolean;
+  showHeader?: boolean;
 }
 
 export const AnnouncementChatArea = ({ showHeader = true }: AnnouncementChatAreaProps) => {
- const currentChannel = useServerStore(selectCurrentChannel);
- const currentServer = useServerStore(selectCurrentServer);
- const user = useAuthStore(selectUser);
- const setMobileSidebarOpen = useUIStore(selectSetMobileSidebarOpen);
- const setMemberSidebarOpen = useUIStore(selectSetMemberSidebarOpen);
- const openModal = useUIStore(selectOpenModal);
+  const currentChannel = useServerStore(selectCurrentChannel);
+  const currentServer = useServerStore(selectCurrentServer);
+  const user = useAuthStore(selectUser);
+  const setMobileSidebarOpen = useUIStore(selectSetMobileSidebarOpen);
+  const setMemberSidebarOpen = useUIStore(selectSetMemberSidebarOpen);
+  const openModal = useUIStore(selectOpenModal);
 
- const channelId = currentChannel?.id ?? null;
- const channelName = currentChannel?.name ?? "";
- const serverId = currentServer?.id ?? null;
- const isGhostMode = currentChannel?.ghost_mode ?? false;
+  const channelId = currentChannel?.id ?? null;
+  const channelName = currentChannel?.name ?? "";
+  const serverId = currentServer?.id ?? null;
+  const isGhostMode = currentChannel?.ghost_mode ?? false;
 
- const channelMessages = useMessageStore((s) => {
- if (!channelId) return EMPTY_MESSAGES;
- return s.messagesByChannel[channelId]?.messages ?? EMPTY_MESSAGES;
- });
+  const channelMessages = useMessageStore((s) => {
+    if (!channelId) return EMPTY_MESSAGES;
+    return s.messagesByChannel[channelId]?.messages ?? EMPTY_MESSAGES;
+  });
 
- const { typingUsers, startTyping, stopTyping } = useTyping(isGhostMode ? null : channelId);
+  const { typingUsers, startTyping, stopTyping } = useTyping(isGhostMode ? null : channelId);
 
- const pinnedMessages = useMemo(() => {
- if (channelMessages.length === 0) return EMPTY_MESSAGES;
- return channelMessages
- .filter((m) => m.is_pinned)
- .slice()
- .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
- }, [channelMessages]);
+  const pinnedMessages = useMemo(() => {
+    if (channelMessages.length === 0) return EMPTY_MESSAGES;
+    return channelMessages
+      .filter((m) => m.is_pinned)
+      .slice()
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [channelMessages]);
 
- const isMobile = useIsMobile();
+  const isMobile = useIsMobile();
 
- const [customEmojiMap, setCustomEmojiMap] = useState<Record<string, string>>({});
- const [slowmodeStatus, setSlowmodeStatus] = useState<{ enabled: boolean; blocked: boolean; immune: boolean; remainingSeconds: number }>({
- enabled: false,
- blocked: false,
- immune: false,
- remainingSeconds: 0,
- });
+  const [customEmojiMap, setCustomEmojiMap] = useState<Record<string, string>>({});
+  const [slowmodeStatus, setSlowmodeStatus] = useState<{ enabled: boolean; blocked: boolean; immune: boolean; remainingSeconds: number }>({
+    enabled: false,
+    blocked: false,
+    immune: false,
+    remainingSeconds: 0,
+  });
 
- useEffect(() => {
- if (!serverId) {
- setCustomEmojiMap({});
- return;
- }
+  useEffect(() => {
+    if (!serverId) {
+      setCustomEmojiMap({});
+      return;
+    }
 
- let cancelled = false;
- const load = async () => {
- try {
- const emojis = await fetchServerEmojis(serverId);
- if (cancelled) return;
- const map: Record<string, string> = {};
- emojis.forEach((e) => {
- map[e.name] = e.url;
- });
- setCustomEmojiMap(map);
- } catch (e) {
- console.error("Failed to load server emojis for pinned message:", e);
- if (!cancelled) setCustomEmojiMap({});
- }
- };
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const emojis = await fetchServerEmojis(serverId);
+        if (cancelled) return;
+        const map: Record<string, string> = {};
+        emojis.forEach((e) => {
+          map[e.name] = e.url;
+        });
+        setCustomEmojiMap(map);
+      } catch (e) {
+        console.error("Failed to load server emojis for pinned message:", e);
+        if (!cancelled) setCustomEmojiMap({});
+      }
+    };
 
- load();
- return () => {
- cancelled = true;
- };
- }, [serverId]);
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [serverId]);
 
- const handleSwipeRight = useCallback(() => setMobileSidebarOpen(true), [setMobileSidebarOpen]);
- const handleSwipeLeft = useCallback(() => setMemberSidebarOpen(true), [setMemberSidebarOpen]);
+  const handleSwipeRight = useCallback(() => setMobileSidebarOpen(true), [setMobileSidebarOpen]);
+  const handleSwipeLeft = useCallback(() => setMemberSidebarOpen(true), [setMemberSidebarOpen]);
 
- const swipeConfig = useMemo(
- () => ({
- onSwipeRight: handleSwipeRight,
- onSwipeLeft: handleSwipeLeft,
- threshold: 50,
- enabled: isMobile,
- }),
- [handleSwipeRight, handleSwipeLeft, isMobile],
- );
+  const swipeConfig = useMemo(
+    () => ({
+      onSwipeRight: handleSwipeRight,
+      onSwipeLeft: handleSwipeLeft,
+      threshold: 50,
+      enabled: isMobile,
+    }),
+    [handleSwipeRight, handleSwipeLeft, isMobile],
+  );
 
- const swipeRef = useSwipeGestureRef(swipeConfig);
+  const swipeRef = useSwipeGestureRef(swipeConfig);
 
- if (!currentChannel) return null;
+  if (!currentChannel) return null;
 
- return (
- <div ref={swipeRef} className="h-full flex flex-col min-w-0 max-w-full overflow-x-hidden bg-layout-members relative">
- {showHeader && <ChannelHeader channel={currentChannel} />}
+  return (
+    <div ref={swipeRef} className="h-full flex flex-col min-w-0 max-w-full overflow-x-hidden bg-layout-members relative">
+      {showHeader && <ChannelHeader channel={currentChannel} />}
 
- <AnnouncementPinnedMessageBar
- pinnedMessages={pinnedMessages}
- userId={user?.id}
- customEmojiMap={customEmojiMap}
- channelId={currentChannel.id}
- openModal={openModal}
- />
+      <AnnouncementPinnedMessageBar
+        pinnedMessages={pinnedMessages}
+        userId={user?.id}
+        customEmojiMap={customEmojiMap}
+        channelId={currentChannel.id}
+        openModal={openModal}
+      />
 
- <MessageList channelId={currentChannel.id} channelName={channelName} />
+      <MessageList channelId={currentChannel.id} channelName={channelName} />
 
- <div className="shrink-0">
- {!isGhostMode && (
- <TypingIndicator
- typingUsers={typingUsers}
- reserveSpace
- rightContent={
- slowmodeStatus.enabled ? (
- <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/80">
- <Clock className="h-3.5 w-3.5" />
- <span>
- {slowmodeStatus.immune
- ? "Slowmode Immune"
- : `Slow mode${slowmodeStatus.blocked ? ` ${formatSlowmodeDuration(slowmodeStatus.remainingSeconds)}` : ""}`}
- </span>
- </span>
- ) : null
- }
- />
- )}
- <MessageInput
- channelId={currentChannel.id}
- channelName={channelName}
- onTyping={startTyping}
- onStopTyping={stopTyping}
- onSlowmodeStatusChange={setSlowmodeStatus}
- />
- </div>
- </div>
- );
+      <div className="shrink-0">
+        {!isGhostMode && (
+          <TypingIndicator
+            typingUsers={typingUsers}
+            reserveSpace
+            rightContent={
+              slowmodeStatus.enabled ? (
+                <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/80">
+                  <Clock3 className="h-3.5 w-3.5" />
+                  <span>
+                    {slowmodeStatus.immune
+                      ? "Slowmode Immune"
+                      : `Slow mode${slowmodeStatus.blocked ? ` ${formatSlowmodeDuration(slowmodeStatus.remainingSeconds)}` : ""}`}
+                  </span>
+                </span>
+              ) : null
+            }
+          />
+        )}
+        <MessageInput
+          channelId={currentChannel.id}
+          channelName={channelName}
+          onTyping={startTyping}
+          onStopTyping={stopTyping}
+          onSlowmodeStatusChange={setSlowmodeStatus}
+        />
+      </div>
+    </div>
+  );
 };
