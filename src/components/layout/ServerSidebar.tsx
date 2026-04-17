@@ -1,4 +1,4 @@
-import { Bell, BellSlash, CaretDown, CaretRight, Checks, DotsSixVertical, Envelope, Folder, FolderPlus, Gear, House, Palette, PencilSimple, Plus, SignOut, Trash, User } from "@phosphor-icons/react";
+import { Bell, BellSlash, CaretDown, CaretRight, Checks, DotsSixVertical, Envelope, Folder, FolderPlus, Gear, House, Palette, PencilSimple, Plus, SignOut, Trash, User as UserIcon } from "@phosphor-icons/react";
 import { useState, useMemo, useEffect, useCallback, forwardRef, memo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";

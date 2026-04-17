@@ -1,4 +1,4 @@
-import { AppWindow, ArrowsOutCardinal, BookOpen, Bug, CaretDown, ChatTeardrop, Cloud, Code, Database, Envelope, Eye, FileText, HardDrives, Heart, Image, Key, Lock, MagnifyingGlass, Megaphone, Microphone, Monitor, Palette, Pen, PenNib, Radio, Scales, Share, Shield, ShieldCheck, Sparkle, Stack, Users } from "@phosphor-icons/react";
+import { AppWindow, ArrowsOutCardinal, BookOpen, Bug, CaretDown, ChatTeardrop, Cloud, Code, Database, Envelope, Eye, FileText, HardDrives, Heart, Image as ImageIcon, Key, Lock, MagnifyingGlass, Megaphone, Microphone, Monitor, Palette, Pen, PenNib, Radio, Scales, Share, Shield, ShieldCheck, Sparkle, Stack, Users } from "@phosphor-icons/react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 

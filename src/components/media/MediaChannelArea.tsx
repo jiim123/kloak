@@ -1,4 +1,4 @@
-import { ChatTeardrop, CircleNotch, DotsThree, FilmStrip, Image as ImageIcon, ImageSquare, Images, Link, Play, Trash, UploadSimple, VideoCamera, X } from "@phosphor-icons/react";
+import { ChatTeardrop, CircleNotch, DotsThree, FilmStrip, Image as ImageIcon, ImageSquare, Images, Link as LinkIcon, Play, Trash, UploadSimple, VideoCamera, X } from "@phosphor-icons/react";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";

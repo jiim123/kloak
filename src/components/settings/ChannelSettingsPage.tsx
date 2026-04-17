@@ -1,4 +1,4 @@
-import { ChartBar, ChatTeardropSlash, CircleNotch, Clock, Eye, FolderOpen, Gear, Hash, Info, Link, Lock, Paperclip, Plus, Shield, Timer, Trash, User, Users, Warning, X } from "@phosphor-icons/react";
+import { ChartBar, ChatTeardropSlash, CircleNotch, Clock, Eye, FolderOpen, Gear, Hash, Info, Link as LinkIcon, Lock, Paperclip, Plus, Shield, Timer, Trash, User as UserIcon, Users, Warning, X } from "@phosphor-icons/react";
 import { useState, useEffect } from "react";
 import { useUIStore } from "@/stores/uiStore";
 import { useServerStore } from "@/stores/serverStore";

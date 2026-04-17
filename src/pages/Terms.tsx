@@ -1,4 +1,4 @@
- import { FileText, Key, Prohibit, Scales, Shield, Trash, User, UserCheck } from "@phosphor-icons/react";
+ import { FileText, Key, Prohibit, Scales, Shield, Trash, User as UserIcon, UserCheck } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
  import { NavigationMenu } from "@/components/layout/NavigationMenu";
  import { Footer } from "@/components/ui/footer-section";

@@ -1,4 +1,4 @@
-import { Archive, Bell, BellRinging, BellSlash, CaretRight, Check, Clock, Copy, CopySimple, Eye, EyeSlash, FolderSimplePlus, Gear, Hash, Link, PushPin, PushPinSlash, SpeakerHigh, SpeakerSlash, Trash } from "@phosphor-icons/react";
+import { Archive, Bell, BellRinging, BellSlash, CaretRight, Check, Clock, Copy, CopySimple, Eye, EyeSlash, FolderSimplePlus, Gear, Hash, Link as LinkIcon, PushPin, PushPinSlash, SpeakerHigh, SpeakerSlash, Trash } from "@phosphor-icons/react";
 import { useState } from "react";
 
 import { toast } from "sonner";

@@ -1,4 +1,4 @@
-import { CircleNotch, Image, MagnifyingGlass, Smiley, X } from "@phosphor-icons/react";
+import { CircleNotch, Image as ImageIcon, MagnifyingGlass, Smiley, X } from "@phosphor-icons/react";
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { FluentEmoji } from '@/components/ui/FluentEmoji';
 

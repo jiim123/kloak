@@ -1,4 +1,4 @@
-import { Calendar, ChatCircle, Check, CircleNotch, Clock, Plus, Prohibit, User as UserIcon, UserMinus, UserPlus, X } from "@phosphor-icons/react";
+import { Calendar as CalendarIcon, ChatCircle, Check, CircleNotch, Clock, Plus, Prohibit, User as UserIcon, UserMinus, UserPlus, X } from "@phosphor-icons/react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { format } from "date-fns";
 

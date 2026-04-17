@@ -1,4 +1,4 @@
-import { Check, CircleNotch, Copy, Link, Users } from "@phosphor-icons/react";
+import { Check, CircleNotch, Copy, Link as LinkIcon, Users } from "@phosphor-icons/react";
 import { useState } from "react";
 
 import { Dialog, DialogContent } from "@/components/ui/dialog";
