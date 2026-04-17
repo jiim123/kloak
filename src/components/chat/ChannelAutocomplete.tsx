@@ -1,156 +1,157 @@
+import { ChatTeardrop, ClipboardText, FilmStrip, Hash, Megaphone, SpeakerHigh } from "@phosphor-icons/react";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Hash, Volume2, Megaphone, Film, MessageSquare, ClipboardList } from "lucide-react";
+
 
 import { useServerStore } from "@/stores/serverStore";
 import { cn } from "@/lib/utils";
 import type { Channel } from "@/types";
 
 interface ChannelOption {
-  id: string;
-  name: string;
-  type: string;
+ id: string;
+ name: string;
+ type: string;
 }
 
 interface ChannelAutocompleteProps {
-  query: string;
-  position: { top: number; left: number };
-  onSelect: (option: ChannelOption) => void;
-  onClose: () => void;
-  onOptionsChange?: (hasOptions: boolean) => void;
+ query: string;
+ position: { top: number; left: number };
+ onSelect: (option: ChannelOption) => void;
+ onClose: () => void;
+ onOptionsChange?: (hasOptions: boolean) => void;
 }
 
 const getChannelIcon = (type: string) => {
-  switch (type) {
-    case "voice":
-      return <Volume2 className="w-4 h-4" />;
-    case "announcement":
-      return <Megaphone className="w-4 h-4" />;
-    case "forum":
-      return <MessageSquare className="w-4 h-4" />;
-    case "tasks":
-      return <ClipboardList className="w-4 h-4" />;
-    case 'media':
-      return <Film className="w-4 h-4" />;
-    default:
-      return <Hash className="w-4 h-4" />;
-  }
+ switch (type) {
+ case "voice":
+ return <SpeakerHigh className="w-4 h-4" />;
+ case "announcement":
+ return <Megaphone className="w-4 h-4" />;
+ case "forum":
+ return <ChatTeardrop className="w-4 h-4" />;
+ case "tasks":
+ return <ClipboardText className="w-4 h-4" />;
+ case 'media':
+ return <FilmStrip className="w-4 h-4" />;
+ default:
+ return <Hash className="w-4 h-4" />;
+ }
 };
 
 export const ChannelAutocomplete = ({ query, position, onSelect, onClose, onOptionsChange }: ChannelAutocompleteProps) => {
-  const { channels } = useServerStore();
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
+ const { channels } = useServerStore();
+ const [selectedIndex, setSelectedIndex] = useState(0);
+ const containerRef = useRef<HTMLDivElement>(null);
 
-  // Build options list - include channel types that can be linked with #mentions
-  const options: ChannelOption[] = channels
-    .filter(
-      (c) =>
-        (c.type === "text" ||
-          c.type === "announcement" ||
-          c.type === "forum" ||
-          c.type === "tasks" ||
-          c.type === "media" ||
-          c.type === "voice") &&
-        c.name.toLowerCase().includes(query.toLowerCase()),
-    )
-    .slice(0, 10)
-    .map((channel) => ({
-      id: channel.id,
-      name: channel.name,
-      type: channel.type || "text",
-    }));
+ // Build options list - include channel types that can be linked with #mentions
+ const options: ChannelOption[] = channels
+ .filter(
+ (c) =>
+ (c.type === "text" ||
+ c.type === "announcement" ||
+ c.type === "forum" ||
+ c.type === "tasks" ||
+ c.type === "media" ||
+ c.type === "voice") &&
+ c.name.toLowerCase().includes(query.toLowerCase()),
+ )
+ .slice(0, 10)
+ .map((channel) => ({
+ id: channel.id,
+ name: channel.name,
+ type: channel.type || "text",
+ }));
 
-  // Reset selection when options change
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [query]);
+ // Reset selection when options change
+ useEffect(() => {
+ setSelectedIndex(0);
+ }, [query]);
 
-  useEffect(() => {
-    onOptionsChange?.(options.length > 0);
-    return () => onOptionsChange?.(false);
-  }, [options.length, onOptionsChange]);
+ useEffect(() => {
+ onOptionsChange?.(options.length > 0);
+ return () => onOptionsChange?.(false);
+ }, [options.length, onOptionsChange]);
 
-  // Keyboard navigation
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (options.length === 0) return;
+ // Keyboard navigation
+ const handleKeyDown = useCallback(
+ (e: KeyboardEvent) => {
+ if (options.length === 0) return;
 
-      switch (e.key) {
-        case "ArrowDown":
-          e.preventDefault();
-          setSelectedIndex((prev) => (prev + 1) % options.length);
-          break;
-        case "ArrowUp":
-          e.preventDefault();
-          setSelectedIndex((prev) => (prev - 1 + options.length) % options.length);
-          break;
-        case "Enter":
-        case "Tab":
-          e.preventDefault();
-          onSelect(options[selectedIndex]);
-          break;
-        case "Escape":
-          e.preventDefault();
-          onClose();
-          break;
-      }
-    },
-    [options, selectedIndex, onSelect, onClose],
-  );
+ switch (e.key) {
+ case "ArrowDown":
+ e.preventDefault();
+ setSelectedIndex((prev) => (prev + 1) % options.length);
+ break;
+ case "ArrowUp":
+ e.preventDefault();
+ setSelectedIndex((prev) => (prev - 1 + options.length) % options.length);
+ break;
+ case "Enter":
+ case "Tab":
+ e.preventDefault();
+ onSelect(options[selectedIndex]);
+ break;
+ case "Escape":
+ e.preventDefault();
+ onClose();
+ break;
+ }
+ },
+ [options, selectedIndex, onSelect, onClose],
+ );
 
-  useEffect(() => {
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [handleKeyDown]);
+ useEffect(() => {
+ document.addEventListener("keydown", handleKeyDown);
+ return () => document.removeEventListener("keydown", handleKeyDown);
+ }, [handleKeyDown]);
 
-  // Click outside to close
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [onClose]);
+ // Click outside to close
+ useEffect(() => {
+ const handleClickOutside = (e: MouseEvent) => {
+ if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+ onClose();
+ }
+ };
+ document.addEventListener("mousedown", handleClickOutside);
+ return () => document.removeEventListener("mousedown", handleClickOutside);
+ }, [onClose]);
 
-  if (options.length === 0) {
-    return null;
-  }
+ if (options.length === 0) {
+ return null;
+ }
 
-  return (
-    <div
-      ref={containerRef}
-      className="w-full bg-white/5 border-b border-white/6 rounded-t-[14px] overflow-hidden"
-    >
-      <div className="px-3 py-1.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wider border-b border-white/6">
-        Channels
-      </div>
-      <div className="max-h-48 overflow-y-auto overscroll-contain p-1">
-        {options.map((option, index) => (
-          <div
-            key={option.id}
-            className={cn(
-              "flex items-center gap-2.5 px-2.5 py-1.5 cursor-pointer rounded-lg transition-colors duration-150",
-              index === selectedIndex
-                ? "bg-primary/10 text-foreground"
-                : "text-foreground/80 hover:bg-muted/50 hover:text-foreground",
-            )}
-            onClick={() => onSelect(option)}
-            onMouseEnter={() => setSelectedIndex(index)}
-          >
-            <div
-              className={cn(
-                "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-colors",
-                index === selectedIndex ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground",
-              )}
-            >
-              {getChannelIcon(option.type)}
-            </div>
-            <span className="font-medium text-[13px] truncate">#{option.name}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+ return (
+ <div
+ ref={containerRef}
+ className="w-full bg-white/5 border-b border-white/6 rounded-t-[14px] overflow-hidden"
+ >
+ <div className="px-3 py-1.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wider border-b border-white/6">
+ Channels
+ </div>
+ <div className="max-h-48 overflow-y-auto overscroll-contain p-1">
+ {options.map((option, index) => (
+ <div
+ key={option.id}
+ className={cn(
+ "flex items-center gap-2.5 px-2.5 py-1.5 cursor-pointer rounded-lg transition-colors duration-150",
+ index === selectedIndex
+ ? "bg-primary/10 text-foreground"
+ : "text-foreground/80 hover:bg-muted/50 hover:text-foreground",
+ )}
+ onClick={() => onSelect(option)}
+ onMouseEnter={() => setSelectedIndex(index)}
+ >
+ <div
+ className={cn(
+ "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-colors",
+ index === selectedIndex ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground",
+ )}
+ >
+ {getChannelIcon(option.type)}
+ </div>
+ <span className="font-medium text-[13px] truncate">#{option.name}</span>
+ </div>
+ ))}
+ </div>
+ </div>
+ );
 };
