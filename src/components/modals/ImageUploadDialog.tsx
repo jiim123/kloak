@@ -1,4 +1,4 @@
-import { Image, Images, UploadSimple, X } from "@phosphor-icons/react";
+import { Image as ImageIcon, Images, UploadSimple, X } from "@phosphor-icons/react";
 import { useState, useRef } from 'react';
 
 import {

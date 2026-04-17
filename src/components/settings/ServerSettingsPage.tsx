@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, CircleNotch, Copy, Crown, DotsSixVertical, DownloadSimple, FloppyDisk, Gear, Link, MagnifyingGlass, Palette, PaperPlaneTilt, PencilSimple, Plug, Plus, Prohibit, Shield, ShieldCheck, Smiley, Trash, UploadSimple, User, UserCircle, Users, X } from "@phosphor-icons/react";
+import { ArrowLeft, Check, CircleNotch, Copy, Crown, DotsSixVertical, DownloadSimple, FloppyDisk, Gear, Link as LinkIcon, MagnifyingGlass, Palette, PaperPlaneTilt, PencilSimple, Plug, Plus, Prohibit, Shield, ShieldCheck, Smiley, Trash, UploadSimple, User as UserIcon, UserCircle, Users, X } from "@phosphor-icons/react";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useForm } from "react-hook-form";

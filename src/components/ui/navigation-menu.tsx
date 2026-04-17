@@ -1,4 +1,4 @@
-import { CaretDown, Envelope, FileText, House, Lightning, Link, List, Sparkle, Stack, Users, X } from "@phosphor-icons/react";
+import { CaretDown, Envelope, FileText, House, Lightning, Link as LinkIcon, List, Sparkle, Stack, Users, X } from "@phosphor-icons/react";
 import * as React from "react";
 import * as NavigationMenuPrimitive from "@radix-ui/react-navigation-menu";
 import { cva } from "class-variance-authority";

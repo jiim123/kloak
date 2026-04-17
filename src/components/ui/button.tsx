@@ -1,4 +1,4 @@
-import { CircleNotch, Link } from "@phosphor-icons/react";
+import { CircleNotch, Link as LinkIcon } from "@phosphor-icons/react";
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";

@@ -1,4 +1,4 @@
-import { Key, Question, Shield, User, Users } from "@phosphor-icons/react";
+import { Key, Question, Shield, User as UserIcon, Users } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
 import { NavigationMenu } from "@/components/layout/NavigationMenu";
 import { Footer } from "@/components/ui/footer-section";

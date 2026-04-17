@@ -1,7 +1,7 @@
 
 
 
-import { File, FileArchive, FileCode, FileImage, FileText, FileXls, FilmStrip, MusicNote } from "@phosphor-icons/react";
+import { File as FileIcon, FileArchive, FileCode, FileImage, FileText, FileXls, FilmStrip, MusicNote } from "@phosphor-icons/react";
 import type { IconProps } from "@phosphor-icons/react";
 type IconComponent = React.FC<IconProps>;
 

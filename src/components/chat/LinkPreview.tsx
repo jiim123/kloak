@@ -1,4 +1,4 @@
-import { ArrowSquareOut, ArrowUp, ChatTeardrop, Heart, Link, Play, ShoppingCart, VideoCamera, Warning, X } from "@phosphor-icons/react";
+import { ArrowSquareOut, ArrowUp, ChatTeardrop, Heart, Link as LinkIcon, Play, ShoppingCart, VideoCamera, Warning, X } from "@phosphor-icons/react";
 import { useState, useEffect, useRef } from "react";
 
 import { supabase } from "@/integrations/supabase/client";

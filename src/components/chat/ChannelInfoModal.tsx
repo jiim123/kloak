@@ -1,4 +1,4 @@
-import { ChatTeardrop, CheckCircle, ClipboardText, Eye, FilmStrip, Ghost, Hash, Link, Lock, Megaphone, SpeakerHigh, Timer, Trash } from "@phosphor-icons/react";
+import { ChatTeardrop, CheckCircle, ClipboardText, Eye, FilmStrip, Ghost, Hash, Link as LinkIcon, Lock, Megaphone, SpeakerHigh, Timer, Trash } from "@phosphor-icons/react";
 import { useMemo } from "react";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
