@@ -1,6 +1,6 @@
 import { CheckCircle, CircleNotch, Eye, EyeSlash, Info, Key, Link as LinkIcon, Sparkle, UserCircle, Warning, WarningCircle, XCircle } from "@phosphor-icons/react";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useNavigate, LinkIcon, useLocation } from "react-router-dom";
+import { useNavigate, Link as RouterLink, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import HCaptcha from "@hcaptcha/react-hcaptcha";
 import { useAuthStore, initializeAuth } from "@/stores/authStore";
@@ -615,13 +615,13 @@ const Auth = ({ formOnly = false }: AuthProps) => {
 
  <p className="text-center text-xs text-muted-foreground mt-3">
  By creating an account, you agree to our{" "}
- <LinkIcon to="/terms" className="text-foreground hover:underline">
+ <RouterLink to="/terms" className="text-foreground hover:underline">
  Terms of Service
- </LinkIcon>{" "}
+ </RouterLink>{" "}
  and{" "}
- <LinkIcon to="/privacy" className="text-foreground hover:underline">
+ <RouterLink to="/privacy" className="text-foreground hover:underline">
  Privacy Policy
- </LinkIcon>
+ </RouterLink>
  </p>
  </form>
  )}
@@ -867,13 +867,13 @@ const Auth = ({ formOnly = false }: AuthProps) => {
 
  <p className="text-center text-xs text-muted-foreground mt-3">
  By creating an account, you agree to our{" "}
- <LinkIcon to="/terms" className="text-foreground hover:underline">
+ <RouterLink to="/terms" className="text-foreground hover:underline">
  Terms of Service
- </LinkIcon>{" "}
+ </RouterLink>{" "}
  and{" "}
- <LinkIcon to="/privacy" className="text-foreground hover:underline">
+ <RouterLink to="/privacy" className="text-foreground hover:underline">
  Privacy Policy
- </LinkIcon>
+ </RouterLink>
  </p>
  </form>
  )}

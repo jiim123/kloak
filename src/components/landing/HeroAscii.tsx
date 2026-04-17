@@ -1,6 +1,6 @@
 import { ArrowRight, Link as LinkIcon } from "@phosphor-icons/react";
 import { useRef } from "react";
-import { LinkIcon } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
 import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
@@ -38,17 +38,17 @@ export const HeroImage = () => {
  transition={{ duration: 0.6, delay: 1 }}
  className="flex flex-col sm:flex-row items-center justify-center gap-4"
  >
- <LinkIcon to="/app">
+ <RouterLink to="/app">
  <Button size="lg" className="px-8 h-12 text-sm font-normal group">
  Open Kloak
  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
  </Button>
- </LinkIcon>
- <LinkIcon to="/about">
+ </RouterLink>
+ <RouterLink to="/about">
  <Button variant="secondary" size="lg" className="px-8 h-12 text-sm font-normal">
  About Kloak
  </Button>
- </LinkIcon>
+ </RouterLink>
  </motion.div>
  </div>
  </div>

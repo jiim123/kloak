@@ -1,5 +1,5 @@
 import { ArrowRight, Link as LinkIcon } from "@phosphor-icons/react";
-import { LinkIcon } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
 import { Button } from '@/components/ui/button';
@@ -52,12 +52,12 @@ export const HeroClassic = () => {
  </motion.p>
  
  <motion.div variants={fadeInUp}>
- <LinkIcon to="/app">
+ <RouterLink to="/app">
  <Button size="lg" className="text-base px-8 h-12">
  Create Your Key
  <ArrowRight className="w-5 h-5 ml-2" />
  </Button>
- </LinkIcon>
+ </RouterLink>
  </motion.div>
  </motion.div>
  </section>
