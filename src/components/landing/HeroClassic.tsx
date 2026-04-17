@@ -1,5 +1,5 @@
 import { ArrowRight, Link as LinkIcon } from "@phosphor-icons/react";
-import { LinkIcon } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
 import { Button } from '@/components/ui/button';
