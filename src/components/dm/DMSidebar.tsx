@@ -24,6 +24,8 @@ import { formatCompactTime } from "@/lib/format";
 import { getEffectivePresence } from "@/lib/presence";
 import { ConversationItemSkeleton } from "@/components/ui/skeletons";
 import type { DMConversation, UserStatus, User } from "@/types";
+import { useRateLimit } from "@/hooks/useRateLimit";
+import { rateLimitToast } from "@/lib/rateLimitToast";
 
 interface DMSidebarProps {
   showFriends: boolean;

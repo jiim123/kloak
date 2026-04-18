@@ -22,6 +22,8 @@ import { getEffectivePresence } from "@/lib/presence";
 import { useLocation } from "react-router-dom";
 import { openUserProfileModal } from "@/lib/userProfilePopover";
 import { useUIStore } from "@/stores/uiStore";
+import { useRateLimit } from "@/hooks/useRateLimit";
+import { rateLimitToast } from "@/lib/rateLimitToast";
 
 interface FriendsListProps {
   onOpenDM: () => void;
@@ -46,6 +48,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
   } = useFriendStore();
   const { openConversation, setCurrentConversation } = useDMStore();
   const { openModal } = useUIStore();
+  const checkBlockLimit = useRateLimit(10, 60_000);
 
   const [activeTab, setActiveTab] = useState("online");
   const [addFriendInput, setAddFriendInput] = useState("");
@@ -285,7 +288,11 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
       </button>
 
       {/* Unblock */}
-      <Button size="sm" variant="outline" onClick={() => user?.id && unblockUser(user.id, blocked.id)}>
+      <Button size="sm" variant="outline" onClick={() => {
+        if (!user?.id) return;
+        if (!checkBlockLimit()) { rateLimitToast("Too many block actions"); return; }
+        unblockUser(user.id, blocked.id);
+      }}>
         Unblock
       </Button>
     </div>
