@@ -134,6 +134,15 @@ interface MessageItemProps {
 const EMPTY_CUSTOM_EMOJI_MAP = new Map<string, string>();
 const EMPTY_GLOBAL_EMOJI_MAP = new Map<string, ResolvedEmoji>();
 
+const isSafeEmojiUrl = (url: string): boolean => {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+};
+
 // FIX 5: RoleIconWrapper defined outside MessageItem to avoid remount on every render
 interface RoleIconWrapperProps extends React.HTMLAttributes<HTMLSpanElement> {
   children: React.ReactNode;
