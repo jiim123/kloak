@@ -134,6 +134,15 @@ interface MessageItemProps {
 const EMPTY_CUSTOM_EMOJI_MAP = new Map<string, string>();
 const EMPTY_GLOBAL_EMOJI_MAP = new Map<string, ResolvedEmoji>();
 
+const isSafeEmojiUrl = (url: string): boolean => {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+};
+
 // FIX 5: RoleIconWrapper defined outside MessageItem to avoid remount on every render
 interface RoleIconWrapperProps extends React.HTMLAttributes<HTMLSpanElement> {
   children: React.ReactNode;
@@ -497,14 +506,14 @@ export const MessageItem = memo(function MessageItem({
   const reactionEmojiNode = useCallback(
     (emoji: string) => {
       const url = resolveCustomEmojiUrl(emoji);
-      if (url) {
+      if (url && isSafeEmojiUrl(url)) {
         return <img src={url} alt={emoji} className="w-6 h-6 object-contain" decoding="async" />;
       }
       // Check if it looks like a custom emoji that we can't resolve locally
       if (/^:[a-z0-9_]{2,12}:$/i.test(emoji)) {
         const m = emoji.match(/^:([a-z0-9_]{2,12}):$/i);
         const fallbackUrl = m ? fallbackEmojiUrls.get(m[1]) : null;
-        if (fallbackUrl) {
+        if (fallbackUrl && isSafeEmojiUrl(fallbackUrl)) {
           return <img src={fallbackUrl} alt={emoji} className="w-6 h-6 object-contain" decoding="async" />;
         }
         return <span className="text-sm leading-none text-muted-foreground">{emoji}</span>;
@@ -517,13 +526,13 @@ export const MessageItem = memo(function MessageItem({
   const reactionEmojiNodeLarge = useCallback(
     (emoji: string) => {
       const url = resolveCustomEmojiUrl(emoji);
-      if (url) {
+      if (url && isSafeEmojiUrl(url)) {
         return <img src={url} alt={emoji} className="w-8 h-8 object-contain" decoding="async" />;
       }
       if (/^:[a-z0-9_]{2,12}:$/i.test(emoji)) {
         const m = emoji.match(/^:([a-z0-9_]{2,12}):$/i);
         const fallbackUrl = m ? fallbackEmojiUrls.get(m[1]) : null;
-        if (fallbackUrl) {
+        if (fallbackUrl && isSafeEmojiUrl(fallbackUrl)) {
           return <img src={fallbackUrl} alt={emoji} className="w-8 h-8 object-contain" decoding="async" />;
         }
         return <span className="text-sm leading-none text-muted-foreground">{emoji}</span>;

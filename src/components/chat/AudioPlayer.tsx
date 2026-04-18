@@ -140,6 +140,7 @@ export const AudioPlayer = memo(function AudioPlayer({ src, fileName, fileSize, 
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch {
+      if (!/^https?:\/\//i.test(src)) return;
       window.open(src, "_blank");
     }
   }, [src, fileName]);

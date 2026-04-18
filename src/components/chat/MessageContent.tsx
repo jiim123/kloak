@@ -52,13 +52,33 @@ const firstHexFromGradient = (gradient: string): string | null => {
   return m?.[0] ?? null;
 };
 
+const SAFE_COLOR_REGEX = /^#[0-9a-fA-F]{6}$/;
+const SAFE_GRADIENT_REGEX = /^linear-gradient\([^"'<>;{}()]*\)$/;
+
+const sanitizeRoleColor = (color: string | undefined | null): string | null => {
+  if (!color) return null;
+  if (SAFE_COLOR_REGEX.test(color)) return color;
+  if (SAFE_GRADIENT_REGEX.test(color)) return color;
+  return null;
+};
+
+const isSafeEmojiUrl = (url: string): boolean => {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+};
+
 const roleMentionStyle = (role?: RoleInfo): string => {
-  if (!role?.color) return "";
-  if (role.color.startsWith("linear-gradient")) {
-    const fallback = firstHexFromGradient(role.color) || "#7dd3fc";
+  const safeColor = sanitizeRoleColor(role?.color);
+  if (!safeColor) return "";
+  if (safeColor.startsWith("linear-gradient")) {
+    const fallback = firstHexFromGradient(safeColor) || "#7dd3fc";
     return ` style="background-color:${fallback}22;color:${fallback}"`;
   }
-  return ` style="background-color:${role.color}22;color:${role.color}"`;
+  return ` style="background-color:${safeColor}22;color:${safeColor}"`;
 };
 
 interface MessageContentProps {
@@ -407,7 +427,7 @@ export const parseTextContent = (
     // 1. Current server emoji (no popup needed) — only for unqualified names
     if (!qualifier) {
       const localUrl = customEmojiMap?.get(name);
-      if (localUrl) {
+      if (localUrl && isSafeEmojiUrl(localUrl)) {
         const safeUrl = escapeHtml(localUrl);
         const safeName = escapeHtml(name);
         return `<img src="${safeUrl}" alt=":${safeName}:" title=":${safeName}:" class="inline-block w-8 h-8 align-middle object-contain" loading="lazy" />`;
@@ -416,31 +436,35 @@ export const parseTextContent = (
     // 2. Qualified name :name~ServerName: — look up specific server
     if (qualifier) {
       const resolved = resolveQualifiedEmoji(`${name}~${qualifier}`);
-      if (resolved) {
+      if (resolved && isSafeEmojiUrl(resolved.url)) {
         const safeUrl = escapeHtml(resolved.url);
         const safeName = escapeHtml(name);
         const safeServer = escapeHtml(qualifier);
         return `<img src="${safeUrl}" alt=":${safeName}~${safeServer}:" title=":${safeName}~${safeServer}:" class="inline-block w-8 h-8 align-middle object-contain cursor-pointer" loading="lazy" data-cross-emoji="${safeName}" data-cross-emoji-server="${safeServer}" />`;
       }
-      return full;
+      return escapeHtml(full);
     }
     // 3. Unqualified cross-server emoji
     const global = globalEmojiMap?.get(name);
-    if (global) {
+    if (global && isSafeEmojiUrl(global.url)) {
       const safeUrl = escapeHtml(global.url);
       const safeName = escapeHtml(name);
       return `<img src="${safeUrl}" alt=":${safeName}:" title=":${safeName}:" class="inline-block w-8 h-8 align-middle object-contain cursor-pointer" loading="lazy" data-cross-emoji="${safeName}" />`;
     }
-    return full;
+    return escapeHtml(full);
   });
 
   // Inline custom emoji token with embedded file path:
   // :ce[name|server_id/file-name.ext]:
   // Run this after the normal :name: pass so the `alt`/`title` attributes we generate
   // do not get re-matched and corrupt the emitted <img> HTML.
-  parsed = parsed.replace(INLINE_CUSTOM_EMOJI_TOKEN_REGEX, (_full, name: string, filePath: string) => {
+  parsed = parsed.replace(INLINE_CUSTOM_EMOJI_TOKEN_REGEX, (full, name: string, filePath: string) => {
+    const resolvedUrl = getServerEmojiPublicUrl(filePath);
+    if (!isSafeEmojiUrl(resolvedUrl)) {
+      return escapeHtml(`:${name}:`);
+    }
     const safeName = escapeHtml(name);
-    const safeUrl = escapeHtml(getServerEmojiPublicUrl(filePath));
+    const safeUrl = escapeHtml(resolvedUrl);
     return `<img src="${safeUrl}" alt=":${safeName}:" title=":${safeName}:" class="inline-block w-8 h-8 align-middle object-contain cursor-pointer" loading="lazy" data-cross-emoji="${safeName}" data-cross-emoji-file-path="${escapeHtml(filePath)}" />`;
   });
 

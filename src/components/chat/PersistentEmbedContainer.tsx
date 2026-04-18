@@ -65,7 +65,11 @@ export const PersistentEmbedContainer = () => {
   );
 };
 
+const SAFE_EMBED_ID = /^[A-Za-z0-9_-]{1,64}$/;
+
 function renderEmbedIframe(embed: { id: string; type: string; channelOrVideoId: string }) {
+  if (!SAFE_EMBED_ID.test(embed.channelOrVideoId)) return null;
+
   const commonProps = {
     height: 270,
     width: 480,
