@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Hash, Volume2, MessageSquare, Megaphone, Film, ClipboardList, Loader2, type LucideIcon } from "lucide-react";
 import type { ChannelType } from "@/types";
+import { useRateLimit } from "@/hooks/useRateLimit";
+import { rateLimitToast } from "@/lib/rateLimitToast";
 
 const CHANNEL_TYPE_OPTIONS: {
   value: "text" | "voice" | "forum" | "announcement" | "tasks" | "media";
@@ -165,6 +167,7 @@ export const CreateChannelModal = () => {
   const [isPrivate, setIsPrivate] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const checkCreateLimit = useRateLimit(5, 60_000);
 
   const isOpen = activeModal === "create-channel";
   const presetCategoryId = modalData?.categoryId as string | undefined;
@@ -202,6 +205,8 @@ export const CreateChannelModal = () => {
     }
 
     if (!currentServer || !user) return;
+
+    if (!checkCreateLimit()) { rateLimitToast("Creating too fast"); return; }
 
     setIsSubmitting(true);
     setError("");
