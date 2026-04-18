@@ -92,9 +92,11 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
   };
 
   const { blockUser } = useFriendStore();
+  const checkBlockLimit = useRateLimit(10, 60_000);
 
   const handleBlockUser = async (userId: string) => {
     if (!user?.id) return;
+    if (!checkBlockLimit()) { rateLimitToast("Too many block actions"); return; }
     await blockUser(user.id, userId);
   };
 
