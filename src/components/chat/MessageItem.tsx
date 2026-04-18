@@ -71,6 +71,8 @@ import { getPollIdFromContent, isPollMessageContent } from "@/lib/poll";
 import { canRevealGhostIdentityForUser } from "@/lib/ghostIdentity";
 import { pickFirstNonBlank } from "@/lib/utils";
 import { openUserProfileModal, SIDE_ALIGNED_USER_PROFILE_POPOVER } from "@/lib/userProfilePopover";
+import { useRateLimit } from "@/hooks/useRateLimit";
+import { rateLimitToast } from "@/lib/rateLimitToast";
 
 // Static data moved outside component
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "👋", "🔥", "👀", "💯", "🙌", "😍", "🤔"] as const;
