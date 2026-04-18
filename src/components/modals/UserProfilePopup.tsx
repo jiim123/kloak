@@ -28,6 +28,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useRateLimit } from "@/hooks/useRateLimit";
+import { rateLimitToast } from "@/lib/rateLimitToast";
 import { getProfileEffectSrc } from "@/lib/profileEffects";
 import { getEffectivePresence } from "@/lib/presence";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -220,6 +222,7 @@ export const UserProfilePopup = () => {
     unblockUser,
   } = useFriendStore();
   const { openConversation, setCurrentConversation } = useDMStore();
+  const checkBlockLimit = useRateLimit(10, 60_000);
 
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [userBadges, setUserBadges] = useState<Badge[]>([]);
@@ -536,6 +539,7 @@ export const UserProfilePopup = () => {
 
   const handleBlockUser = async () => {
     if (!currentUser || !profileUser) return;
+    if (!checkBlockLimit()) { rateLimitToast("Too many block actions"); return; }
     try {
       await blockUser(currentUser.id, profileUser.id);
       toast.success(`Blocked ${profileUser.display_name || profileUser.username}`);
@@ -546,6 +550,7 @@ export const UserProfilePopup = () => {
 
   const handleUnblockUser = async () => {
     if (!currentUser || !profileUser) return;
+    if (!checkBlockLimit()) { rateLimitToast("Too many block actions"); return; }
     try {
       await unblockUser(currentUser.id, profileUser.id);
       toast.success(`Unblocked ${profileUser.display_name || profileUser.username}`);

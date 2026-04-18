@@ -31,6 +31,8 @@ import {
   CircleUser,
   ArrowLeft,
 } from "lucide-react";
+import { useRateLimit } from "@/hooks/useRateLimit";
+import { rateLimitToast } from "@/lib/rateLimitToast";
 
 import {
   AlertDialog,
@@ -700,6 +702,7 @@ export const ServerSettingsPage = () => {
   } = useServerStore();
   const { user } = useAuthStore();
   const isMobile = useIsMobile();
+  const checkModLimit = useRateLimit(10, 30_000);
 
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -1759,6 +1762,7 @@ export const ServerSettingsPage = () => {
 
   const handleKickMember = async (member: ServerMember) => {
     if (!server) return;
+    if (!checkModLimit()) { rateLimitToast("Moderation actions too fast"); return; }
 
     try {
       await kickMember(server.id, member.user_id);
@@ -1770,6 +1774,7 @@ export const ServerSettingsPage = () => {
 
   const handleBanMember = async (member: ServerMember) => {
     if (!server) return;
+    if (!checkModLimit()) { rateLimitToast("Moderation actions too fast"); return; }
 
     try {
       await banMember(server.id, member.user_id);

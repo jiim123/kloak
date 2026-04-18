@@ -12,6 +12,8 @@ import { useSwipeGestureRef } from "@/hooks/useSwipeGesture";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthorStyles } from "@/hooks/useAuthorStyles";
 import { useUnreadChannelsContext } from "@/hooks/useUnreadChannelsContext";
+import { useRateLimit } from "@/hooks/useRateLimit";
+import { rateLimitToast } from "@/lib/rateLimitToast";
 import {
   MessageSquare,
   Hash,
@@ -243,6 +245,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
   const isMobile = useIsMobile();
   const { hasPermission } = useMemberPermissions(currentChannel?.id);
   const canManageMessages = hasPermission("manage_messages");
+  const checkThreadLimit = useRateLimit(5, 60_000);
 
   const [threads, setThreads] = useState<Thread[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -1258,6 +1261,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
 
   const handleCreateThread = useCallback(async () => {
     if (!user || !currentChannel) return;
+    if (!checkThreadLimit()) { rateLimitToast("Creating threads too fast"); return; }
 
     const title = newThreadTitle.trim();
     const textContent = newThreadContent.trim();
@@ -1314,6 +1318,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
     createPendingAttachments,
     uploadPendingAttachments,
     clearPendingAttachments,
+    checkThreadLimit,
   ]);
 
   const handleAttachmentInputChange = useCallback(

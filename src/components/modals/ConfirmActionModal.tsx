@@ -16,6 +16,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import type { ServerMember } from "@/types";
+import { useRateLimit } from "@/hooks/useRateLimit";
+import { rateLimitToast } from "@/lib/rateLimitToast";
 
 type ActionType = "kick" | "ban" | "mute" | "unmute" | "transferOwnership" | "massBan";
 
@@ -24,6 +26,7 @@ export const ConfirmActionModal = () => {
   const { kickMember, banMember, updateMember, transferOwnership, currentServer } = useServerStore();
   const { user } = useAuthStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const checkModLimit = useRateLimit(10, 30_000);
 
   const isOpen = activeModal === "confirmAction";
   const action = modalData?.action as ActionType | undefined;
@@ -38,6 +41,7 @@ export const ConfirmActionModal = () => {
 
   const handleConfirm = async () => {
     if (!currentServer || !action) return;
+    if (!checkModLimit()) { rateLimitToast("Moderation actions too fast"); return; }
 
     // Mass ban flow
     if (action === "massBan" && massBanMembers && massBanMembers.length > 0) {

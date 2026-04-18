@@ -32,6 +32,9 @@ import {
   Download,
   Shield,
 } from "lucide-react";
+// Rate limit utilities
+import { useRateLimit } from "@/hooks/useRateLimit";
+import { rateLimitToast } from "@/lib/rateLimitToast";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -130,6 +133,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const { playTestSound } = useNotificationSound();
   const { user, updateUser, logout } = useAuthStore();
   const { blockedUsers, unblockUser, fetchFriends, isLoading: isFriendsLoading } = useFriendStore();
+  const checkBlockLimit = useRateLimit(10, 60_000);
 
   const [activeTab, setActiveTab] = useState("account");
   const [isLoading, setIsLoading] = useState(false);
@@ -529,6 +533,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 className="rounded-xl"
                 onClick={async () => {
                   if (!user?.id) return;
+                  if (!checkBlockLimit()) { rateLimitToast("Too many block actions"); return; }
                   await unblockUser(user.id, u.id);
                   toast.success(`Unblocked @${u.username}`);
                 }}
