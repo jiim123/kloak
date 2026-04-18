@@ -12,6 +12,8 @@ import { useSwipeGestureRef } from "@/hooks/useSwipeGesture";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthorStyles } from "@/hooks/useAuthorStyles";
 import { useUnreadChannelsContext } from "@/hooks/useUnreadChannelsContext";
+import { useRateLimit } from "@/hooks/useRateLimit";
+import { rateLimitToast } from "@/lib/rateLimitToast";
 import {
   MessageSquare,
   Hash,
