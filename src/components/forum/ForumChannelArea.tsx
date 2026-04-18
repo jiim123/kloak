@@ -1318,6 +1318,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
     createPendingAttachments,
     uploadPendingAttachments,
     clearPendingAttachments,
+    checkThreadLimit,
   ]);
 
   const handleAttachmentInputChange = useCallback(
