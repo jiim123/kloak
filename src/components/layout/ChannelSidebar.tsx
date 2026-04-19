@@ -359,7 +359,7 @@ VoiceUserCountBadge.displayName = "VoiceUserCountBadge";
 // ─── Unread dot indicator ───
 
 const UnreadDot = memo(() => (
-  <span className="w-1.5 h-1.5 rounded-full bg-foreground flex-shrink-0" />
+  <span className="inline-block w-1.5 h-1.5 rounded-full bg-foreground flex-shrink-0" />
 ));
 UnreadDot.displayName = "UnreadDot";
 
@@ -502,7 +502,16 @@ const SortableChannel = memo(({
         )}
 
         {/* Unread dot (no mentions) */}
-        {isUnread && mentionCount === 0 && !isSortingMode && <UnreadDot />}
+        {isUnread && mentionCount === 0 && !isSortingMode && (
+          <span
+            className={cn(
+              "absolute right-3 top-1/2 -translate-y-1/2 transition-opacity duration-150",
+              isAdmin && !isMobile && "group-hover:opacity-0",
+            )}
+          >
+            <UnreadDot />
+          </span>
+        )}
 
         {/* Mention badge */}
         {mentionCount > 0 && !isSortingMode && (
@@ -514,7 +523,7 @@ const SortableChannel = memo(({
         {/* Admin settings - desktop only, not in sort mode */}
         {isAdmin && !isMobile && !isSortingMode && (
           <SettingsIcon
-            className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground cursor-pointer flex-shrink-0"
+            className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground cursor-pointer pointer-events-none group-hover:pointer-events-auto"
             onClick={handleSettingsClick}
           />
         )}
@@ -524,7 +533,7 @@ const SortableChannel = memo(({
           <div
             {...attributes}
             {...listeners}
-            className="p-1 -mr-1 opacity-0 group-hover:opacity-50 hover:!opacity-100 cursor-grab active:cursor-grabbing"
+            className="absolute right-1 top-1/2 -translate-y-1/2 p-1 opacity-0 group-hover:opacity-50 hover:!opacity-100 cursor-grab active:cursor-grabbing pointer-events-none group-hover:pointer-events-auto"
           >
             <div className="w-1 h-3 flex flex-col gap-0.5 justify-center">
               <div className="w-1 h-1 rounded-full bg-muted-foreground" />
