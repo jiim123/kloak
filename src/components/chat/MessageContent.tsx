@@ -357,7 +357,7 @@ export const parseTextContent = (
     const alignClass = align === "center" ? "mx-auto block" : align === "right" ? "ml-auto block" : "mr-auto block";
     if (isTrustedInlineImageUrl(url)) {
       const widthStyle = width !== "auto" ? `width="${escapeHtml(width)}"` : "";
-      return `<img src="${escapeHtml(url)}" alt="Image" ${widthStyle} class="${alignClass} max-w-full rounded-lg my-2 cursor-pointer hover:opacity-90" loading="lazy" data-image-url="${escapeHtml(url)}" data-align="${align}" style="min-height:40px;max-height:350px;background:rgb(24 24 24 / 40%)" onload="this.style.backgroundColor='transparent'" />`;
+      return `<img src="${escapeHtml(url)}" alt="Image" ${widthStyle} class="${alignClass} max-w-full rounded-lg my-2 cursor-pointer hover:opacity-90" loading="lazy" data-image-url="${escapeHtml(url)}" data-align="${align}" data-loading-bg="true" style="min-height:40px;max-height:350px;background:rgb(24 24 24 / 40%)" />`;
     }
     return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="${alignClass} message-link">View image</a>`;
   });
@@ -372,7 +372,7 @@ export const parseTextContent = (
     const audioExts = ["mp3", "ogg", "wav", "flac", "m4a"];
 
     if (imageExts.includes(ext)) {
-      return `<img data-attachment-path="${escapeHtml(path)}" alt="Image" class="block mr-auto max-w-full sm:max-w-[400px] max-h-[60vh] sm:max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90 object-contain" loading="lazy" style="visibility:hidden;min-height:40px;max-height:350px;background:rgb(24 24 24 / 40%)" onload="this.style.backgroundColor='transparent'" />`;
+      return `<img data-attachment-path="${escapeHtml(path)}" alt="Image" class="block mr-auto max-w-full sm:max-w-[400px] max-h-[60vh] sm:max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90 object-contain" loading="lazy" data-loading-bg="true" style="visibility:hidden;min-height:40px;max-height:350px;background:rgb(24 24 24 / 40%)" />`;
     } else if (videoExts.includes(ext)) {
       return `<video data-attachment-path="${escapeHtml(path)}" controls preload="metadata" class="block max-w-full w-full sm:max-w-[480px] rounded-lg my-2 aspect-video object-contain bg-black/10">Your browser does not support video.</video>`;
     } else if (audioExts.includes(ext)) {
@@ -390,7 +390,7 @@ export const parseTextContent = (
       return escapeHtml(url); // Don't linkify unsafe URLs
     }
     if (isImageUrl(url)) {
-      return `<img src="${escapeHtml(url)}" alt="Image" class="block mr-auto max-w-full sm:max-w-[400px] max-h-[60vh] sm:max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90 object-contain" loading="lazy" data-image-url="${escapeHtml(url)}" style="min-height:40px;max-height:350px;background:rgb(24 24 24 / 40%)" onload="this.style.backgroundColor='transparent'" />`;
+      return `<img src="${escapeHtml(url)}" alt="Image" class="block mr-auto max-w-full sm:max-w-[400px] max-h-[60vh] sm:max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90 object-contain" loading="lazy" data-image-url="${escapeHtml(url)}" data-loading-bg="true" style="min-height:40px;max-height:350px;background:rgb(24 24 24 / 40%)" />`;
     }
     return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="message-link">${escapeHtml(url)}</a>`;
   });
@@ -674,6 +674,24 @@ export const MessageContent = ({
       cancelled = true;
     };
   }, [content, effectiveCustomEmojiMap, effectiveGlobalEmojiMap, mentionedUsersMap]);
+
+  // Clear the loading-placeholder background on images once they load.
+  // Previously this was handled by an inline `onload=` attribute emitted by
+  // parseTextContent, but inline event handlers violate CSP. Instead we attach
+  // a single delegated `load` capture listener on the content container.
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    const handleLoad = (e: Event) => {
+      const target = e.target;
+      if (target instanceof HTMLImageElement && target.dataset.loadingBg === "true") {
+        target.style.backgroundColor = "transparent";
+        delete target.dataset.loadingBg;
+      }
+    };
+    el.addEventListener("load", handleLoad, true);
+    return () => el.removeEventListener("load", handleLoad, true);
+  }, []);
 
   // Replace native emoji characters with Fluent Emoji 3D images.
   // Must also depend on usersMap so it re-runs after mention display names resolve
