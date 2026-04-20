@@ -71,6 +71,8 @@ import { getPollIdFromContent, isPollMessageContent } from "@/lib/poll";
 import { canRevealGhostIdentityForUser } from "@/lib/ghostIdentity";
 import { pickFirstNonBlank } from "@/lib/utils";
 import { openUserProfileModal, SIDE_ALIGNED_USER_PROFILE_POPOVER } from "@/lib/userProfilePopover";
+import { useRateLimit } from "@/hooks/useRateLimit";
+import { rateLimitToast } from "@/lib/rateLimitToast";
 
 // Static data moved outside component
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "👋", "🔥", "👀", "💯", "🙌", "😍", "🤔"] as const;
@@ -133,6 +135,15 @@ interface MessageItemProps {
 
 const EMPTY_CUSTOM_EMOJI_MAP = new Map<string, string>();
 const EMPTY_GLOBAL_EMOJI_MAP = new Map<string, ResolvedEmoji>();
+
+const isSafeEmojiUrl = (url: string): boolean => {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+};
 
 // FIX 5: RoleIconWrapper defined outside MessageItem to avoid remount on every render
 interface RoleIconWrapperProps extends React.HTMLAttributes<HTMLSpanElement> {
@@ -497,14 +508,14 @@ export const MessageItem = memo(function MessageItem({
   const reactionEmojiNode = useCallback(
     (emoji: string) => {
       const url = resolveCustomEmojiUrl(emoji);
-      if (url) {
+      if (url && isSafeEmojiUrl(url)) {
         return <img src={url} alt={emoji} className="w-6 h-6 object-contain" decoding="async" />;
       }
       // Check if it looks like a custom emoji that we can't resolve locally
       if (/^:[a-z0-9_]{2,12}:$/i.test(emoji)) {
         const m = emoji.match(/^:([a-z0-9_]{2,12}):$/i);
         const fallbackUrl = m ? fallbackEmojiUrls.get(m[1]) : null;
-        if (fallbackUrl) {
+        if (fallbackUrl && isSafeEmojiUrl(fallbackUrl)) {
           return <img src={fallbackUrl} alt={emoji} className="w-6 h-6 object-contain" decoding="async" />;
         }
         return <span className="text-sm leading-none text-muted-foreground">{emoji}</span>;
@@ -517,13 +528,13 @@ export const MessageItem = memo(function MessageItem({
   const reactionEmojiNodeLarge = useCallback(
     (emoji: string) => {
       const url = resolveCustomEmojiUrl(emoji);
-      if (url) {
+      if (url && isSafeEmojiUrl(url)) {
         return <img src={url} alt={emoji} className="w-8 h-8 object-contain" decoding="async" />;
       }
       if (/^:[a-z0-9_]{2,12}:$/i.test(emoji)) {
         const m = emoji.match(/^:([a-z0-9_]{2,12}):$/i);
         const fallbackUrl = m ? fallbackEmojiUrls.get(m[1]) : null;
-        if (fallbackUrl) {
+        if (fallbackUrl && isSafeEmojiUrl(fallbackUrl)) {
           return <img src={fallbackUrl} alt={emoji} className="w-8 h-8 object-contain" decoding="async" />;
         }
         return <span className="text-sm leading-none text-muted-foreground">{emoji}</span>;
@@ -716,11 +727,18 @@ export const MessageItem = memo(function MessageItem({
 
   const formattedTimestamp = useMemo(() => formatMessageTimestamp(message.created_at), [message.created_at]);
 
+  // Client-side rate limit guards (UX defense — server enforces real limits)
+  const checkReactionLimit = useRateLimit(15, 10_000);
+  const checkEditLimit = useRateLimit(10, 30_000);
+  const checkPinLimit = useRateLimit(5, 30_000);
+  const checkDeleteLimit = useRateLimit(10, 15_000);
+
   // Auto-resize textarea for edit mode
   // (Inline edit textarea removed — editing now happens in MessageInput)
 
   // Callbacks — editing now delegates to editStore
   const handleStartEditing = useCallback(() => {
+    if (!checkEditLimit()) { rateLimitToast("Editing too fast"); return; }
     const { startEditing } = useEditStore.getState();
     startEditing({
       id: message.id,
@@ -728,13 +746,14 @@ export const MessageItem = memo(function MessageItem({
       content: message.content,
       isDM: !!dmActions,
     });
-  }, [message.id, message.channel_id, message.content, dmActions]);
+  }, [message.id, message.channel_id, message.content, dmActions, checkEditLimit]);
 
   // For DMs, channel_id won't exist — use conversation context
   // The channelId for DMs is set via the dmActions context in DMChatArea
 
   const handlePin = useCallback(async () => {
     if (!user) return;
+    if (!checkPinLimit()) { rateLimitToast("Pinning/unpinning too fast"); return; }
     try {
       await pinMessage(message.id, !message.is_pinned, user.id);
       toast.success(message.is_pinned ? "Message unpinned" : "Message pinned");
@@ -742,7 +761,7 @@ export const MessageItem = memo(function MessageItem({
       console.error("Failed to pin/unpin message:", error);
       toast.error(error instanceof Error ? error.message : "Failed to pin/unpin message");
     }
-  }, [user, message.id, message.is_pinned, pinMessage]);
+  }, [user, message.id, message.is_pinned, pinMessage, checkPinLimit]);
 
   const isExternalEmoji = useCallback(
     (emoji: string): boolean => {
@@ -758,6 +777,7 @@ export const MessageItem = memo(function MessageItem({
   const handleReactionClick = useCallback(
     async (emoji: string, hasReacted: boolean) => {
       if (!user) return;
+      if (!checkReactionLimit()) { rateLimitToast("Adding reactions too fast"); return; }
       if (hasReacted) {
         await removeReaction(message.id, user.id, emoji);
       } else {
@@ -768,19 +788,20 @@ export const MessageItem = memo(function MessageItem({
         await addReaction(message.id, user.id, emoji);
       }
     },
-    [user, message.id, addReaction, removeReaction, isExternalEmoji, canUseExternalEmojis],
+    [user, message.id, addReaction, removeReaction, isExternalEmoji, canUseExternalEmojis, checkReactionLimit],
   );
 
   const handleAddReaction = useCallback(
     (emoji: string) => {
       if (!user) return;
+      if (!checkReactionLimit()) { rateLimitToast("Adding reactions too fast"); return; }
       if (isExternalEmoji(emoji) && !canUseExternalEmojis) {
         toast.error("You don't have permission to use external emojis");
         return;
       }
       addReaction(message.id, user.id, emoji);
     },
-    [user, message.id, addReaction, isExternalEmoji, canUseExternalEmojis],
+    [user, message.id, addReaction, isExternalEmoji, canUseExternalEmojis, checkReactionLimit],
   );
 
   const handleDesktopAddReaction = useCallback(
@@ -959,7 +980,10 @@ export const MessageItem = memo(function MessageItem({
   const handleRowMouseLeave = useCallback(() => setIsRowHovered(false), []);
 
   // Stable callbacks for delete modal
-  const handleShowDeleteModal = useCallback(() => setShowDeleteModal(true), []);
+  const handleShowDeleteModal = useCallback(() => {
+    if (!checkDeleteLimit()) { rateLimitToast("Deleting too fast"); return; }
+    setShowDeleteModal(true);
+  }, [checkDeleteLimit]);
 
   // Stable touch propagation stopper
   const stopTouchPropagation = useCallback((e: React.TouchEvent) => e.stopPropagation(), []);

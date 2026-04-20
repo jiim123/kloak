@@ -27,6 +27,8 @@ import {
   Search,
   type LucideIcon,
 } from "lucide-react";
+import { useRateLimit } from "@/hooks/useRateLimit";
+import { rateLimitToast } from "@/lib/rateLimitToast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -189,6 +191,7 @@ export const ServerSettingsModal = () => {
   } = useServerStore();
   const { user } = useAuthStore();
   const isMobile = useIsMobile();
+  const checkModLimit = useRateLimit(10, 30_000);
 
   type SettingsTabId = "overview" | "members" | "roles" | "bans" | "invites" | "emojis";
 
@@ -1227,6 +1230,7 @@ export const ServerSettingsModal = () => {
 
   const handleKickMember = async (member: ServerMember) => {
     if (!server) return;
+    if (!checkModLimit()) { rateLimitToast("Moderation actions too fast"); return; }
 
     try {
       await kickMember(server.id, member.user_id);
@@ -1238,6 +1242,7 @@ export const ServerSettingsModal = () => {
 
   const handleBanMember = async (member: ServerMember) => {
     if (!server) return;
+    if (!checkModLimit()) { rateLimitToast("Moderation actions too fast"); return; }
 
     try {
       await banMember(server.id, member.user_id);

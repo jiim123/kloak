@@ -1,12 +1,15 @@
-import { KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { DragEvent, KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import {
   Calendar,
+  ChevronDown,
+  ChevronRight,
   Check,
   CheckCircle2,
   Circle,
   ClipboardList,
   FileText,
+  GripVertical,
   MoreHorizontal,
   Plus,
   UserPlus,
@@ -193,11 +196,12 @@ const runRpc: RpcInvoker = (fn, params) =>
 interface FlattenedTask {
   task: Task;
   depth: number;
+  hasSubtasks: boolean;
 }
 
 const byPositionThenCreated = (a: Task, b: Task) => a.position - b.position || a.created_at.localeCompare(b.created_at);
 
-const buildTaskTree = (items: Task[]) => {
+const buildTaskTree = (items: Task[], collapsedMainTaskIds: Set<string>) => {
   const taskById = new Map(items.map((task) => [task.id, task]));
   const childrenByParentId = new Map<string | null, Task[]>();
 
@@ -222,7 +226,11 @@ const buildTaskTree = (items: Task[]) => {
   const flatten = (parentId: string | null, depth: number, out: FlattenedTask[]) => {
     const children = (childrenByParentId.get(parentId) ?? []).slice().sort(byPositionThenCreated);
     children.forEach((child) => {
-      out.push({ task: child, depth });
+      const hasSubtasks = (childrenByParentId.get(child.id)?.length ?? 0) > 0;
+      out.push({ task: child, depth, hasSubtasks });
+      if (depth === 0 && collapsedMainTaskIds.has(child.id)) {
+        return;
+      }
       flatten(child.id, depth + 1, out);
     });
   };
@@ -234,10 +242,20 @@ const buildTaskTree = (items: Task[]) => {
 interface TaskRowProps {
   task: Task;
   depth: number;
+  hasSubtasks: boolean;
+  subtasksCollapsed: boolean;
+  canReorderMainTask: boolean;
+  isDragTarget: boolean;
+  isDragging: boolean;
   canCreateTasks: boolean;
   canAssignTasks: boolean;
   canToggleTaskStatus: boolean;
   canDeleteTasks: boolean;
+  onMainTaskDragStart: (task: Task, event: DragEvent<HTMLElement>) => void;
+  onMainTaskDragOver: (task: Task, event: DragEvent<HTMLElement>) => void;
+  onMainTaskDrop: (task: Task, event: DragEvent<HTMLElement>) => void;
+  onMainTaskDragEnd: () => void;
+  onToggleSubtasks: (task: Task) => void;
   onToggleStatus: (task: Task) => void;
   onOpenNotes: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
@@ -248,10 +266,20 @@ interface TaskRowProps {
 const TaskRow = ({
   task,
   depth,
+  hasSubtasks,
+  subtasksCollapsed,
+  canReorderMainTask,
+  isDragTarget,
+  isDragging,
   canCreateTasks,
   canAssignTasks,
   canToggleTaskStatus,
   canDeleteTasks,
+  onMainTaskDragStart,
+  onMainTaskDragOver,
+  onMainTaskDrop,
+  onMainTaskDragEnd,
+  onToggleSubtasks,
   onToggleStatus,
   onOpenNotes,
   onDeleteTask,
@@ -263,8 +291,14 @@ const TaskRow = ({
 
   return (
     <div
-      className="group flex items-center gap-3 border-b border-border/60 px-4 py-3 transition-colors"
+      className={cn(
+        "group flex items-center gap-3 border-b border-border/60 px-4 py-3 transition-colors",
+        isDragTarget && "bg-primary/10",
+        isDragging && "opacity-70",
+      )}
       style={{ marginLeft: depth * TASK_INDENT_PX }}
+      onDragOver={canReorderMainTask ? (event) => onMainTaskDragOver(task, event) : undefined}
+      onDrop={canReorderMainTask ? (event) => onMainTaskDrop(task, event) : undefined}
     >
       <button type="button" className="shrink-0" disabled={!canToggleTaskStatus} onClick={() => onToggleStatus(task)}>
         {task.status === "completed" ? (
@@ -276,6 +310,17 @@ const TaskRow = ({
 
       <div className="min-w-0 flex-1 text-left">
         <div className="flex min-w-0 items-center gap-3">
+          {depth === 0 && hasSubtasks ? (
+            <button
+              type="button"
+              className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-secondary/40 hover:text-foreground"
+              onClick={() => onToggleSubtasks(task)}
+              title={subtasksCollapsed ? "Expand sub-tasks" : "Collapse sub-tasks"}
+              aria-label={subtasksCollapsed ? "Expand sub-tasks" : "Collapse sub-tasks"}
+            >
+              {subtasksCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </button>
+          ) : null}
           <span className={cn("truncate text-sm font-medium", task.status === "completed" && "line-through text-muted-foreground")}>
             {task.title}
           </span>
@@ -289,6 +334,19 @@ const TaskRow = ({
       </div>
 
       <div className="flex shrink-0 items-center gap-3 text-xs text-muted-foreground">
+        {canReorderMainTask && (
+          <button
+            type="button"
+            draggable
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary/40 hover:text-foreground cursor-grab active:cursor-grabbing"
+            onDragStart={(event) => onMainTaskDragStart(task, event)}
+            onDragEnd={onMainTaskDragEnd}
+            title="Drag to reorder main task"
+            aria-label="Drag to reorder main task"
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+        )}
         {task.description && (
           <button
             type="button"
@@ -380,6 +438,10 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
   const [submittingInlineTask, setSubmittingInlineTask] = useState(false);
   const [notesTask, setNotesTask] = useState<Task | null>(null);
   const [inlineParentTaskId, setInlineParentTaskId] = useState<string | null>(null);
+  const [collapsedMainTaskIds, setCollapsedMainTaskIds] = useState<Set<string>>(new Set());
+  const [draggedMainTaskId, setDraggedMainTaskId] = useState<string | null>(null);
+  const [dragOverMainTaskId, setDragOverMainTaskId] = useState<string | null>(null);
+  const [reorderingTaskId, setReorderingTaskId] = useState<string | null>(null);
   const [assignTask, setAssignTask] = useState<Task | null>(null);
   const [assigneeSearch, setAssigneeSearch] = useState("");
   const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<string[]>([]);
@@ -394,6 +456,8 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
   const canAssignTasks = !!channelId && canPerformInChannel("assign_tasks", channelId);
   const canChangeTaskStatus = !!channelId && canPerformInChannel("change_task_status", channelId);
   const canDeleteTasks = !!channelId && canPerformInChannel("delete_tasks", channelId);
+  const canEditOwnTasks = !!channelId && canPerformInChannel("edit_own_tasks", channelId);
+  const canEditAllTasks = !!channelId && canPerformInChannel("edit_all_tasks", channelId);
 
 
 
@@ -493,10 +557,14 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
     [filter, user?.id],
   );
 
-  const flattenedTasks = useMemo(() => buildTaskTree(tasks), [tasks]);
+  const flattenedTasks = useMemo(() => buildTaskTree(tasks, collapsedMainTaskIds), [tasks, collapsedMainTaskIds]);
   const visibleFlattenedTasks = useMemo(
     () => flattenedTasks.filter((entry) => taskMatchesFilter(entry.task)),
     [flattenedTasks, taskMatchesFilter],
+  );
+  const mainTaskOrder = useMemo(
+    () => flattenedTasks.filter((entry) => entry.depth === 0).map((entry) => entry.task.id),
+    [flattenedTasks],
   );
   const inlineParentTask = useMemo(
     () => (inlineParentTaskId ? tasks.find((task) => task.id === inlineParentTaskId) ?? null : null),
@@ -772,6 +840,104 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
     [canAssignTasks],
   );
 
+  const toggleMainTaskCollapse = useCallback((task: Task) => {
+    if (task.parent_task_id) return;
+
+    setCollapsedMainTaskIds((current) => {
+      const next = new Set(current);
+      if (next.has(task.id)) {
+        next.delete(task.id);
+      } else {
+        next.add(task.id);
+      }
+      return next;
+    });
+  }, []);
+
+  const canReorderTask = useCallback(
+    (task: Task) => {
+      if (!userId) return false;
+      if (canEditAllTasks) return true;
+      return canEditOwnTasks && task.created_by === userId;
+    },
+    [canEditAllTasks, canEditOwnTasks, userId],
+  );
+
+  const reorderMainTask = useCallback(
+    async (draggedTaskId: string, targetTaskId: string) => {
+      if (!user) return;
+
+      const fromIndex = mainTaskOrder.indexOf(draggedTaskId);
+      const toIndex = mainTaskOrder.indexOf(targetTaskId);
+      if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return;
+
+      setReorderingTaskId(draggedTaskId);
+      try {
+        const { error } = await runRpc("move_task", {
+          _task_id: draggedTaskId,
+          _user_id: user.id,
+          _new_position: toIndex,
+          _clear_parent: true,
+        });
+        if (error) throw error;
+        await loadBoard();
+      } catch (error) {
+        console.error("Failed to reorder tasks:", error);
+        toast.error(error instanceof Error ? error.message : "Failed to reorder tasks");
+      } finally {
+        setReorderingTaskId(null);
+      }
+    },
+    [loadBoard, mainTaskOrder, user],
+  );
+
+  const handleMainTaskDragStart = useCallback(
+    (task: Task, event: DragEvent<HTMLElement>) => {
+      if (task.parent_task_id || filter !== "all" || !canReorderTask(task)) {
+        event.preventDefault();
+        return;
+      }
+
+      setDraggedMainTaskId(task.id);
+      setDragOverMainTaskId(task.id);
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", task.id);
+    },
+    [canReorderTask, filter],
+  );
+
+  const handleMainTaskDragOver = useCallback(
+    (task: Task, event: DragEvent<HTMLElement>) => {
+      if (!draggedMainTaskId || task.parent_task_id || filter !== "all") return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      if (dragOverMainTaskId !== task.id) {
+        setDragOverMainTaskId(task.id);
+      }
+    },
+    [dragOverMainTaskId, draggedMainTaskId, filter],
+  );
+
+  const handleMainTaskDrop = useCallback(
+    (task: Task, event: DragEvent<HTMLElement>) => {
+      event.preventDefault();
+      if (!draggedMainTaskId || task.parent_task_id || filter !== "all") return;
+
+      const draggedTask = tasks.find((entry) => entry.id === draggedMainTaskId);
+      if (!draggedTask || !canReorderTask(draggedTask)) return;
+
+      void reorderMainTask(draggedMainTaskId, task.id);
+      setDraggedMainTaskId(null);
+      setDragOverMainTaskId(null);
+    },
+    [canReorderTask, draggedMainTaskId, filter, reorderMainTask, tasks],
+  );
+
+  const clearMainTaskDrag = useCallback(() => {
+    setDraggedMainTaskId(null);
+    setDragOverMainTaskId(null);
+  }, []);
+
   const toggleAssigneeSelection = (targetUserId: string) => {
     setSelectedAssigneeIds((current) => {
       if (current.includes(targetUserId)) {
@@ -1011,10 +1177,20 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
                         <TaskRow
                           task={entry.task}
                           depth={entry.depth}
+                          hasSubtasks={entry.hasSubtasks}
+                          subtasksCollapsed={entry.depth === 0 && collapsedMainTaskIds.has(entry.task.id)}
+                          canReorderMainTask={entry.depth === 0 && filter === "all" && canReorderTask(entry.task)}
+                          isDragTarget={entry.depth === 0 && !!draggedMainTaskId && dragOverMainTaskId === entry.task.id}
+                          isDragging={reorderingTaskId === entry.task.id}
                           canCreateTasks={canCreateTasks}
                           canAssignTasks={canAssignTasks}
                           canToggleTaskStatus={canToggleTaskStatus(entry.task)}
                           canDeleteTasks={canDeleteTasks}
+                          onMainTaskDragStart={handleMainTaskDragStart}
+                          onMainTaskDragOver={handleMainTaskDragOver}
+                          onMainTaskDrop={handleMainTaskDrop}
+                          onMainTaskDragEnd={clearMainTaskDrag}
+                          onToggleSubtasks={toggleMainTaskCollapse}
                           onToggleStatus={(task) => void toggleTaskStatus(task)}
                           onOpenNotes={openNotesDialog}
                           onDeleteTask={(task) => void handleDeleteTask(task)}

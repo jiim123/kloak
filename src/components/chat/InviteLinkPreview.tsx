@@ -1,19 +1,55 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { Loader2, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
 import { toast } from "sonner";
+import { getServerInitials } from "@/lib/serverUtils";
 
 type InviteDetails = {
   id: string;
   name: string;
   icon_url: string | null;
+  banner_url: string | null;
   about: string | null;
   inviter_username: string | null;
+  member_count?: number | null;
+};
+
+const INVITE_DETAILS_CACHE_TTL_MS = 2 * 60_000;
+const inviteDetailsCache = new Map<string, { data: InviteDetails | null; cachedAt: number }>();
+const inviteDetailsInFlight = new Map<string, Promise<InviteDetails | null>>();
+
+const getInviteDetailsCached = async (code: string): Promise<InviteDetails | null> => {
+  const now = Date.now();
+  const cached = inviteDetailsCache.get(code);
+  if (cached && now - cached.cachedAt < INVITE_DETAILS_CACHE_TTL_MS) {
+    return cached.data;
+  }
+
+  const inFlight = inviteDetailsInFlight.get(code);
+  if (inFlight) return inFlight;
+
+  const request = (async () => {
+    try {
+      const { data, error } = await supabase.rpc("get_invite_details_by_code", { _invite_code: code });
+      if (error) throw error;
+      const row = ((data ?? [])[0] as unknown as InviteDetails | undefined) ?? null;
+      inviteDetailsCache.set(code, { data: row, cachedAt: Date.now() });
+      return row;
+    } catch {
+      inviteDetailsCache.set(code, { data: null, cachedAt: Date.now() });
+      return null;
+    } finally {
+      inviteDetailsInFlight.delete(code);
+    }
+  })();
+
+  inviteDetailsInFlight.set(code, request);
+  return request;
 };
 
 export const InviteLinkPreview = ({ inviteCode }: { inviteCode: string }) => {
@@ -39,16 +75,10 @@ export const InviteLinkPreview = ({ inviteCode }: { inviteCode: string }) => {
       }
 
       setIsLoading(true);
-      try {
-        const { data, error } = await supabase.rpc("get_invite_details_by_code", { _invite_code: normalizedCode });
-        if (error) throw error;
-
-        const row = (data ?? [])[0] as unknown as InviteDetails | undefined;
-        if (!cancelled) setInvite(row ?? null);
-      } catch {
-        if (!cancelled) setInvite(null);
-      } finally {
-        if (!cancelled) setIsLoading(false);
+      const row = await getInviteDetailsCached(normalizedCode);
+      if (!cancelled) {
+        setInvite(row ?? null);
+        setIsLoading(false);
       }
     };
 
@@ -126,23 +156,46 @@ export const InviteLinkPreview = ({ inviteCode }: { inviteCode: string }) => {
 
   return (
     <div className="mt-2 w-full max-w-sm overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
-      <div className="p-4">
-        <div className="flex items-center gap-3">
-          <Avatar className="h-12 w-12 rounded-xl">
-            <AvatarImage src={invite.icon_url || undefined} />
-            <AvatarFallback className="rounded-xl bg-transparent">
-              {invite.name?.[0]?.toUpperCase() || "?"}
-            </AvatarFallback>
-          </Avatar>
-          <div className="min-w-0 flex-1">
-            <div className="font-medium leading-tight truncate">{invite.name}</div>
-            <div className="mt-0.5 text-xs text-muted-foreground truncate">
-              You’ve been invited{invite.inviter_username ? ` by ${invite.inviter_username}` : ""}
-            </div>
+      <div className="h-16 w-full overflow-hidden bg-muted/40">
+        {invite.banner_url ? (
+          <img src={invite.banner_url} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <div
+            className="h-full w-full opacity-80"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle at 1px 1px, hsl(var(--foreground) / 0.16) 1px, transparent 0)",
+              backgroundSize: "14px 14px",
+            }}
+          />
+        )}
+      </div>
+
+      <div className="p-4 pt-0">
+        <Avatar className="-mt-6 h-12 w-12 rounded-xl border-[3px] border-card shadow-sm">
+          <AvatarImage src={invite.icon_url || undefined} />
+          <AvatarFallback className="rounded-xl bg-secondary text-foreground font-semibold">
+            {getServerInitials(invite.name)}
+          </AvatarFallback>
+        </Avatar>
+
+        <div className="mt-3 min-w-0">
+          <div className="truncate font-medium leading-tight">{invite.name}</div>
+          <div className="mt-1 truncate text-xs text-muted-foreground">
+            You've been invited{invite.inviter_username ? ` by ${invite.inviter_username}` : ""}
           </div>
         </div>
 
-        <Button onClick={handleJoin} disabled={isJoining} className="mt-4 w-full">
+        {typeof invite.member_count === "number" && invite.member_count >= 0 && (
+          <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Users className="h-3.5 w-3.5" />
+            <span>{invite.member_count.toLocaleString()} members</span>
+          </div>
+        )}
+
+        {!!invite.about && <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{invite.about}</p>}
+
+        <Button onClick={handleJoin} disabled={isJoining} className="mt-4 h-8 w-full rounded-full text-xs">
           {isJoining && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {isAlreadyMember ? "Open Server" : "Join Community"}
         </Button>

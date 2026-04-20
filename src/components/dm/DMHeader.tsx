@@ -10,6 +10,8 @@ import { cn } from "@/lib/utils";
 import { getEffectivePresence } from "@/lib/presence";
 import { toast } from "sonner";
 import type { User, UserStatus } from "@/types";
+import { useRateLimit } from "@/hooks/useRateLimit";
+import { rateLimitToast } from "@/lib/rateLimitToast";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,6 +34,7 @@ export const DMHeader = ({ otherUser }: DMHeaderProps) => {
   const { user } = useAuthStore();
   const [hoveredButton, setHoveredButton] = useState<string | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const checkBlockLimit = useRateLimit(10, 60_000);
 
   const otherPresence = getEffectivePresence(
     (otherUser?.status as UserStatus) || "offline",
@@ -59,6 +62,7 @@ export const DMHeader = ({ otherUser }: DMHeaderProps) => {
 
   const handleBlockUser = async () => {
     if (!user?.id || !otherUser?.id) return;
+    if (!checkBlockLimit()) { rateLimitToast("Too many block actions"); return; }
     try {
       await blockUser(user.id, otherUser.id);
       toast.success(`Blocked ${otherUser.display_name || otherUser.username}`);
