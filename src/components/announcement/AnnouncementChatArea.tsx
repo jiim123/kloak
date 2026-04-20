@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { ChannelHeader } from "@/components/chat/ChannelHeader";
 import { MessageList } from "@/components/chat/MessageList";
 import { MessageInput } from "@/components/chat/MessageInput";
@@ -63,6 +63,23 @@ const AnnouncementPinnedMessageBar = React.memo(function AnnouncementPinnedMessa
 
   const handleSeeAll = useCallback(() => openModal("pinned-messages", { channelId }), [openModal, channelId]);
 
+  // Clear loading-placeholder background on snippet images once they load
+  // (replaces the CSP-violating inline `onload` attribute).
+  const snippetRef = useRef<HTMLSpanElement | null>(null);
+  useEffect(() => {
+    const el = snippetRef.current;
+    if (!el) return;
+    const handleLoad = (e: Event) => {
+      const target = e.target;
+      if (target instanceof HTMLImageElement && target.dataset.loadingBg === "true") {
+        target.style.backgroundColor = "transparent";
+        delete target.dataset.loadingBg;
+      }
+    };
+    el.addEventListener("load", handleLoad, true);
+    return () => el.removeEventListener("load", handleLoad, true);
+  }, []);
+
   return (
     <div className="flex items-center gap-2 px-4 py-2 bg-muted/50 border-b border-border/50 flex-shrink-0 min-w-0 overflow-hidden">
       <Pin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
@@ -78,6 +95,7 @@ const AnnouncementPinnedMessageBar = React.memo(function AnnouncementPinnedMessa
         </span>
       )}
       <span
+        ref={snippetRef}
         className="text-sm text-muted-foreground truncate min-w-0 flex-1 inline-flex items-center gap-1 [&_img]:w-4 [&_img]:h-4 [&_img]:inline-block [&_img]:align-middle"
         dangerouslySetInnerHTML={{ __html: parsedSnippet || "Pinned message" }}
       />
