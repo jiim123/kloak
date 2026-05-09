@@ -522,7 +522,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
   );
 
   return (
-    <div className="h-full flex flex-col min-w-0 bg-black text-white relative overflow-hidden">
+    <div className="h-full flex flex-col min-w-0 bg-black text-white relative overflow-hidden md:gap-2">
       <ChannelHeader channel={channel} extraActions={textPanelToggle} showMessageActions={false} />
 
       <div className="flex h-11 items-center justify-between border-b border-white/10 bg-black/95 px-3 sm:px-4 md:hidden">
