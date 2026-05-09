@@ -401,7 +401,7 @@ END;
 $function$;
 
 REVOKE EXECUTE ON FUNCTION public.update_server(uuid, uuid, jsonb) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.update_server(uuid, uuid, jsonb) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.update_server(uuid, uuid, jsonb) TO anon, authenticated, service_role;
 
 DO $$
 BEGIN
