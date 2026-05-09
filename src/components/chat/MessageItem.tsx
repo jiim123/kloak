@@ -1641,7 +1641,7 @@ export const MessageItem = memo(function MessageItem({
 
         {/* Reactions - rendered outside ContextMenu to avoid interfering with message actions */}
         {!message.is_system_message && message.reactions && message.reactions.length > 0 && (
-          <div className={cn("flex flex-wrap items-center gap-3 px-4", compactMode ? "pl-4" : "pl-[68px]")}>
+          <div className={cn("mt-1.5 flex flex-wrap items-center gap-3 px-4", compactMode ? "pl-4" : "pl-[68px]")}>
             {message.reactions.map((reaction) => (
               <HoverCard key={reaction.emoji} openDelay={200}>
                 <HoverCardTrigger asChild>
@@ -1654,11 +1654,14 @@ export const MessageItem = memo(function MessageItem({
                       onTouchEnd={clearReactionLongPress}
                       onTouchMove={clearReactionLongPress}
                       disabled={!effectiveCanAddReactions}
-                      className={`flex items-center gap-1 bg-transparent border-none cursor-pointer transition-opacity duration-150 ${
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-md border px-2 py-1 transition-colors duration-150",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1 focus-visible:ring-offset-background",
                         reaction.hasReacted
-                          ? "text-foreground opacity-100"
-                          : "text-muted-foreground opacity-60 hover:opacity-100"
-                      } ${!effectiveCanAddReactions ? "opacity-50 cursor-not-allowed" : ""}`}
+                          ? "border-primary/60 bg-primary/15 text-foreground"
+                          : "border-border/70 bg-muted/30 text-muted-foreground hover:bg-muted/55 hover:border-border",
+                        !effectiveCanAddReactions && "opacity-50 cursor-not-allowed",
+                      )}
                     >
                       {reactionEmojiNode(reaction.emoji)}
                       <span className="text-[11px] font-semibold font-mono">{reaction.count}</span>
@@ -1723,7 +1726,7 @@ export const MessageItem = memo(function MessageItem({
                     <button
                       key={`ghost-${emoji}`}
                       onClick={() => handleReactionClick(emoji, false)}
-                      className="flex items-center gap-1 bg-transparent border-none cursor-pointer opacity-30 hover:opacity-100 transition-opacity duration-150 text-muted-foreground"
+                      className="inline-flex items-center gap-1 rounded-md border border-dashed border-border/70 px-2 py-1 bg-background/40 cursor-pointer opacity-50 hover:opacity-100 hover:bg-muted/45 hover:border-border transition-all duration-150 text-muted-foreground"
                     >
                       {reactionEmojiNode(emoji)}
                     </button>
