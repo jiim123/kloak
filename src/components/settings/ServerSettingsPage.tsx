@@ -121,6 +121,24 @@ const serverSettingsSchema = z.object({
 
 type ServerSettingsForm = z.infer<typeof serverSettingsSchema>;
 
+type PublicationRequirement = {
+  key: string;
+  label: string;
+  met: boolean;
+  current: number | boolean;
+  required: number | boolean;
+  unit: string;
+};
+
+type PublicationEligibility = {
+  success: boolean;
+  eligible?: boolean;
+  is_published?: boolean;
+  requirements?: PublicationRequirement[];
+  unmet_requirements?: string[];
+  error?: string;
+};
+
 const getRoleIcon = (role: ServerRole) => {
   switch (role) {
     case "owner":
@@ -735,6 +753,8 @@ export const ServerSettingsPage = () => {
   const [copiedInviteId, setCopiedInviteId] = useState<string | null>(null);
   const [inviteExpiresIn, setInviteExpiresIn] = useState<string>("never");
   const [inviteMaxUses, setInviteMaxUses] = useState<string>("unlimited");
+  const [publicationEligibility, setPublicationEligibility] = useState<PublicationEligibility | null>(null);
+  const [isLoadingPublicationEligibility, setIsLoadingPublicationEligibility] = useState(false);
   const [editingRole, setEditingRole] = useState<CustomServerRole | null>(null);
   const [roleName, setRoleName] = useState("");
   const [roleColor, setRoleColor] = useState("#5865F2");
@@ -947,6 +967,29 @@ export const ServerSettingsPage = () => {
   const isOwner = userRole === "owner";
   const isAdmin = userRole === "admin";
 
+  const loadPublicationEligibility = async () => {
+    if (!server?.id || !user?.id || !isOwner) {
+      setPublicationEligibility(null);
+      return;
+    }
+
+    setIsLoadingPublicationEligibility(true);
+    try {
+      const { data, error } = await supabase.rpc("get_server_publication_eligibility", {
+        _server_id: server.id,
+        _user_id: user.id,
+      });
+
+      if (error) throw error;
+      setPublicationEligibility((data ?? null) as PublicationEligibility | null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to load publication requirements.";
+      setPublicationEligibility({ success: false, error: message });
+    } finally {
+      setIsLoadingPublicationEligibility(false);
+    }
+  };
+
   const {
     register,
     handleSubmit,
@@ -1016,6 +1059,11 @@ export const ServerSettingsPage = () => {
       supabase.removeChannel(channel);
     };
   }, [isServerSettingsOpen, server?.id, user?.id]);
+
+  useEffect(() => {
+    if (!isServerSettingsOpen) return;
+    void loadPublicationEligibility();
+  }, [isServerSettingsOpen, server?.id, user?.id, isOwner]);
 
   // Track the server ID when settings open to detect server switches
   const initialServerIdRef = useRef<string | null>(null);
@@ -1685,7 +1733,7 @@ export const ServerSettingsPage = () => {
     setIsLoading(true);
     try {
       let iconUrl = iconRemoved ? null : server.icon_url;
-      let bannerUrl = bannerRemoved ? null : server.banner_url;
+      const bannerUrl = bannerRemoved ? null : server.banner_url;
 
       // Upload new icon if selected
       if (iconFile) {
@@ -1734,6 +1782,8 @@ export const ServerSettingsPage = () => {
         setSystemChannelLeaveId(updatedServer.system_channel_leave_id || "");
       }
 
+      await loadPublicationEligibility();
+
       toast.success("Server settings updated!");
       clearIcon();
       clearBanner();
@@ -1755,6 +1805,23 @@ export const ServerSettingsPage = () => {
       closeServerSettings();
     } catch (error) {
       toast.error("Failed to delete server");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePublishedChange = async (checked: boolean) => {
+    if (!server || !user) return;
+
+    setIsLoading(true);
+    try {
+      await updateServer(server.id, user.id, { is_published: checked });
+      await fetchServers(user.id);
+      await loadPublicationEligibility();
+      toast.success(checked ? "Server is now public" : "Server is no longer public");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update public status");
+      await loadPublicationEligibility();
     } finally {
       setIsLoading(false);
     }
@@ -2285,13 +2352,58 @@ export const ServerSettingsPage = () => {
                 {isOwner && (
                   <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
                     <Label className="text-sm font-medium">Publish Server</Label>
-                    <div className="flex items-start gap-3 p-3 rounded-lg border border-border/50 bg-secondary/30 opacity-75">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-foreground">Make this server public</p>
-                        <p className="text-xs text-muted-foreground">
-                          We&apos;re rebuilding the Explore page, so publishing will be available soon.
-                        </p>
+                    <div className="space-y-3 rounded-lg border border-border/50 bg-secondary/30 p-3">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-foreground">Make this server public</p>
+                          <p className="text-xs text-muted-foreground">
+                            Public servers appear in Explore only after meeting the minimum quality requirements.
+                          </p>
+                        </div>
+                        <Switch
+                          checked={!!server.is_published}
+                          onCheckedChange={handlePublishedChange}
+                          disabled={isLoading || isLoadingPublicationEligibility || (!server.is_published && !publicationEligibility?.eligible)}
+                        />
                       </div>
+
+                      {isLoadingPublicationEligibility ? (
+                        <p className="text-xs text-muted-foreground">Checking requirements...</p>
+                      ) : publicationEligibility?.requirements?.length ? (
+                        <div className="space-y-2">
+                          {publicationEligibility.requirements.map((requirement) => (
+                            <div
+                              key={requirement.key}
+                              className="flex items-center justify-between gap-3 rounded-md border border-border/40 bg-background/40 px-3 py-2"
+                            >
+                              <div className="flex min-w-0 items-center gap-2">
+                                {requirement.met ? (
+                                  <Check className="h-4 w-4 flex-shrink-0 text-emerald-500" />
+                                ) : (
+                                  <X className="h-4 w-4 flex-shrink-0 text-destructive" />
+                                )}
+                                <span className="text-xs text-foreground">{requirement.label}</span>
+                              </div>
+                              <span className="text-right text-xs text-muted-foreground">
+                                {typeof requirement.current === "boolean"
+                                  ? requirement.current
+                                    ? "Set"
+                                    : "Missing"
+                                  : `${requirement.current}/${requirement.required} ${requirement.unit}`}
+                              </span>
+                            </div>
+                          ))}
+                          {!publicationEligibility.eligible && publicationEligibility.unmet_requirements?.length ? (
+                            <p className="text-xs text-muted-foreground">
+                              Missing: {publicationEligibility.unmet_requirements.join(" | ")}
+                            </p>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          {publicationEligibility?.error || "Unable to load publication requirements."}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}

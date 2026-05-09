@@ -3727,6 +3727,10 @@ export type Database = {
         }[]
       }
       get_explore_servers: { Args: never; Returns: Json }
+      get_server_publication_eligibility: {
+        Args: { _server_id: string; _user_id: string }
+        Returns: Json
+      }
       get_friend_dashboard: { Args: { _user_id: string }; Returns: Json }
       get_invite_details_by_code: {
         Args: { _invite_code: string }
