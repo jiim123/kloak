@@ -85,6 +85,27 @@ interface AuthState {
   >;
 }
 
+const mapAuthUser = (userData: Record<string, unknown>, fallbackStatus: UserStatus = "online"): User => ({
+  id: userData.id as string,
+  username: userData.username as string,
+  display_name: userData.display_name as string | null,
+  avatar_url: userData.avatar_url as string | null,
+  banner_url: (userData.banner_url as string | null) ?? null,
+  avatar_decoration: userData.avatar_decoration as string | null,
+  profile_effect: (userData.profile_effect as string | null) ?? null,
+  banner_color: (userData.banner_color as string) || "#5865F2",
+  profile_theme_primary: (userData.profile_theme_primary as string | null) ?? null,
+  profile_theme_accent: (userData.profile_theme_accent as string | null) ?? null,
+  bio: userData.bio as string | null,
+  status: (userData.status as UserStatus) || fallbackStatus,
+  custom_status: userData.custom_status as string | null,
+  created_at: userData.created_at as string,
+  last_seen: (userData.last_seen as string | null) ?? new Date().toISOString(),
+  pronouns: (userData.pronouns as string | null) ?? null,
+  is_bot: (userData.is_bot as boolean | null) ?? false,
+  allow_nsfw: (userData.allow_nsfw as boolean | null) ?? false,
+});
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -127,25 +148,7 @@ export const useAuthStore = create<AuthState>()(
           }
 
           const userData = data as Record<string, unknown>;
-          const user: User = {
-            id: userData.id as string,
-            username: userData.username as string,
-            display_name: userData.display_name as string | null,
-            avatar_url: userData.avatar_url as string | null,
-            banner_url: (userData.banner_url as string | null) ?? null,
-            avatar_decoration: userData.avatar_decoration as string | null,
-            profile_effect: (userData.profile_effect as string | null) ?? null,
-            banner_color: (userData.banner_color as string) || "#5865F2",
-            profile_theme_primary: (userData.profile_theme_primary as string | null) ?? null,
-            profile_theme_accent: (userData.profile_theme_accent as string | null) ?? null,
-            bio: userData.bio as string | null,
-            status: "online",
-            custom_status: userData.custom_status as string | null,
-            created_at: userData.created_at as string,
-            last_seen: new Date().toISOString(),
-            pronouns: (userData.pronouns as string | null) ?? null,
-            is_bot: (userData.is_bot as boolean | null) ?? false,
-          };
+          const user = mapAuthUser(userData);
 
           set({ user, isAuthenticated: true, isLoading: false });
           useUserCacheStore.getState().upsertUser(user);
@@ -253,26 +256,8 @@ export const useAuthStore = create<AuthState>()(
             throw new Error("No user data returned");
           }
 
-          const userData = data;
-          const user: User = {
-            id: userData.id as string,
-            username: userData.username as string,
-            display_name: userData.display_name as string | null,
-            avatar_url: userData.avatar_url as string | null,
-            banner_url: (userData.banner_url as string | null) ?? null,
-            avatar_decoration: userData.avatar_decoration as string | null,
-            profile_effect: (userData.profile_effect as string | null) ?? null,
-            banner_color: (userData.banner_color as string) || "#5865F2",
-            profile_theme_primary: (userData.profile_theme_primary as string | null) ?? null,
-            profile_theme_accent: (userData.profile_theme_accent as string | null) ?? null,
-            bio: userData.bio as string | null,
-            status: (userData.status as UserStatus) || "online",
-            custom_status: userData.custom_status as string | null,
-            created_at: userData.created_at as string,
-            last_seen: userData.last_seen as string | null,
-            pronouns: (userData.pronouns as string | null) ?? null,
-            is_bot: (userData.is_bot as boolean | null) ?? false,
-          };
+          const userData = data as Record<string, unknown>;
+          const user = mapAuthUser(userData);
 
           // New account starts with no manual status override.
           const newKeyHash = await hashSecretKey(secretKey);
@@ -346,25 +331,7 @@ export const useAuthStore = create<AuthState>()(
           }
 
           const userData = data as Record<string, unknown>;
-          const user: User = {
-            id: userData.id as string,
-            username: userData.username as string,
-            display_name: userData.display_name as string | null,
-            avatar_url: userData.avatar_url as string | null,
-            banner_url: (userData.banner_url as string | null) ?? null,
-            avatar_decoration: userData.avatar_decoration as string | null,
-            profile_effect: (userData.profile_effect as string | null) ?? null,
-            banner_color: (userData.banner_color as string) || "#5865F2",
-            profile_theme_primary: (userData.profile_theme_primary as string | null) ?? null,
-            profile_theme_accent: (userData.profile_theme_accent as string | null) ?? null,
-            bio: userData.bio as string | null,
-            status: "online",
-            custom_status: userData.custom_status as string | null,
-            created_at: userData.created_at as string,
-            last_seen: new Date().toISOString(),
-            pronouns: (userData.pronouns as string | null) ?? null,
-            is_bot: (userData.is_bot as boolean | null) ?? false,
-          };
+          const user = mapAuthUser(userData);
 
           set({ user, isAuthenticated: true, isLoading: false, manualStatus: null });
           // Seed user cache to avoid redundant get_user_by_id calls (realtime / DMs).

@@ -7659,6 +7659,7 @@ BEGIN
     'bio', u.bio,
     'status', u.status,
     'custom_status', u.custom_status,
+    'allow_nsfw', u.allow_nsfw,
     'created_at', u.created_at,
     'last_seen', u.last_seen
   ) INTO result
@@ -8433,12 +8434,13 @@ CREATE FUNCTION public.register_user(_username text, _key_hash text, _banner_col
           'banner_color', u.banner_color,
           'profile_theme_primary', u.profile_theme_primary,
           'profile_theme_accent', u.profile_theme_accent,
-          'bio', u.bio,
-          'status', u.status,
-          'custom_status', u.custom_status,
-          'created_at', u.created_at,
-          'last_seen', u.last_seen
-        ) INTO result
+    'bio', u.bio,
+    'status', u.status,
+    'custom_status', u.custom_status,
+    'allow_nsfw', u.allow_nsfw,
+    'created_at', u.created_at,
+    'last_seen', u.last_seen
+  ) INTO result
         FROM public.users u
         WHERE u.id = new_user_id;
 
