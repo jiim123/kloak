@@ -220,7 +220,10 @@ const AttachmentItem = memo(function AttachmentItem({
   // the attachment URL is already stripped from displayContent)
   if (!signedUrl && (isImage || isVideo || isAudio)) {
     return (
-      <div className="flex items-center justify-center rounded-lg bg-muted/20 w-16 h-16">
+      <div
+        className="flex items-center justify-center rounded-lg bg-muted/20"
+        style={reservedStyle ? { width: reservedStyle.width, height: reservedStyle.height } : undefined}
+      >
         <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
       </div>
     );
@@ -236,8 +239,11 @@ const AttachmentItem = memo(function AttachmentItem({
           <img
             src={signedUrl}
             alt={attachment.file_name}
+            width={reservedStyle?.width}
+            height={reservedStyle?.height}
             className="w-full h-full object-contain rounded-lg cursor-pointer hover:opacity-90"
             decoding="async"
+            loading="lazy"
             onClick={() => signedUrl && onImageClick?.(signedUrl)}
             onError={refresh}
           />

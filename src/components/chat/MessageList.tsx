@@ -39,7 +39,6 @@ const EMPTY_CUSTOM_EMOJI_MAP = new Map<string, string>();
 const EMPTY_GLOBAL_EMOJI_MAP = new Map<string, ResolvedEmoji>();
 
 const OVERFLOW_ANCHOR_NONE = { overflowAnchor: "none" as const };
-const OVERFLOW_ANCHOR_AUTO = { overflowAnchor: "auto" as const };
 
 // CRITICAL — content-visibility: auto for off-screen messages.
 // This tells the browser to skip layout, style, and paint work for messages
@@ -58,6 +57,38 @@ const MESSAGE_ROW_STYLE: React.CSSProperties = {
   contentVisibility: "auto",
   containIntrinsicSize: "auto 80px",
   overflowAnchor: "none",
+};
+
+const estimateAttachmentRenderHeight = (attachment: Message["attachments"][number]): number => {
+  if (!attachment.file_type?.startsWith("image/")) return 0;
+  if (!attachment.width || !attachment.height) return 200;
+
+  const maxW = 400;
+  const maxH = 300;
+  let w = attachment.width;
+  let h = attachment.height;
+
+  if (w > maxW) {
+    h = Math.round(h * (maxW / w));
+    w = maxW;
+  }
+
+  if (h > maxH) {
+    h = maxH;
+  }
+
+  return h;
+};
+
+const getMessageRowStyle = (message: Message, isGrouped: boolean): React.CSSProperties => {
+  const imageHeight = Math.max(0, ...(message.attachments ?? []).map(estimateAttachmentRenderHeight));
+  if (imageHeight <= 0) return MESSAGE_ROW_STYLE;
+
+  const rowChromeHeight = isGrouped ? 24 : 64;
+  return {
+    ...MESSAGE_ROW_STYLE,
+    containIntrinsicSize: `auto ${imageHeight + rowChromeHeight}px`,
+  };
 };
 
 // Date dividers stay fully rendered — useScrollToMessage uses them as landmarks
@@ -95,6 +126,11 @@ const getDateDividerLabel = (date: Date): string => {
 type ListItem =
   | { type: "message"; message: Message; previousMessage: Message | null; isNewMessagesDivider: boolean }
   | { type: "dateDivider"; label: string; date: Date };
+
+type PendingScrollAnchor = {
+  messageId: string;
+  topOffset: number;
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SUB-COMPONENTS (memoized, module-scope)
@@ -190,7 +226,7 @@ const Row = memo(({ item, authorStyle, customEmojiMap, globalEmojiMap, highlight
   const isGrouped = shouldGroupMessages(message, previousMessage);
 
   return (
-    <div style={MESSAGE_ROW_STYLE}>
+    <div data-message-row data-message-id={message.id} style={getMessageRowStyle(message, isGrouped)}>
       <MessageItem
         message={message}
         isGrouped={isGrouped}
@@ -337,6 +373,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   const prevChannelIdRef = useRef<string>(channelId);
   const didInitialBottomScrollRef = useRef(false);
   const lastScrollHeightRef = useRef(0);
+  const pendingScrollAnchorRef = useRef<PendingScrollAnchor | null>(null);
 
   // Stable refs for use inside handlers/effects without triggering re-renders
   const messagesRef = useRef(messages);
@@ -549,6 +586,48 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
 
   const startReachedCooldownRef = useRef(false);
 
+  const captureScrollAnchor = useCallback((): PendingScrollAnchor | null => {
+    const node = containerRef.current;
+    if (!node) return null;
+
+    const containerTop = node.getBoundingClientRect().top;
+    const rows = node.querySelectorAll<HTMLElement>("[data-message-row][data-message-id]");
+
+    for (const row of rows) {
+      const rect = row.getBoundingClientRect();
+      if (rect.bottom <= containerTop) continue;
+
+      const messageId = row.dataset.messageId;
+      if (!messageId) return null;
+
+      return {
+        messageId,
+        topOffset: rect.top - containerTop,
+      };
+    }
+
+    return null;
+  }, []);
+
+  const restoreScrollAnchor = useCallback((anchor: PendingScrollAnchor) => {
+    const node = containerRef.current;
+    if (!node) return false;
+
+    const row = node.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(anchor.messageId)}"]`);
+    if (!row) return false;
+
+    const containerTop = node.getBoundingClientRect().top;
+    const currentTopOffset = row.getBoundingClientRect().top - containerTop;
+    const delta = currentTopOffset - anchor.topOffset;
+
+    if (Math.abs(delta) > 0.5) {
+      node.scrollTop += delta;
+      lastScrollHeightRef.current = node.scrollHeight;
+    }
+
+    return true;
+  }, []);
+
   const handleLoadOlder = useCallback(() => {
     if (!hasMore || isLoading || isFetchingOlder || startReachedCooldownRef.current) return;
     const msgs = deduplicatedMessagesRef.current;
@@ -556,13 +635,43 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     if (!beforeCursor) return;
 
     startReachedCooldownRef.current = true;
+    pendingScrollAnchorRef.current = captureScrollAnchor();
 
     fetchMessagesRef.current(channelIdRef.current, 50, beforeCursor).finally(() => {
       setTimeout(() => {
         startReachedCooldownRef.current = false;
       }, 220);
     });
-  }, [hasMore, isLoading, isFetchingOlder, channelData?.oldestLoadedAt]);
+  }, [hasMore, isLoading, isFetchingOlder, channelData?.oldestLoadedAt, captureScrollAnchor]);
+
+  useLayoutEffect(() => {
+    if (isFetchingOlder) return;
+
+    const anchor = pendingScrollAnchorRef.current;
+    if (!anchor) return;
+
+    if (!restoreScrollAnchor(anchor)) {
+      pendingScrollAnchorRef.current = null;
+      return;
+    }
+
+    // content-visibility and late intrinsic-size correction can adjust layout
+    // after the first paint. Re-applying the same anchor for two frames keeps
+    // the user's viewport stable without relying on browser scroll anchoring.
+    let secondFrame: number | null = null;
+    const firstFrame = requestAnimationFrame(() => {
+      restoreScrollAnchor(anchor);
+      secondFrame = requestAnimationFrame(() => {
+        restoreScrollAnchor(anchor);
+        pendingScrollAnchorRef.current = null;
+      });
+    });
+
+    return () => {
+      cancelAnimationFrame(firstFrame);
+      if (secondFrame !== null) cancelAnimationFrame(secondFrame);
+    };
+  }, [isFetchingOlder, msgCount, restoreScrollAnchor]);
 
   // Throttled scroll handler via requestAnimationFrame — scroll fires 60+/sec
   // on trackpads, so we coalesce to at most once per frame.
@@ -721,7 +830,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
             ref={containerRef}
             className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative bg-transparent"
             onScroll={handleScroll}
-            style={OVERFLOW_ANCHOR_AUTO}
+            style={OVERFLOW_ANCHOR_NONE}
           >
             {isLoading && messages.length > 0 && (
               <div style={OVERFLOW_ANCHOR_NONE}>
