@@ -2315,9 +2315,6 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                     <div className="p-4 md:py-5 md:px-5">
                       {/* Desktop layout */}
                       <div className="hidden md:flex md:gap-4">
-                        {firstAttachmentPath && (
-                          <ForumThreadThumbnail attachmentPath={firstAttachmentPath} />
-                        )}
                         <div className="min-w-0 flex-1 flex flex-col gap-2">
                           {/* Title */}
                           <span className="block truncate text-base font-medium text-foreground">{threadTitle}</span>
@@ -2389,13 +2386,13 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                             </div>
                           )}
                         </div>
+                        {firstAttachmentPath && (
+                          <ForumThreadThumbnail attachmentPath={firstAttachmentPath} />
+                        )}
                       </div>
 
                       {/* Mobile layout */}
                       <div className="flex gap-3 md:hidden">
-                        {firstAttachmentPath && (
-                          <ForumThreadThumbnail attachmentPath={firstAttachmentPath} />
-                        )}
                         <div className="min-w-0 flex-1 flex flex-col gap-2">
                           {/* Title */}
                           <div className="text-sm font-medium text-foreground">{threadTitle}</div>
@@ -2467,6 +2464,9 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                             </div>
                           )}
                         </div>
+                        {firstAttachmentPath && (
+                          <ForumThreadThumbnail attachmentPath={firstAttachmentPath} />
+                        )}
                       </div>
                     </div>
                     {/* Delete thread button removed from list - only available when thread is opened */}
