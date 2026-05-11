@@ -193,11 +193,12 @@ export const ImageUploadDialog = ({ open, onOpenChange, onUpload }: ImageUploadD
           <p className="text-sm text-destructive">{error}</p>
         )}
 
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={handleClose} disabled={isUploading}>
+        <DialogFooter>
+          <Button variant="outline" rounded="xl" onClick={handleClose} disabled={isUploading}>
             Cancel
           </Button>
           <Button 
+            rounded="xl"
             onClick={handleUpload} 
             disabled={selectedFiles.length === 0 || isUploading}
           >

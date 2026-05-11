@@ -184,13 +184,14 @@ export const JoinServerModal = () => {
 
               {/* Actions - same style as Create Server modal: Back left, primary right */}
               <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-2 sm:gap-3 pt-2 border-t border-border/30">
-                <Button type="button" variant="ghost" onClick={handleBack} className="flex-1 sm:flex-none rounded-xl">
+                <Button type="button" variant="outline" rounded="xl" onClick={handleBack} className="flex-1 sm:flex-none">
                   Back
                 </Button>
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="flex-1 sm:flex-none rounded-xl bg-primary hover:bg-primary/90"
+                  rounded="xl"
+                  className="flex-1 sm:flex-none"
                 >
                   {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Join Server

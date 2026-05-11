@@ -2206,12 +2206,13 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                   Attach
                 </Button>
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={handleCancelCreate} disabled={isCreatingThread}>
+                  <Button variant="outline" rounded="xl" onClick={handleCancelCreate} disabled={isCreatingThread}>
                     Cancel
                   </Button>
                   <Button
                     onClick={handleCreateThread}
                     disabled={(!newThreadTitle.trim() && !newThreadContent.trim()) || isCreatingThread}
+                    rounded="xl"
                   >
                     {isCreatingThread ? (
                       <>

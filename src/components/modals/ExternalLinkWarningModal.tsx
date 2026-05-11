@@ -53,10 +53,10 @@ export const ExternalLinkWarningModal = () => {
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={handleClose}>
+          <Button type="button" variant="outline" rounded="xl" onClick={handleClose}>
             Cancel
           </Button>
-          <Button type="button" onClick={handleContinue}>
+          <Button type="button" rounded="xl" onClick={handleContinue}>
             Continue
           </Button>
         </DialogFooter>

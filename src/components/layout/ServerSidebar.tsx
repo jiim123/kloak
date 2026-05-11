@@ -1537,10 +1537,10 @@ export const ServerSidebar = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setIsCreateFolderOpen(false)}>
+            <Button variant="outline" rounded="xl" onClick={() => setIsCreateFolderOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleCreateFolder} disabled={!newFolderName.trim()}>
+            <Button rounded="xl" onClick={handleCreateFolder} disabled={!newFolderName.trim()}>
               Create
             </Button>
           </DialogFooter>
@@ -1567,10 +1567,10 @@ export const ServerSidebar = () => {
             />
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setIsRenameFolderOpen(false)}>
+            <Button variant="outline" rounded="xl" onClick={() => setIsRenameFolderOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleRenameFolder} disabled={!renameFolderName.trim()}>
+            <Button rounded="xl" onClick={handleRenameFolder} disabled={!renameFolderName.trim()}>
               Save
             </Button>
           </DialogFooter>
@@ -1594,10 +1594,10 @@ export const ServerSidebar = () => {
             />
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setIsChangeFolderColorOpen(false)}>
+            <Button variant="outline" rounded="xl" onClick={() => setIsChangeFolderColorOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleChangeColor}>Save</Button>
+            <Button rounded="xl" onClick={handleChangeColor}>Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

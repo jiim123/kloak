@@ -174,10 +174,10 @@ export const CreatePollModal = ({ open, onOpenChange, channelId }: CreatePollMod
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="secondary" onClick={() => handleClose(false)}>
+          <Button type="button" variant="outline" rounded="xl" onClick={() => handleClose(false)}>
             Cancel
           </Button>
-          <Button type="button" onClick={submit} disabled={!canSubmit}>
+          <Button type="button" rounded="xl" onClick={submit} disabled={!canSubmit}>
             Create poll
           </Button>
         </DialogFooter>

@@ -3333,21 +3333,23 @@ export const ServerSettingsPage = () => {
                         <Button
                           type="button"
                           size="sm"
+                          variant="outline"
+                          rounded="xl"
+                          onClick={clearEmoji}
+                          disabled={isUploadingEmoji && !!emojiFile}
+                        >
+                          Clear
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          rounded="xl"
                           onClick={uploadServerEmoji}
                           disabled={isUploadingEmoji || !emojiFile || !emojiName.trim()}
                           className="flex-1 sm:flex-none"
                         >
                           {isUploadingEmoji && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                           Upload
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={clearEmoji}
-                          disabled={isUploadingEmoji && !!emojiFile}
-                        >
-                          Clear
                         </Button>
                       </div>
                     </div>

@@ -3330,16 +3330,6 @@ export const ServerSettingsModal = () => {
                           <div className="flex flex-col-reverse sm:flex-row gap-2">
                             <Button
                               type="button"
-                              onClick={uploadServerEmoji}
-                              disabled={isUploadingEmoji || !emojiFile || !emojiName.trim()}
-                              rounded="xl"
-                              className="h-10 flex-1 sm:flex-none"
-                            >
-                              {isUploadingEmoji && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                              Upload
-                            </Button>
-                            <Button
-                              type="button"
                               variant="outline"
                               rounded="xl"
                               onClick={clearEmoji}
@@ -3347,6 +3337,16 @@ export const ServerSettingsModal = () => {
                               className="h-10"
                             >
                               Clear
+                            </Button>
+                            <Button
+                              type="button"
+                              onClick={uploadServerEmoji}
+                              disabled={isUploadingEmoji || !emojiFile || !emojiName.trim()}
+                              rounded="xl"
+                              className="h-10 flex-1 sm:flex-none"
+                            >
+                              {isUploadingEmoji && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                              Upload
                             </Button>
                           </div>
                         </div>

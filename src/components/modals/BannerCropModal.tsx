@@ -138,7 +138,7 @@ export const BannerCropModal = ({
           <ZoomIn className="w-4 h-4 text-muted-foreground flex-shrink-0" />
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter>
           <Button variant="outline" rounded="xl" onClick={onClose} disabled={isUploading}>
             Cancel
           </Button>
