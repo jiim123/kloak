@@ -23,6 +23,7 @@ import {
   Check,
   Volume2,
   VolumeX,
+  MessageSquareText,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -47,6 +48,7 @@ interface ChannelContextMenuProps {
   onEdit: () => void;
   onDelete: () => void;
   onCopyLink: () => void;
+  onOpenChat?: () => void;
   onMarkAsRead?: () => void;
 }
 
@@ -57,6 +59,7 @@ export const ChannelContextMenu = ({
   onEdit,
   onDelete,
   onCopyLink,
+  onOpenChat,
   onMarkAsRead,
 }: ChannelContextMenuProps) => {
   const { user } = useAuthStore();
@@ -170,6 +173,12 @@ export const ChannelContextMenu = ({
               Mark as Read
             </ContextMenuItem>
           )}
+          {onOpenChat && (
+            <ContextMenuItem onClick={onOpenChat}>
+              <MessageSquareText className="w-4 h-4" />
+              Open Chat
+            </ContextMenuItem>
+          )}
           <ContextMenuItem onClick={handleToggleMute}>
             {channelMuted ? <Volume2 className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
             {channelMuted ? "Unmute Channel" : "Mute Channel"}
@@ -245,6 +254,12 @@ export const ChannelContextMenu = ({
             <ContextMenuItem onClick={onMarkAsRead}>
               <Check className="w-4 h-4" />
               Mark as Read
+            </ContextMenuItem>
+          )}
+          {onOpenChat && (
+            <ContextMenuItem onClick={onOpenChat}>
+              <MessageSquareText className="w-4 h-4" />
+              Open Chat
             </ContextMenuItem>
           )}
           <ContextMenuItem onClick={handleToggleMute}>

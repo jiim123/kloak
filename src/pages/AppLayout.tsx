@@ -118,6 +118,10 @@ const AppLayout = () => {
   const joinedVoiceChannelId = useVoiceStore((s) => s.joinedChannelId);
   const authEntryPath = getAuthEntryPath();
   const [lockedLayoutIsMobile, setLockedLayoutIsMobile] = useState<boolean | null>(null);
+  const activeVoiceTextChannelId = useMemo(() => {
+    if (currentChannel?.type !== "voice") return null;
+    return channels.find((channel) => channel.linked_voice_channel_id === currentChannel.id)?.id ?? null;
+  }, [channels, currentChannel?.id, currentChannel?.type]);
   const { hasPermission } = useMemberPermissions();
 
   // Keep the active layout mode stable while connected to voice.
@@ -249,6 +253,7 @@ const AppLayout = () => {
 
   // Real-time channel messages and reactions - at app level for stability
   useRealtimeMessages(currentChannel?.id || null);
+  useRealtimeMessages(activeVoiceTextChannelId);
 
   // Real-time DMs at app level so messages are received even when not viewing DMs
   const unreadDMs = useUnreadDMs(user?.id || null);

@@ -21,6 +21,7 @@ import {
   Eye,
   EyeOff,
   ChevronRight,
+  MessageSquareText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useMemo } from "react";
@@ -46,6 +47,7 @@ interface ChannelContextDrawerProps {
   onEdit: () => void;
   onDelete: () => void;
   onCopyLink: () => void;
+  onOpenChat?: () => void;
   onMarkAsRead?: () => void;
 }
 
@@ -126,6 +128,7 @@ export const ChannelContextDrawer = ({
   onEdit,
   onDelete,
   onCopyLink,
+  onOpenChat,
   onMarkAsRead,
 }: ChannelContextDrawerProps) => {
   const { user } = useAuthStore();
@@ -253,6 +256,9 @@ export const ChannelContextDrawer = ({
               {onMarkAsRead && (
                 <DrawerItem icon={Check} label="Mark as Read" onClick={() => act(onMarkAsRead)} />
               )}
+              {onOpenChat && (
+                <DrawerItem icon={MessageSquareText} label="Open Chat" onClick={() => act(onOpenChat)} />
+              )}
               <DrawerItem
                 icon={channelMuted ? Volume2 : BellOff}
                 label={channelMuted ? "Unmute Channel" : "Mute Channel"}
@@ -309,6 +315,9 @@ export const ChannelContextDrawer = ({
               {/* Quick actions */}
               {onMarkAsRead && (
                 <DrawerItem icon={Check} label="Mark as Read" onClick={() => act(onMarkAsRead)} />
+              )}
+              {onOpenChat && (
+                <DrawerItem icon={MessageSquareText} label="Open Chat" onClick={() => act(onOpenChat)} />
               )}
               <DrawerItem
                 icon={channelMuted ? Volume2 : BellOff}

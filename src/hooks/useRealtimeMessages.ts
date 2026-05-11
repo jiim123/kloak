@@ -6,7 +6,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useServerStore } from '@/stores/serverStore';
 import { useUserCacheStore } from '@/stores/userCacheStore';
 import { resolveSignedUrls, isSupabaseAttachmentUrl } from '@/lib/signedUrl';
-import type { Message } from '@/types';
+import type { Message, MessageReply } from '@/types';
 import { fetchAndCacheUser, getUserFromCache, getOrFetchUser } from '@/stores/userCacheStore';
 import type { User } from '@/types';
 import { canRevealGhostIdentityForUser, getGhostPseudonymousUserId } from '@/lib/ghostIdentity';
@@ -187,7 +187,8 @@ export const useRealtimeMessages = (channelId: string | null) => {
                   reactions: [],
                 };
                 
-                // If there's a reply, try to get it from existing messages
+                // If there's a reply, try local state first, then hydrate the same preview
+                // data used by the normal channel message fetch path.
                 if (newMsg.reply_to_id) {
                   const freshStore = useMessageStore.getState();
                   const freshMessages = freshStore.messagesByChannel[channelId]?.messages || [];
@@ -198,6 +199,25 @@ export const useRealtimeMessages = (channelId: string | null) => {
                       content: replyMsg.content,
                       user_id: replyMsg.user_id,
                     };
+                  } else {
+                    const currentUserId = localUser?.id;
+                    const { data: replyRows } = await supabase.rpc("get_message_replies_secure", {
+                      _message_ids: [newMsg.reply_to_id],
+                      _user_id: currentUserId,
+                      _blocked_user_ids: Array.isArray(blocked) ? blocked : [],
+                    });
+                    const replyRow = Array.isArray(replyRows) ? (replyRows[0] as any) : null;
+                    if (replyRow?.id) {
+                      if (replyRow.user && typeof replyRow.user === "object" && replyRow.user.id) {
+                        useUserCacheStore.getState().upsertUser(replyRow.user as User);
+                      }
+                      message.reply_to = {
+                        id: replyRow.id,
+                        content: replyRow.content,
+                        user_id: replyRow.user_id,
+                        user: replyRow.user,
+                      } satisfies MessageReply;
+                    }
                   }
                 }
                 

@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
@@ -233,6 +233,7 @@ function ParticipantTile({
 
 export function VoiceChannelArea({ channel }: { channel: Channel }) {
   const isMobile = useIsMobile();
+  const location = useLocation();
   const { channelId: routeChannelId } = useParams();
   const { user } = useAuthStore();
   const { members, channels } = useServerStore();
@@ -360,7 +361,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
   }, [channels, channel.id, channel.server_id]);
   const isLinkedTextGhostMode = linkedTextChannel?.ghost_mode ?? false;
   const showTextPanel =
-    effectivelyJoined && isTextPanelOpen && (!isMobile || routeChannelId === channel.id);
+    isTextPanelOpen && !!linkedTextChannel && (!isMobile || routeChannelId === channel.id);
   const { typingUsers, startTyping, stopTyping } = useTyping(
     showTextPanel && linkedTextChannel && !isLinkedTextGhostMode ? linkedTextChannel.id : null
   );
@@ -464,6 +465,13 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
     setIsTextPanelOpen(false);
   }, [channel.id]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("voiceChat") === "1" && linkedTextChannel) {
+      setIsTextPanelOpen(true);
+    }
+  }, [location.search, linkedTextChannel]);
+
   // On mobile, never auto-open linked text when entering a voice route.
   useEffect(() => {
     if (!isMobile) return;
@@ -472,15 +480,8 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
     }
   }, [isMobile, routeChannelId, channel.id]);
 
-  // Keep the join screen visible when not connected.
-  useEffect(() => {
-    if (!effectivelyJoined) {
-      setIsTextPanelOpen(false);
-    }
-  }, [effectivelyJoined]);
-
   const handleOpenLinkedText = () => {
-    if (!linkedTextChannel || !effectivelyJoined) return;
+    if (!linkedTextChannel) return;
     setIsTextPanelOpen(true);
   };
 
@@ -504,17 +505,15 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
       variant="ghost"
       size="icon"
       className={cn(
-        "h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground",
-        showTextPanel && "bg-accent text-foreground"
+        "h-8 w-8 rounded-lg text-muted-foreground hover:bg-white/10 hover:text-white",
+        showTextPanel && "bg-white/10 text-white"
       )}
       onClick={() => (showTextPanel ? setIsTextPanelOpen(false) : handleOpenLinkedText())}
-      disabled={!linkedTextChannel || !effectivelyJoined}
+      disabled={!linkedTextChannel}
       title={
         !linkedTextChannel
           ? "No attached text chat yet"
-          : effectivelyJoined
-            ? "Open attached text chat"
-            : "Join voice to open attached text chat"
+          : "Open attached text chat"
       }
     >
       <MessageSquareText className="w-4 h-4" />
@@ -544,13 +543,11 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
             showTextPanel && "bg-white/10 text-white"
           )}
           onClick={() => (showTextPanel ? setIsTextPanelOpen(false) : handleOpenLinkedText())}
-          disabled={!linkedTextChannel || !effectivelyJoined}
+          disabled={!linkedTextChannel}
           title={
             !linkedTextChannel
               ? "No attached text chat yet"
-              : effectivelyJoined
-                ? "Open attached text chat"
-                : "Join voice to open attached text chat"
+              : "Open attached text chat"
           }
         >
           <MessageSquareText className="h-4 w-4" />
@@ -849,9 +846,9 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
 
       {/* Voice-attached text panel */}
       {showTextPanel && (
-        <aside className="absolute bottom-0 right-0 top-11 z-30 w-full overflow-hidden border-l border-white/15 bg-background/95 backdrop-blur md:top-[57px] sm:w-[420px]">
+        <aside className="absolute bottom-0 right-0 top-11 z-30 w-full overflow-hidden border-l border-white/15 bg-background/95 backdrop-blur md:top-0 sm:w-[420px]">
           <div className="h-full flex flex-col min-h-0">
-            <div className="h-11 px-3 border-b border-border/70 flex items-center justify-between bg-background/90">
+            <div className="h-14 px-3 border-b border-border/70 flex items-center justify-between bg-background">
               <div className="min-w-0">
                 <div className="text-sm font-medium truncate">
                   {linkedTextChannel ? `#${linkedTextChannel.name}` : "Attached text"}

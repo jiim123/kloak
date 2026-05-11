@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, memo, type ReactNode } from "react";
+import { useState, useMemo, useCallback, useEffect, memo, type ReactNode, type SyntheticEvent } from "react";
 import { FluentEmoji } from "@/components/ui/FluentEmoji";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -394,6 +394,7 @@ const SortableChannel = memo(({
   voiceUserIds,
   resolveUser,
   onSelect,
+  onOpenChat,
   onEdit,
   onDelete,
   onCopyLink,
@@ -402,6 +403,8 @@ const SortableChannel = memo(({
   isDraggingAny,
   isSortingMode,
   categories,
+  hasLinkedChat,
+  isLinkedChatActive,
 }: {
   channel: Channel;
   isActive: boolean;
@@ -411,6 +414,7 @@ const SortableChannel = memo(({
   voiceUserIds?: string[];
   resolveUser?: (userId: string) => { avatarUser?: any; label: string };
   onSelect: () => void;
+  onOpenChat?: () => void;
   onEdit: () => void;
   onDelete: () => void;
   onCopyLink: () => void;
@@ -419,6 +423,8 @@ const SortableChannel = memo(({
   isDraggingAny?: boolean;
   isSortingMode?: boolean;
   categories?: ChannelCategory[];
+  hasLinkedChat?: boolean;
+  isLinkedChatActive?: boolean;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: channel.id,
@@ -432,12 +438,29 @@ const SortableChannel = memo(({
     zIndex: isDragging ? 50 : undefined,
   }), [transform, transition, isDragging]);
 
-  const handleSettingsClick = useCallback((e: React.MouseEvent) => {
+  const handleSettingsClick = useCallback((e: SyntheticEvent) => {
     e.stopPropagation();
     onEdit();
   }, [onEdit]);
 
+  const handleOpenChatClick = useCallback((e: SyntheticEvent) => {
+    e.stopPropagation();
+    onOpenChat?.();
+  }, [onOpenChat]);
+
   const voiceCount = voiceUserIds?.length ?? 0;
+  const showOpenChatAction = channel.type === "voice" && hasLinkedChat && !!onOpenChat;
+  const showDesktopActions = !isMobile && !isSortingMode && (showOpenChatAction || isAdmin);
+  const rowIsActive = isActive || !!isLinkedChatActive;
+  const desktopActionCount = (showOpenChatAction ? 1 : 0) + (isAdmin ? 2 : 0);
+  const desktopActionPaddingClass =
+    desktopActionCount >= 3
+      ? "pr-24"
+      : desktopActionCount === 2
+        ? "pr-16"
+        : desktopActionCount === 1 || (channel.type === "voice" && voiceCount > 0)
+          ? "pr-10"
+          : "";
 
   // Build aria-label
   const ariaLabel = useMemo(() => {
@@ -445,8 +468,9 @@ const SortableChannel = memo(({
     if (isUnread && mentionCount === 0) parts.push('unread');
     if (mentionCount > 0) parts.push(`${mentionCount} mention${mentionCount > 1 ? 's' : ''}`);
     if (channel.is_private) parts.push('private');
+    if (showOpenChatAction) parts.push('has attached chat');
     return parts.join(', ');
-  }, [channel.name, channel.type, channel.is_private, isUnread, mentionCount]);
+  }, [channel.name, channel.type, channel.is_private, isUnread, mentionCount, showOpenChatAction]);
 
   const buttonContent = (
     <div className="flex items-center w-full min-w-0">
@@ -463,18 +487,19 @@ const SortableChannel = memo(({
           "transition-colors duration-150",
           "hover:bg-foreground/[0.04]",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-1",
-          isActive && !isSortingMode && "bg-foreground/[0.06] text-foreground",
-          !isActive && "text-muted-foreground hover:text-foreground",
-          isUnread && !isActive && "text-foreground font-[500]",
+          rowIsActive && !isSortingMode && "bg-foreground/[0.06] text-foreground",
+          !rowIsActive && "text-muted-foreground hover:text-foreground",
+          isUnread && !rowIsActive && "text-foreground font-[500]",
           isDragging && "opacity-50 shadow-lg ring-2 ring-primary/30 bg-secondary",
           isSortingMode && "cursor-default",
+          desktopActionPaddingClass,
         )}
       >
         {/* Active indicator */}
         <div
           className={cn(
             "absolute left-1 top-1.5 bottom-1.5 w-0.5 bg-foreground rounded-full transition-opacity duration-150",
-            isActive && !isSortingMode ? "opacity-100" : "opacity-0",
+            rowIsActive && !isSortingMode ? "opacity-100" : "opacity-0",
           )}
         />
 
@@ -498,7 +523,14 @@ const SortableChannel = memo(({
 
         {/* Voice user count badge */}
         {channel.type === "voice" && voiceCount > 0 && !isSortingMode && (
-          <VoiceUserCountBadge count={voiceCount} />
+          <span
+            className={cn(
+              "absolute right-3 top-1/2 -translate-y-1/2 transition-opacity duration-150",
+              showDesktopActions && "group-hover:opacity-0",
+            )}
+          >
+            <VoiceUserCountBadge count={voiceCount} />
+          </span>
         )}
 
         {/* Unread dot (no mentions) */}
@@ -506,7 +538,7 @@ const SortableChannel = memo(({
           <span
             className={cn(
               "absolute right-3 top-1/2 -translate-y-1/2 transition-opacity duration-150",
-              isAdmin && !isMobile && "group-hover:opacity-0",
+              showDesktopActions && "group-hover:opacity-0",
             )}
           >
             <UnreadDot />
@@ -515,30 +547,85 @@ const SortableChannel = memo(({
 
         {/* Mention badge */}
         {mentionCount > 0 && !isSortingMode && (
-          <span className="px-1.5 py-0.5 text-xs font-mono rounded-full bg-red-600 text-white flex-shrink-0">
+          <span
+            className={cn(
+              "px-1.5 py-0.5 text-xs font-mono rounded-full bg-red-600 text-white flex-shrink-0 transition-opacity",
+              showDesktopActions && "group-hover:opacity-0",
+            )}
+          >
             {mentionCount > 99 ? "99+" : mentionCount}
           </span>
         )}
 
-        {/* Admin settings - desktop only, not in sort mode */}
-        {isAdmin && !isMobile && !isSortingMode && (
-          <SettingsIcon
-            className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground cursor-pointer pointer-events-none group-hover:pointer-events-auto"
-            onClick={handleSettingsClick}
-          />
-        )}
+        {showDesktopActions && (
+          <div className="absolute right-1 top-1/2 z-10 flex -translate-y-1/2 items-center gap-0.5">
+            {showOpenChatAction && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    className={cn(
+                      "flex h-6 w-6 items-center justify-center rounded text-muted-foreground opacity-0 transition-opacity transition-colors group-hover:opacity-100 hover:bg-secondary hover:text-foreground",
+                      isLinkedChatActive && "bg-foreground/[0.08] text-foreground",
+                    )}
+                    onClick={handleOpenChatClick}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleOpenChatClick(e);
+                      }
+                    }}
+                    aria-label={`Open chat for ${channel.name}`}
+                  >
+                    <MessageSquareIcon className="w-3.5 h-3.5" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">Open Chat</TooltipContent>
+              </Tooltip>
+            )}
 
-        {/* Drag handle for admins - desktop only */}
-        {isAdmin && !isMobile && (
-          <div
-            {...attributes}
-            {...listeners}
-            className="absolute right-1 top-1/2 -translate-y-1/2 p-1 opacity-0 group-hover:opacity-50 hover:!opacity-100 cursor-grab active:cursor-grabbing pointer-events-none group-hover:pointer-events-auto"
-          >
-            <div className="w-1 h-3 flex flex-col gap-0.5 justify-center">
-              <div className="w-1 h-1 rounded-full bg-muted-foreground" />
-              <div className="w-1 h-1 rounded-full bg-muted-foreground" />
-            </div>
+            {isAdmin && (
+              <>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground opacity-0 transition-opacity transition-colors group-hover:opacity-100 hover:bg-secondary hover:text-foreground"
+                      onClick={handleSettingsClick}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handleSettingsClick(e);
+                        }
+                      }}
+                      aria-label={`Open settings for ${channel.name}`}
+                    >
+                      <SettingsIcon className="w-3.5 h-3.5" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">Channel Settings</TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div
+                      {...attributes}
+                      {...listeners}
+                      className="flex h-6 w-6 cursor-grab items-center justify-center rounded text-muted-foreground opacity-0 transition-opacity transition-colors group-hover:opacity-50 hover:!opacity-100 hover:bg-secondary hover:text-foreground active:cursor-grabbing"
+                      aria-label={`Reorder ${channel.name}`}
+                    >
+                      <div className="w-1 h-3 flex flex-col gap-0.5 justify-center">
+                        <div className="w-1 h-1 rounded-full bg-current" />
+                        <div className="w-1 h-1 rounded-full bg-current" />
+                      </div>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">Drag to Reorder</TooltipContent>
+                </Tooltip>
+              </>
+            )}
           </div>
         )}
       </button>
@@ -573,6 +660,7 @@ const SortableChannel = memo(({
             onEdit={onEdit}
             onDelete={onDelete}
             onCopyLink={onCopyLink}
+            onOpenChat={onOpenChat}
             onMarkAsRead={onMarkAsRead}
           />
         </>
@@ -588,6 +676,7 @@ const SortableChannel = memo(({
             onEdit={onEdit}
             onDelete={onDelete}
             onCopyLink={onCopyLink}
+            onOpenChat={onOpenChat}
             onMarkAsRead={onMarkAsRead}
           />
         </ContextMenu>
@@ -609,6 +698,7 @@ const CategoryContent = memo(({
   getChannelUnread,
   isAdmin,
   onSelectChannel,
+  onOpenChannelChat,
   onEditChannel,
   onDeleteChannel,
   onCopyChannelLink,
@@ -619,12 +709,14 @@ const CategoryContent = memo(({
   isDraggingAny,
   isSortingMode,
   categories,
+  linkedTextChannelByVoiceId,
 }: {
   channels: Channel[];
   currentChannelId: string | undefined;
   getChannelUnread: (channelId: string) => { unreadCount: number; mentionCount: number };
   isAdmin: boolean;
   onSelectChannel: (channel: Channel) => void;
+  onOpenChannelChat: (channel: Channel) => void;
   onEditChannel: (channelId: string) => void;
   onDeleteChannel: (channelId: string) => void;
   onCopyChannelLink: (channelId: string) => void;
@@ -635,6 +727,7 @@ const CategoryContent = memo(({
   isDraggingAny?: boolean;
   isSortingMode?: boolean;
   categories?: ChannelCategory[];
+  linkedTextChannelByVoiceId: Map<string, Channel>;
 }) => {
   const channelIds = useMemo(() => channels.map((c) => c.id), [channels]);
 
@@ -654,6 +747,7 @@ const CategoryContent = memo(({
               voiceUserIds={voicePresenceByChannel[channel.id]}
               resolveUser={resolveUser}
               onSelect={() => onSelectChannel(channel)}
+              onOpenChat={() => onOpenChannelChat(channel)}
               onEdit={() => onEditChannel(channel.id)}
               onDelete={() => onDeleteChannel(channel.id)}
               onCopyLink={() => onCopyChannelLink(channel.id)}
@@ -661,6 +755,8 @@ const CategoryContent = memo(({
               isMobile={isMobile}
               isDraggingAny={isDraggingAny}
               isSortingMode={isSortingMode}
+              hasLinkedChat={linkedTextChannelByVoiceId.has(channel.id)}
+              isLinkedChatActive={currentChannelId !== channel.id && currentChannelId === linkedTextChannelByVoiceId.get(channel.id)?.id}
             />
           );
         })}
@@ -681,6 +777,7 @@ const SortableCategory = memo(({
   getChannelUnread,
   onToggle,
   onSelectChannel,
+  onOpenChannelChat,
   onAddChannel,
   onEditChannel,
   onEditCategory,
@@ -695,6 +792,7 @@ const SortableCategory = memo(({
   isDraggingAny,
   isSortingMode,
   allCategories,
+  linkedTextChannelByVoiceId,
 }: {
   category: ChannelCategory;
   channels: Channel[];
@@ -704,6 +802,7 @@ const SortableCategory = memo(({
   getChannelUnread: (channelId: string) => { unreadCount: number; mentionCount: number };
   onToggle: () => void;
   onSelectChannel: (channel: Channel) => void;
+  onOpenChannelChat: (channel: Channel) => void;
   onAddChannel: () => void;
   onEditChannel: (channelId: string) => void;
   onEditCategory: () => void;
@@ -718,6 +817,7 @@ const SortableCategory = memo(({
   isDraggingAny?: boolean;
   isSortingMode?: boolean;
   allCategories?: ChannelCategory[];
+  linkedTextChannelByVoiceId: Map<string, Channel>;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: category.id,
@@ -905,6 +1005,7 @@ const SortableCategory = memo(({
           getChannelUnread={getChannelUnread}
           isAdmin={isAdmin}
           onSelectChannel={onSelectChannel}
+          onOpenChannelChat={onOpenChannelChat}
           onEditChannel={onEditChannel}
           onDeleteChannel={onDeleteChannel}
           onCopyChannelLink={onCopyChannelLink}
@@ -915,6 +1016,7 @@ const SortableCategory = memo(({
           isDraggingAny={isDraggingAny}
           isSortingMode={isSortingMode}
           categories={allCategories}
+          linkedTextChannelByVoiceId={linkedTextChannelByVoiceId}
         />
       )}
     </div>
@@ -1083,6 +1185,17 @@ export const ChannelSidebar = () => {
     return map;
   }, [channels]);
 
+  const linkedTextChannelByVoiceId = useMemo(() => {
+    const map = new Map<string, Channel>();
+    for (const channel of channels || []) {
+      if (channel.type !== "text" || !channel.linked_voice_channel_id) continue;
+      if (!map.has(channel.linked_voice_channel_id)) {
+        map.set(channel.linked_voice_channel_id, channel);
+      }
+    }
+    return map;
+  }, [channels]);
+
   const getSidebarChannelUnread = useCallback(
     (channelId: string) => {
       const base = getChannelUnread(channelId);
@@ -1138,6 +1251,21 @@ export const ChannelSidebar = () => {
       }
     },
     [setCurrentChannel, currentServer, navigate, closeMobileSidebars],
+  );
+
+  const handleOpenVoiceChannelChat = useCallback(
+    (voiceChannel: Channel) => {
+      if (!currentServer || voiceChannel.type !== "voice") return;
+      const linkedTextChannel = linkedTextChannelByVoiceId.get(voiceChannel.id);
+      if (!linkedTextChannel) {
+        toast.error("No attached text chat yet");
+        return;
+      }
+      setCurrentChannel(voiceChannel);
+      closeMobileSidebars();
+      navigate(`/app/servers/${currentServer.id}/channels/${voiceChannel.id}?voiceChat=1`);
+    },
+    [closeMobileSidebars, currentServer, linkedTextChannelByVoiceId, navigate, setCurrentChannel],
   );
 
   const isOverviewActive = !!currentServer && location.pathname === `/app/servers/${currentServer.id}/overview`;
@@ -1463,12 +1591,15 @@ export const ChannelSidebar = () => {
                     voiceUserIds={voicePresenceByChannel[channel.id]}
                     resolveUser={resolveUser}
                     onSelect={() => handleSelectChannel(channel)}
+                    onOpenChat={() => handleOpenVoiceChannelChat(channel)}
                     onEdit={() => openModal("edit-channel", { channelId: channel.id })}
                     onDelete={() => handleDeleteChannel(channel.id)}
                     onCopyLink={() => handleCopyChannelLink(channel.id)}
                     isMobile={isMobile}
                     isDraggingAny={isDraggingAny}
                     isSortingMode={isSortingMode}
+                    hasLinkedChat={linkedTextChannelByVoiceId.has(channel.id)}
+                    isLinkedChatActive={currentChannel?.linked_voice_channel_id === channel.id}
                   />
                 );
               })}
@@ -1489,6 +1620,7 @@ export const ChannelSidebar = () => {
             getChannelUnread={getSidebarChannelUnread}
             onToggle={() => toggleCategory(category.id)}
             onSelectChannel={handleSelectChannel}
+            onOpenChannelChat={handleOpenVoiceChannelChat}
             onAddChannel={() => openModal("create-channel", { categoryId: category.id })}
             onEditChannel={(channelId) => openModal("edit-channel", { channelId })}
             onEditCategory={() => openModal("edit-channel", { isCategory: true, categoryId: category.id })}
@@ -1503,6 +1635,7 @@ export const ChannelSidebar = () => {
             isDraggingAny={isDraggingAny}
             isSortingMode={isSortingMode}
             allCategories={sortedCategories}
+            linkedTextChannelByVoiceId={linkedTextChannelByVoiceId}
           />
         ))}
       </SortableContext>
@@ -1534,6 +1667,7 @@ export const ChannelSidebar = () => {
                     voiceUserIds={voicePresenceByChannel[channel.id]}
                     resolveUser={resolveUser}
                     onSelect={() => handleSelectChannel(channel)}
+                    onOpenChat={() => handleOpenVoiceChannelChat(channel)}
                     onEdit={() => openModal("edit-channel", { channelId: channel.id })}
                     onDelete={() => handleDeleteChannel(channel.id)}
                     onCopyLink={() => handleCopyChannelLink(channel.id)}
@@ -1542,6 +1676,8 @@ export const ChannelSidebar = () => {
                     isDraggingAny={isDraggingAny}
                     isSortingMode={isSortingMode}
                     categories={sortedCategories}
+                    hasLinkedChat={linkedTextChannelByVoiceId.has(channel.id)}
+                    isLinkedChatActive={currentChannel?.linked_voice_channel_id === channel.id}
                   />
                 );
               })}
