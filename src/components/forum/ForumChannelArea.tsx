@@ -215,21 +215,37 @@ const ThreadAttachmentGallery = ({
   );
 };
 const ForumThreadsSkeleton = () => (
-  <div className="divide-y divide-border">
+  <div className="flex flex-col gap-2 p-3 md:p-4">
     {Array.from({ length: 6 }).map((_, index) => (
-      <div key={index} className="p-3 md:p-4">
-        <Skeleton className="mb-2 h-5 w-2/3 md:w-1/3" />
-        <Skeleton className="mb-1 h-4 w-full" />
-        <Skeleton className="mb-3 h-4 w-5/6" />
-        <div className="flex flex-wrap gap-2">
-          <Skeleton className="h-6 w-28 rounded-sm" />
-          <Skeleton className="h-6 w-24 rounded-sm" />
-          <Skeleton className="h-6 w-32 rounded-sm" />
+      <div key={index} className="rounded-lg border border-border/60 bg-muted/15 p-4 md:px-5 md:py-5">
+        <div className="flex items-start gap-4">
+          <Skeleton className="hidden h-16 w-16 flex-shrink-0 rounded-md md:block" />
+          <div className="min-w-0 flex-1">
+            <Skeleton className="mb-3 h-5 w-2/3 md:w-1/2" />
+            <div className="mb-3 flex flex-wrap gap-2">
+              <Skeleton className="h-4 w-28 rounded-sm" />
+              <Skeleton className="h-4 w-24 rounded-sm" />
+            </div>
+            <Skeleton className="mb-2 h-4 w-full" />
+            <Skeleton className="mb-4 h-4 w-5/6" />
+            <div className="flex flex-wrap gap-3">
+              <Skeleton className="h-4 w-14 rounded-sm" />
+              <Skeleton className="h-4 w-20 rounded-sm" />
+              <Skeleton className="h-4 w-32 rounded-sm" />
+            </div>
+          </div>
         </div>
       </div>
     ))}
   </div>
 );
+
+// Session-scoped forum caches survive unmount/remount while the app stays loaded.
+const forumChannelThreadsCache = new Map<string, Thread[]>();
+const forumLoadedThreadChannels = new Set<string>();
+const forumChannelThreadMessagesCache = new Map<string, Record<string, Message[]>>();
+const forumChannelLoadedThreadMessagesCache = new Map<string, Set<string>>();
+const forumFetchThreadsInFlight = new Map<string, Promise<void>>();
 
 interface ForumChannelAreaProps {
   showHeader?: boolean;
@@ -277,6 +293,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
   const [showDeleteThreadModal, setShowDeleteThreadModal] = useState(false);
   const [threadToDelete, setThreadToDelete] = useState<Thread | null>(null);
   const [threadAttachmentLightboxUrl, setThreadAttachmentLightboxUrl] = useState<string | null>(null);
+  const [jumpedThreadMessageId, setJumpedThreadMessageId] = useState<string | null>(null);
   const [reactionUserNameOverrides, setReactionUserNameOverrides] = useState<Map<string, string>>(new Map());
   const createTopicTitleRef = useRef<HTMLInputElement>(null);
   const createTopicTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -290,10 +307,26 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
   // Use ref to track current thread ID for realtime subscription
   const selectedThreadIdRef = useRef<string | null>(null);
   const threadMessagesRef = useRef<Record<string, Message[]>>({});
+  const loadedThreadMessagesRef = useRef<Set<string>>(new Set());
+  const fetchThreadMessagesInFlightRef = useRef<Map<string, Promise<void>>>(new Map());
+  const currentChannelIdRef = useRef<string | null>(currentChannel?.id ?? null);
 
   // Reset thread selection when channel changes
   useEffect(() => {
     setSelectedThreadId(null);
+    setIsLoading(true);
+    currentChannelIdRef.current = currentChannel?.id ?? null;
+    const nextChannelId = currentChannel?.id ?? null;
+    const cachedThreads =
+      nextChannelId && forumLoadedThreadChannels.has(nextChannelId)
+        ? forumChannelThreadsCache.get(nextChannelId)
+        : null;
+    const cachedThreadMessages = nextChannelId ? forumChannelThreadMessagesCache.get(nextChannelId) : null;
+    const cachedLoadedThreadMessages = nextChannelId ? forumChannelLoadedThreadMessagesCache.get(nextChannelId) : null;
+    setThreads(cachedThreads ? [...cachedThreads] : []);
+    setThreadMessages(cachedThreadMessages ? { ...cachedThreadMessages } : {});
+    loadedThreadMessagesRef.current = cachedLoadedThreadMessages ? new Set(cachedLoadedThreadMessages) : new Set();
+    fetchThreadMessagesInFlightRef.current.clear();
     setReplyContent("");
     setReplyingToThread(null);
     setEditingMessageId(null);
@@ -327,6 +360,25 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
   }, [threadMessages]);
 
   useEffect(() => {
+    const channelId = currentChannel?.id;
+    if (!channelId) return;
+    if (!forumLoadedThreadChannels.has(channelId)) return;
+    forumChannelThreadsCache.set(channelId, threads);
+  }, [currentChannel?.id, threads]);
+
+  useEffect(() => {
+    const channelId = currentChannel?.id;
+    if (!channelId) return;
+    forumChannelThreadMessagesCache.set(channelId, threadMessages);
+  }, [currentChannel?.id, threadMessages]);
+
+  useEffect(() => {
+    const channelId = currentChannel?.id;
+    if (!channelId) return;
+    forumChannelLoadedThreadMessagesCache.set(channelId, new Set(loadedThreadMessagesRef.current));
+  }, [currentChannel?.id, threadMessages]);
+
+  useEffect(() => {
     createPendingAttachmentsRef.current = createPendingAttachments;
   }, [createPendingAttachments]);
 
@@ -336,6 +388,9 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
 
   useEffect(() => {
     return () => {
+      if (jumpHighlightTimeoutRef.current !== null) {
+        window.clearTimeout(jumpHighlightTimeoutRef.current);
+      }
       revokeAttachmentPreviews(createPendingAttachmentsRef.current);
       revokeAttachmentPreviews(replyPendingAttachmentsRef.current);
     };
@@ -349,7 +404,56 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
   });
 
   const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
-  const fetchThreadsInFlightRef = useRef<Promise<void> | null>(null);
+
+  const refreshThreadSummary = useCallback(async (threadId: string) => {
+    if (!threadId) return;
+
+    const { data: summaryData, error: summaryError } = await (supabase.rpc as any)("get_thread_summaries", {
+      _thread_ids: [threadId],
+    });
+
+    if (summaryError) throw summaryError;
+
+    const summaries = typeof summaryData === "string" ? JSON.parse(summaryData) : summaryData;
+    const summary = Array.isArray(summaries) ? summaries.find((item) => item?.thread_id === threadId) : null;
+    if (!summary) return;
+
+    setThreads((prev) =>
+      sortThreads(
+        prev.map((thread) =>
+          thread.id === threadId
+            ? {
+                ...thread,
+                message_count: summary.message_count ?? thread.message_count ?? 0,
+                last_activity: summary.last_activity ?? thread.last_activity ?? thread.created_at,
+                last_message_author: summary.last_message_author ?? thread.last_message_author,
+              }
+            : thread,
+        ),
+      ),
+    );
+  }, []);
+
+  const jumpHighlightTimeoutRef = useRef<number | null>(null);
+
+  const handleJumpToThreadMessage = useCallback((messageId: string) => {
+    if (!messageId) return;
+
+    const target = document.querySelector<HTMLElement>(`[data-thread-message-id="${CSS.escape(messageId)}"]`);
+    if (!target) return;
+
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    setJumpedThreadMessageId(messageId);
+
+    if (jumpHighlightTimeoutRef.current !== null) {
+      window.clearTimeout(jumpHighlightTimeoutRef.current);
+    }
+
+    jumpHighlightTimeoutRef.current = window.setTimeout(() => {
+      setJumpedThreadMessageId((current) => (current === messageId ? null : current));
+      jumpHighlightTimeoutRef.current = null;
+    }, 1800);
+  }, []);
 
   const membersByUserId = useMemo(() => {
     const map = new Map<string, ServerMember>();
@@ -662,16 +766,19 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
 
   const fetchThreads = useCallback(async () => {
     if (!currentChannel || !user?.id) return;
-    if (fetchThreadsInFlightRef.current) return fetchThreadsInFlightRef.current;
+    const channelId = currentChannel.id;
+    const existingInFlight = forumFetchThreadsInFlight.get(channelId);
+    if (existingInFlight) return existingInFlight;
 
     const inFlight = (async () => {
-      setIsLoading(true);
+      const hasCachedThreads = forumLoadedThreadChannels.has(channelId);
+      setIsLoading(!hasCachedThreads);
       try {
         // Fetch all threads for this channel
         const { data: threadsData, error: threadsError } = await supabase
           .from("threads")
           .select("*")
-          .eq("channel_id", currentChannel.id)
+          .eq("channel_id", channelId)
           .order("created_at", { ascending: false });
 
         if (threadsError) throw threadsError;
@@ -680,14 +787,18 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
         const messageIds = (threadsData || []).map((t) => t.message_id);
 
         if (messageIds.length === 0) {
-          setThreads([]);
+          forumLoadedThreadChannels.add(channelId);
+          if (currentChannelIdRef.current === channelId) {
+            setThreads([]);
+          }
+          forumChannelThreadsCache.set(channelId, []);
           return;
         }
 
         // Fetch the original messages for each thread (single query)
         const { data: messagesData, error: messagesError } = await supabase.rpc("get_messages_by_ids_secure", {
           _message_ids: messageIds,
-          _user_id: user!.id,
+          _user_id: user.id,
           _blocked_user_ids: [],
         });
 
@@ -707,8 +818,16 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
           }
         }
 
+        const rawMessages = (messagesData || []) as any[];
+        const messageById = new Map<string, any>();
+        rawMessages.forEach((message) => {
+          if (message?.id) {
+            messageById.set(message.id, message);
+          }
+        });
+
         const threadsWithInfo: Thread[] = (threadsData || []).map((thread) => {
-          const rawMessage = ((messagesData || []) as any[]).find((m: any) => m.id === thread.message_id);
+          const rawMessage = messageById.get(thread.message_id);
           const summary = summaryByThreadId.get(thread.id);
 
           // Transform raw reactions to ReactionGroup format
@@ -750,104 +869,134 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
           };
         });
 
-        setThreads(sortThreads(threadsWithInfo));
+        const sortedThreads = sortThreads(threadsWithInfo);
+        forumLoadedThreadChannels.add(channelId);
+        forumChannelThreadsCache.set(channelId, sortedThreads);
+        if (currentChannelIdRef.current === channelId) {
+          setThreads(sortedThreads);
+        }
       } catch (error) {
         handleError(error, "Failed to fetch threads");
       } finally {
-        setIsLoading(false);
+        if (currentChannelIdRef.current === channelId) {
+          setIsLoading(false);
+        }
       }
     })();
 
-    fetchThreadsInFlightRef.current = inFlight;
+    forumFetchThreadsInFlight.set(channelId, inFlight);
     try {
       await inFlight;
     } finally {
-      if (fetchThreadsInFlightRef.current === inFlight) {
-        fetchThreadsInFlightRef.current = null;
-      }
+      forumFetchThreadsInFlight.delete(channelId);
     }
   }, [currentChannel, user?.id]);
 
   const fetchThreadMessagesById = useCallback(
-    async (threadId: string) => {
+    async (threadId: string, options?: { force?: boolean }) => {
       if (!threadId) return;
 
-      const { data, error } = await supabase.rpc("get_thread_messages", {
-        _thread_id: threadId,
-        _limit: 50,
-      });
-
-      if (error) throw error;
-
-      const messages = typeof data === "string" ? JSON.parse(data) : data;
-      const messageIds = (messages || []).map((m: any) => m.id);
-      const reactionsMap: Record<string, any[]> = {};
-
-      if (messageIds.length > 0) {
-        const { data: reactionsData } = await supabase.from("thread_reactions").select("*").in("message_id", messageIds);
-
-        if (reactionsData) {
-          reactionsData.forEach((reaction) => {
-            if (!reactionsMap[reaction.message_id]) {
-              reactionsMap[reaction.message_id] = [];
-            }
-            reactionsMap[reaction.message_id].push(reaction);
-          });
-        }
+      const force = options?.force ?? false;
+      if (!force && loadedThreadMessagesRef.current.has(threadId)) {
+        return;
       }
 
-      const groupReactions = (reactions: any[], currentUserId?: string) => {
-        const groups: Record<string, { emoji: string; count: number; users: string[]; hasReacted: boolean }> = {};
-        reactions.forEach((reaction) => {
-          if (!groups[reaction.emoji]) {
-            groups[reaction.emoji] = {
-              emoji: reaction.emoji,
-              count: 0,
-              users: [],
-              hasReacted: false,
-            };
-          }
-          groups[reaction.emoji].count++;
-          groups[reaction.emoji].users.push(reaction.user_id);
-          if (reaction.user_id === currentUserId) {
-            groups[reaction.emoji].hasReacted = true;
-          }
+      const existingInFlight = fetchThreadMessagesInFlightRef.current.get(threadId);
+      if (existingInFlight) {
+        return existingInFlight;
+      }
+
+      const inFlight = (async () => {
+        const { data, error } = await supabase.rpc("get_thread_messages", {
+          _thread_id: threadId,
+          _limit: 50,
         });
-        return Object.values(groups);
-      };
 
-      // Extract users into cache, then strip from messages
-      const uniqueUsers = new Map<string, User>();
-      for (const msg of (messages || [])) {
-        if (msg.user && typeof msg.user === 'object' && msg.user.id) {
-          uniqueUsers.set(msg.user.id, msg.user as User);
+        if (error) throw error;
+
+        const messages = typeof data === "string" ? JSON.parse(data) : data;
+        const messageIds = (messages || []).map((m: any) => m.id);
+        const reactionsMap: Record<string, any[]> = {};
+
+        if (messageIds.length > 0) {
+          const { data: reactionsData } = await supabase.from("thread_reactions").select("*").in("message_id", messageIds);
+
+          if (reactionsData) {
+            reactionsData.forEach((reaction) => {
+              if (!reactionsMap[reaction.message_id]) {
+                reactionsMap[reaction.message_id] = [];
+              }
+              reactionsMap[reaction.message_id].push(reaction);
+            });
+          }
         }
-      }
-      if (uniqueUsers.size > 0) {
-        bulkSetUsersInCache(Array.from(uniqueUsers.values()));
-      }
 
-      const messagesWithUsers = (messages || []).map(
-        (msg: any) =>
-          ({
-            id: msg.id,
-            thread_id: msg.thread_id,
-            user_id: msg.user_id,
-            content: msg.content,
-            reply_to_id: msg.reply_to_id,
-            reply_to: msg.reply_to ? { id: msg.reply_to.id, content: msg.reply_to.content, user_id: msg.reply_to.user_id || msg.reply_to.user?.id } : null,
-            edited_at: msg.edited_at,
-            created_at: msg.created_at,
-            channel_id: currentChannel?.id || "",
-            is_pinned: false,
-            reactions: groupReactions(reactionsMap[msg.id] || [], user?.id),
-          }) as Message,
-      );
+        const groupReactions = (reactions: any[], currentUserId?: string) => {
+          const groups: Record<string, { emoji: string; count: number; users: string[]; hasReacted: boolean }> = {};
+          reactions.forEach((reaction) => {
+            if (!groups[reaction.emoji]) {
+              groups[reaction.emoji] = {
+                emoji: reaction.emoji,
+                count: 0,
+                users: [],
+                hasReacted: false,
+              };
+            }
+            groups[reaction.emoji].count++;
+            groups[reaction.emoji].users.push(reaction.user_id);
+            if (reaction.user_id === currentUserId) {
+              groups[reaction.emoji].hasReacted = true;
+            }
+          });
+          return Object.values(groups);
+        };
 
-      setThreadMessages((prev) => ({
-        ...prev,
-        [threadId]: messagesWithUsers,
-      }));
+        // Extract users into cache, then strip from messages
+        const uniqueUsers = new Map<string, User>();
+        for (const msg of (messages || [])) {
+          if (msg.user && typeof msg.user === "object" && msg.user.id) {
+            uniqueUsers.set(msg.user.id, msg.user as User);
+          }
+          if (msg.reply_to?.user && typeof msg.reply_to.user === "object" && msg.reply_to.user.id) {
+            uniqueUsers.set(msg.reply_to.user.id, msg.reply_to.user as User);
+          }
+        }
+        if (uniqueUsers.size > 0) {
+          bulkSetUsersInCache(Array.from(uniqueUsers.values()));
+        }
+
+        const messagesWithUsers = (messages || []).map(
+          (msg: any) =>
+            ({
+              id: msg.id,
+              thread_id: msg.thread_id,
+              user_id: msg.user_id,
+              content: msg.content,
+              reply_to_id: msg.reply_to_id,
+              reply_to: msg.reply_to
+                ? { id: msg.reply_to.id, content: msg.reply_to.content, user_id: msg.reply_to.user_id || msg.reply_to.user?.id }
+                : null,
+              edited_at: msg.edited_at,
+              created_at: msg.created_at,
+              channel_id: currentChannel?.id || "",
+              is_pinned: false,
+              reactions: groupReactions(reactionsMap[msg.id] || [], user?.id),
+            }) as Message,
+        );
+
+        setThreadMessages((prev) => ({
+          ...prev,
+          [threadId]: messagesWithUsers,
+        }));
+        loadedThreadMessagesRef.current.add(threadId);
+      })();
+
+      fetchThreadMessagesInFlightRef.current.set(threadId, inFlight);
+      try {
+        await inFlight;
+      } finally {
+        fetchThreadMessagesInFlightRef.current.delete(threadId);
+      }
     },
     [currentChannel?.id, user?.id],
   );
@@ -874,8 +1023,16 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
       .on(
         "broadcast",
         { event: "thread_messages" },
-        () => {
-          void fetchThreads();
+        ({ payload }) => {
+          const eventPayload = payload as BroadcastMutationPayload<ForumBroadcastRow>;
+          const changedThreadId = eventPayload?.new?.thread_id ?? eventPayload?.old?.thread_id;
+          const operation = eventPayload?.op;
+
+          if (!changedThreadId || operation === "UPDATE" || changedThreadId === selectedThreadIdRef.current) {
+            return;
+          }
+
+          void refreshThreadSummary(changedThreadId);
         },
       )
       .on(
@@ -895,7 +1052,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentChannel, fetchThreads]);
+  }, [currentChannel, fetchThreads, refreshThreadSummary]);
 
   // Subscribe to thread messages for realtime updates
   useEffect(() => {
@@ -918,7 +1075,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
 
           if (changedThreadId && changedThreadId !== threadId) return;
 
-          void fetchThreadMessagesById(threadId);
+          void fetchThreadMessagesById(threadId, { force: true });
         },
       )
       .on(
@@ -933,7 +1090,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
             if (!messages.some((m) => m.id === changedMessageId)) return;
           }
 
-          void fetchThreadMessagesById(threadId);
+          void fetchThreadMessagesById(threadId, { force: true });
         },
       )
       .on(
@@ -1924,7 +2081,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
     const replyToMsg = replyingToThread ? threadMessages[threadId]?.find((m) => m.id === replyingToThread) : null;
 
     return (
-      <div className="border-t border-border bg-background">
+      <div className="mt-3 border-t border-border bg-background pt-3">
         <MessageInput
           channelId={currentChannel?.id}
           channelName={currentChannel?.name}
@@ -2087,7 +2244,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
             </div>
           )}
 
-          {isLoading ? (
+          {isLoading && threads.length === 0 ? (
             <ForumThreadsSkeleton />
           ) : threads.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center px-4">
@@ -2103,7 +2260,13 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
               </p>
             </div>
           ) : (
-            <div className="flex flex-col gap-2 p-3 md:p-4">
+            <div className="relative">
+              {isLoading && (
+                <div className="pointer-events-none absolute inset-0 z-10 bg-background/70 backdrop-blur-[1px]">
+                  <ForumThreadsSkeleton />
+                </div>
+              )}
+              <div className="flex flex-col gap-2 p-3 md:p-4">
               {threads.map((thread) => {
                 const isSelected = selectedThreadId === thread.id;
                 // Extract title from message content: first line before double newline, or first line if no double newline
@@ -2310,6 +2473,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                   </div>
                 );
               })}
+              </div>
             </div>
           )}
           </div>
@@ -2608,7 +2772,11 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                             return (
                               <div
                                 key={msg.id}
-                                className="group relative flex gap-3 border-b border-border pb-3"
+                                data-thread-message-id={msg.id}
+                                className={cn(
+                                  "group relative flex gap-3 border-b border-border pb-3 transition-colors",
+                                  jumpedThreadMessageId === msg.id && "rounded-md bg-primary/10",
+                                )}
                                 onMouseEnter={() => setHoveredMessageId(msg.id)}
                                 onMouseLeave={() => setHoveredMessageId(null)}
                                 onTouchStart={() => setHoveredMessageId(msg.id)}
@@ -2648,7 +2816,12 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
 
                                   {/* Reply reference */}
                                   {msg.reply_to && (
-                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+                                    <button
+                                      type="button"
+                                      className="mb-1 flex max-w-full items-center gap-1.5 text-left text-xs text-muted-foreground transition-colors hover:text-foreground"
+                                      onClick={() => handleJumpToThreadMessage(msg.reply_to!.id)}
+                                      title="Jump to replied message"
+                                    >
                                       <CornerUpLeft className="w-3 h-3 flex-shrink-0" />
                                       <span>Replying to</span>
                                       <span className="font-medium text-primary">
@@ -2667,7 +2840,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                                           <ReplyPreview content={msg.reply_to.content} maxLength={50} />
                                         </span>
                                       )}
-                                    </div>
+                                    </button>
                                   )}
 
                                   {isEditing ? (
@@ -3163,7 +3336,11 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                             return (
                               <div
                                 key={msg.id}
-                                className="group relative flex gap-3 border-b border-border pb-3"
+                                data-thread-message-id={msg.id}
+                                className={cn(
+                                  "group relative flex gap-3 border-b border-border pb-3 transition-colors",
+                                  jumpedThreadMessageId === msg.id && "rounded-md bg-primary/10",
+                                )}
                                 onMouseEnter={() => setHoveredMessageId(msg.id)}
                                 onMouseLeave={() => setHoveredMessageId(null)}
                                 onTouchStart={() => setHoveredMessageId(msg.id)}
@@ -3203,7 +3380,12 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
 
                                   {/* Reply reference */}
                                   {msg.reply_to && (
-                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+                                    <button
+                                      type="button"
+                                      className="mb-1 flex max-w-full items-center gap-1.5 text-left text-xs text-muted-foreground transition-colors hover:text-foreground"
+                                      onClick={() => handleJumpToThreadMessage(msg.reply_to!.id)}
+                                      title="Jump to replied message"
+                                    >
                                       <CornerUpLeft className="w-3 h-3 flex-shrink-0" />
                                       <span>Replying to</span>
                                       <span className="font-medium text-primary">
@@ -3222,7 +3404,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                                           <ReplyPreview content={msg.reply_to.content} maxLength={50} />
                                         </span>
                                       )}
-                                    </div>
+                                    </button>
                                   )}
 
                                   {isEditing ? (
