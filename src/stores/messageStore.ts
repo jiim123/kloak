@@ -3,8 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useServerStore } from "@/stores/serverStore";
+import { useSyncStore } from "@/stores/syncStore";
 import { useUserCacheStore, bulkSetUsersInCache, fetchAndCacheUser } from "@/stores/userCacheStore";
 import { resolveSignedUrls, isSupabaseAttachmentUrl } from "@/lib/signedUrl";
+import { afterNextPaint, beginChatPerf, endChatPerf, markChatPerf } from "@/lib/chatPerf";
 import { toast } from "sonner";
 import type { Message, MessageReply, ReactionGroup, User } from "@/types";
 
@@ -21,6 +23,15 @@ interface PrefetchedOlderPage {
   messages: Message[];
   hasMore: boolean;
   oldestLoadedAt: string | null;
+  prefetchedAt: number;
+}
+
+interface PrefetchedBootstrapPage {
+  limit: number;
+  messages: Message[];
+  hasMore: boolean;
+  oldestLoadedAt: string | null;
+  deferredReplyIds: string[];
   prefetchedAt: number;
 }
 
@@ -51,10 +62,17 @@ interface MessageState {
     silent?: boolean,
     skipBootstrap?: boolean,
   ) => Promise<void>;
+  prefetchChannelBootstrap: (channelId: string, limit?: number) => Promise<void>;
   prefetchOlderMessages: (channelId: string, limit?: number) => Promise<void>;
 
   // Message actions
-  sendMessage: (channelId: string, userId: string, content: string, replyToId?: string) => Promise<Message | null>;
+  sendMessage: (
+    channelId: string,
+    userId: string,
+    content: string,
+    replyToId?: string,
+    options?: SendMessageOptions,
+  ) => Promise<Message | null>;
   sendPoll: (
     channelId: string,
     userId: string,
@@ -83,6 +101,10 @@ interface MessageState {
   clearMessages: () => void;
   clearChannelCache: (channelId: string) => void;
   removeMessagesByUser: (userId: string) => void;
+}
+
+interface SendMessageOptions {
+  optimisticAttachments?: Message["attachments"];
 }
 
 const groupReactions = (reactions: any[], currentUserId?: string): ReactionGroup[] => {
@@ -149,11 +171,140 @@ const MESSAGE_CACHE_STORAGE_KEY = "kloak:message-cache:v1";
 const inflightFetches = new Map<string, Promise<void>>();
 const inflightPrefetches = new Map<string, Promise<void>>();
 const replyCache = new Map<string, { data: MessageReply; cachedAt: number }>();
+const bootstrapPrefetchCache = new Map<string, PrefetchedBootstrapPage>();
 
 const trimMessages = (messages: Message[], mode: "newest" | "oldest" = "newest") => {
   if (messages.length <= MAX_MESSAGES_PER_CHANNEL) return messages;
   if (mode === "oldest") return messages.slice(0, MAX_MESSAGES_PER_CHANNEL);
   return messages.slice(messages.length - MAX_MESSAGES_PER_CHANNEL);
+};
+
+const getPrefetchedBootstrapPage = (channelId: string, limit: number) => {
+  const prefetched = bootstrapPrefetchCache.get(channelId);
+  if (!prefetched) return null;
+  if (prefetched.limit !== limit) return null;
+  if (Date.now() - prefetched.prefetchedAt >= PREFETCH_CACHE_EXPIRY_MS) {
+    bootstrapPrefetchCache.delete(channelId);
+    return null;
+  }
+  return prefetched;
+};
+
+const createOptimisticMessageId = () => `temp-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+const resolveReplyPreview = (
+  messagesByChannel: Record<string, ChannelMessages>,
+  channelId: string,
+  replyToId?: string,
+): MessageReply | undefined => {
+  if (!replyToId) return undefined;
+  const replyMessage = messagesByChannel[channelId]?.messages.find((m) => m.id === replyToId);
+  if (!replyMessage) return undefined;
+  return {
+    id: replyMessage.id,
+    content: replyMessage.content,
+    user_id: replyMessage.user_id,
+  };
+};
+
+const mergeMessageIntoChannelCache = (
+  messagesByChannel: Record<string, ChannelMessages>,
+  channelId: string,
+  message: Message,
+  tempId?: string,
+) => {
+  const existingCache = messagesByChannel[channelId];
+  const existingMessages = existingCache?.messages ?? [];
+  const tempMessage = tempId ? existingMessages.find((m) => m.id === tempId) : undefined;
+  const withoutTemp = tempId ? existingMessages.filter((m) => m.id !== tempId) : existingMessages;
+  const mergedMessage =
+    tempMessage && (!message.attachments || message.attachments.length === 0)
+      ? { ...message, attachments: tempMessage.attachments }
+      : message;
+
+  if (withoutTemp.some((m) => m.id === mergedMessage.id)) {
+    const nextMessages = withoutTemp.map((m) => (m.id === mergedMessage.id ? { ...m, ...mergedMessage } : m));
+    return pruneMessagesByChannel(
+      {
+        ...messagesByChannel,
+        [channelId]: {
+          messages: nextMessages,
+          hasMore: existingCache?.hasMore ?? true,
+          lastFetched: Date.now(),
+          oldestLoadedAt: existingCache?.oldestLoadedAt ?? nextMessages[0]?.created_at ?? mergedMessage.created_at,
+          prefetchedOlder: existingCache?.prefetchedOlder ?? null,
+        },
+      },
+      channelId,
+    );
+  }
+
+  const nextMessages = [...withoutTemp, mergedMessage].sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+  );
+
+  return pruneMessagesByChannel(
+    {
+      ...messagesByChannel,
+        [channelId]: {
+          messages: nextMessages,
+          hasMore: existingCache?.hasMore ?? true,
+          lastFetched: Date.now(),
+          oldestLoadedAt: existingCache?.oldestLoadedAt ?? nextMessages[0]?.created_at ?? mergedMessage.created_at,
+          prefetchedOlder: existingCache?.prefetchedOlder ?? null,
+        },
+      },
+      channelId,
+  );
+};
+
+const hydrateMissingRepliesInBackground = async (
+  channelId: string,
+  replyIds: string[],
+  requestUserId: string,
+  blockedUserIds: string[],
+) => {
+  const dedupedReplyIds = Array.from(new Set(replyIds));
+  if (dedupedReplyIds.length === 0) return;
+
+  try {
+    const { data: replyData } = await supabase.rpc("get_message_replies_secure", {
+      _message_ids: dedupedReplyIds,
+      _user_id: requestUserId,
+      _blocked_user_ids: blockedUserIds,
+    });
+
+    if (!Array.isArray(replyData) || replyData.length === 0) return;
+
+    const replyMap = new Map<string, MessageReply>();
+    for (const reply of replyData as any[]) {
+      const normalizedReply = toMessageReply(reply);
+      if (!normalizedReply) continue;
+      replyMap.set(normalizedReply.id, normalizedReply);
+      replyCache.set(normalizedReply.id, {
+        data: normalizedReply,
+        cachedAt: Date.now(),
+      });
+      pruneReplyCache();
+    }
+
+    if (replyMap.size === 0) return;
+
+    const cacheEntry = useMessageStore.getState().messagesByChannel[channelId];
+    if (!cacheEntry) return;
+
+    for (const message of cacheEntry.messages) {
+      if (!message.reply_to_id || message.reply_to) continue;
+      const replyPreview = replyMap.get(message.reply_to_id);
+      if (!replyPreview) continue;
+      useMessageStore.getState().updateMessage(message.id, {
+        channel_id: channelId,
+        reply_to: replyPreview,
+      });
+    }
+  } catch (error) {
+    console.error("Failed to hydrate missing replies in background:", error);
+  }
 };
 
 const pruneReplyCache = () => {
@@ -254,12 +405,19 @@ const loadChannelMessagePage = async ({
   limit,
   before,
   skipBootstrap = false,
+  perfId,
 }: {
   channelId: string;
   limit: number;
   before?: string;
   skipBootstrap?: boolean;
-}): Promise<{ messages: Message[]; hasMore: boolean; oldestLoadedAt: string | null }> => {
+  perfId?: string | null;
+}): Promise<{
+  messages: Message[];
+  hasMore: boolean;
+  oldestLoadedAt: string | null;
+  deferredReplyIds: string[];
+}> => {
   const normalizedBefore = typeof before === "string" && before.trim().length > 0 ? before : undefined;
   const blockedUserIds = useFriendStore.getState().visibilityBlockedUserIds;
   const requestUserId = useAuthStore.getState().user?.id;
@@ -280,6 +438,10 @@ const loadChannelMessagePage = async ({
     );
 
     if (bootstrapError) {
+      markChatPerf(perfId, "bootstrap-rpc", {
+        ok: false,
+        missingRpc: isMissingRpcError(bootstrapError),
+      });
       if (!isMissingRpcError(bootstrapError)) {
         throw bootstrapError;
       }
@@ -301,6 +463,11 @@ const loadChannelMessagePage = async ({
           : [];
         useServerStore.getState().hydrateChannelPermissions(channelId, channelPermissions);
         usedBootstrap = true;
+        markChatPerf(perfId, "bootstrap-rpc", {
+          ok: true,
+          rowCount: messageRows.length,
+          permissionCount: channelPermissions.length,
+        });
       }
     }
   }
@@ -315,6 +482,11 @@ const loadChannelMessagePage = async ({
     });
     if (error) throw error;
     messageRows = Array.isArray(data) ? data : [];
+    markChatPerf(perfId, "messages-rpc", {
+      rowCount: messageRows.length,
+      paginated: !!normalizedBefore,
+      skipBootstrap,
+    });
 
     if (normalizedBefore && messageRows.length === 0) {
       const beforeMs = Date.parse(normalizedBefore);
@@ -329,6 +501,9 @@ const loadChannelMessagePage = async ({
         });
         if (!fallbackError) {
           messageRows = Array.isArray(fallbackData) ? fallbackData : [];
+          markChatPerf(perfId, "messages-rpc-nudge", {
+            rowCount: messageRows.length,
+          });
         }
       }
     }
@@ -369,7 +544,9 @@ const loadChannelMessagePage = async ({
 
   const dedupedMissingReplyIds = Array.from(new Set(missingReplyIds));
 
-  if (dedupedMissingReplyIds.length > 0) {
+  const deferredReplyIds = usedBootstrap ? dedupedMissingReplyIds : [];
+
+  if (!usedBootstrap && dedupedMissingReplyIds.length > 0) {
     const { data: replyData } = await supabase.rpc("get_message_replies_secure", {
       _message_ids: dedupedMissingReplyIds,
       _user_id: requestUserId,
@@ -377,6 +554,10 @@ const loadChannelMessagePage = async ({
     });
 
     if (replyData) {
+      markChatPerf(perfId, "reply-rpc", {
+        replyCount: Array.isArray(replyData) ? replyData.length : 0,
+        missingReplyIds: dedupedMissingReplyIds.length,
+      });
       (replyData as any[]).forEach((reply: any) => {
         const normalizedReply = toMessageReply(reply);
         if (!normalizedReply) return;
@@ -439,7 +620,14 @@ const loadChannelMessagePage = async ({
     resolveSignedUrls(attachmentUrls).catch(() => {});
   }
 
-  return { messages, hasMore, oldestLoadedAt };
+  markChatPerf(perfId, "normalized", {
+    messageCount: messages.length,
+    usedBootstrap,
+    deferredReplyIds: deferredReplyIds.length,
+    attachmentUrlCount: attachmentUrls.length,
+  });
+
+  return { messages, hasMore, oldestLoadedAt, deferredReplyIds };
 };
 
 export const useMessageStore = create<MessageState>((set, get) => ({
@@ -478,6 +666,8 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     skipBootstrap = false,
   ) => {
     const normalizedBefore = typeof before === "string" && before.trim().length > 0 ? before : undefined;
+    const requestUserId = useAuthStore.getState().user?.id;
+    const blockedUserIds = useFriendStore.getState().visibilityBlockedUserIds;
     const inflightKey = `${channelId}:${normalizedBefore ?? ""}:${limit}`;
     const existingInflight = inflightFetches.get(inflightKey);
     if (existingInflight) return existingInflight;
@@ -485,11 +675,22 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     const p = (async () => {
       const { messagesByChannel } = get();
       const cached = messagesByChannel[channelId];
+      const perfId = beginChatPerf("fetch-messages", {
+        channelId,
+        before: normalizedBefore ?? null,
+        force,
+        silent,
+        skipBootstrap,
+        hadCached: !!cached?.messages?.length,
+      });
 
       // If we have cached messages and they're fresh, don't refetch (unless paginating)
       if (!normalizedBefore && !force && cached && cached.messages.length > 0) {
         const isFresh = Date.now() - cached.lastFetched < CACHE_EXPIRY_MS;
         if (isFresh) {
+          endChatPerf(perfId, "cache-hit", {
+            messageCount: cached.messages.length,
+          });
           return;
         }
       }
@@ -498,8 +699,10 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       // Only show the full-screen skeleton if we have ZERO cached messages for this channel.
       // If we have stale cached messages, show them immediately and fetch silently in background.
       const hasCachedMessages = cached && cached.messages.length > 0;
+      const prefetchedBootstrap =
+        !normalizedBefore && !skipBootstrap ? getPrefetchedBootstrapPage(channelId, limit) : null;
 
-      if (!hasCachedMessages && !silent) {
+      if (!hasCachedMessages && !prefetchedBootstrap && !silent) {
         // First-ever visit to this channel — show skeleton
         set({ isLoading: true });
       }
@@ -524,15 +727,35 @@ export const useMessageStore = create<MessageState>((set, get) => ({
                 messages: prefetchedOlder.messages,
                 hasMore: prefetchedOlder.hasMore,
                 oldestLoadedAt: prefetchedOlder.oldestLoadedAt,
+                deferredReplyIds: [] as string[],
               }
+            : prefetchedBootstrap
+              ? {
+                  messages: prefetchedBootstrap.messages,
+                  hasMore: prefetchedBootstrap.hasMore,
+                  oldestLoadedAt: prefetchedBootstrap.oldestLoadedAt,
+                  deferredReplyIds: prefetchedBootstrap.deferredReplyIds,
+                }
             : await loadChannelMessagePage({
                 channelId,
                 limit,
                 before: normalizedBefore,
                 skipBootstrap,
+                perfId,
               });
 
-        const { messages, hasMore, oldestLoadedAt: oldestFetchedAt } = page;
+        if (prefetchedOlder && Date.now() - prefetchedOlder.prefetchedAt < PREFETCH_CACHE_EXPIRY_MS) {
+          markChatPerf(perfId, "used-prefetched-older", {
+            rowCount: prefetchedOlder.messages.length,
+          });
+        } else if (prefetchedBootstrap) {
+          markChatPerf(perfId, "used-prefetched-bootstrap", {
+            rowCount: prefetchedBootstrap.messages.length,
+            deferredReplyIds: prefetchedBootstrap.deferredReplyIds.length,
+          });
+        }
+
+        const { messages, hasMore, oldestLoadedAt: oldestFetchedAt, deferredReplyIds } = page;
 
         set((state) => {
           const existingCache = state.messagesByChannel[channelId];
@@ -641,7 +864,38 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             };
           }
         });
+        afterNextPaint(() => {
+          markChatPerf(perfId, "post-state-paint", {
+            messageCount: messages.length,
+            paginated: !!normalizedBefore,
+          });
+        });
+
+        if (deferredReplyIds.length > 0 && !normalizedBefore && requestUserId) {
+          void hydrateMissingRepliesInBackground(
+            channelId,
+            deferredReplyIds,
+            requestUserId,
+            blockedUserIds,
+          ).then(() => {
+            endChatPerf(perfId, "deferred-replies-complete", {
+              deferredReplyIds: deferredReplyIds.length,
+            });
+          }).catch((error) => {
+            endChatPerf(perfId, "deferred-replies-failed", {
+              deferredReplyIds: deferredReplyIds.length,
+              error: error instanceof Error ? error.message : "Deferred reply hydration failed",
+            });
+          });
+        } else {
+          endChatPerf(perfId, "done", {
+            messageCount: messages.length,
+          });
+        }
       } catch (error) {
+        endChatPerf(perfId, "failed", {
+          error: error instanceof Error ? error.message : "Failed to fetch messages",
+        });
         console.error("Failed to fetch messages:", error);
         set((state) => {
           const { [channelId]: _, ...restFetching } = state.fetchingChannels;
@@ -654,6 +908,55 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     });
 
     inflightFetches.set(inflightKey, p);
+    return p;
+  },
+
+  prefetchChannelBootstrap: async (channelId: string, limit = 50) => {
+    const cacheEntry = get().messagesByChannel[channelId];
+    const hasFreshCache =
+      !!cacheEntry &&
+      (cacheEntry.messages?.length ?? 0) > 0 &&
+      Date.now() - cacheEntry.lastFetched < CACHE_EXPIRY_MS;
+    if (hasFreshCache) return;
+
+    if (getPrefetchedBootstrapPage(channelId, limit)) return;
+
+    const inflightKey = `bootstrap:${channelId}:${limit}`;
+    const existingInflight = inflightPrefetches.get(inflightKey);
+    if (existingInflight) return existingInflight;
+
+    const p = (async () => {
+      try {
+        const page = await loadChannelMessagePage({
+          channelId,
+          limit,
+          skipBootstrap: false,
+        });
+
+        const currentCache = get().messagesByChannel[channelId];
+        const stillHasFreshCache =
+          !!currentCache &&
+          (currentCache.messages?.length ?? 0) > 0 &&
+          Date.now() - currentCache.lastFetched < CACHE_EXPIRY_MS;
+        if (stillHasFreshCache) return;
+
+        bootstrapPrefetchCache.set(channelId, {
+          limit,
+          messages: page.messages,
+          hasMore: page.hasMore,
+          oldestLoadedAt: page.oldestLoadedAt,
+          deferredReplyIds: page.deferredReplyIds,
+          prefetchedAt: Date.now(),
+        });
+      } catch (error) {
+        console.error("Failed to prefetch channel bootstrap:", error);
+      }
+    })().finally(() => {
+      const cur = inflightPrefetches.get(inflightKey);
+      if (cur === p) inflightPrefetches.delete(inflightKey);
+    });
+
+    inflightPrefetches.set(inflightKey, p);
     return p;
   },
 
@@ -722,7 +1025,52 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     return p;
   },
 
-  sendMessage: async (channelId: string, userId: string, content: string, replyToId?: string) => {
+  sendMessage: async (
+    channelId: string,
+    userId: string,
+    content: string,
+    replyToId?: string,
+    options?: SendMessageOptions,
+  ) => {
+    const tempId = createOptimisticMessageId();
+    const perfId = beginChatPerf("send-message", {
+      channelId,
+      hasReply: !!replyToId,
+      hasAttachments: (options?.optimisticAttachments?.length ?? 0) > 0,
+      contentLength: content.length,
+    });
+    const syncStore = useSyncStore.getState();
+    const currentUser = useAuthStore.getState().user;
+    const replyData = resolveReplyPreview(get().messagesByChannel, channelId, replyToId);
+
+    if (currentUser) {
+      useUserCacheStore.getState().upsertUser(currentUser as unknown as User);
+    }
+
+    syncStore.addOptimisticItem(tempId);
+    set((state) => ({
+      messagesByChannel: mergeMessageIntoChannelCache(state.messagesByChannel, channelId, {
+        id: tempId,
+        channel_id: channelId,
+        user_id: userId,
+        is_own: true,
+        reply_to_id: replyToId ?? null,
+        content,
+        is_pinned: false,
+        is_system_message: false,
+        embed_hidden: false,
+        edited_at: null,
+        created_at: new Date().toISOString(),
+        reply_to: replyData,
+        attachments: options?.optimisticAttachments ?? [],
+        reactions: [],
+      }),
+      replyingTo: null,
+    }));
+    afterNextPaint(() => {
+      markChatPerf(perfId, "local-render");
+    });
+
     try {
       // Use hardened RPC path; direct table INSERT may be intentionally blocked for anon clients.
       const { data, error } = await supabase.rpc("send_message" as any, {
@@ -739,28 +1087,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         throw error;
       }
 
-      // 2. Resolve reply data from local cache for immediate display
-      let replyData: MessageReply | undefined;
-      if (replyToId) {
-        const messages = get().getMessages();
-        const replyMsg = messages.find((m) => m.id === replyToId);
-        if (replyMsg) {
-          replyData = {
-            id: replyMsg.id,
-            content: replyMsg.content,
-            user_id: replyMsg.user_id,
-          };
-        }
-      }
-
-      const currentUser = useAuthStore.getState().user;
-
-      // Cache the user but don't embed on the message
-      if (currentUser) {
-        useUserCacheStore.getState().upsertUser(currentUser as unknown as User);
-      }
-
-      // 3. Map RPC response to Message type (user stripped — looked up from cache)
+      // Map RPC response to Message type; author data still resolves from the user cache.
       const message: Message = {
         id: (data as any).id,
         channel_id: (data as any).channel_id,
@@ -778,30 +1105,12 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         reactions: [],
       };
 
-      // 4. Update the local state
-      set((state) => {
-        const existingCache = state.messagesByChannel[channelId];
-        if (!existingCache) return { replyingTo: null };
-
-        // Check for duplicates to prevent issues with Realtime subscriptions
-        if (existingCache.messages.some((m) => m.id === message.id)) {
-          return { replyingTo: null };
-        }
-
-        return {
-          messagesByChannel: pruneMessagesByChannel(
-            {
-              ...state.messagesByChannel,
-              [channelId]: {
-                ...existingCache,
-                messages: [...existingCache.messages, message],
-              },
-            },
-            channelId,
-          ),
-          replyingTo: null,
-        };
-      });
+      syncStore.confirmOptimisticItem(tempId, message.id);
+      set((state) => ({
+        messagesByChannel: mergeMessageIntoChannelCache(state.messagesByChannel, channelId, message, tempId),
+        replyingTo: null,
+      }));
+      endChatPerf(perfId, "server-reconcile");
 
       // Attach suppression metadata for the caller
       (message as any)._mentions_suppressed = (data as any).mentions_suppressed;
@@ -809,6 +1118,28 @@ export const useMessageStore = create<MessageState>((set, get) => ({
 
       return message;
     } catch (error) {
+      endChatPerf(perfId, "failed", {
+        error: error instanceof Error ? error.message : "Failed to send message",
+      });
+      syncStore.failOptimisticItem(tempId, error instanceof Error ? error.message : "Failed to send message");
+      syncStore.removeOptimisticItem(tempId);
+      set((state) => {
+        const existingCache = state.messagesByChannel[channelId];
+        if (!existingCache) return state;
+
+        return {
+          messagesByChannel: pruneMessagesByChannel(
+            {
+              ...state.messagesByChannel,
+              [channelId]: {
+                ...existingCache,
+                messages: existingCache.messages.filter((m) => m.id !== tempId),
+              },
+            },
+            channelId,
+          ),
+        };
+      });
       console.error("Failed to send message:", error);
       if (isNewAccountMessagingRestrictionError(error)) {
         toast.warning("Messaging is temporarily restricted", {
@@ -1248,9 +1579,13 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     });
   },
 
-  clearMessages: () => set({ messagesByChannel: {}, replyingTo: null }),
+  clearMessages: () => {
+    bootstrapPrefetchCache.clear();
+    set({ messagesByChannel: {}, replyingTo: null });
+  },
 
   clearChannelCache: (channelId: string) => {
+    bootstrapPrefetchCache.delete(channelId);
     set((state) => {
       const { [channelId]: _, ...rest } = state.messagesByChannel;
       return { messagesByChannel: rest };

@@ -45,6 +45,7 @@ import { fetchServerEmojis } from "@/lib/serverEmojis";
 import { useServerEmojis } from "@/hooks/useServerEmojis";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import type { MessageAttachment } from "@/types";
 
 export interface DMInputConfig {
   conversationId: string;
@@ -88,6 +89,13 @@ interface ChannelMapping {
   channelId: string;
 }
 
+interface PreparedAttachment {
+  pending: PendingAttachment;
+  storagePath: string | null;
+  contentUrl: string;
+  optimisticAttachment: MessageAttachment;
+}
+
 const MAX_LENGTH = 2000;
 const MIN_TEXTAREA_HEIGHT = 40;
 const MAX_TEXTAREA_HEIGHT = 160;
@@ -124,6 +132,7 @@ const ALLOWED_FILE_EXTENSIONS =
   ".jpg,.jpeg,.png,.gif,.webp,.avif,.svg,.mp4,.webm,.mov,.mp3,.ogg,.wav,.flac,.m4a,.pdf,.txt,.zip,.rar,.gz,.doc,.docx,.xls,.xlsx,.json";
 const DRAFT_SAVE_DELAY = 500;
 const TYPING_STOP_DELAY = 2000;
+const KLOAK_ATTACHMENT_PREFIX = "kloak-attachment://";
 
 // Memoized action bar (full-width bottom bar)
 const ActionBar = memo(
@@ -566,6 +575,51 @@ export const MessageInput = ({
     cancelEditing();
   }, [cancelEditing]);
 
+  const prepareAttachmentsForMessage = useCallback(
+    (attachments: PendingAttachment[]): PreparedAttachment[] => {
+      if (!user?.id) return [];
+
+      return attachments.map((attachment, index) => {
+        if (attachment.gifUrl) {
+          return {
+            pending: attachment,
+            storagePath: null,
+            contentUrl: attachment.gifUrl,
+            optimisticAttachment: {
+              id: `temp-att-${Date.now()}-${index}`,
+              message_id: "",
+              file_url: attachment.gifUrl,
+              file_name: attachment.file.name || "gif",
+              file_type: "image/gif",
+              file_size: null,
+              width: null,
+              height: null,
+            },
+          };
+        }
+
+        const ext = attachment.file.name.split(".").pop() || "bin";
+        const storagePath = `${user.id}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+        return {
+          pending: attachment,
+          storagePath,
+          contentUrl: `${KLOAK_ATTACHMENT_PREFIX}${storagePath}`,
+          optimisticAttachment: {
+            id: `temp-att-${Date.now()}-${index}`,
+            message_id: "",
+            file_url: attachment.preview || `${KLOAK_ATTACHMENT_PREFIX}${storagePath}`,
+            file_name: attachment.file.name,
+            file_type: attachment.file.type || null,
+            file_size: attachment.file.size || null,
+            width: null,
+            height: null,
+          },
+        };
+      });
+    },
+    [user?.id],
+  );
+
   const handleSubmit = useCallback(async () => {
     // --- EDIT MODE ---
     if (isEditMode && editingMessage && user) {
@@ -651,99 +705,125 @@ export const MessageInput = ({
 
     try {
       let finalContent = transportReadyContent;
-      const uploadedUrls: string[] = [];
-
-      const gifAttachments = pendingAttachments.filter((a) => a.gifUrl);
-      const fileAttachments = pendingAttachments.filter((a) => !a.gifUrl);
-      const savedAttachmentMeta = fileAttachments.map((a) => ({
-        name: a.file.name,
-        type: a.file.type,
-        size: a.file.size,
-      }));
-
-      // Upload file attachments (same for both modes)
-      if (fileAttachments.length > 0) {
-        setPendingAttachments((prev) =>
-          prev.map((a) => (a.gifUrl ? a : { ...a, uploading: true }))
-        );
-        for (const att of fileAttachments) {
-          let fileToUpload = att.file;
-          if (fileToUpload.type.startsWith("image/")) {
-            fileToUpload = await compressAttachmentImage(fileToUpload);
-          }
-          const ext = fileToUpload.name.split(".").pop() || "bin";
-          const fileName = `${user.id}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
-          const res = await secureUpload("attachments", fileName, fileToUpload, { contentType: fileToUpload.type });
-          uploadedUrls.push(res.publicUrl);
-        }
-      }
-
-      for (const gif of gifAttachments) {
-        uploadedUrls.push(gif.gifUrl!);
-      }
-
-      if (uploadedUrls.length > 0) {
-        const urlBlock = uploadedUrls.join("\n");
-        finalContent = finalContent ? `${finalContent}\n${urlBlock}` : urlBlock;
-      }
 
       if (isForum) {
+        const uploadedUrls: string[] = [];
+        const gifAttachments = pendingAttachments.filter((a) => a.gifUrl);
+        const fileAttachments = pendingAttachments.filter((a) => !a.gifUrl);
+        if (fileAttachments.length > 0) {
+          setPendingAttachments((prev) => prev.map((a) => (a.gifUrl ? a : { ...a, uploading: true })));
+          for (const att of fileAttachments) {
+            let fileToUpload = att.file;
+            if (fileToUpload.type.startsWith("image/")) {
+              fileToUpload = await compressAttachmentImage(fileToUpload);
+            }
+            const ext = fileToUpload.name.split(".").pop() || "bin";
+            const fileName = `${user.id}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+            const res = await secureUpload("attachments", fileName, fileToUpload, { contentType: fileToUpload.type });
+            uploadedUrls.push(res.publicUrl);
+          }
+        }
+        for (const gif of gifAttachments) {
+          uploadedUrls.push(gif.gifUrl!);
+        }
+        if (uploadedUrls.length > 0) {
+          const urlBlock = uploadedUrls.join("\n");
+          finalContent = finalContent ? `${finalContent}\n${urlBlock}` : urlBlock;
+        }
+
         // Forum mode: delegate to forumConfig.onSend
         const replyToId = forumConfigRef.current?.replyingTo?.id || null;
         await forumConfigRef.current!.onSend(finalContent, replyToId);
       } else {
-        // Channel / DM mode
-        const replyToId = isDM ? dmConfig?.replyingTo?.id : channelReplyingTo?.id;
-        const sentMessage = await sendMessage(targetId, user.id, finalContent, replyToId);
-
-        // Insert attachment records
-        const fileUploadedUrls = uploadedUrls.slice(0, fileAttachments.length);
-        if (sentMessage && fileUploadedUrls.length > 0) {
-          const attachmentRows = fileUploadedUrls.map((url, i) => ({
-            message_id: sentMessage.id,
-            file_url: url,
-            file_name: savedAttachmentMeta[i]?.name || "attachment",
-            file_type: savedAttachmentMeta[i]?.type || null,
-            file_size: savedAttachmentMeta[i]?.size || null,
-          }));
-
-          const tableName = isDM ? "dm_attachments" : "message_attachments";
-          const { data: insertedAttachments, error: attachError } = await supabase
-            .from(tableName)
-            .insert(attachmentRows)
-            .select();
-
-          if (attachError) {
-            console.error("[MessageInput] Attachment insert error:", attachError);
-          }
-
-          if (insertedAttachments && insertedAttachments.length > 0) {
-            const formattedAttachments = insertedAttachments.map((a: any) => ({
-              id: a.id,
-              message_id: a.message_id,
-              file_url: a.file_url,
-              file_name: a.file_name,
-              file_type: a.file_type,
-              file_size: a.file_size,
-              width: a.width,
-              height: a.height,
-            }));
-
-            if (isDM) {
-              useDMStore.getState().updateMessage(targetId, sentMessage.id, {
-                attachments: formattedAttachments,
-              });
-            } else {
-              useMessageStore.getState().updateMessage(sentMessage.id, {
-                channel_id: targetId,
-                attachments: formattedAttachments,
-              } as any);
-            }
-          }
+        const preparedAttachments = prepareAttachmentsForMessage(pendingAttachments);
+        const attachmentUrls = preparedAttachments.map((attachment) => attachment.contentUrl);
+        if (attachmentUrls.length > 0) {
+          const urlBlock = attachmentUrls.join("\n");
+          finalContent = finalContent ? `${finalContent}\n${urlBlock}` : urlBlock;
         }
 
+        // Channel / DM mode
+        const replyToId = isDM ? dmConfig?.replyingTo?.id : channelReplyingTo?.id;
+        const sentMessage = await sendMessage(targetId, user.id, finalContent, replyToId, {
+          optimisticAttachments: preparedAttachments.map((attachment) => attachment.optimisticAttachment),
+        });
+        if (!sentMessage) return;
+
+        const draftKey = isForum ? `forum-${targetId}` : isDM ? `dm-${targetId}` : targetId;
+        setContent("");
+        setPendingAttachments([]);
+        clearDraft(draftKey);
+        if (textareaRef.current) textareaRef.current.style.height = `${MIN_TEXTAREA_HEIGHT}px`;
+
+        void (async () => {
+          try {
+            if (preparedAttachments.some((attachment) => attachment.storagePath)) {
+              for (const attachment of preparedAttachments) {
+                if (!attachment.storagePath) continue;
+                let fileToUpload = attachment.pending.file;
+                if (fileToUpload.type.startsWith("image/")) {
+                  fileToUpload = await compressAttachmentImage(fileToUpload);
+                }
+                await secureUpload("attachments", attachment.storagePath, fileToUpload, {
+                  contentType: fileToUpload.type,
+                });
+              }
+            }
+
+            const persistedAttachments = preparedAttachments
+              .map((attachment, i) => ({
+                message_id: sentMessage.id,
+                file_url: attachment.contentUrl,
+                file_name: attachment.optimisticAttachment.file_name || `attachment-${i + 1}`,
+                file_type: attachment.optimisticAttachment.file_type || null,
+                file_size: attachment.optimisticAttachment.file_size || null,
+              }))
+              .filter((attachment) => !!attachment.file_url);
+
+            if (persistedAttachments.length === 0) return;
+
+            const { data: insertedAttachments, error: attachError } = await supabase
+              .from(isDM ? "dm_attachments" : "message_attachments")
+              .insert(persistedAttachments)
+              .select();
+
+            if (attachError) {
+              throw attachError;
+            }
+
+            if (insertedAttachments && insertedAttachments.length > 0) {
+              const formattedAttachments = insertedAttachments.map((a: any) => ({
+                id: a.id,
+                message_id: a.message_id,
+                file_url: a.file_url,
+                file_name: a.file_name,
+                file_type: a.file_type,
+                file_size: a.file_size,
+                width: a.width,
+                height: a.height,
+              }));
+
+              if (isDM) {
+                useDMStore.getState().updateMessage(targetId, sentMessage.id, {
+                  attachments: formattedAttachments,
+                });
+              } else {
+                useMessageStore.getState().updateMessage(sentMessage.id, {
+                  channel_id: targetId,
+                  attachments: formattedAttachments,
+                } as any);
+              }
+            }
+          } catch (attachmentError) {
+            console.error("[MessageInput] Attachment finalize error:", attachmentError);
+            toast.error("Attachment upload is still processing", {
+              description: "Your message was sent, but one or more attachments could not be finalized.",
+            });
+          }
+        })();
+
         // DM: update presence after send
-        if (isDM && sentMessage) {
+        if (isDM) {
           const auth = useAuthStore.getState();
           if (auth.manualStatus !== "offline") auth.updateLastSeen();
           if (auth.manualStatus !== "offline" && auth.manualStatus !== "dnd") {
@@ -753,11 +833,13 @@ export const MessageInput = ({
       }
 
       // Common cleanup
-      setContent("");
-      setPendingAttachments([]);
-      const draftKey = isForum ? `forum-${targetId}` : isDM ? `dm-${targetId}` : targetId;
-      clearDraft(draftKey);
-      if (textareaRef.current) textareaRef.current.style.height = `${MIN_TEXTAREA_HEIGHT}px`;
+      if (isForum) {
+        setContent("");
+        setPendingAttachments([]);
+        const draftKey = `forum-${targetId}`;
+        clearDraft(draftKey);
+        if (textareaRef.current) textareaRef.current.style.height = `${MIN_TEXTAREA_HEIGHT}px`;
+      }
 
       if (isForum) {
         forumConfigRef.current?.onCancelReply?.();

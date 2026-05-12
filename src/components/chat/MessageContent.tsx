@@ -103,6 +103,7 @@ const INLINE_CUSTOM_EMOJI_TOKEN_REGEX = /:ce\[([a-z0-9_]{2,12})\|([a-z0-9/_\.-]{
 const CUSTOM_EMOJI_TEXT_REGEX = /:([a-z0-9_]{2,12})(?:~([^:]{1,50}))?:/g;
 const CUSTOM_EMOJI_RENDER_REGEX =
   /:ce\[([a-z0-9_]{2,12})\|([a-z0-9/_\.-]{1,300})\]:|:([a-z0-9_]{2,12})(?:~([^:]{1,50}))?:/g;
+const HAS_POTENTIAL_CUSTOM_EMOJI_REGEX = /:ce\[|:([a-z0-9_]{2,12})(?:~[^:]{1,50})?:/i;
 
 const getServerEmojiPublicUrl = (filePath: string): string => {
   return getCdnUrl("server-emojis", filePath);
@@ -500,6 +501,10 @@ export const MessageContent = ({
   const segments = useMemo(() => parseMessageSegments(content), [content]);
   const effectiveCustomEmojiMap = providedCustomEmojiMap ?? localCustomEmojiMap;
   const effectiveGlobalEmojiMap = providedGlobalEmojiMap ?? localGlobalEmojiMap;
+  const hasUrlLikeContent = content.includes("http://") || content.includes("https://");
+  const hasPotentialCustomEmoji = useMemo(() => HAS_POTENTIAL_CUSTOM_EMOJI_REGEX.test(content), [content]);
+  const shouldComputePreviewMetadata = linkPreviewsEnabled && !hideEmbeds && !hideLinksPreview;
+  const shouldComputeInviteMetadata = content.includes("/invite/");
 
   const mentionedUserIds = useMemo(() => {
     const ids = new Set<string>();
@@ -571,6 +576,7 @@ export const MessageContent = ({
 
   // Fallback: resolve unresolved :emojiname: from DB for emojis from servers the viewer isn't in
   useEffect(() => {
+    if (!hasPotentialCustomEmoji) return;
     const el = contentRef.current;
     if (!el) return;
 
@@ -673,7 +679,7 @@ export const MessageContent = ({
     return () => {
       cancelled = true;
     };
-  }, [content, effectiveCustomEmojiMap, effectiveGlobalEmojiMap, mentionedUsersMap]);
+  }, [content, effectiveCustomEmojiMap, effectiveGlobalEmojiMap, hasPotentialCustomEmoji, mentionedUsersMap]);
 
   // Clear the loading-placeholder background on images once they load.
   // Previously this was handled by an inline `onload=` attribute emitted by
@@ -895,32 +901,35 @@ export const MessageContent = ({
 
   // Extract URLs for link previews (only from text segments, not code blocks)
   const allUrls = useMemo(() => {
+    if (!hasUrlLikeContent) return [];
     const textContent = segments
       .filter((s) => s.type === "text")
       .map((s) => s.content)
       .join(" ");
     return extractUrls(textContent);
-  }, [segments]);
+  }, [hasUrlLikeContent, segments]);
 
   const imageUrls = useMemo(() => allUrls.filter((url) => isImageUrl(url)), [allUrls]);
 
   const inviteCodes = useMemo(() => {
+    if (!shouldComputeInviteMetadata || allUrls.length === 0) return [];
     const codes = new Set<string>();
     for (const url of allUrls) {
       const match = url.match(/\/invite\/([A-Za-z0-9]{8})/);
       if (match?.[1]) codes.add(match[1].toUpperCase());
     }
     return Array.from(codes);
-  }, [allUrls]);
+  }, [allUrls, shouldComputeInviteMetadata]);
 
   const previewUrls = useMemo(() => {
+    if (!shouldComputePreviewMetadata || allUrls.length === 0) return [];
     // Filter out image URLs (already rendered inline) and invite links (handled separately)
     return allUrls.filter((url) => {
       if (isImageUrl(url)) return false;
       if (/\/invite\/[A-Za-z0-9]{8}/.test(url)) return false;
       return true;
     });
-  }, [allUrls]);
+  }, [allUrls, shouldComputePreviewMetadata]);
 
   const canManageRoles = hasPermission("manage_roles");
 

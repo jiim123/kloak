@@ -7,7 +7,7 @@ import { useServerStore } from '@/stores/serverStore';
 import { useUserCacheStore } from '@/stores/userCacheStore';
 import { resolveSignedUrls, isSupabaseAttachmentUrl } from '@/lib/signedUrl';
 import type { Message, MessageReply } from '@/types';
-import { fetchAndCacheUser, getUserFromCache, getOrFetchUser } from '@/stores/userCacheStore';
+import { getUserFromCache, getOrFetchUser } from '@/stores/userCacheStore';
 import type { User } from '@/types';
 import { canRevealGhostIdentityForUser, getGhostPseudonymousUserId } from '@/lib/ghostIdentity';
 
@@ -15,6 +15,8 @@ const CHANNEL_SUBSCRIBE_CATCHUP_MAX_AGE_MS = 5 * 60_000;
 const MIN_CATCHUP_FETCH_GAP_MS = 30_000;
 const BROADCAST_RESYNC_INTERVAL_MS = 12_000;
 const MIN_BROADCAST_RESYNC_GAP_MS = 6_000;
+const REPLY_HYDRATION_BATCH_DELAY_MS = 80;
+const MAX_REACTION_ID_CACHE_SIZE = 5000;
 
 type BroadcastMutationOp = 'INSERT' | 'UPDATE' | 'DELETE';
 
@@ -44,6 +46,16 @@ type BroadcastMutationPayload<T> = {
   old?: T;
 };
 
+const getCacheCatchupState = (
+  cacheEntry: { messages?: Array<unknown>; lastFetched?: number } | undefined,
+  now: number,
+) => {
+  const hasCached = (cacheEntry?.messages?.length ?? 0) > 0;
+  const cacheAge = typeof cacheEntry?.lastFetched === 'number' ? now - cacheEntry.lastFetched : Number.POSITIVE_INFINITY;
+  const isFreshEnough = cacheAge < CHANNEL_SUBSCRIBE_CATCHUP_MAX_AGE_MS;
+  return { hasCached, cacheAge, isFreshEnough };
+};
+
 export const useRealtimeMessages = (channelId: string | null) => {
   const isSettingUpRef = useRef(false);
   const lastSubscribeAtRef = useRef<number>(0);
@@ -52,6 +64,10 @@ export const useRealtimeMessages = (channelId: string | null) => {
   const isSubscribedRef = useRef(false);
   const lastBroadcastResyncAtRef = useRef<number>(0);
   const listenerScopeRef = useRef(`messages-${Math.random().toString(36).slice(2)}`);
+  const pendingReplyIdsRef = useRef(new Set<string>());
+  const replyHydrationTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const replyHydrationInFlightRef = useRef(false);
+  const reactionMessageIdByReactionIdRef = useRef(new Map<string, string>());
 
   useEffect(() => {
     if (!channelId) {
@@ -75,6 +91,76 @@ export const useRealtimeMessages = (channelId: string | null) => {
       internal._off?.("broadcast", reactionFilter);
     };
 
+    const flushPendingReplies = async () => {
+      if (!isActive || replyHydrationInFlightRef.current) return;
+
+      const replyIds = Array.from(pendingReplyIdsRef.current);
+      if (replyIds.length === 0) return;
+
+      pendingReplyIdsRef.current.clear();
+      replyHydrationInFlightRef.current = true;
+
+      try {
+        const currentUserId = useAuthStore.getState().user?.id;
+        if (!currentUserId) return;
+
+        const blocked = useFriendStore.getState().visibilityBlockedUserIds;
+        const { data: replyRows } = await supabase.rpc("get_message_replies_secure", {
+          _message_ids: replyIds,
+          _user_id: currentUserId,
+          _blocked_user_ids: Array.isArray(blocked) ? blocked : [],
+        });
+
+        if (!Array.isArray(replyRows) || replyRows.length === 0) return;
+
+        const replyMap = new Map<string, MessageReply>();
+        for (const replyRow of replyRows as any[]) {
+          if (replyRow?.user && typeof replyRow.user === "object" && replyRow.user.id) {
+            useUserCacheStore.getState().upsertUser(replyRow.user as User);
+          }
+          if (!replyRow?.id || typeof replyRow.content !== "string") continue;
+          replyMap.set(replyRow.id, {
+            id: replyRow.id,
+            content: replyRow.content,
+            user_id: replyRow.user_id,
+            user: replyRow.user,
+          } satisfies MessageReply);
+        }
+
+        if (replyMap.size === 0) return;
+
+        const messages = useMessageStore.getState().messagesByChannel[channelId]?.messages || [];
+        for (const message of messages) {
+          if (!message.reply_to_id || message.reply_to) continue;
+          const replyPreview = replyMap.get(message.reply_to_id);
+          if (!replyPreview) continue;
+          useMessageStore.getState().updateMessage(message.id, {
+            reply_to: replyPreview,
+            channel_id: channelId,
+          } as Partial<Message>);
+        }
+      } catch (error) {
+        console.error('[Realtime] Failed to hydrate reply previews:', error);
+      } finally {
+        replyHydrationInFlightRef.current = false;
+        if (pendingReplyIdsRef.current.size > 0) {
+          replyHydrationTimerRef.current = setTimeout(() => {
+            replyHydrationTimerRef.current = null;
+            void flushPendingReplies();
+          }, REPLY_HYDRATION_BATCH_DELAY_MS);
+        }
+      }
+    };
+
+    const scheduleReplyHydration = (replyId: string) => {
+      pendingReplyIdsRef.current.add(replyId);
+      if (replyHydrationTimerRef.current || replyHydrationInFlightRef.current) return;
+      replyHydrationTimerRef.current = setTimeout(() => {
+        replyHydrationTimerRef.current = null;
+        void flushPendingReplies();
+      }, REPLY_HYDRATION_BATCH_DELAY_MS);
+    };
+
     const scheduleRetry = (status: 'CLOSED' | 'CHANNEL_ERROR' | 'TIMED_OUT') => {
       if (!isActive) return;
       retryCount += 1;
@@ -87,6 +173,82 @@ export const useRealtimeMessages = (channelId: string | null) => {
         if (!isActive) return;
         setupSubscription();
       }, delay);
+    };
+
+    const rememberReactionMessageId = (reactionId: string | undefined, messageId: string | undefined) => {
+      if (!reactionId || !messageId) return;
+      const map = reactionMessageIdByReactionIdRef.current;
+      map.set(reactionId, messageId);
+      if (map.size <= MAX_REACTION_ID_CACHE_SIZE) return;
+      const oldestKey = map.keys().next().value;
+      if (typeof oldestKey === 'string') {
+        map.delete(oldestKey);
+      }
+    };
+
+    const refetchReactionsForMessageIds = (messageIds: string[]) => {
+      const uniqueMessageIds = Array.from(new Set(messageIds.filter(Boolean)));
+      if (uniqueMessageIds.length === 0) return;
+
+      supabase
+        .from('reactions')
+        .select('message_id, user_id, emoji')
+        .in('message_id', uniqueMessageIds)
+        .then(({ data, error }) => {
+          if (error) {
+            console.error('[Realtime] Failed to refetch reactions:', error);
+            return;
+          }
+
+          const serverState = useServerStore.getState();
+          const isGhostMode =
+            serverState.currentChannel?.id === channelId && !!serverState.currentChannel?.ghost_mode;
+          const currentUserId = useAuthStore.getState().user?.id;
+          const reactionsByMessage = new Map<
+            string,
+            { emoji: string; count: number; users: string[]; hasReacted: boolean }[]
+          >();
+
+          for (const msgId of uniqueMessageIds) {
+            reactionsByMessage.set(msgId, []);
+          }
+
+          for (const row of data || []) {
+            const revealIdentity = canRevealGhostIdentityForUser({
+              isGhostMode,
+              authorUserId: row.user_id,
+              members: serverState.members,
+              ownerId: serverState.currentServer?.owner_id,
+            });
+            const effectiveReactionUserId = revealIdentity
+              ? row.user_id
+              : getGhostPseudonymousUserId(row.user_id, channelId);
+
+            let msgReactions = reactionsByMessage.get(row.message_id);
+            if (!msgReactions) {
+              msgReactions = [];
+              reactionsByMessage.set(row.message_id, msgReactions);
+            }
+            const existing = msgReactions.find((r) => r.emoji === row.emoji);
+            if (existing) {
+              existing.count++;
+              existing.users.push(effectiveReactionUserId);
+              if (row.user_id === currentUserId) existing.hasReacted = true;
+            } else {
+              msgReactions.push({
+                emoji: row.emoji,
+                count: 1,
+                users: [effectiveReactionUserId],
+                hasReacted: row.user_id === currentUserId,
+              });
+            }
+          }
+
+          const store = useMessageStore.getState();
+          for (const [msgId, reactions] of reactionsByMessage) {
+            store.updateMessage(msgId, { reactions, channel_id: channelId } as Partial<Message>);
+          }
+        });
     };
 
     const setupSubscription = () => {
@@ -200,24 +362,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
                       user_id: replyMsg.user_id,
                     };
                   } else {
-                    const currentUserId = localUser?.id;
-                    const { data: replyRows } = await supabase.rpc("get_message_replies_secure", {
-                      _message_ids: [newMsg.reply_to_id],
-                      _user_id: currentUserId,
-                      _blocked_user_ids: Array.isArray(blocked) ? blocked : [],
-                    });
-                    const replyRow = Array.isArray(replyRows) ? (replyRows[0] as any) : null;
-                    if (replyRow?.id) {
-                      if (replyRow.user && typeof replyRow.user === "object" && replyRow.user.id) {
-                        useUserCacheStore.getState().upsertUser(replyRow.user as User);
-                      }
-                      message.reply_to = {
-                        id: replyRow.id,
-                        content: replyRow.content,
-                        user_id: replyRow.user_id,
-                        user: replyRow.user,
-                      } satisfies MessageReply;
-                    }
+                    scheduleReplyHydration(newMsg.reply_to_id);
                   }
                 }
                 
@@ -281,6 +426,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
                 const newReaction = eventPayload.new;
                 if (!newReaction?.message_id || !newReaction?.user_id || !newReaction?.emoji) return;
                 if (newReaction.channel_id && newReaction.channel_id !== channelId) return;
+                rememberReactionMessageId(newReaction.id, newReaction.message_id);
 
                 const serverState = useServerStore.getState();
                 const isGhostMode =
@@ -371,7 +517,16 @@ export const useRealtimeMessages = (channelId: string | null) => {
                 useMessageStore
                   .getState()
                   .updateMessage(oldReaction.message_id, { reactions, channel_id: channelId } as Partial<Message>);
+              } else if (oldReaction.message_id) {
+                refetchReactionsForMessageIds([oldReaction.message_id]);
               } else if (oldReaction.id) {
+                const mappedMessageId = reactionMessageIdByReactionIdRef.current.get(oldReaction.id);
+                reactionMessageIdByReactionIdRef.current.delete(oldReaction.id);
+                if (mappedMessageId) {
+                  refetchReactionsForMessageIds([mappedMessageId]);
+                  return;
+                }
+
                 // Fallback when delete payload is partial.
                 const { messagesByChannel } = useMessageStore.getState();
                 const channelData = messagesByChannel[channelId];
@@ -379,65 +534,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
 
                 const messageIds = channelData.messages.filter((m) => (m.reactions?.length ?? 0) > 0).map((m) => m.id);
                 if (messageIds.length === 0) return;
-
-                supabase
-                  .from('reactions')
-                  .select('message_id, user_id, emoji')
-                  .in('message_id', messageIds)
-                  .then(({ data, error }) => {
-                    if (error) {
-                      console.error('[Realtime] Failed to refetch reactions:', error);
-                      return;
-                    }
-
-                    const serverState = useServerStore.getState();
-                    const isGhostMode =
-                      serverState.currentChannel?.id === channelId && !!serverState.currentChannel?.ghost_mode;
-                    const reactionsByMessage = new Map<
-                      string,
-                      { emoji: string; count: number; users: string[]; hasReacted: boolean }[]
-                    >();
-
-                    for (const msgId of messageIds) {
-                      reactionsByMessage.set(msgId, []);
-                    }
-
-                    for (const row of data || []) {
-                      const revealIdentity = canRevealGhostIdentityForUser({
-                        isGhostMode,
-                        authorUserId: row.user_id,
-                        members: serverState.members,
-                        ownerId: serverState.currentServer?.owner_id,
-                      });
-                      const effectiveReactionUserId = revealIdentity
-                        ? row.user_id
-                        : getGhostPseudonymousUserId(row.user_id, channelId);
-
-                      let msgReactions = reactionsByMessage.get(row.message_id);
-                      if (!msgReactions) {
-                        msgReactions = [];
-                        reactionsByMessage.set(row.message_id, msgReactions);
-                      }
-                      const existing = msgReactions.find((r) => r.emoji === row.emoji);
-                      if (existing) {
-                        existing.count++;
-                        existing.users.push(effectiveReactionUserId);
-                        if (row.user_id === currentUserId) existing.hasReacted = true;
-                      } else {
-                        msgReactions.push({
-                          emoji: row.emoji,
-                          count: 1,
-                          users: [effectiveReactionUserId],
-                          hasReacted: row.user_id === currentUserId,
-                        });
-                      }
-                    }
-
-                    const store = useMessageStore.getState();
-                    for (const [msgId, reactions] of reactionsByMessage) {
-                      store.updateMessage(msgId, { reactions, channel_id: channelId } as Partial<Message>);
-                    }
-                  });
+                refetchReactionsForMessageIds(messageIds);
               }
             } catch (error) {
               console.error('[Realtime] Error processing reaction event:', error);
@@ -457,6 +554,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
         isSettingUpRef.current = false;
         
         if (status === 'SUBSCRIBED') {
+          const previousEventAt = lastEventAtRef.current;
           isIntentionalClose = false;
           isSubscribedRef.current = true;
           console.log('[Realtime] Successfully subscribed to messages for channel:', channelId);
@@ -464,15 +562,19 @@ export const useRealtimeMessages = (channelId: string | null) => {
           lastSubscribeAtRef.current = Date.now();
           lastEventAtRef.current = Date.now();
 
-          // Catch up channel state after (re)subscribe if cache is missing/stale.
+          // Only catch up after (re)subscribe when the visible cache is missing
+          // or has likely drifted beyond what realtime alone can reconcile.
           const store = useMessageStore.getState();
           const cacheEntry = store.messagesByChannel[channelId];
-          const hasCached = (cacheEntry?.messages?.length ?? 0) > 0;
-          const isFreshEnough =
-            !!cacheEntry && Date.now() - cacheEntry.lastFetched < CHANNEL_SUBSCRIBE_CATCHUP_MAX_AGE_MS;
           const now = Date.now();
+          const { hasCached, isFreshEnough } = getCacheCatchupState(cacheEntry, now);
+          const initialColdLoadInFlight = !hasCached && store.isLoading;
           const canRunCatchup = now - lastCatchupFetchAtRef.current >= MIN_CATCHUP_FETCH_GAP_MS;
-          if ((!hasCached || !isFreshEnough) && canRunCatchup) {
+          const hasRecentRealtimeActivity =
+            previousEventAt > 0 && now - previousEventAt < CHANNEL_SUBSCRIBE_CATCHUP_MAX_AGE_MS;
+          const shouldCatchUp =
+            !initialColdLoadInFlight && (!hasCached || (!isFreshEnough && !hasRecentRealtimeActivity));
+          if (shouldCatchUp && canRunCatchup) {
             lastCatchupFetchAtRef.current = now;
             void store.fetchMessages(channelId, 50, undefined, true, hasCached, true).catch(() => undefined);
           }
@@ -516,7 +618,10 @@ export const useRealtimeMessages = (channelId: string | null) => {
       lastBroadcastResyncAtRef.current = now;
 
       const store = useMessageStore.getState();
-      const hasCached = (store.messagesByChannel[channelId]?.messages?.length ?? 0) > 0;
+      const cacheEntry = store.messagesByChannel[channelId];
+      const { hasCached, isFreshEnough } = getCacheCatchupState(cacheEntry, now);
+      if (hasCached && isFreshEnough) return;
+
       void store.fetchMessages(channelId, 20, undefined, true, hasCached, true).catch(() => undefined);
     }, BROADCAST_RESYNC_INTERVAL_MS);
 
@@ -553,6 +658,13 @@ export const useRealtimeMessages = (channelId: string | null) => {
       if (retryTimeout) {
         clearTimeout(retryTimeout);
       }
+      if (replyHydrationTimerRef.current) {
+        clearTimeout(replyHydrationTimerRef.current);
+        replyHydrationTimerRef.current = null;
+      }
+      pendingReplyIdsRef.current.clear();
+      replyHydrationInFlightRef.current = false;
+      reactionMessageIdByReactionIdRef.current.clear();
       clearInterval(broadcastResyncInterval);
       if (channel) {
         try {

@@ -574,24 +574,21 @@ export const MessageItem = memo(function MessageItem({
     [memberNameById, reactionUserNameOverrides, user?.id],
   );
 
-  const unresolvedReactionUserIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const reaction of message.reactions ?? []) {
-      for (const uid of reaction.users) {
-        if (!uid || uid === user?.id) continue;
-        if (uid.startsWith("ghost_")) continue;
-        if (memberNameById.has(uid)) continue;
-        if (reactionUserNameOverrides.has(uid)) continue;
-        ids.add(uid);
-      }
-    }
-    return Array.from(ids);
-  }, [memberNameById, message.reactions, reactionUserNameOverrides, user?.id]);
+  const ensureReactionUserNames = useCallback((userIds: string[]) => {
+    const unresolvedReactionUserIds = Array.from(
+      new Set(
+        userIds.filter((uid) => {
+          if (!uid || uid === user?.id) return false;
+          if (uid.startsWith("ghost_")) return false;
+          if (memberNameById.has(uid)) return false;
+          if (reactionUserNameOverrides.has(uid)) return false;
+          return true;
+        }),
+      ),
+    );
+    if (unresolvedReactionUserIds.length === 0) return () => undefined;
 
-  useEffect(() => {
-    if (unresolvedReactionUserIds.length === 0) return;
     let cancelled = false;
-
     unresolvedReactionUserIds.forEach((uid) => {
       const cachedUser = getUserFromCache(uid);
       if (cachedUser) {
@@ -633,12 +630,24 @@ export const MessageItem = memo(function MessageItem({
     return () => {
       cancelled = true;
     };
-  }, [unresolvedReactionUserIds]);
+  }, [memberNameById, reactionUserNameOverrides, user?.id]);
+
+  useEffect(() => {
+    if (!reactionDrawerOpen) return;
+    const dispose = ensureReactionUserNames((message.reactions ?? []).flatMap((reaction) => reaction.users));
+    return dispose;
+  }, [ensureReactionUserNames, message.reactions, reactionDrawerOpen]);
 
   const selectedReaction = useMemo(() => {
     if (!reactionDetailsEmoji) return null;
     return message.reactions?.find((r) => r.emoji === reactionDetailsEmoji) ?? null;
   }, [message.reactions, reactionDetailsEmoji]);
+
+  useEffect(() => {
+    if (!selectedReaction) return;
+    const dispose = ensureReactionUserNames(selectedReaction.users);
+    return dispose;
+  }, [ensureReactionUserNames, selectedReaction]);
 
   const selectedReactionNames = useMemo(() => {
     if (!selectedReaction) return [];
@@ -1651,7 +1660,15 @@ export const MessageItem = memo(function MessageItem({
         {!message.is_system_message && message.reactions && message.reactions.length > 0 && (
           <div className={cn("mt-1.5 flex flex-wrap items-center gap-3 px-4", compactMode ? "pl-4" : "pl-[68px]")}>
             {message.reactions.map((reaction) => (
-              <HoverCard key={reaction.emoji} openDelay={200}>
+              <HoverCard
+                key={reaction.emoji}
+                openDelay={200}
+                onOpenChange={(open) => {
+                  if (open && !isGhostMode) {
+                    ensureReactionUserNames(reaction.users);
+                  }
+                }}
+              >
                 <HoverCardTrigger asChild>
                   <span className="inline-flex">
                     <button

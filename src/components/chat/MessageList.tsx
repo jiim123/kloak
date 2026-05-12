@@ -20,6 +20,14 @@ import { MessageMapsProvider } from "./MessageMapsContext";
 import type { Message } from "@/types";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
 import { getGlobalEmojiMap, type ResolvedEmoji } from "@/lib/globalEmojiResolver";
+import {
+  afterNextPaint,
+  beginChatPerf,
+  endChannelNavigationPerf,
+  endChatPerf,
+  markChannelNavigationPerf,
+  markChatPerf,
+} from "@/lib/chatPerf";
 import { isSameDay, isToday, isYesterday, format } from "date-fns";
 
 interface MessageListProps {
@@ -33,10 +41,15 @@ interface MessageListProps {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const CHANNEL_ENTRY_FORCE_REFETCH_MAX_AGE_MS = 5 * 60_000;
-const LOAD_OLDER_TOP_THRESHOLD_MIN_PX = 96;
-const LOAD_OLDER_TOP_THRESHOLD_MAX_PX = 480;
-const LOAD_OLDER_TOP_THRESHOLD_VIEWPORT_RATIO = 0.4;
+const INITIAL_CHANNEL_LOAD_LIMIT = 35;
+const BACKGROUND_HISTORY_PREFETCH_DELAY_MS = 350;
+const BACKGROUND_HISTORY_PREFETCH_LIMIT = 50;
+const LOAD_OLDER_TOP_THRESHOLD_MIN_PX = 56;
+const LOAD_OLDER_TOP_THRESHOLD_MAX_PX = 220;
+const LOAD_OLDER_TOP_THRESHOLD_VIEWPORT_RATIO = 0.22;
 const LOAD_OLDER_BOTTOM_DISTANCE_GUARD_PX = 300;
+const LOAD_OLDER_REARM_DISTANCE_PX = 180;
+const LOAD_OLDER_COOLDOWN_MS = 550;
 
 const EMPTY_MESSAGE_ARRAY: Message[] = [];
 const EMPTY_CUSTOM_EMOJI_MAP = new Map<string, string>();
@@ -230,6 +243,31 @@ interface RowProps {
   globalEmojiMap: Map<string, ResolvedEmoji>;
   highlightedMessageId: string | null;
 }
+const areRowPropsEqual = (prev: RowProps, next: RowProps) => {
+  if (prev.item.type !== next.item.type) return false;
+
+  if (prev.item.type === "dateDivider" && next.item.type === "dateDivider") {
+    return prev.item.label === next.item.label;
+  }
+
+  if (prev.item.type !== "message" || next.item.type !== "message") return false;
+
+  const prevMessage = prev.item.message;
+  const nextMessage = next.item.message;
+  const prevWasHighlighted = prevMessage.id === prev.highlightedMessageId;
+  const nextWasHighlighted = nextMessage.id === next.highlightedMessageId;
+
+  return (
+    prevMessage === nextMessage &&
+    prev.item.previousMessage === next.item.previousMessage &&
+    prev.item.isNewMessagesDivider === next.item.isNewMessagesDivider &&
+    prev.authorStyle === next.authorStyle &&
+    prev.customEmojiMap === next.customEmojiMap &&
+    prev.globalEmojiMap === next.globalEmojiMap &&
+    prevWasHighlighted === nextWasHighlighted
+  );
+};
+
 const Row = memo(({ item, authorStyle, customEmojiMap, globalEmojiMap, highlightedMessageId }: RowProps) => {
   if (item.type === "dateDivider") {
     return <DateDivider label={item.label} />;
@@ -250,8 +288,15 @@ const Row = memo(({ item, authorStyle, customEmojiMap, globalEmojiMap, highlight
       />
     </div>
   );
-});
+}, areRowPropsEqual);
 Row.displayName = "Row";
+
+type DerivedMessageView = {
+  messages: Message[];
+  deduplicatedMessages: Message[];
+  flatItems: ListItem[];
+  visibleAuthorUserIds: string[];
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN COMPONENT
@@ -281,20 +326,25 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
 
   useRealtimePolls(channelId);
 
+  const { getChannelUnread, markAsRead } = useUnreadChannelsContext();
+  const channelUnread = getChannelUnread(channelId);
+  const { lastReadAt, firstUnreadMessageId } = channelUnread;
+
   // Stable empty-array reference prevents downstream memo churn
   const rawMessages = channelData?.messages ?? EMPTY_MESSAGE_ARRAY;
+  const lastMarkedMessageIdRef = useRef<string | null>(null);
 
-  const messages = useMemo(() => {
-    if (!visibilityBlockedUserIds || visibilityBlockedUserIds.length === 0) return rawMessages;
-    const blocked = new Set(visibilityBlockedUserIds);
-    return rawMessages.filter((m) => !blocked.has(m.user_id));
-  }, [rawMessages, visibilityBlockedUserIds]);
+  // Stable reference for visibleAuthorUserIds — prevents useAuthorStyles re-fetch
+  // when author set is unchanged (e.g. on presence updates that don't add new authors).
+  const visibleAuthorUserIdsRef = useRef<string[]>([]);
 
-  const hasMore = channelData?.hasMore ?? true;
+  const derivedView = useMemo<DerivedMessageView>(() => {
+    const blockedSet =
+      visibilityBlockedUserIds && visibilityBlockedUserIds.length > 0 ? new Set(visibilityBlockedUserIds) : null;
+    const filteredMessages = blockedSet ? rawMessages.filter((m) => !blockedSet.has(m.user_id)) : rawMessages;
 
-  const deduplicatedMessages = useMemo(() => {
     const seen = new Map<string, Message>();
-    for (const msg of messages) {
+    for (const msg of filteredMessages) {
       const stableKey = getStableMessageKey(msg);
       const existing = seen.get(stableKey);
       if (!existing) {
@@ -303,36 +353,31 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
         seen.set(stableKey, msg);
       }
     }
-    if (seen.size === messages.length) return messages;
-    return messages.filter((m) => seen.get(getStableMessageKey(m)) === m);
-  }, [messages]);
 
-  const msgCount = deduplicatedMessages.length;
+    const deduplicatedMessages =
+      seen.size === filteredMessages.length
+        ? filteredMessages
+        : filteredMessages.filter((m) => seen.get(getStableMessageKey(m)) === m);
 
-  const { getChannelUnread, markAsRead } = useUnreadChannelsContext();
-  const channelUnread = getChannelUnread(channelId);
-  const { lastReadAt, firstUnreadMessageId } = channelUnread;
-
-  // Compute divider index ONCE here, embed into flatItems — avoids per-row .indexOf()
-  const newMessagesDividerIndex = useMemo(() => {
-    if (!lastReadAt || !firstUnreadMessageId) return -1;
-    const lastReadTime = new Date(lastReadAt).getTime();
-    for (let i = 0; i < deduplicatedMessages.length; i++) {
-      if (new Date(deduplicatedMessages[i].created_at).getTime() > lastReadTime) return i;
-    }
-    return -1;
-  }, [deduplicatedMessages, lastReadAt, firstUnreadMessageId]);
-
-  const lastMarkedMessageIdRef = useRef<string | null>(null);
-
-  // Single-pass construction: embeds previousMessage + isNewMessagesDivider directly
-  // into each item. This eliminates the O(n²) .indexOf() calls the old itemContent was doing.
-  const flatItems = useMemo(() => {
     const items: ListItem[] = [];
+    const authorIds = new Set<string>();
     const hasInitialUnread = lastMarkedMessageIdRef.current === null;
+    const lastReadTime = lastReadAt ? new Date(lastReadAt).getTime() : null;
+    let newMessagesDividerIndex = -1;
+
+    if (lastReadTime !== null && firstUnreadMessageId) {
+      for (let i = 0; i < deduplicatedMessages.length; i++) {
+        if (new Date(deduplicatedMessages[i].created_at).getTime() > lastReadTime) {
+          newMessagesDividerIndex = i;
+          break;
+        }
+      }
+    }
 
     for (let i = 0; i < deduplicatedMessages.length; i++) {
       const msg = deduplicatedMessages[i];
+      if (msg.user_id) authorIds.add(msg.user_id);
+
       const msgDate = new Date(msg.created_at);
       const prevMsg = i > 0 ? deduplicatedMessages[i - 1] : null;
       const prevDate = prevMsg ? new Date(prevMsg.created_at) : null;
@@ -352,25 +397,30 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
         isNewMessagesDivider: i === newMessagesDividerIndex && hasInitialUnread,
       });
     }
-    return items;
-  }, [deduplicatedMessages, newMessagesDividerIndex]);
 
-  // Stable reference for visibleAuthorUserIds — prevents useAuthorStyles re-fetch
-  // when author set is unchanged (e.g. on presence updates that don't add new authors).
-  const visibleAuthorUserIdsRef = useRef<string[]>([]);
-  const visibleAuthorUserIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const msg of deduplicatedMessages) {
-      if (msg.user_id) ids.add(msg.user_id);
-    }
-    const next = Array.from(ids).sort();
-    const prev = visibleAuthorUserIdsRef.current;
-    if (prev.length === next.length && prev.every((id, i) => id === next[i])) {
-      return prev;
-    }
-    visibleAuthorUserIdsRef.current = next;
-    return next;
-  }, [deduplicatedMessages]);
+    const nextVisibleAuthorUserIds = Array.from(authorIds).sort();
+    const prevVisibleAuthorUserIds = visibleAuthorUserIdsRef.current;
+    const visibleAuthorUserIds =
+      prevVisibleAuthorUserIds.length === nextVisibleAuthorUserIds.length &&
+      prevVisibleAuthorUserIds.every((id, index) => id === nextVisibleAuthorUserIds[index])
+        ? prevVisibleAuthorUserIds
+        : nextVisibleAuthorUserIds;
+
+    visibleAuthorUserIdsRef.current = visibleAuthorUserIds;
+
+    return {
+      messages: filteredMessages,
+      deduplicatedMessages,
+      flatItems: items,
+      visibleAuthorUserIds,
+    };
+  }, [rawMessages, visibilityBlockedUserIds, lastReadAt, firstUnreadMessageId]);
+
+  const { messages, deduplicatedMessages, flatItems, visibleAuthorUserIds } = derivedView;
+
+  const hasMore = channelData?.hasMore ?? true;
+
+  const msgCount = deduplicatedMessages.length;
 
   const authorStyleMap = useAuthorStyles(currentServerId, visibleAuthorUserIds);
 
@@ -387,6 +437,18 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   const didInitialBottomScrollRef = useRef(false);
   const lastScrollHeightRef = useRef(0);
   const pendingScrollAnchorRef = useRef<PendingScrollAnchor | null>(null);
+  const channelOpenPerfRef = useRef<string | null>(null);
+  const channelFirstPaintMarkedRef = useRef(false);
+  const olderHistoryPerfRef = useRef<string | null>(null);
+  const shouldWarmHistoryRef = useRef(false);
+  const isLoadingRef = useRef(isLoading);
+  isLoadingRef.current = isLoading;
+  const isFetchingOlderRef = useRef(isFetchingOlder);
+  isFetchingOlderRef.current = isFetchingOlder;
+  const hasMoreRef = useRef(hasMore);
+  hasMoreRef.current = hasMore;
+  const msgCountRef = useRef(msgCount);
+  msgCountRef.current = msgCount;
 
   // Stable refs for use inside handlers/effects without triggering re-renders
   const messagesRef = useRef(messages);
@@ -440,6 +502,10 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
 
   useEffect(() => {
     if (manageCurrentChannel) setCurrentChannel(channelId);
+    markChannelNavigationPerf(channelId, "message-list-effect-start");
+    channelOpenPerfRef.current = beginChatPerf("channel-open", { channelId });
+    channelFirstPaintMarkedRef.current = false;
+    shouldWarmHistoryRef.current = false;
     prevMessagesLengthRef.current = 0;
     lastNudgedMessageIdRef.current = null;
     lastMarkedMessageIdRef.current = null;
@@ -452,12 +518,83 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     const isFreshEnough = !!cacheEntry && Date.now() - cacheEntry.lastFetched < CHANNEL_ENTRY_FORCE_REFETCH_MAX_AGE_MS;
     const unreadSnapshot = getChannelUnread(channelId);
     const hasUnreadBacklog = (unreadSnapshot.unreadCount ?? 0) > 0;
+    const firstUnreadMessageId = unreadSnapshot.firstUnreadMessageId ?? null;
+    const hasUnreadGap =
+      hasUnreadBacklog &&
+      !!firstUnreadMessageId &&
+      !cacheEntry?.messages?.some((message) => message.id === firstUnreadMessageId);
 
-    if (!hasCached || !isRealtimeConnected || !isFreshEnough || hasUnreadBacklog) {
-      fetchMessages(channelId, 50, undefined, true, hasCached);
+    if (!hasCached) {
+      markChannelNavigationPerf(channelId, "fetch-start", {
+        cold: true,
+        cached: false,
+        limit: INITIAL_CHANNEL_LOAD_LIMIT,
+      });
+      shouldWarmHistoryRef.current = true;
+      fetchMessages(channelId, INITIAL_CHANNEL_LOAD_LIMIT, undefined, false, false);
+      return;
+    }
+
+    // Cached channels should render immediately and reconcile in the background.
+    if (!isRealtimeConnected || !isFreshEnough || hasUnreadGap) {
+      markChannelNavigationPerf(channelId, "fetch-start", {
+        cold: false,
+        cached: true,
+        reconcile: true,
+      });
+      void fetchMessages(channelId, 50, undefined, true, true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelId, manageCurrentChannel]);
+
+  useLayoutEffect(() => {
+    if (channelFirstPaintMarkedRef.current) return;
+    const perfId = channelOpenPerfRef.current;
+    if (!perfId) return;
+    const hasRenderableState = msgCount > 0 || (!isLoading && messages.length === 0);
+    if (!hasRenderableState) return;
+
+    channelFirstPaintMarkedRef.current = true;
+    afterNextPaint(() => {
+      if (channelOpenPerfRef.current !== perfId) return;
+      markChatPerf(perfId, "first-paint", {
+        messageCount: msgCountRef.current,
+        empty: messagesRef.current.length === 0,
+      });
+      markChannelNavigationPerf(channelId, "first-paint", {
+        messageCount: msgCountRef.current,
+        empty: messagesRef.current.length === 0,
+      });
+      afterNextPaint(() => {
+        if (channelOpenPerfRef.current !== perfId) return;
+        if (isLoadingRef.current || isFetchingOlderRef.current) return;
+        endChatPerf(perfId, "settled", {
+          messageCount: msgCountRef.current,
+          hasMore: hasMoreRef.current,
+        });
+        endChannelNavigationPerf(channelId, "settled", {
+          messageCount: msgCountRef.current,
+          hasMore: hasMoreRef.current,
+        });
+        channelOpenPerfRef.current = null;
+      });
+    });
+  }, [channelId, isLoading, messages.length, msgCount]);
+
+  useEffect(() => {
+    const perfId = channelOpenPerfRef.current;
+    if (!perfId || !channelFirstPaintMarkedRef.current) return;
+    if (isLoading || isFetchingOlder) return;
+
+    afterNextPaint(() => {
+      if (channelOpenPerfRef.current !== perfId) return;
+      endChatPerf(perfId, "settled", {
+        messageCount: msgCount,
+        hasMore,
+      });
+      channelOpenPerfRef.current = null;
+    });
+  }, [hasMore, isFetchingOlder, isLoading, msgCount]);
 
   useEffect(() => {
     if (isRealtimeConnected) return;
@@ -513,8 +650,8 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     if (document.visibilityState !== "visible") return;
 
     const timer = window.setTimeout(() => {
-      void prefetchOlderMessages(channelId, 50).catch(() => undefined);
-    }, 700);
+      void prefetchOlderMessages(channelId, BACKGROUND_HISTORY_PREFETCH_LIMIT).catch(() => undefined);
+    }, shouldWarmHistoryRef.current ? BACKGROUND_HISTORY_PREFETCH_DELAY_MS : 700);
 
     return () => {
       window.clearTimeout(timer);
@@ -611,6 +748,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   }, []);
 
   const startReachedCooldownRef = useRef(false);
+  const loadOlderArmedRef = useRef(true);
 
   const captureScrollAnchor = useCallback((): PendingScrollAnchor | null => {
     const node = containerRef.current;
@@ -655,18 +793,25 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   }, []);
 
   const handleLoadOlder = useCallback(() => {
-    if (!hasMore || isLoading || isFetchingOlder || startReachedCooldownRef.current) return;
+    if (!hasMore || isLoading || isFetchingOlder || startReachedCooldownRef.current || !loadOlderArmedRef.current) {
+      return;
+    }
     const msgs = deduplicatedMessagesRef.current;
     const beforeCursor = channelData?.oldestLoadedAt || msgs[0]?.created_at;
     if (!beforeCursor) return;
 
     startReachedCooldownRef.current = true;
+    loadOlderArmedRef.current = false;
+    olderHistoryPerfRef.current = beginChatPerf("load-older", {
+      channelId: channelIdRef.current,
+      beforeCursor,
+    });
     pendingScrollAnchorRef.current = captureScrollAnchor();
 
     fetchMessagesRef.current(channelIdRef.current, 50, beforeCursor).finally(() => {
       setTimeout(() => {
         startReachedCooldownRef.current = false;
-      }, 220);
+      }, LOAD_OLDER_COOLDOWN_MS);
     });
   }, [hasMore, isLoading, isFetchingOlder, channelData?.oldestLoadedAt, captureScrollAnchor]);
 
@@ -677,6 +822,11 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     if (!anchor) return;
 
     if (!restoreScrollAnchor(anchor)) {
+      endChatPerf(olderHistoryPerfRef.current, "anchor-missing", {
+        channelId,
+        messageCount: msgCount,
+      });
+      olderHistoryPerfRef.current = null;
       pendingScrollAnchorRef.current = null;
       return;
     }
@@ -689,6 +839,11 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       restoreScrollAnchor(anchor);
       secondFrame = requestAnimationFrame(() => {
         restoreScrollAnchor(anchor);
+        endChatPerf(olderHistoryPerfRef.current, "anchor-restored", {
+          channelId,
+          messageCount: msgCount,
+        });
+        olderHistoryPerfRef.current = null;
         pendingScrollAnchorRef.current = null;
       });
     });
@@ -711,11 +866,16 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
 
       const distanceFromBottom = node.scrollHeight - node.scrollTop - node.clientHeight;
       const loadOlderTopThreshold = getLoadOlderTopThreshold(node.clientHeight);
+      const loadOlderRearmThreshold = loadOlderTopThreshold + LOAD_OLDER_REARM_DISTANCE_PX;
       const atBottom = distanceFromBottom <= 100;
       const wasAtBottom = isNearBottomRef.current;
 
       isNearBottomRef.current = atBottom;
       lastScrollHeightRef.current = node.scrollHeight;
+
+      if (node.scrollTop > loadOlderRearmThreshold) {
+        loadOlderArmedRef.current = true;
+      }
 
       if (
         node.scrollTop <= loadOlderTopThreshold &&
@@ -744,6 +904,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
 
   // Initial bottom scroll
   useEffect(() => {
+    loadOlderArmedRef.current = true;
     if (isLoading || msgCount === 0 || didInitialBottomScrollRef.current) return;
     didInitialBottomScrollRef.current = true;
 
@@ -769,29 +930,39 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     if (!node) return;
 
     lastScrollHeightRef.current = node.scrollHeight;
+    let observerRaf: number | null = null;
 
     const autoScrollIfNeeded = () => {
-      const n = containerRef.current;
-      if (!n || !isNearBottomRef.current) return;
-      const newHeight = n.scrollHeight;
-      const oldHeight = lastScrollHeightRef.current;
-      if (newHeight > oldHeight) {
-        n.scrollTop = n.scrollHeight;
-        isNearBottomRef.current = true;
-      }
-      lastScrollHeightRef.current = newHeight;
+      if (observerRaf !== null) return;
+      observerRaf = requestAnimationFrame(() => {
+        observerRaf = null;
+        const n = containerRef.current;
+        if (!n || !isNearBottomRef.current) return;
+        const newHeight = n.scrollHeight;
+        const oldHeight = lastScrollHeightRef.current;
+        if (newHeight > oldHeight) {
+          n.scrollTop = n.scrollHeight;
+          isNearBottomRef.current = true;
+        }
+        lastScrollHeightRef.current = newHeight;
+      });
     };
+
+    const wrapper = messagesWrapperRef.current;
+    if (!wrapper) {
+      return () => {
+        if (observerRaf !== null) cancelAnimationFrame(observerRaf);
+      };
+    }
 
     const resizeObserver = new ResizeObserver(autoScrollIfNeeded);
     const mutationObserver = new MutationObserver(autoScrollIfNeeded);
 
-    const wrapper = messagesWrapperRef.current;
-    if (wrapper) {
-      resizeObserver.observe(wrapper);
-      mutationObserver.observe(wrapper, { childList: true, subtree: true });
-    }
+    resizeObserver.observe(wrapper);
+    mutationObserver.observe(wrapper, { childList: true });
 
     return () => {
+      if (observerRaf !== null) cancelAnimationFrame(observerRaf);
       resizeObserver.disconnect();
       mutationObserver.disconnect();
     };
@@ -871,10 +1042,10 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
             {isFetchingOlder && <LoadingOlderIndicator />}
 
             <div key={channelId} ref={messagesWrapperRef} data-messages-container>
-              {flatItems.map((item) => {
+              {flatItems.map((item, index) => {
                 const key =
                   item.type === "dateDivider"
-                    ? `date-divider-${item.date.toISOString().slice(0, 10)}`
+                    ? `date-divider-${item.date.toISOString().slice(0, 10)}-${index}`
                     : getStableMessageKey(item.message);
                 const authorStyle = item.type === "message" ? authorStyleMap[item.message.user_id] : undefined;
                 return (
