@@ -294,7 +294,7 @@ const ExploreServersOriginal = () => {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.5, delay: 0.5 }}
-                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
                 >
                   {verifiedServers.map((s, index) => {
                     const joined = myServerIds.has(s.id);
@@ -332,7 +332,13 @@ const ExploreServersOriginal = () => {
                           <div className="px-4 pb-4 pt-12">
                             <div className="flex flex-col items-center text-center">
                               <div className="text-base font-medium text-foreground truncate w-full">{s.name}</div>
-                              {s.about && <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{s.about}</div>}
+                              {s.about ? (
+                                <div className="text-xs text-muted-foreground mt-1 line-clamp-4 leading-5 min-h-[5rem]">
+                                  {s.about}
+                                </div>
+                              ) : (
+                                <div className="mt-1 min-h-[5rem]" aria-hidden="true" />
+                              )}
                             </div>
                             {tags.length > 0 && (
                               <div className="mt-3 flex flex-wrap gap-2 justify-center">
@@ -379,7 +385,7 @@ const ExploreServersOriginal = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.5, delay: 0.6 }}
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
               >
                 {paginated.map((s, index) => {
                   const joined = myServerIds.has(s.id);
@@ -414,7 +420,13 @@ const ExploreServersOriginal = () => {
                         <div className="px-4 pb-4 pt-12">
                           <div className="flex flex-col items-center text-center">
                             <div className="text-base font-medium text-foreground truncate w-full">{s.name}</div>
-                            {s.about && <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{s.about}</div>}
+                            {s.about ? (
+                              <div className="text-xs text-muted-foreground mt-1 line-clamp-4 leading-5 min-h-[5rem]">
+                                {s.about}
+                              </div>
+                            ) : (
+                              <div className="mt-1 min-h-[5rem]" aria-hidden="true" />
+                            )}
                           </div>
                           {tags.length > 0 && (
                             <div className="mt-3 flex flex-wrap gap-2 justify-center">
