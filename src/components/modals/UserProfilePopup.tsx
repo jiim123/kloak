@@ -23,6 +23,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useDMStore } from "@/stores/dmStore";
+import { useUserCacheStore } from "@/stores/userCacheStore";
 import { useAuthorStyles } from "@/hooks/useAuthorStyles";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
@@ -351,7 +352,7 @@ export const UserProfilePopup = () => {
         if (!payload?.user) throw new Error("Profile not found");
 
         const d = payload.user as any;
-        setProfileUser({
+        const nextProfileUser: User = {
           id: d.id,
           username: d.username,
           display_name: d.display_name,
@@ -369,7 +370,9 @@ export const UserProfilePopup = () => {
           last_seen: d.last_seen,
           pronouns: d.pronouns ?? null,
           is_bot: d.is_bot ?? false,
-        });
+        };
+        setProfileUser(nextProfileUser);
+        useUserCacheStore.getState().upsertUser(nextProfileUser);
 
         setUserBadges((Array.isArray(payload.badges) ? payload.badges : []) as Badge[]);
         const sharedServerIds = new Set((Array.isArray(payload.shared_server_ids) ? payload.shared_server_ids : []) as string[]);
@@ -387,6 +390,34 @@ export const UserProfilePopup = () => {
 
     void fetchProfile();
   }, [applyCooldownFromDeclinedAt, currentUser?.id, isOpen, serverIds, servers, userId]);
+
+  useEffect(() => {
+    if (!isOpen || !userId) return;
+
+    const mergeCachedPresence = () => {
+      const cached = useUserCacheStore.getState().getUser(userId);
+      if (!cached) return;
+      setProfileUser((prev) => {
+        if (!prev || prev.id !== userId) return prev;
+        if (
+          prev.status === cached.status &&
+          prev.last_seen === cached.last_seen &&
+          prev.custom_status === cached.custom_status
+        ) {
+          return prev;
+        }
+        return {
+          ...prev,
+          status: cached.status,
+          last_seen: cached.last_seen,
+          custom_status: cached.custom_status,
+        };
+      });
+    };
+
+    mergeCachedPresence();
+    return useUserCacheStore.subscribe(mergeCachedPresence);
+  }, [isOpen, userId]);
 
   useEffect(() => {
     if (cooldownSeconds <= 0) return;

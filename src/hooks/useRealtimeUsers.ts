@@ -3,9 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useServerStore } from '@/stores/serverStore';
 import { useFriendStore } from '@/stores/friendStore';
 import { useDMStore } from '@/stores/dmStore';
-import { useMessageStore } from '@/stores/messageStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useUserCacheStore } from '@/stores/userCacheStore';
+import { useUIStore } from '@/stores/uiStore';
 import type { User, UserStatus } from '@/types';
 
 /**
@@ -232,26 +232,30 @@ const toUserStatus = (value: unknown, fallback: UserStatus): UserStatus => {
 
 const collectPresenceTargetUserIds = (): string[] => {
   const { friends } = useFriendStore.getState();
-  const { conversations } = useDMStore.getState();
+  const { conversations, currentConversation } = useDMStore.getState();
   const { members } = useServerStore.getState();
+  const { activeModal, modalData } = useUIStore.getState();
   const userIds = new Set<string>();
   friends.forEach((f) => userIds.add(f.id));
   conversations.forEach((c) => {
     if (c.other_user?.id) userIds.add(c.other_user.id);
+    c.participants?.forEach((p) => {
+      if (p.user_id) userIds.add(p.user_id);
+    });
+  });
+  if (currentConversation?.other_user?.id) userIds.add(currentConversation.other_user.id);
+  currentConversation?.participants?.forEach((p) => {
+    if (p.user_id) userIds.add(p.user_id);
   });
   members.forEach((member) => userIds.add(member.user_id));
+  if (activeModal === 'userProfile' && typeof modalData?.userId === 'string') {
+    userIds.add(modalData.userId);
+  }
   return Array.from(userIds);
 };
 
 const collectPollTargetUserIds = (): string[] => {
-  const { friends } = useFriendStore.getState();
-  const { conversations } = useDMStore.getState();
-  const userIds = new Set<string>();
-  friends.forEach((f) => userIds.add(f.id));
-  conversations.forEach((c) => {
-    if (c.other_user?.id) userIds.add(c.other_user.id);
-  });
-  return Array.from(userIds);
+  return collectPresenceTargetUserIds();
 };
 
 const buildOwnPresencePayload = (): GlobalPresenceMeta | null => {
@@ -417,6 +421,8 @@ export const useRealtimeUsers = () => {
     };
     const unsubFriends = useFriendStore.subscribe(throttledApply);
     const unsubDMs = useDMStore.subscribe(throttledApply);
+    const unsubServer = useServerStore.subscribe(throttledApply);
+    const unsubUI = useUIStore.subscribe(throttledApply);
 
     channel
       .on('presence', { event: 'sync' }, applyPresenceSnapshot)
@@ -441,6 +447,8 @@ export const useRealtimeUsers = () => {
     return () => {
       unsubFriends();
       unsubDMs();
+      unsubServer();
+      unsubUI();
       if (storeSubTimer) clearTimeout(storeSubTimer);
       if (presenceChannelRef.current === channel) {
         presenceChannelRef.current = null;

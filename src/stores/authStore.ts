@@ -557,6 +557,11 @@ export const useAuthStore = create<AuthState>()(
         }
 
         try {
+          const lastSeen = new Date(now).toISOString();
+          const updatedUser = { ...user, last_seen: lastSeen };
+          set({ user: updatedUser });
+          useUserCacheStore.getState().upsertUser(updatedUser as any);
+
           await supabase.rpc("update_user_last_seen", {
             _user_id: user.id,
           });

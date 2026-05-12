@@ -1638,12 +1638,6 @@ export const useServerStore = create<ServerState>((set, get) => ({
             roles: item.roles as any,
           }));
 
-        // Populate user cache with member user data
-        const memberUsers = members.map((m) => m.user).filter(Boolean);
-        if (memberUsers.length > 0) {
-          bulkSetUsersInCache(memberUsers as any);
-        }
-
         // Before setting members into state, preserve real-time presence status
         // for users who have recent Presence channel data (prevents stale DB overwrites)
         const existingMembers = get().members;
@@ -1673,6 +1667,13 @@ export const useServerStore = create<ServerState>((set, get) => ({
           }
           return m;
         });
+
+        // Populate user cache with the same member user data that the UI receives.
+        // This keeps profiles, DMs, and member rows from disagreeing after a member refresh.
+        const memberUsers = mergedMembers.map((m) => m.user).filter(Boolean);
+        if (memberUsers.length > 0) {
+          bulkSetUsersInCache(memberUsers as any);
+        }
 
         const now = Date.now();
         membersCachedAt.set(modeCacheKey, now);
