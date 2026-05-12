@@ -57,6 +57,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AvatarDecorationModal } from "@/components/modals/AvatarDecorationModal";
 import { ProfileEffectModal } from "@/components/modals/ProfileEffectModal";
 import { EditableProfilePreview } from "@/components/modals/EditableProfilePreview";
+import { BannerCropModal } from "@/components/modals/BannerCropModal";
 import { DockNavigation } from "@/components/ui/dock-navigation";
 import { useUIStore, THEMES, type Theme } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -77,6 +78,7 @@ import { sanitizeDisplayName, validateDisplayName } from "@/lib/displayNameValid
 
 
 type UserSettingsVariant = "modal" | "page";
+type ProfileCropTarget = "avatar" | "banner" | null;
 
 const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const navigate = useNavigate();
@@ -207,6 +209,8 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const [profileThemeAccent, setProfileThemeAccent] = useState<string | null>(user?.profile_theme_accent ?? null);
   const [localAvatarUrl, setLocalAvatarUrl] = useState<string | null>(user?.avatar_url ?? null);
   const [localBannerUrl, setLocalBannerUrl] = useState<string | null>(user?.banner_url ?? null);
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [cropTarget, setCropTarget] = useState<ProfileCropTarget>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
@@ -219,6 +223,28 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   useEffect(() => {
     setLocalBannerUrl(user?.banner_url ?? null);
   }, [user?.banner_url]);
+
+  useEffect(() => {
+    return () => {
+      if (cropImageSrc) {
+        URL.revokeObjectURL(cropImageSrc);
+      }
+    };
+  }, [cropImageSrc]);
+
+  const closeCropModal = () => {
+    if (cropImageSrc) {
+      URL.revokeObjectURL(cropImageSrc);
+    }
+    setCropImageSrc(null);
+    setCropTarget(null);
+  };
+
+  const openCropModal = (file: File, target: Exclude<ProfileCropTarget, null>) => {
+    const src = URL.createObjectURL(file);
+    setCropImageSrc(src);
+    setCropTarget(target);
+  };
 
   const navItems = [
     { id: "account", label: "Account", icon: Key },
@@ -242,11 +268,18 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   useEffect(() => {
     if (variant !== "page") return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") handleClose();
+      if (e.key !== "Escape") return;
+      if (cropImageSrc) {
+        URL.revokeObjectURL(cropImageSrc);
+      }
+      setCropImageSrc(null);
+      setCropTarget(null);
+      setActiveTab("account");
+      closeModal();
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [variant]);
+  }, [closeModal, variant, cropImageSrc]);
 
   const handleSaveProfile = async () => {
     if (!user) return;
@@ -277,7 +310,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const handleDmPrivacyChange = async (value: "everyone" | "shared_servers" | "friends" | "no_one") => {
     if (!user?.id) return;
     setDmPrivacy(value);
-    const { error } = await supabase.rpc("set_dm_privacy_preference" as any, {
+    const { error } = await supabase.rpc("set_dm_privacy_preference", {
       _user_id: user.id,
       _dm_privacy: value,
     });
@@ -302,26 +335,8 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       return;
     }
 
-    setIsLoading(true);
-    try {
-      const { compressImage } = await import("@/lib/imageCompression");
-      const compressed = await compressImage(file, "avatar");
-      const fileExt = compressed.name.split(".").pop();
-      const filePath = `${user.id}/avatar-${Date.now()}.${fileExt}`;
-
-      const { publicUrl } = await secureUpload("avatars", filePath, file, {
-        upsert: false,
-        cacheControl: "31536000",
-      });
-      setLocalAvatarUrl(publicUrl);
-      await updateUser({ avatar_url: publicUrl });
-      toast.success("Avatar updated!");
-    } catch (error) {
-      console.error("Upload error:", error);
-      toast.error("Failed to upload avatar");
-    } finally {
-      setIsLoading(false);
-    }
+    openCropModal(file, "avatar");
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -338,26 +353,53 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       return;
     }
 
-    setIsBannerUploading(true);
-    try {
-      const { compressImage } = await import("@/lib/imageCompression");
-      const compressed = await compressImage(file, "profile-banner");
-      const fileExt = compressed.name.split(".").pop();
-      const filePath = `${user.id}/banner-${Date.now()}.${fileExt}`;
+    openCropModal(file, "banner");
+    if (bannerInputRef.current) bannerInputRef.current.value = "";
+  };
 
-      const { publicUrl } = await secureUpload("avatars", filePath, file, {
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    if (!user || !cropTarget) return;
+
+    const isAvatar = cropTarget === "avatar";
+    const setUploading = isAvatar ? setIsLoading : setIsBannerUploading;
+    const setPreview = isAvatar ? setLocalAvatarUrl : setLocalBannerUrl;
+    const uploadType = isAvatar ? "avatar" : "profile-banner";
+    const filePrefix = isAvatar ? "avatar" : "banner";
+    const successMessage = isAvatar ? "Avatar updated!" : "Banner updated!";
+    const errorMessage = isAvatar ? "Failed to upload avatar" : "Failed to upload banner";
+
+    const previewUrl = URL.createObjectURL(croppedBlob);
+    setPreview(previewUrl);
+    setUploading(true);
+    closeCropModal();
+
+    try {
+      const rawFile = new File([croppedBlob], `${filePrefix}.webp`, { type: "image/webp" });
+      const { compressImage } = await import("@/lib/imageCompression");
+      const compressed = await compressImage(rawFile, uploadType);
+      const fileExt = compressed.name.split(".").pop() || "webp";
+      const filePath = `${user.id}/${filePrefix}-${Date.now()}.${fileExt}`;
+
+      const { publicUrl } = await secureUpload("avatars", filePath, compressed, {
         upsert: false,
         cacheControl: "31536000",
       });
-      setLocalBannerUrl(publicUrl);
-      await updateUser({ banner_url: publicUrl });
-      toast.success("Banner updated!");
+
+      setPreview(publicUrl);
+      URL.revokeObjectURL(previewUrl);
+      if (isAvatar) {
+        await updateUser({ avatar_url: publicUrl });
+      } else {
+        await updateUser({ banner_url: publicUrl });
+      }
+      toast.success(successMessage);
     } catch (error) {
-      console.error("Banner upload error:", error);
-      toast.error("Failed to upload banner");
+      console.error("Profile image upload error:", error);
+      URL.revokeObjectURL(previewUrl);
+      setPreview(isAvatar ? user.avatar_url ?? null : user.banner_url ?? null);
+      toast.error(errorMessage);
     } finally {
-      setIsBannerUploading(false);
-      if (bannerInputRef.current) bannerInputRef.current.value = "";
+      setUploading(false);
     }
   };
 
@@ -440,6 +482,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   };
 
   const handleClose = () => {
+    closeCropModal();
     setActiveTab("account");
     closeModal();
   };
@@ -1591,6 +1634,26 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         </AlertDialogContent>
       </AlertDialog>
 
+
+      {cropImageSrc && cropTarget && (
+        <BannerCropModal
+          open={Boolean(cropImageSrc && cropTarget)}
+          imageSrc={cropImageSrc}
+          onClose={closeCropModal}
+          onCropComplete={handleCropComplete}
+          isUploading={cropTarget === "avatar" ? isLoading : isBannerUploading}
+          title={cropTarget === "avatar" ? "Crop Avatar" : "Crop Banner"}
+          description={
+            cropTarget === "avatar"
+              ? "Adjust the crop area. Your avatar will be saved as a square image."
+              : "Adjust the crop area. Your banner will be saved at 16:9 aspect ratio."
+          }
+          aspect={cropTarget === "avatar" ? 1 : 16 / 9}
+          targetWidth={cropTarget === "avatar" ? 256 : 1200}
+          targetHeight={cropTarget === "avatar" ? 256 : 675}
+          cropShape={cropTarget === "avatar" ? "round" : "rect"}
+        />
+      )}
 
       {/* Avatar Decoration Modal */}
       <AvatarDecorationModal

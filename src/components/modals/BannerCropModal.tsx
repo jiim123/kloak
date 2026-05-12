@@ -18,13 +18,21 @@ interface BannerCropModalProps {
   onClose: () => void;
   onCropComplete: (croppedBlob: Blob) => void;
   isUploading?: boolean;
+  title?: string;
+  description?: string;
+  aspect?: number;
+  targetWidth?: number;
+  targetHeight?: number;
+  cropShape?: "rect" | "round";
+  uploadLabel?: string;
 }
 
-const TARGET_WIDTH = 960;
-const TARGET_HEIGHT = 540;
-const ASPECT = 16 / 9;
-
-async function getCroppedImg(imageSrc: string, pixelCrop: Area): Promise<Blob> {
+async function getCroppedImg(
+  imageSrc: string,
+  pixelCrop: Area,
+  targetWidth: number,
+  targetHeight: number,
+): Promise<Blob> {
   const image = new Image();
   image.crossOrigin = "anonymous";
   await new Promise<void>((resolve, reject) => {
@@ -35,11 +43,11 @@ async function getCroppedImg(imageSrc: string, pixelCrop: Area): Promise<Blob> {
 
   const canvas = document.createElement("canvas");
 
-  // Determine output size: downscale if larger, but don't upscale
+  // Downscale to the configured max bounds, but never upscale.
   let outW = pixelCrop.width;
   let outH = pixelCrop.height;
-  if (outW > TARGET_WIDTH || outH > TARGET_HEIGHT) {
-    const scale = Math.min(TARGET_WIDTH / outW, TARGET_HEIGHT / outH);
+  if (outW > targetWidth || outH > targetHeight) {
+    const scale = Math.min(targetWidth / outW, targetHeight / outH);
     outW = Math.round(outW * scale);
     outH = Math.round(outH * scale);
   }
@@ -79,6 +87,13 @@ export const BannerCropModal = ({
   onClose,
   onCropComplete,
   isUploading,
+  title = "Crop Banner",
+  description = "Adjust the crop area. The image will be saved as a cropped WebP.",
+  aspect = 16 / 9,
+  targetWidth = 960,
+  targetHeight = 540,
+  cropShape = "rect",
+  uploadLabel = "Crop & Upload",
 }: BannerCropModalProps) => {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -91,7 +106,7 @@ export const BannerCropModal = ({
   const handleApply = async () => {
     if (!croppedAreaPixels) return;
     try {
-      const blob = await getCroppedImg(imageSrc, croppedAreaPixels);
+      const blob = await getCroppedImg(imageSrc, croppedAreaPixels, targetWidth, targetHeight);
       onCropComplete(blob);
     } catch (err) {
       console.error("Failed to crop image:", err);
@@ -102,19 +117,17 @@ export const BannerCropModal = ({
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="bg-background/95 backdrop-blur-xl border-border/50 rounded-2xl sm:max-w-lg max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Crop Banner</DialogTitle>
-          <DialogDescription>
-            Adjust the crop area. The banner will be saved at 16:9 aspect ratio (960×540 max).
-          </DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
-        {/* Crop area */}
         <div className="relative w-full" style={{ height: 300 }}>
           <Cropper
             image={imageSrc}
             crop={crop}
             zoom={zoom}
-            aspect={ASPECT}
+            aspect={aspect}
+            cropShape={cropShape}
             onCropChange={setCrop}
             onZoomChange={setZoom}
             onCropComplete={onCropCompleteInternal}
@@ -124,7 +137,6 @@ export const BannerCropModal = ({
           />
         </div>
 
-        {/* Zoom control */}
         <div className="flex items-center gap-3 px-1">
           <ZoomOut className="w-4 h-4 text-muted-foreground flex-shrink-0" />
           <Slider
@@ -146,10 +158,10 @@ export const BannerCropModal = ({
             {isUploading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Uploading…
+                Uploading...
               </>
             ) : (
-              "Crop & Upload"
+              uploadLabel
             )}
           </Button>
         </DialogFooter>
