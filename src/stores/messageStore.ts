@@ -13,6 +13,15 @@ interface ChannelMessages {
   hasMore: boolean;
   lastFetched: number;
   oldestLoadedAt?: string | null;
+  prefetchedOlder?: PrefetchedOlderPage | null;
+}
+
+interface PrefetchedOlderPage {
+  beforeCursor: string;
+  messages: Message[];
+  hasMore: boolean;
+  oldestLoadedAt: string | null;
+  prefetchedAt: number;
 }
 
 interface MessageState {
@@ -42,6 +51,7 @@ interface MessageState {
     silent?: boolean,
     skipBootstrap?: boolean,
   ) => Promise<void>;
+  prefetchOlderMessages: (channelId: string, limit?: number) => Promise<void>;
 
   // Message actions
   sendMessage: (channelId: string, userId: string, content: string, replyToId?: string) => Promise<Message | null>;
@@ -129,6 +139,7 @@ const isNewAccountMessagingRestrictionError = (error: any) => {
 // Cache expiry time - 5 minutes
 const CACHE_EXPIRY_MS = 5 * 60 * 1000;
 const REPLY_CACHE_EXPIRY_MS = 5 * 60 * 1000;
+const PREFETCH_CACHE_EXPIRY_MS = 2 * 60 * 1000;
 const MAX_CACHED_CHANNELS = 5;
 const MAX_MESSAGES_PER_CHANNEL = 150;
 const MAX_REPLY_CACHE_ITEMS = 800;
@@ -136,6 +147,7 @@ const MESSAGE_CACHE_STORAGE_KEY = "kloak:message-cache:v1";
 
 // In-flight request coalescing (prevents duplicate message fetches during rapid switching)
 const inflightFetches = new Map<string, Promise<void>>();
+const inflightPrefetches = new Map<string, Promise<void>>();
 const replyCache = new Map<string, { data: MessageReply; cachedAt: number }>();
 
 const trimMessages = (messages: Message[], mode: "newest" | "oldest" = "newest") => {
@@ -180,7 +192,18 @@ const readPersistedMessagesByChannel = (): Record<string, ChannelMessages> => {
 const persistMessagesByChannel = (messagesByChannel: Record<string, ChannelMessages>) => {
   if (typeof window === "undefined") return;
   try {
-    window.sessionStorage.setItem(MESSAGE_CACHE_STORAGE_KEY, JSON.stringify(pruneMessagesByChannel(messagesByChannel)));
+    const persisted = Object.fromEntries(
+      Object.entries(pruneMessagesByChannel(messagesByChannel)).map(([channelId, cache]) => [
+        channelId,
+        {
+          messages: cache.messages,
+          hasMore: cache.hasMore,
+          lastFetched: cache.lastFetched,
+          oldestLoadedAt: cache.oldestLoadedAt ?? null,
+        },
+      ]),
+    );
+    window.sessionStorage.setItem(MESSAGE_CACHE_STORAGE_KEY, JSON.stringify(persisted));
   } catch {
     // ignore storage pressure/quota issues
   }
@@ -198,6 +221,7 @@ const pruneMessagesByChannel = (
     const trimMode = isKeptChannel ? keepChannelTrimMode : "newest";
     normalized[channelId] = {
       ...data,
+      prefetchedOlder: data.prefetchedOlder ?? null,
       // Keep the actively paginated channel growing so top-reached loading
       // can continue firing while loading older history.
       messages: shouldBypassTrim ? (data.messages || []) : trimMessages(data.messages || [], trimMode),
@@ -223,6 +247,199 @@ const pruneMessagesByChannel = (
     }
   }
   return pruned;
+};
+
+const loadChannelMessagePage = async ({
+  channelId,
+  limit,
+  before,
+  skipBootstrap = false,
+}: {
+  channelId: string;
+  limit: number;
+  before?: string;
+  skipBootstrap?: boolean;
+}): Promise<{ messages: Message[]; hasMore: boolean; oldestLoadedAt: string | null }> => {
+  const normalizedBefore = typeof before === "string" && before.trim().length > 0 ? before : undefined;
+  const blockedUserIds = useFriendStore.getState().visibilityBlockedUserIds;
+  const requestUserId = useAuthStore.getState().user?.id;
+  if (!requestUserId) throw new Error("Not authenticated");
+
+  let messageRows: any[] = [];
+  let usedBootstrap = false;
+
+  if (!normalizedBefore && !skipBootstrap) {
+    const { data: bootstrapData, error: bootstrapError } = await (supabase.rpc as any)(
+      "get_channel_bootstrap_secure",
+      {
+        _channel_id: channelId,
+        _user_id: requestUserId,
+        _limit: limit,
+        _blocked_user_ids: blockedUserIds,
+      },
+    );
+
+    if (bootstrapError) {
+      if (!isMissingRpcError(bootstrapError)) {
+        throw bootstrapError;
+      }
+    } else {
+      let payload = bootstrapData;
+      if (typeof payload === "string") {
+        try {
+          payload = JSON.parse(payload);
+        } catch {
+          payload = null;
+        }
+      }
+
+      if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+        const bootstrap = payload as Record<string, any>;
+        messageRows = Array.isArray(bootstrap.messages) ? bootstrap.messages : [];
+        const channelPermissions = Array.isArray(bootstrap.channel_permissions)
+          ? bootstrap.channel_permissions
+          : [];
+        useServerStore.getState().hydrateChannelPermissions(channelId, channelPermissions);
+        usedBootstrap = true;
+      }
+    }
+  }
+
+  if (!usedBootstrap) {
+    const { data, error } = await supabase.rpc("get_channel_messages_secure", {
+      _channel_id: channelId,
+      _user_id: requestUserId,
+      _limit: limit,
+      _before: normalizedBefore || null,
+      _blocked_user_ids: blockedUserIds,
+    });
+    if (error) throw error;
+    messageRows = Array.isArray(data) ? data : [];
+
+    if (normalizedBefore && messageRows.length === 0) {
+      const beforeMs = Date.parse(normalizedBefore);
+      if (Number.isFinite(beforeMs)) {
+        const nudgedBefore = new Date(beforeMs - 1).toISOString();
+        const { data: fallbackData, error: fallbackError } = await supabase.rpc("get_channel_messages_secure", {
+          _channel_id: channelId,
+          _user_id: requestUserId,
+          _limit: limit,
+          _before: nudgedBefore,
+          _blocked_user_ids: blockedUserIds,
+        });
+        if (!fallbackError) {
+          messageRows = Array.isArray(fallbackData) ? fallbackData : [];
+        }
+      }
+    }
+
+    if (!normalizedBefore) {
+      void useServerStore
+        .getState()
+        .fetchChannelPermissions(channelId)
+        .catch(() => undefined);
+    }
+  }
+
+  const replyMap: Record<string, MessageReply> = {};
+  const missingReplyIds: string[] = [];
+  messageRows.forEach((msg: any) => {
+    if (!msg?.reply_to_id) return;
+    const replyId = String(msg.reply_to_id);
+
+    const inlineReply = toMessageReply(msg.reply_to);
+    if (inlineReply) {
+      replyMap[replyId] = inlineReply;
+      replyCache.set(replyId, { data: inlineReply, cachedAt: Date.now() });
+      pruneReplyCache();
+      return;
+    }
+
+    const cachedReply = replyCache.get(replyId);
+    if (cachedReply && Date.now() - cachedReply.cachedAt < REPLY_CACHE_EXPIRY_MS) {
+      replyMap[replyId] = cachedReply.data;
+      return;
+    }
+
+    const hasInlineField = Object.prototype.hasOwnProperty.call(msg, "reply_to");
+    if (!hasInlineField) {
+      missingReplyIds.push(replyId);
+    }
+  });
+
+  const dedupedMissingReplyIds = Array.from(new Set(missingReplyIds));
+
+  if (dedupedMissingReplyIds.length > 0) {
+    const { data: replyData } = await supabase.rpc("get_message_replies_secure", {
+      _message_ids: dedupedMissingReplyIds,
+      _user_id: requestUserId,
+      _blocked_user_ids: blockedUserIds,
+    });
+
+    if (replyData) {
+      (replyData as any[]).forEach((reply: any) => {
+        const normalizedReply = toMessageReply(reply);
+        if (!normalizedReply) return;
+        replyMap[normalizedReply.id] = normalizedReply;
+        replyCache.set(normalizedReply.id, {
+          data: normalizedReply,
+          cachedAt: Date.now(),
+        });
+        pruneReplyCache();
+      });
+    }
+  }
+
+  const currentUserId = useAuthStore.getState().user?.id;
+
+  const uniqueUsers = new Map<string, User>();
+  for (const msg of messageRows) {
+    if (msg.user && typeof msg.user === "object" && msg.user.id) {
+      uniqueUsers.set(msg.user.id, msg.user as User);
+    }
+    if (msg.reply_to?.user && typeof msg.reply_to.user === "object" && msg.reply_to.user.id) {
+      uniqueUsers.set(msg.reply_to.user.id, msg.reply_to.user as User);
+    }
+  }
+  if (uniqueUsers.size > 0) {
+    bulkSetUsersInCache(Array.from(uniqueUsers.values()));
+  }
+
+  const messages: Message[] = messageRows.reverse().map((msg: any) => ({
+    id: msg.id,
+    channel_id: msg.channel_id,
+    user_id: msg.user_id,
+    is_own: msg.is_own ?? (msg.user_id === currentUserId),
+    reply_to_id: msg.reply_to_id ?? null,
+    content: msg.content,
+    is_pinned: msg.is_pinned ?? false,
+    is_system_message: msg.is_system_message ?? false,
+    embed_hidden: msg.embed_hidden ?? false,
+    edited_at: msg.edited_at ?? null,
+    created_at: msg.created_at,
+    reply_to: msg.reply_to_id
+      ? replyMap[msg.reply_to_id] ?? toMessageReply(msg.reply_to)
+      : undefined,
+    attachments: msg.attachments || [],
+    reactions: groupReactions(
+      blockedUserIds.length > 0
+        ? (msg.reactions || []).filter((r: any) => !blockedUserIds.includes(r.user_id))
+        : msg.reactions || [],
+      currentUserId,
+    ),
+  }));
+
+  const hasMore = messages.length === limit;
+  const oldestLoadedAt = messages[0]?.created_at ?? null;
+
+  const attachmentUrls = messages
+    .flatMap((m) => (m.attachments || []).map((a: any) => a.file_url as string))
+    .filter((url): url is string => !!url && isSupabaseAttachmentUrl(url));
+  if (attachmentUrls.length > 0) {
+    resolveSignedUrls(attachmentUrls).catch(() => {});
+  }
+
+  return { messages, hasMore, oldestLoadedAt };
 };
 
 export const useMessageStore = create<MessageState>((set, get) => ({
@@ -295,199 +512,27 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       }
 
       try {
-        const blockedUserIds = useFriendStore.getState().visibilityBlockedUserIds;
-        const requestUserId = useAuthStore.getState().user?.id;
-        if (!requestUserId) throw new Error("Not authenticated");
+        const existingCache = get().messagesByChannel[channelId];
+        const prefetchedOlder =
+          normalizedBefore && existingCache?.prefetchedOlder?.beforeCursor === normalizedBefore
+            ? existingCache.prefetchedOlder
+            : null;
 
-        let messageRows: any[] = [];
-        let usedBootstrap = false;
-
-        if (!normalizedBefore && !skipBootstrap) {
-          const { data: bootstrapData, error: bootstrapError } = await (supabase.rpc as any)(
-            "get_channel_bootstrap_secure",
-            {
-              _channel_id: channelId,
-              _user_id: requestUserId,
-              _limit: limit,
-              _blocked_user_ids: blockedUserIds,
-            },
-          );
-
-          if (bootstrapError) {
-            if (!isMissingRpcError(bootstrapError)) {
-              throw bootstrapError;
-            }
-          } else {
-            let payload = bootstrapData;
-            if (typeof payload === "string") {
-              try {
-                payload = JSON.parse(payload);
-              } catch {
-                payload = null;
+        const page =
+          prefetchedOlder && Date.now() - prefetchedOlder.prefetchedAt < PREFETCH_CACHE_EXPIRY_MS
+            ? {
+                messages: prefetchedOlder.messages,
+                hasMore: prefetchedOlder.hasMore,
+                oldestLoadedAt: prefetchedOlder.oldestLoadedAt,
               }
-            }
-
-            if (payload && typeof payload === "object" && !Array.isArray(payload)) {
-              const bootstrap = payload as Record<string, any>;
-              messageRows = Array.isArray(bootstrap.messages) ? bootstrap.messages : [];
-              const channelPermissions = Array.isArray(bootstrap.channel_permissions)
-                ? bootstrap.channel_permissions
-                : [];
-              useServerStore.getState().hydrateChannelPermissions(channelId, channelPermissions);
-              usedBootstrap = true;
-            }
-          }
-        }
-
-        if (!usedBootstrap) {
-          const { data, error } = await supabase.rpc("get_channel_messages_secure", {
-            _channel_id: channelId,
-            _user_id: requestUserId,
-            _limit: limit,
-            _before: normalizedBefore || null,
-            _blocked_user_ids: blockedUserIds,
-          });
-          if (error) throw error;
-          messageRows = Array.isArray(data) ? data : [];
-
-          // Fallback for timestamp cursor ties:
-          // if a page boundary has many rows with the exact same created_at,
-          // strict `< _before` can return zero and stall pagination at 50.
-          // Nudge the cursor back by 1ms and retry once.
-          if (normalizedBefore && messageRows.length === 0) {
-            const beforeMs = Date.parse(normalizedBefore);
-            if (Number.isFinite(beforeMs)) {
-              const nudgedBefore = new Date(beforeMs - 1).toISOString();
-              const { data: fallbackData, error: fallbackError } = await supabase.rpc(
-                "get_channel_messages_secure",
-                {
-                  _channel_id: channelId,
-                  _user_id: requestUserId,
-                  _limit: limit,
-                  _before: nudgedBefore,
-                  _blocked_user_ids: blockedUserIds,
-                },
-              );
-              if (!fallbackError) {
-                messageRows = Array.isArray(fallbackData) ? fallbackData : [];
-              }
-            }
-          }
-
-          // Bootstrap RPC may be unavailable while migrations roll out.
-          // Ensure channel overrides are still loaded via legacy path.
-          if (!normalizedBefore) {
-            void useServerStore
-              .getState()
-              .fetchChannelPermissions(channelId)
-              .catch(() => undefined);
-          }
-        }
-
-        const replyMap: Record<string, MessageReply> = {};
-        const missingReplyIds: string[] = [];
-        // Prefer inline `reply_to` from get_channel_messages_secure to avoid an extra RPC.
-        // Fall back to reply cache / get_message_replies_secure only for legacy payloads.
-        messageRows.forEach((msg: any) => {
-          if (!msg?.reply_to_id) return;
-          const replyId = String(msg.reply_to_id);
-
-          const inlineReply = toMessageReply(msg.reply_to);
-          if (inlineReply) {
-            replyMap[replyId] = inlineReply;
-            replyCache.set(replyId, { data: inlineReply, cachedAt: Date.now() });
-            pruneReplyCache();
-            return;
-          }
-
-          const cachedReply = replyCache.get(replyId);
-          if (cachedReply && Date.now() - cachedReply.cachedAt < REPLY_CACHE_EXPIRY_MS) {
-            replyMap[replyId] = cachedReply.data;
-            return;
-          }
-
-          // If the row includes `reply_to` (even null), the server already resolved visibility.
-          const hasInlineField = Object.prototype.hasOwnProperty.call(msg, "reply_to");
-          if (!hasInlineField) {
-            missingReplyIds.push(replyId);
-          }
-        });
-
-        const dedupedMissingReplyIds = Array.from(new Set(missingReplyIds));
-
-        if (dedupedMissingReplyIds.length > 0) {
-          const { data: replyData } = await supabase.rpc("get_message_replies_secure", {
-            _message_ids: dedupedMissingReplyIds,
-            _user_id: requestUserId,
-            _blocked_user_ids: blockedUserIds,
-          });
-
-          if (replyData) {
-            (replyData as any[]).forEach((reply: any) => {
-              const normalizedReply = toMessageReply(reply);
-              if (!normalizedReply) return;
-              replyMap[normalizedReply.id] = normalizedReply;
-              replyCache.set(normalizedReply.id, {
-                data: normalizedReply,
-                cachedAt: Date.now(),
+            : await loadChannelMessagePage({
+                channelId,
+                limit,
+                before: normalizedBefore,
+                skipBootstrap,
               });
-              pruneReplyCache();
-            });
-          }
-        }
 
-        const currentUserId = useAuthStore.getState().user?.id;
-
-        // Phase 1: Extract user objects into the centralized cache, then strip from messages
-        const uniqueUsers = new Map<string, User>();
-        for (const msg of messageRows) {
-          if (msg.user && typeof msg.user === 'object' && msg.user.id) {
-            uniqueUsers.set(msg.user.id, msg.user as User);
-          }
-          // Also extract reply user data
-          if (msg.reply_to?.user && typeof msg.reply_to.user === 'object' && msg.reply_to.user.id) {
-            uniqueUsers.set(msg.reply_to.user.id, msg.reply_to.user as User);
-          }
-        }
-        if (uniqueUsers.size > 0) {
-          bulkSetUsersInCache(Array.from(uniqueUsers.values()));
-        }
-
-        const messages: Message[] = messageRows.reverse().map((msg: any) => ({
-          id: msg.id,
-          channel_id: msg.channel_id,
-          user_id: msg.user_id,
-          is_own: msg.is_own ?? (msg.user_id === currentUserId),
-          reply_to_id: msg.reply_to_id ?? null,
-          content: msg.content,
-          is_pinned: msg.is_pinned ?? false,
-          is_system_message: msg.is_system_message ?? false,
-          embed_hidden: msg.embed_hidden ?? false,
-          edited_at: msg.edited_at ?? null,
-          created_at: msg.created_at,
-          reply_to: msg.reply_to_id
-            ? replyMap[msg.reply_to_id] ?? toMessageReply(msg.reply_to)
-            : undefined,
-          attachments: msg.attachments || [],
-          reactions: groupReactions(
-            blockedUserIds.length > 0
-              ? (msg.reactions || []).filter((r: any) => !blockedUserIds.includes(r.user_id))
-              : msg.reactions || [],
-            currentUserId,
-          ),
-        }));
-
-        const hasMore = messages.length === limit;
-        const oldestFetchedAt = messages[0]?.created_at ?? null;
-
-        // Pre-warm signed URL cache for all attachments in this batch (fire-and-forget).
-        // Individual useSignedUrl hooks will then resolve from cache instantly.
-        const attachmentUrls = messages
-          .flatMap((m) => (m.attachments || []).map((a: any) => a.file_url as string))
-          .filter((url): url is string => !!url && isSupabaseAttachmentUrl(url));
-        if (attachmentUrls.length > 0) {
-          resolveSignedUrls(attachmentUrls).catch(() => {});
-        }
+        const { messages, hasMore, oldestLoadedAt: oldestFetchedAt } = page;
 
         set((state) => {
           const existingCache = state.messagesByChannel[channelId];
@@ -505,6 +550,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
                   hasMore,
                   lastFetched: existingCache.lastFetched,
                   oldestLoadedAt: oldestFetchedAt ?? existingCache.oldestLoadedAt ?? normalizedBefore,
+                  prefetchedOlder: null,
                 },
               },
               channelId,
@@ -529,6 +575,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
                     hasMore,
                     lastFetched: Date.now(),
                     oldestLoadedAt: null,
+                    prefetchedOlder: null,
                   },
                 },
                 channelId,
@@ -561,6 +608,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
                   hasMore,
                   lastFetched: Date.now(),
                   oldestLoadedAt: reconciled[0]?.created_at ?? null,
+                  prefetchedOlder: null,
                 },
               },
               channelId,
@@ -581,6 +629,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
                   hasMore,
                   lastFetched: Date.now(),
                   oldestLoadedAt: oldestFetchedAt,
+                  prefetchedOlder: null,
                 },
               },
               channelId,
@@ -605,6 +654,71 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     });
 
     inflightFetches.set(inflightKey, p);
+    return p;
+  },
+
+  prefetchOlderMessages: async (channelId: string, limit = 50) => {
+    const cacheEntry = get().messagesByChannel[channelId];
+    if (!cacheEntry || cacheEntry.messages.length === 0 || !cacheEntry.hasMore) return;
+
+    const beforeCursor = cacheEntry.oldestLoadedAt || cacheEntry.messages[0]?.created_at;
+    if (!beforeCursor) return;
+
+    const prefetchedOlder = cacheEntry.prefetchedOlder;
+    if (
+      prefetchedOlder?.beforeCursor === beforeCursor &&
+      Date.now() - prefetchedOlder.prefetchedAt < PREFETCH_CACHE_EXPIRY_MS
+    ) {
+      return;
+    }
+
+    const inflightKey = `${channelId}:${beforeCursor}:${limit}`;
+    const existingInflight = inflightPrefetches.get(inflightKey);
+    if (existingInflight) return existingInflight;
+
+    const p = (async () => {
+      try {
+        const page = await loadChannelMessagePage({
+          channelId,
+          limit,
+          before: beforeCursor,
+          skipBootstrap: true,
+        });
+
+        set((state) => {
+          const current = state.messagesByChannel[channelId];
+          if (!current) return state;
+
+          const currentBeforeCursor = current.oldestLoadedAt || current.messages[0]?.created_at;
+          if (!currentBeforeCursor || currentBeforeCursor !== beforeCursor) {
+            return state;
+          }
+
+          return {
+            messagesByChannel: {
+              ...state.messagesByChannel,
+              [channelId]: {
+                ...current,
+                prefetchedOlder: {
+                  beforeCursor,
+                  messages: page.messages,
+                  hasMore: page.hasMore,
+                  oldestLoadedAt: page.oldestLoadedAt,
+                  prefetchedAt: Date.now(),
+                },
+              },
+            },
+          };
+        });
+      } catch (error) {
+        console.error("Failed to prefetch older messages:", error);
+      }
+    })().finally(() => {
+      const cur = inflightPrefetches.get(inflightKey);
+      if (cur === p) inflightPrefetches.delete(inflightKey);
+    });
+
+    inflightPrefetches.set(inflightKey, p);
     return p;
   },
 

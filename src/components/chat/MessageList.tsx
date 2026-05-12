@@ -33,6 +33,10 @@ interface MessageListProps {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const CHANNEL_ENTRY_FORCE_REFETCH_MAX_AGE_MS = 5 * 60_000;
+const LOAD_OLDER_TOP_THRESHOLD_MIN_PX = 96;
+const LOAD_OLDER_TOP_THRESHOLD_MAX_PX = 480;
+const LOAD_OLDER_TOP_THRESHOLD_VIEWPORT_RATIO = 0.4;
+const LOAD_OLDER_BOTTOM_DISTANCE_GUARD_PX = 300;
 
 const EMPTY_MESSAGE_ARRAY: Message[] = [];
 const EMPTY_CUSTOM_EMOJI_MAP = new Map<string, string>();
@@ -117,6 +121,14 @@ const getDateDividerLabel = (date: Date): string => {
   if (isToday(date)) return "Today";
   if (isYesterday(date)) return "Yesterday";
   return format(date, "EEEE, MMMM d, yyyy");
+};
+
+const getLoadOlderTopThreshold = (clientHeight: number): number => {
+  const scaledThreshold = Math.round(clientHeight * LOAD_OLDER_TOP_THRESHOLD_VIEWPORT_RATIO);
+  return Math.min(
+    LOAD_OLDER_TOP_THRESHOLD_MAX_PX,
+    Math.max(LOAD_OLDER_TOP_THRESHOLD_MIN_PX, scaledThreshold),
+  );
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -251,6 +263,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
 
   const isLoading = useMessageStore((s) => s.isLoading);
   const fetchMessages = useMessageStore((s) => s.fetchMessages);
+  const prefetchOlderMessages = useMessageStore((s) => s.prefetchOlderMessages);
   const setCurrentChannel = useMessageStore((s) => s.setCurrentChannel);
   const channelData = useMessageStore((s) => s.messagesByChannel[channelId]);
   const isFetchingOlder = useMessageStore((s) => !!s.fetchingChannels[channelId]);
@@ -496,6 +509,19 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   }, []);
 
   useEffect(() => {
+    if (isLoading || isFetchingOlder || !hasMore || msgCount === 0) return;
+    if (document.visibilityState !== "visible") return;
+
+    const timer = window.setTimeout(() => {
+      void prefetchOlderMessages(channelId, 50).catch(() => undefined);
+    }, 700);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [channelId, hasMore, isFetchingOlder, isLoading, msgCount, prefetchOlderMessages]);
+
+  useEffect(() => {
     if (messages.length > 0 && isNearBottomRef.current) {
       const latestMessage = messages[messages.length - 1];
       if (
@@ -684,13 +710,18 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       if (!node) return;
 
       const distanceFromBottom = node.scrollHeight - node.scrollTop - node.clientHeight;
+      const loadOlderTopThreshold = getLoadOlderTopThreshold(node.clientHeight);
       const atBottom = distanceFromBottom <= 100;
       const wasAtBottom = isNearBottomRef.current;
 
       isNearBottomRef.current = atBottom;
       lastScrollHeightRef.current = node.scrollHeight;
 
-      if (node.scrollTop <= 96 && !atBottom && distanceFromBottom > 300) {
+      if (
+        node.scrollTop <= loadOlderTopThreshold &&
+        !atBottom &&
+        distanceFromBottom > LOAD_OLDER_BOTTOM_DISTANCE_GUARD_PX
+      ) {
         handleLoadOlder();
       }
 

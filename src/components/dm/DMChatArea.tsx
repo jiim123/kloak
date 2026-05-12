@@ -17,13 +17,33 @@ import { DMHeader } from "./DMHeader";
 import { GroupChatHeader } from "./GroupChatHeader";
 import type { DirectMessage, Message, User } from "@/types";
 
+const DM_LOAD_OLDER_TOP_THRESHOLD_MIN_PX = 96;
+const DM_LOAD_OLDER_TOP_THRESHOLD_MAX_PX = 420;
+const DM_LOAD_OLDER_TOP_THRESHOLD_VIEWPORT_RATIO = 0.35;
+const DM_LOAD_OLDER_BOTTOM_DISTANCE_GUARD_PX = 300;
+
+const getDMLoadOlderTopThreshold = (clientHeight: number): number => {
+  const scaledThreshold = Math.round(clientHeight * DM_LOAD_OLDER_TOP_THRESHOLD_VIEWPORT_RATIO);
+  return Math.min(
+    DM_LOAD_OLDER_TOP_THRESHOLD_MAX_PX,
+    Math.max(DM_LOAD_OLDER_TOP_THRESHOLD_MIN_PX, scaledThreshold),
+  );
+};
+
 export const DMChatArea = () => {
   const { user } = useAuthStore();
-  const { currentConversation, isLoading, fetchMessages, getMessages } = useDMStore();
+  const { currentConversation, isLoading, fetchMessages, getMessages, prefetchOlderMessages } = useDMStore();
   const { setMobileSidebarOpen } = useUIStore();
   const { blockedUsers, visibilityBlockedUserIds } = useFriendStore();
   const { markAsRead } = useUnreadDMsContext();
   const isMobile = useIsMobile();
+  const currentConversationId = currentConversation?.id ?? null;
+  const historyMeta = useDMStore((state) =>
+    currentConversationId ? state.historyMetaByConversation[currentConversationId] : undefined,
+  );
+  const isFetchingOlder = useDMStore((state) =>
+    currentConversationId ? !!state.fetchingOlderByConversation[currentConversationId] : false,
+  );
 
   // Get messages for current conversation from cache
   const rawMessages = currentConversation ? getMessages(currentConversation.id) : [];
@@ -48,6 +68,9 @@ export const DMChatArea = () => {
   const scrollRAFRef = useRef<number | null>(null);
   const needsScrollRef = useRef(true);
   const prevConversationIdRef = useRef<string | null>(null);
+  const pendingOlderRestoreRef = useRef<{ scrollHeight: number; scrollTop: number } | null>(null);
+  const prevMessageCountRef = useRef(0);
+  const prevLastMessageIdRef = useRef<string | null>(null);
 
   const { highlightedMessageId } = useScrollToMessage({ messages, isLoading, containerRef: messagesContainerRef });
 
@@ -59,6 +82,9 @@ export const DMChatArea = () => {
   if (prevConversationIdRef.current !== currentConversation?.id) {
     prevConversationIdRef.current = currentConversation?.id || null;
     needsScrollRef.current = true;
+    pendingOlderRestoreRef.current = null;
+    prevMessageCountRef.current = 0;
+    prevLastMessageIdRef.current = null;
   }
 
   // Swipe gesture for mobile
@@ -87,14 +113,40 @@ export const DMChatArea = () => {
     }
   }, [messages.length, currentConversation?.id]);
 
-  // Auto-scroll to bottom on new messages
+  useLayoutEffect(() => {
+    const pendingRestore = pendingOlderRestoreRef.current;
+    const container = messagesContainerRef.current;
+    if (!pendingRestore || !container) return;
+
+    const delta = container.scrollHeight - pendingRestore.scrollHeight;
+    container.scrollTop = pendingRestore.scrollTop + delta;
+    pendingOlderRestoreRef.current = null;
+  }, [messages.length]);
+
+  const lastMessageId = messages.length > 0 ? messages[messages.length - 1].id : null;
+
+  // Auto-scroll to bottom on appended new messages
   useEffect(() => {
-    if (isAtBottom) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    } else if (messages.length > 0) {
-      setNewMessageCount((prev) => prev + 1);
+    const prevCount = prevMessageCountRef.current;
+    const prevLastMessageId = prevLastMessageIdRef.current;
+    const appendedNewMessage =
+      prevCount > 0 &&
+      messages.length >= prevCount &&
+      lastMessageId !== null &&
+      prevLastMessageId !== null &&
+      lastMessageId !== prevLastMessageId;
+
+    if (appendedNewMessage) {
+      if (isAtBottom) {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      } else {
+        setNewMessageCount((prev) => prev + 1);
+      }
     }
-  }, [messages.length, isAtBottom]);
+
+    prevMessageCountRef.current = messages.length;
+    prevLastMessageIdRef.current = lastMessageId;
+  }, [isAtBottom, lastMessageId, messages.length]);
 
   useEffect(() => {
     if (isAtBottom) setNewMessageCount(0);
@@ -106,17 +158,61 @@ export const DMChatArea = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (!currentConversation?.id || !user?.id || isLoading || isFetchingOlder) return;
+    if (historyMeta?.hasMore === false || rawMessages.length === 0) return;
+    if (document.visibilityState !== "visible") return;
+
+    const timer = window.setTimeout(() => {
+      void prefetchOlderMessages(currentConversation.id, user.id, 50).catch(() => undefined);
+    }, 700);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [
+    currentConversation?.id,
+    historyMeta?.hasMore,
+    isFetchingOlder,
+    isLoading,
+    prefetchOlderMessages,
+    rawMessages.length,
+    user?.id,
+  ]);
+
   const handleScroll = useCallback(() => {
     if (scrollRAFRef.current !== null) cancelAnimationFrame(scrollRAFRef.current);
     scrollRAFRef.current = requestAnimationFrame(() => {
       const container = messagesContainerRef.current;
       if (!container) return;
       const { scrollTop, scrollHeight, clientHeight } = container;
-      const atBottom = scrollHeight - scrollTop - clientHeight < 100;
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+      const loadOlderTopThreshold = getDMLoadOlderTopThreshold(clientHeight);
+      const atBottom = distanceFromBottom < 100;
       setIsAtBottom((prev) => (prev !== atBottom ? atBottom : prev));
+      if (
+        currentConversation?.id &&
+        user?.id &&
+        !isFetchingOlder &&
+        historyMeta?.hasMore !== false &&
+        historyMeta?.oldestLoadedMessageId &&
+        scrollTop <= loadOlderTopThreshold &&
+        !atBottom &&
+        distanceFromBottom > DM_LOAD_OLDER_BOTTOM_DISTANCE_GUARD_PX
+      ) {
+        pendingOlderRestoreRef.current = { scrollHeight, scrollTop };
+        void fetchMessages(currentConversation.id, user.id, 50, historyMeta.oldestLoadedMessageId);
+      }
       scrollRAFRef.current = null;
     });
-  }, []);
+  }, [
+    currentConversation?.id,
+    fetchMessages,
+    historyMeta?.hasMore,
+    historyMeta?.oldestLoadedMessageId,
+    isFetchingOlder,
+    user?.id,
+  ]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

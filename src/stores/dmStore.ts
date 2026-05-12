@@ -30,7 +30,9 @@ interface DMState {
   currentConversation: DMConversation | null;
   // Store messages per conversation to persist them
   messagesByConversation: Record<string, DirectMessage[]>;
+  historyMetaByConversation: Record<string, DMHistoryMeta>;
   isLoading: boolean;
+  fetchingOlderByConversation: Record<string, boolean>;
 
   // Conversation actions
   fetchConversations: (userId: string) => Promise<void>;
@@ -41,6 +43,7 @@ interface DMState {
 
   // Message actions
   fetchMessages: (conversationId: string, userId: string, limit?: number, before?: string) => Promise<void>;
+  prefetchOlderMessages: (conversationId: string, userId: string, limit?: number) => Promise<void>;
   sendMessage: (
     conversationId: string,
     senderId: string,
@@ -70,6 +73,20 @@ interface DMState {
   getMessages: (conversationId: string) => DirectMessage[];
 }
 
+interface DMPrefetchedOlderPage {
+  beforeId: string;
+  messages: DirectMessage[];
+  hasMore: boolean;
+  oldestLoadedMessageId: string | null;
+  prefetchedAt: number;
+}
+
+interface DMHistoryMeta {
+  hasMore: boolean;
+  oldestLoadedMessageId: string | null;
+  prefetchedOlder?: DMPrefetchedOlderPage | null;
+}
+
 const groupReactions = (reactions: any[], currentUserId?: string): ReactionGroup[] => {
   const groups: Record<string, ReactionGroup> = {};
 
@@ -94,6 +111,8 @@ const groupReactions = (reactions: any[], currentUserId?: string): ReactionGroup
 
 const MAX_CACHED_DM_CONVERSATIONS = 10;
 const MAX_DM_MESSAGES_PER_CONVERSATION = 200;
+const DM_PREFETCH_CACHE_EXPIRY_MS = 2 * 60 * 1000;
+const inflightDMPrefetches = new Map<string, Promise<void>>();
 
 const pruneDMMessageCache = (
   input: Record<string, DirectMessage[]>,
@@ -120,11 +139,127 @@ const pruneDMMessageCache = (
   return result;
 };
 
+const loadDMMessagePage = async (
+  conversationId: string,
+  userId: string,
+  limit: number,
+  before?: string,
+): Promise<{ messages: DirectMessage[]; hasMore: boolean; oldestLoadedMessageId: string | null }> => {
+  const { data, error } = await supabase.rpc("get_dm_messages", {
+    _conversation_id: conversationId,
+    _user_id: userId,
+    _limit: limit,
+    _before_id: before || null,
+  });
+
+  if (error) throw error;
+
+  const dataArray = Array.isArray(data) ? data : [];
+  const messageIds = dataArray.map((msg: any) => msg.id);
+
+  let reactions: any[] = [];
+  let attachments: any[] = [];
+  if (messageIds.length > 0) {
+    const [reactionResult, attachmentResult] = await Promise.all([
+      supabase
+        .from("dm_reactions")
+        .select("id, message_id, user_id, emoji")
+        .in("message_id", messageIds),
+      supabase
+        .from("dm_attachments")
+        .select("id, message_id, file_url, file_name, file_type, file_size, width, height")
+        .in("message_id", messageIds),
+    ]);
+    reactions = reactionResult.data || [];
+    attachments = attachmentResult.data || [];
+  }
+
+  const uniqueUsers = new Map<string, User>();
+  for (const msg of dataArray) {
+    if ((msg as any).sender && typeof (msg as any).sender === "object" && (msg as any).sender.id) {
+      uniqueUsers.set((msg as any).sender.id, (msg as any).sender as User);
+    }
+  }
+  if (uniqueUsers.size > 0) {
+    bulkSetUsersInCache(Array.from(uniqueUsers.values()));
+  }
+
+  const reversedData = [...dataArray].reverse();
+  const replyToIds = reversedData
+    .map((msg: any) => msg.reply_to_id)
+    .filter((id: string | null): id is string => !!id);
+
+  const replyToMap: Record<string, Partial<DirectMessage>> = {};
+  if (replyToIds.length > 0) {
+    const uniqueReplyIds = [...new Set(replyToIds)];
+    const batchMap = new Map(reversedData.map((m: any) => [m.id, m]));
+    const missingIds = uniqueReplyIds.filter((id) => !batchMap.has(id));
+
+    for (const id of uniqueReplyIds) {
+      const found = batchMap.get(id);
+      if (found) {
+        replyToMap[id] = {
+          id: found.id,
+          content: found.content,
+          sender_id: found.sender_id,
+        };
+      }
+    }
+
+    if (missingIds.length > 0) {
+      const { data: replyData } = await supabase.rpc("get_dm_messages_by_ids_secure", {
+        _message_ids: missingIds,
+        _user_id: userId,
+      });
+      if (replyData) {
+        for (const r of replyData as any[]) {
+          replyToMap[r.id] = {
+            id: r.id,
+            content: r.content,
+            sender_id: r.sender_id,
+          };
+        }
+      }
+    }
+  }
+
+  const messages: DirectMessage[] = reversedData.map((msg: any) => {
+    const msgReactions = reactions.filter((r) => r.message_id === msg.id);
+    return {
+      id: msg.id,
+      conversation_id: msg.conversation_id,
+      sender_id: msg.sender_id,
+      content: msg.content,
+      reply_to_id: msg.reply_to_id ?? null,
+      edited_at: msg.edited_at ?? null,
+      created_at: msg.created_at,
+      reply_to: msg.reply_to_id ? (replyToMap[msg.reply_to_id] as DirectMessage) || null : null,
+      attachments: attachments.filter((a: any) => a.message_id === msg.id),
+      reactions: groupReactions(msgReactions, userId),
+    };
+  });
+
+  const dmAttachmentUrls = messages
+    .flatMap((m) => (m.attachments || []).map((a: any) => a.file_url as string))
+    .filter((url): url is string => !!url && isSupabaseAttachmentUrl(url));
+  if (dmAttachmentUrls.length > 0) {
+    resolveSignedUrls(dmAttachmentUrls).catch(() => {});
+  }
+
+  return {
+    messages,
+    hasMore: messages.length === limit,
+    oldestLoadedMessageId: messages[0]?.id ?? null,
+  };
+};
+
 export const useDMStore = create<DMState>((set, get) => ({
   conversations: [],
   currentConversation: null,
   messagesByConversation: {},
+  historyMetaByConversation: {},
   isLoading: false,
+  fetchingOlderByConversation: {},
 
   fetchConversations: async (userId: string) => {
     // Only show loading when we have no cached conversations (silent background refresh)
@@ -274,6 +409,12 @@ export const useDMStore = create<DMState>((set, get) => ({
         messagesByConversation: Object.fromEntries(
           Object.entries(state.messagesByConversation).filter(([key]) => key !== conversationId),
         ),
+        historyMetaByConversation: Object.fromEntries(
+          Object.entries(state.historyMetaByConversation).filter(([key]) => key !== conversationId),
+        ),
+        fetchingOlderByConversation: Object.fromEntries(
+          Object.entries(state.fetchingOlderByConversation).filter(([key]) => key !== conversationId),
+        ),
       }));
 
       return true;
@@ -289,148 +430,141 @@ export const useDMStore = create<DMState>((set, get) => ({
     if (!hasCached) {
       set({ isLoading: true });
     }
+    if (before) {
+      set((state) => ({
+        fetchingOlderByConversation: {
+          ...state.fetchingOlderByConversation,
+          [conversationId]: true,
+        },
+      }));
+    }
 
     try {
-      // Use RPC function to fetch messages
-      const { data, error } = await supabase.rpc("get_dm_messages", {
-        _conversation_id: conversationId,
-        _user_id: userId,
-        _limit: limit,
-        _before_id: before || null,
-      });
-
-      if (error) throw error;
-
-      const dataArray = Array.isArray(data) ? data : [];
-
-      // Fetch reactions and attachments separately for each message
-      const messageIds = dataArray.map((msg: any) => msg.id);
-
-      let reactions: any[] = [];
-      let attachments: any[] = [];
-      if (messageIds.length > 0) {
-        // Fetch reactions and attachments in parallel
-        const [reactionResult, attachmentResult] = await Promise.all([
-          supabase
-            .from("dm_reactions")
-            .select("id, message_id, user_id, emoji")
-            .in("message_id", messageIds),
-          supabase
-            .from("dm_attachments")
-            .select("id, message_id, file_url, file_name, file_type, file_size, width, height")
-            .in("message_id", messageIds),
-        ]);
-        reactions = reactionResult.data || [];
-        attachments = attachmentResult.data || [];
-      }
-
-      // Extract sender data into user cache, then strip from messages
-      const uniqueUsers = new Map<string, User>();
-      for (const msg of dataArray) {
-        if ((msg as any).sender && typeof (msg as any).sender === 'object' && (msg as any).sender.id) {
-          uniqueUsers.set((msg as any).sender.id, (msg as any).sender as User);
-        }
-      }
-      if (uniqueUsers.size > 0) {
-        bulkSetUsersInCache(Array.from(uniqueUsers.values()));
-      }
-
-      const reversedData = [...dataArray].reverse();
-
-      // Collect reply_to_ids that need fetching
-      const replyToIds = reversedData
-        .map((msg: any) => msg.reply_to_id)
-        .filter((id: string | null): id is string => !!id);
-
-      // Batch-fetch replied-to messages with sender info
-      const replyToMap: Record<string, Partial<DirectMessage>> = {};
-      if (replyToIds.length > 0) {
-        const uniqueReplyIds = [...new Set(replyToIds)];
-        // First check if any are in the current batch
-        const batchMap = new Map(reversedData.map((m: any) => [m.id, m]));
-        const missingIds = uniqueReplyIds.filter((id) => !batchMap.has(id));
-
-        // Map from batch
-        for (const id of uniqueReplyIds) {
-          const found = batchMap.get(id);
-          if (found) {
-            replyToMap[id] = {
-              id: found.id,
-              content: found.content,
-              sender_id: found.sender_id,
-            };
-          }
-        }
-
-        // Fetch missing ones from guarded RPC
-        if (missingIds.length > 0) {
-          const { data: replyData } = await supabase.rpc("get_dm_messages_by_ids_secure", {
-            _message_ids: missingIds,
-            _user_id: userId,
-          });
-          if (replyData) {
-            for (const r of replyData as any[]) {
-              replyToMap[r.id] = {
-                id: r.id,
-                content: r.content,
-                sender_id: r.sender_id,
-              };
+      const historyMeta = get().historyMetaByConversation[conversationId];
+      const prefetchedOlder =
+        before && historyMeta?.prefetchedOlder?.beforeId === before
+          ? historyMeta.prefetchedOlder
+          : null;
+      const page =
+        prefetchedOlder && Date.now() - prefetchedOlder.prefetchedAt < DM_PREFETCH_CACHE_EXPIRY_MS
+          ? {
+              messages: prefetchedOlder.messages,
+              hasMore: prefetchedOlder.hasMore,
+              oldestLoadedMessageId: prefetchedOlder.oldestLoadedMessageId,
             }
-          }
-        }
-      }
-
-      const messages: DirectMessage[] = reversedData.map((msg: any) => {
-        const msgReactions = reactions.filter((r) => r.message_id === msg.id);
-        return {
-          id: msg.id,
-          conversation_id: msg.conversation_id,
-          sender_id: msg.sender_id,
-          content: msg.content,
-          reply_to_id: msg.reply_to_id ?? null,
-          edited_at: msg.edited_at ?? null,
-          created_at: msg.created_at,
-          reply_to: msg.reply_to_id ? (replyToMap[msg.reply_to_id] as DirectMessage) || null : null,
-          attachments: attachments.filter((a: any) => a.message_id === msg.id),
-          reactions: groupReactions(msgReactions, userId),
-        };
-      });
-
-      // Pre-warm signed URL cache for DM attachments (fire-and-forget)
-      const dmAttachmentUrls = messages
-        .flatMap((m) => (m.attachments || []).map((a: any) => a.file_url as string))
-        .filter((url): url is string => !!url && isSupabaseAttachmentUrl(url));
-      if (dmAttachmentUrls.length > 0) {
-        resolveSignedUrls(dmAttachmentUrls).catch(() => {});
-      }
+          : await loadDMMessagePage(conversationId, userId, limit, before);
+      const { messages, hasMore, oldestLoadedMessageId } = page;
 
       set((state) => {
         const currentMessages = state.messagesByConversation[conversationId] || [];
+        const { [conversationId]: _, ...restFetchingOlder } = state.fetchingOlderByConversation;
 
         if (before) {
           // Prepend older messages
           return {
-            messagesByConversation: {
-              ...state.messagesByConversation,
-              [conversationId]: [...messages, ...currentMessages],
+            messagesByConversation: pruneDMMessageCache(
+              {
+                ...state.messagesByConversation,
+                [conversationId]: [...messages, ...currentMessages],
+              },
+              state.currentConversation?.id,
+            ),
+            historyMetaByConversation: {
+              ...state.historyMetaByConversation,
+              [conversationId]: {
+                hasMore,
+                oldestLoadedMessageId: oldestLoadedMessageId ?? before,
+                prefetchedOlder: null,
+              },
             },
+            fetchingOlderByConversation: restFetchingOlder,
             isLoading: false,
           };
         } else {
           // Replace with fresh messages
           return {
-            messagesByConversation: {
-              ...state.messagesByConversation,
-              [conversationId]: messages,
+            messagesByConversation: pruneDMMessageCache(
+              {
+                ...state.messagesByConversation,
+                [conversationId]: messages,
+              },
+              state.currentConversation?.id,
+            ),
+            historyMetaByConversation: {
+              ...state.historyMetaByConversation,
+              [conversationId]: {
+                hasMore,
+                oldestLoadedMessageId,
+                prefetchedOlder: null,
+              },
             },
+            fetchingOlderByConversation: restFetchingOlder,
             isLoading: false,
           };
         }
       });
     } catch (error) {
       console.error("Failed to fetch DM messages:", error);
-      set({ isLoading: false });
+      set((state) => {
+        const { [conversationId]: _, ...restFetchingOlder } = state.fetchingOlderByConversation;
+        return { isLoading: false, fetchingOlderByConversation: restFetchingOlder };
+      });
     }
+  },
+
+  prefetchOlderMessages: async (conversationId: string, userId: string, limit = 50) => {
+    const currentMessages = get().messagesByConversation[conversationId] || [];
+    const historyMeta = get().historyMetaByConversation[conversationId];
+    const beforeId = historyMeta?.oldestLoadedMessageId || currentMessages[0]?.id || null;
+    if (!beforeId || historyMeta?.hasMore === false) return;
+
+    const prefetchedOlder = historyMeta?.prefetchedOlder;
+    if (
+      prefetchedOlder?.beforeId === beforeId &&
+      Date.now() - prefetchedOlder.prefetchedAt < DM_PREFETCH_CACHE_EXPIRY_MS
+    ) {
+      return;
+    }
+
+    const inflightKey = `${conversationId}:${beforeId}:${limit}`;
+    const existingInflight = inflightDMPrefetches.get(inflightKey);
+    if (existingInflight) return existingInflight;
+
+    const p = (async () => {
+      try {
+        const page = await loadDMMessagePage(conversationId, userId, limit, beforeId);
+        set((state) => {
+          const currentMeta = state.historyMetaByConversation[conversationId];
+          const currentList = state.messagesByConversation[conversationId] || [];
+          const currentBeforeId = currentMeta?.oldestLoadedMessageId || currentList[0]?.id || null;
+          if (!currentBeforeId || currentBeforeId !== beforeId) return state;
+
+          return {
+            historyMetaByConversation: {
+              ...state.historyMetaByConversation,
+              [conversationId]: {
+                ...(currentMeta || { hasMore: true, oldestLoadedMessageId: beforeId }),
+                prefetchedOlder: {
+                  beforeId,
+                  messages: page.messages,
+                  hasMore: page.hasMore,
+                  oldestLoadedMessageId: page.oldestLoadedMessageId,
+                  prefetchedAt: Date.now(),
+                },
+              },
+            },
+          };
+        });
+      } catch (error) {
+        console.error("Failed to prefetch older DM messages:", error);
+      }
+    })().finally(() => {
+      const cur = inflightDMPrefetches.get(inflightKey);
+      if (cur === p) inflightDMPrefetches.delete(inflightKey);
+    });
+
+    inflightDMPrefetches.set(inflightKey, p);
+    return p;
   },
 
   sendMessage: async (conversationId: string, senderId: string, content: string, replyToId?: string) => {
