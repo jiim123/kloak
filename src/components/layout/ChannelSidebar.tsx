@@ -736,6 +736,7 @@ const CategoryContent = memo(({
       <SortableContext items={channelIds} strategy={verticalListSortingStrategy}>
         {channels.map((channel) => {
           const { unreadCount, mentionCount } = getChannelUnread(channel.id);
+          const linkedTextChannel = linkedTextChannelByVoiceId.get(channel.id);
           return (
             <SortableChannel
               key={channel.id}
@@ -755,8 +756,13 @@ const CategoryContent = memo(({
               isMobile={isMobile}
               isDraggingAny={isDraggingAny}
               isSortingMode={isSortingMode}
-              hasLinkedChat={linkedTextChannelByVoiceId.has(channel.id)}
-              isLinkedChatActive={currentChannelId !== channel.id && currentChannelId === linkedTextChannelByVoiceId.get(channel.id)?.id}
+              hasLinkedChat={!!linkedTextChannel}
+              isLinkedChatActive={
+                !!currentChannelId &&
+                !!linkedTextChannel &&
+                currentChannelId !== channel.id &&
+                currentChannelId === linkedTextChannel.id
+              }
             />
           );
         })}
