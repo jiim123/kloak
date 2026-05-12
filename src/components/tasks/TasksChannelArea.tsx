@@ -446,6 +446,7 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
   const [assigneeSearch, setAssigneeSearch] = useState("");
   const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<string[]>([]);
   const [savingAssignees, setSavingAssignees] = useState(false);
+  const tasksRef = useRef<Task[]>([]);
   const taskIdsRef = useRef<Set<string>>(new Set());
   const initialLoadKeyRef = useRef<string | null>(null);
 
@@ -458,35 +459,118 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
   const canDeleteTasks = !!channelId && canPerformInChannel("delete_tasks", channelId);
   const canEditOwnTasks = !!channelId && canPerformInChannel("edit_own_tasks", channelId);
   const canEditAllTasks = !!channelId && canPerformInChannel("edit_all_tasks", channelId);
+  const syncTaskReferences = useCallback((nextTasks: Task[]) => {
+    const taskById = new Map(nextTasks.map((task) => [task.id, task]));
+    setNotesTask((current) => (current ? taskById.get(current.id) ?? null : null));
+    setAssignTask((current) => (current ? taskById.get(current.id) ?? null : null));
+    setCollapsedMainTaskIds((current) => {
+      const next = new Set(Array.from(current).filter((taskId) => taskById.has(taskId)));
+      return next.size === current.size ? current : next;
+    });
+  }, []);
 
+  const commitTasks = useCallback((nextTasks: Task[]) => {
+    tasksRef.current = nextTasks;
+    taskIdsRef.current = new Set(nextTasks.map((task) => task.id));
+    setTasks(nextTasks);
+    syncTaskReferences(nextTasks);
+  }, [syncTaskReferences]);
 
-
-  const loadBoard = useCallback(async () => {
+  const fetchBoardTasks = useCallback(async (showError = true) => {
     if (!channelId || !userId) return [] as Task[];
 
-    setLoading(true);
     try {
       const tasksResult = await runRpc("get_channel_tasks", { _channel_id: channelId, _user_id: userId });
       if (tasksResult.error) throw tasksResult.error;
-
-      const loadedTasks = Array.isArray(tasksResult.data) ? tasksResult.data.map(normalizeTask) : [];
-      setTasks(loadedTasks);
-      return loadedTasks;
+      return Array.isArray(tasksResult.data) ? tasksResult.data.map(normalizeTask) : [];
     } catch (error) {
       console.error("Failed to load tasks board:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to load tasks");
-      setTasks([]);
+      if (showError) {
+        toast.error(error instanceof Error ? error.message : "Failed to load tasks");
+      }
       return [] as Task[];
-    } finally {
-      setLoading(false);
     }
   }, [channelId, userId]);
+
+  const loadBoard = useCallback(async (showLoading = true) => {
+    if (showLoading) {
+      setLoading(true);
+    }
+
+    try {
+      const loadedTasks = await fetchBoardTasks(true);
+      commitTasks(loadedTasks);
+      return loadedTasks;
+    } finally {
+      if (showLoading) {
+        setLoading(false);
+      }
+    }
+  }, [commitTasks, fetchBoardTasks]);
+
+  const upsertTaskLocally = useCallback((nextTask: Task) => {
+    const currentTasks = tasksRef.current;
+    const existingIndex = currentTasks.findIndex((task) => task.id === nextTask.id);
+    if (existingIndex < 0) {
+      commitTasks([...currentTasks, nextTask]);
+      return;
+    }
+
+    const mergedTasks = currentTasks.slice();
+    mergedTasks[existingIndex] = nextTask;
+    commitTasks(mergedTasks);
+  }, [commitTasks]);
+
+  const fetchTaskById = useCallback(async (taskId: string) => {
+    if (!userId) return null;
+
+    try {
+      const taskResult = await runRpc("get_task_secure", { _task_id: taskId, _user_id: userId });
+      if (taskResult.error) throw taskResult.error;
+      if (!taskResult.data || typeof taskResult.data !== "object") {
+        return null;
+      }
+
+      return normalizeTask(taskResult.data);
+    } catch (error) {
+      console.error("Failed to refresh task:", error);
+      return null;
+    }
+  }, [userId]);
+
+  const refreshTasksById = useCallback(async (taskIds: string[]) => {
+    const uniqueTaskIds = Array.from(new Set(taskIds));
+    if (uniqueTaskIds.length === 0) return;
+    const refreshedEntries = await Promise.all(
+      uniqueTaskIds.map(async (taskId) => [taskId, await fetchTaskById(taskId)] as const),
+    );
+    const refreshedById = new Map(
+      refreshedEntries.filter((entry): entry is readonly [string, Task] => entry[1] !== null),
+    );
+    const nextTasks = tasksRef.current.filter((task) => !uniqueTaskIds.includes(task.id) || refreshedById.has(task.id));
+
+    refreshedById.forEach((task, taskId) => {
+      const existingIndex = nextTasks.findIndex((entry) => entry.id === taskId);
+      if (existingIndex < 0) {
+        nextTasks.push(task);
+        return;
+      }
+
+      nextTasks[existingIndex] = task;
+    });
+
+    commitTasks(nextTasks);
+  }, [commitTasks, fetchTaskById]);
+
+  const refreshTaskById = useCallback(async (taskId: string) => {
+    await refreshTasksById([taskId]);
+  }, [refreshTasksById]);
 
   useEffect(() => {
     if (currentChannel?.type !== "tasks" || !channelId || !userId || !canViewTasks) {
       initialLoadKeyRef.current = null;
       setLoading(false);
-      setTasks([]);
+      commitTasks([]);
       return;
     }
 
@@ -622,23 +706,40 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
   }, [assignableUsers, assigneeSearch]);
 
   useEffect(() => {
+    tasksRef.current = tasks;
     taskIdsRef.current = new Set(tasks.map((task) => task.id));
   }, [tasks]);
 
-    useEffect(() => {
+  useEffect(() => {
     if (currentChannel?.type !== "tasks" || !channelId || !canViewTasks) return;
 
     let stopped = false;
-    let refreshTimer = null;
+    let hasSeenSubscribed = false;
+    let boardRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+    let taskRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+    const pendingTaskRefreshIds = new Set<string>();
 
-    const scheduleRefresh = () => {
-      if (refreshTimer) return;
+    const scheduleBoardRefresh = () => {
+      if (boardRefreshTimer) return;
 
-      refreshTimer = setTimeout(() => {
-        refreshTimer = null;
+      boardRefreshTimer = setTimeout(() => {
+        boardRefreshTimer = null;
         if (!stopped) {
-          void loadBoard();
+          void loadBoard(false);
         }
+      }, 120);
+    };
+
+    const scheduleTaskRefresh = (taskId: string) => {
+      pendingTaskRefreshIds.add(taskId);
+      if (taskRefreshTimer) return;
+
+      taskRefreshTimer = setTimeout(() => {
+        const taskIds = Array.from(pendingTaskRefreshIds);
+        pendingTaskRefreshIds.clear();
+        taskRefreshTimer = null;
+        if (stopped) return;
+        void refreshTasksById(taskIds);
       }, 120);
     };
 
@@ -653,8 +754,18 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
               : null;
 
         const eventChannelId = record && typeof (record as Record<string, unknown>).channel_id === "string" ? (record as Record<string, unknown>).channel_id as string : null;
-        if (!eventChannelId || eventChannelId === channelId) {
-          scheduleRefresh();
+        const taskId = record && typeof (record as Record<string, unknown>).id === "string" ? (record as Record<string, unknown>).id as string : null;
+        if (eventChannelId && eventChannelId !== channelId) {
+          return;
+        }
+
+        if (payload.eventType === "DELETE" && taskId && taskIdsRef.current.has(taskId)) {
+          commitTasks(tasksRef.current.filter((task) => task.id !== taskId));
+          return;
+        }
+
+        if (taskId) {
+          scheduleTaskRefresh(taskId);
         }
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "task_assignees" }, (payload) => {
@@ -667,21 +778,26 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
 
         const taskId = record && typeof (record as Record<string, unknown>).task_id === "string" ? (record as Record<string, unknown>).task_id as string : null;
         if (taskId && taskIdsRef.current.has(taskId)) {
-          scheduleRefresh();
+          scheduleTaskRefresh(taskId);
         }
       })
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
-          scheduleRefresh();
+          if (!hasSeenSubscribed) {
+            hasSeenSubscribed = true;
+            return;
+          }
+          scheduleBoardRefresh();
         }
       });
 
     return () => {
       stopped = true;
-      if (refreshTimer) clearTimeout(refreshTimer);
+      if (boardRefreshTimer) clearTimeout(boardRefreshTimer);
+      if (taskRefreshTimer) clearTimeout(taskRefreshTimer);
       supabase.removeChannel(channel);
     };
-  }, [currentChannel?.type, channelId, canViewTasks, loadBoard]);
+  }, [canViewTasks, channelId, commitTasks, currentChannel?.type, loadBoard, refreshTasksById]);
 
   const resetInlineCreate = () => {
     setInlineCreateOpen(false);
@@ -735,11 +851,16 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
         _status: task.status === "completed" ? "open" : "completed",
       });
       if (error) throw error;
-      const loadedTasks = await loadBoard();
-      if (notesTask?.id === task.id) {
-        const refreshedTask = loadedTasks.find((entry) => entry.id === task.id);
-        setNotesTask(refreshedTask ?? null);
-      }
+
+      const nextStatus = task.status === "completed" ? "open" : "completed";
+      upsertTaskLocally({
+        ...task,
+        status: nextStatus,
+        completed_by: nextStatus === "completed" ? user.id : null,
+        completed_at: nextStatus === "completed" ? new Date().toISOString() : null,
+        completer: nextStatus === "completed" ? user : null,
+        updated_at: new Date().toISOString(),
+      });
     } catch (error) {
       console.error("Failed to update task status:", error);
       toast.error(error instanceof Error ? error.message : "Failed to update task status");
@@ -787,7 +908,13 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
         _parent_task_id: parentTask?.id ?? null,
       });
       if (error) throw error;
-      await loadBoard();
+
+      const createdTask = data && typeof data === "object" ? normalizeTask({ ...data, creator: user, assignees: [] }) : null;
+      if (createdTask) {
+        upsertTaskLocally(createdTask);
+      } else {
+        void loadBoard(false);
+      }
       resetInlineCreate();
     } catch (error) {
       console.error("Failed to create task:", error);
@@ -811,11 +938,7 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
         throw new Error(String((data as Record<string, unknown>).error));
       }
 
-      const loadedTasks = await loadBoard();
-      if (notesTask?.id === task.id) {
-        const refreshedTask = loadedTasks.find((entry) => entry.id === task.id);
-        setNotesTask(refreshedTask ?? null);
-      }
+      await loadBoard(false);
     } catch (error) {
       console.error("Failed to delete task:", error);
       toast.error(error instanceof Error ? error.message : "Failed to delete task");
@@ -880,7 +1003,7 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
           _clear_parent: true,
         });
         if (error) throw error;
-        await loadBoard();
+        void loadBoard(false);
       } catch (error) {
         console.error("Failed to reorder tasks:", error);
         toast.error(error instanceof Error ? error.message : "Failed to reorder tasks");
@@ -976,6 +1099,7 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
 
     try {
       const failedAssignments: string[] = [];
+      const failedAssignmentIds = new Set<string>();
 
       for (const assigneeId of toAssign) {
         const candidateUser =
@@ -997,6 +1121,7 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
           const message = error instanceof Error ? error.message : "Failed to assign user";
           if (message.includes("Cannot assign tasks to users without channel access")) {
             failedAssignments.push(candidateUser ? memberLabel(candidateUser) : "Unknown user");
+            failedAssignmentIds.add(assigneeId);
             continue;
           }
           throw error;
@@ -1016,7 +1141,28 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
         }
       }
 
-      await loadBoard();
+      const nextAssigneeIds = selectedAssigneeIds.filter((assigneeId) => !failedAssignmentIds.has(assigneeId));
+      const nextAssignees = nextAssigneeIds.map((assigneeId, index) => {
+        const candidateUser =
+          assignableUsers.find((entry) => entry.id === assigneeId) ??
+          selectedAssigneeUsers.find((entry) => entry.id === assigneeId) ??
+          assignTask.assignees.find((entry) => entry.user_id === assigneeId)?.user;
+
+        return {
+          id: `${assignTask.id}:${assigneeId}:${index}`,
+          task_id: assignTask.id,
+          user_id: assigneeId,
+          assigned_by: user.id,
+          assigned_at: new Date().toISOString(),
+          user: candidateUser,
+        };
+      });
+
+      upsertTaskLocally({
+        ...assignTask,
+        assignees: nextAssignees,
+        updated_at: new Date().toISOString(),
+      });
 
       if (failedAssignments.length > 0) {
         toast.warning("Skipped users without channel access: " + failedAssignments.join(", "));

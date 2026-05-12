@@ -144,6 +144,26 @@ const sortThreads = (threadList: Thread[]) =>
     return bTime - aTime;
   });
 
+const groupForumReactions = (reactions: any[], currentUserId?: string): ReactionGroup[] => {
+  const groups: Record<string, { emoji: string; count: number; users: string[]; hasReacted: boolean }> = {};
+  reactions.forEach((reaction) => {
+    if (!groups[reaction.emoji]) {
+      groups[reaction.emoji] = {
+        emoji: reaction.emoji,
+        count: 0,
+        users: [],
+        hasReacted: false,
+      };
+    }
+    groups[reaction.emoji].count++;
+    groups[reaction.emoji].users.push(reaction.user_id);
+    if (reaction.user_id === currentUserId) {
+      groups[reaction.emoji].hasReacted = true;
+    }
+  });
+  return Object.values(groups);
+};
+
 const parseThreadMessageContent = (content: string) => {
   const trimmed = content.trim();
   const parts = trimmed.split("\n\n");
@@ -312,6 +332,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
   const threadMessagesRef = useRef<Record<string, Message[]>>({});
   const loadedThreadMessagesRef = useRef<Set<string>>(new Set());
   const fetchThreadMessagesInFlightRef = useRef<Map<string, Promise<void>>>(new Map());
+  const refreshThreadInFlightRef = useRef<Map<string, Promise<void>>>(new Map());
   const currentChannelIdRef = useRef<string | null>(currentChannel?.id ?? null);
 
   // Reset thread selection when channel changes
@@ -361,6 +382,33 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
   useEffect(() => {
     threadMessagesRef.current = threadMessages;
   }, [threadMessages]);
+
+  const upsertThread = useCallback((nextThread: Thread) => {
+    setThreads((prev) => {
+      const existingIndex = prev.findIndex((thread) => thread.id === nextThread.id);
+      if (existingIndex < 0) {
+        return sortThreads([...prev, nextThread]);
+      }
+
+      const updated = prev.slice();
+      updated[existingIndex] = nextThread;
+      return sortThreads(updated);
+    });
+  }, []);
+
+  const removeThreadById = useCallback((threadId: string) => {
+    setThreads((prev) => prev.filter((thread) => thread.id !== threadId));
+    setThreadMessages((prev) => {
+      if (!(threadId in prev)) return prev;
+      const next = { ...prev };
+      delete next[threadId];
+      return next;
+    });
+    loadedThreadMessagesRef.current.delete(threadId);
+    if (selectedThreadIdRef.current === threadId) {
+      setSelectedThreadId(null);
+    }
+  }, []);
 
   useEffect(() => {
     const channelId = currentChannel?.id;
@@ -436,6 +484,70 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
       ),
     );
   }, []);
+
+  const refreshThreadById = useCallback(async (threadId: string) => {
+    if (!threadId || !currentChannel?.id || !user?.id) return;
+    const existingInFlight = refreshThreadInFlightRef.current.get(threadId);
+    if (existingInFlight) return existingInFlight;
+
+    const inFlight = (async () => {
+      const { data: threadData, error: threadError } = await supabase
+        .from("threads")
+        .select("*")
+        .eq("id", threadId)
+        .eq("channel_id", currentChannel.id)
+        .maybeSingle();
+
+      if (threadError) throw threadError;
+      if (!threadData) {
+        removeThreadById(threadId);
+        return;
+      }
+
+      const [{ data: messagesData, error: messagesError }, { data: summaryData, error: summaryError }] = await Promise.all([
+        supabase.rpc("get_messages_by_ids_secure", {
+          _message_ids: [threadData.message_id],
+          _user_id: user.id,
+          _blocked_user_ids: [],
+        }),
+        (supabase.rpc as any)("get_thread_summaries", {
+          _thread_ids: [threadId],
+        }),
+      ]);
+
+      if (messagesError) throw messagesError;
+      if (summaryError) throw summaryError;
+
+      const rawMessage = Array.isArray(messagesData)
+        ? (messagesData as any[]).find((message) => message?.id === threadData.message_id)
+        : null;
+      const summaries = typeof summaryData === "string" ? JSON.parse(summaryData) : summaryData;
+      const summary = Array.isArray(summaries) ? summaries.find((item) => item?.thread_id === threadId) : null;
+
+      const nextThread: Thread = {
+        ...threadData,
+        message: rawMessage
+          ? ({
+              ...rawMessage,
+              is_pinned: rawMessage.is_pinned ?? false,
+              reactions: Array.isArray(rawMessage.reactions) ? groupForumReactions(rawMessage.reactions, user.id) : [],
+            } as Message)
+          : undefined,
+        message_count: summary?.message_count ?? 0,
+        last_activity: summary?.last_activity ?? threadData.created_at,
+        last_message_author: summary?.last_message_author ?? undefined,
+      };
+
+      upsertThread(nextThread);
+    })();
+
+    refreshThreadInFlightRef.current.set(threadId, inFlight);
+    try {
+      await inFlight;
+    } finally {
+      refreshThreadInFlightRef.current.delete(threadId);
+    }
+  }, [currentChannel?.id, removeThreadById, upsertThread, user?.id]);
 
   const jumpHighlightTimeoutRef = useRef<number | null>(null);
 
@@ -1019,8 +1131,22 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
       .on(
         "broadcast",
         { event: "threads" },
-        () => {
-          void fetchThreads();
+        ({ payload }) => {
+          const eventPayload = payload as BroadcastMutationPayload<ForumBroadcastRow>;
+          const threadId = eventPayload?.new?.id ?? eventPayload?.old?.id;
+          const operation = eventPayload?.op;
+
+          if (!threadId) {
+            void fetchThreads();
+            return;
+          }
+
+          if (operation === "DELETE") {
+            removeThreadById(threadId);
+            return;
+          }
+
+          void refreshThreadById(threadId);
         },
       )
       .on(
@@ -1046,8 +1172,22 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
           table: "threads",
           filter: `channel_id=eq.${currentChannel.id}`,
         },
-        () => {
-          fetchThreads();
+        (payload) => {
+          const threadId =
+            (payload.new && typeof payload.new === "object" && "id" in payload.new ? String((payload.new as any).id) : null) ??
+            (payload.old && typeof payload.old === "object" && "id" in payload.old ? String((payload.old as any).id) : null);
+
+          if (!threadId) {
+            void fetchThreads();
+            return;
+          }
+
+          if (payload.eventType === "DELETE") {
+            removeThreadById(threadId);
+            return;
+          }
+
+          void refreshThreadById(threadId);
         },
       )
       .subscribe();
@@ -1055,7 +1195,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentChannel, fetchThreads, refreshThreadSummary]);
+  }, [currentChannel, fetchThreads, refreshThreadById, refreshThreadSummary, removeThreadById]);
 
   // Subscribe to thread messages for realtime updates
   useEffect(() => {
@@ -1075,10 +1215,9 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
         ({ payload }) => {
           const eventPayload = payload as BroadcastMutationPayload<ForumBroadcastRow>;
           const changedThreadId = eventPayload?.new?.thread_id ?? eventPayload?.old?.thread_id;
+          const operation = eventPayload?.op;
 
-          if (changedThreadId && changedThreadId !== threadId) return;
-
-          void fetchThreadMessagesById(threadId, { force: true });
+          if (!changedThreadId || changedThreadId !== threadId || operation === "UPDATE") return;
         },
       )
       .on(
@@ -1092,8 +1231,6 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
             const messages = threadMessagesRef.current[threadId] || [];
             if (!messages.some((m) => m.id === changedMessageId)) return;
           }
-
-          void fetchThreadMessagesById(threadId, { force: true });
         },
       )
       .on(
@@ -1259,28 +1396,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
               .eq("message_id", messageId);
 
             if (reactionsData) {
-              const groupReactions = (reactions: any[], currentUserId?: string) => {
-                const groups: Record<string, { emoji: string; count: number; users: string[]; hasReacted: boolean }> =
-                  {};
-                reactions.forEach((reaction) => {
-                  if (!groups[reaction.emoji]) {
-                    groups[reaction.emoji] = {
-                      emoji: reaction.emoji,
-                      count: 0,
-                      users: [],
-                      hasReacted: false,
-                    };
-                  }
-                  groups[reaction.emoji].count++;
-                  groups[reaction.emoji].users.push(reaction.user_id);
-                  if (reaction.user_id === currentUserId) {
-                    groups[reaction.emoji].hasReacted = true;
-                  }
-                });
-                return Object.values(groups);
-              };
-
-              const reactions = groupReactions(reactionsData, user?.id);
+              const reactions = groupForumReactions(reactionsData, user?.id);
 
               setThreadMessages((prev) => {
                 const messages = prev[threadId] || [];
@@ -1318,28 +1434,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
               .eq("message_id", messageId);
 
             if (reactionsData !== null) {
-              const groupReactions = (reactions: any[], currentUserId?: string) => {
-                const groups: Record<string, { emoji: string; count: number; users: string[]; hasReacted: boolean }> =
-                  {};
-                reactions.forEach((reaction) => {
-                  if (!groups[reaction.emoji]) {
-                    groups[reaction.emoji] = {
-                      emoji: reaction.emoji,
-                      count: 0,
-                      users: [],
-                      hasReacted: false,
-                    };
-                  }
-                  groups[reaction.emoji].count++;
-                  groups[reaction.emoji].users.push(reaction.user_id);
-                  if (reaction.user_id === currentUserId) {
-                    groups[reaction.emoji].hasReacted = true;
-                  }
-                });
-                return Object.values(groups);
-              };
-
-              const reactions = groupReactions(reactionsData, user?.id);
+              const reactions = groupForumReactions(reactionsData, user?.id);
 
               setThreadMessages((prev) => {
                 const messages = prev[threadId] || [];
@@ -1402,7 +1497,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [selectedThreadId, currentChannel?.id, fetchThreadMessagesById]);
+  }, [currentChannel?.id, selectedThreadId]);
 
   // Safety net: batch-fetch missing users for displayed thread replies
   useEffect(() => {
@@ -1455,13 +1550,15 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
 
       if (error) throw error;
 
-      // Clear inputs and refresh threads
+      // Clear inputs and let the realtime path hydrate the thread row once.
       setNewThreadTitle("");
       setNewThreadContent("");
       clearPendingAttachments("create");
       setIsCreateTopicFocused(false);
       setShowFormatToolbar(false);
-      await fetchThreads();
+      if (typeof threadId === "string" && threadId) {
+        void refreshThreadById(threadId);
+      }
       showSuccess("Thread created successfully");
     } catch (error) {
       handleError(error, "Failed to create thread");
@@ -1472,7 +1569,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
     user,
     currentChannel,
     sendMessage,
-    fetchThreads,
+    refreshThreadById,
     newThreadTitle,
     newThreadContent,
     createPendingAttachments,
@@ -1923,78 +2020,73 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
       }
 
       try {
-        // Check if reaction already exists
-        const { data: existing, error: checkError } = await supabase
-          .from("thread_reactions")
-          .select("*")
-          .eq("message_id", messageId)
-          .eq("user_id", user.id)
-          .eq("emoji", emoji)
-          .maybeSingle();
+        const currentMessages = threadMessagesRef.current[selectedThreadId] || [];
+        const targetMessage = currentMessages.find((message) => message.id === messageId);
+        const existingGroup = targetMessage?.reactions?.find((reaction) => reaction.emoji === emoji);
+        const hasReacted = !!existingGroup?.users?.includes(user.id);
 
-        if (checkError && checkError.code !== "PGRST116") {
-          throw checkError;
+        const { error } = await (supabase.rpc as any)("toggle_thread_reaction", {
+          _message_id: messageId,
+          _user_id: user.id,
+          _emoji: emoji,
+        });
+
+        if (error) {
+          throw error;
         }
 
-        if (existing) {
-          // Remove reaction
-          const { error: deleteError } = await supabase
-            .from("thread_reactions")
-            .delete()
-            .eq("message_id", messageId)
-            .eq("user_id", user.id)
-            .eq("emoji", emoji);
+        setThreadMessages((prev) => {
+          if (!selectedThreadId || !prev[selectedThreadId]) return prev;
+          return {
+            ...prev,
+            [selectedThreadId]: prev[selectedThreadId].map((message) => {
+              if (message.id !== messageId) return message;
 
-          if (deleteError) {
-            throw deleteError;
-          }
-        } else {
-          // Add reaction
-          const { error: insertError } = await supabase.from("thread_reactions").insert({
-            message_id: messageId,
-            user_id: user.id,
-            emoji: emoji,
-          });
+              const currentReactions = message.reactions || [];
+              if (hasReacted) {
+                const nextReactions = currentReactions
+                  .map((reaction) => {
+                    if (reaction.emoji !== emoji) return reaction;
+                    const users = reaction.users.filter((id) => id !== user.id);
+                    return {
+                      ...reaction,
+                      count: Math.max(0, reaction.count - 1),
+                      users,
+                      hasReacted: false,
+                    };
+                  })
+                  .filter((reaction) => reaction.count > 0);
+                return { ...message, reactions: nextReactions };
+              }
 
-          if (insertError) {
-            throw insertError;
-          }
-        }
-
-        // Refresh reactions for this message
-        const { data: reactionsData } = await supabase.from("thread_reactions").select("*").eq("message_id", messageId);
-
-        if (reactionsData) {
-          const groupReactions = (reactions: any[], currentUserId?: string) => {
-            const groups: Record<string, { emoji: string; count: number; users: string[]; hasReacted: boolean }> = {};
-            reactions.forEach((reaction) => {
-              if (!groups[reaction.emoji]) {
-                groups[reaction.emoji] = {
-                  emoji: reaction.emoji,
-                  count: 0,
-                  users: [],
-                  hasReacted: false,
+              const existingReactionIndex = currentReactions.findIndex((reaction) => reaction.emoji === emoji);
+              if (existingReactionIndex < 0) {
+                return {
+                  ...message,
+                  reactions: [
+                    ...currentReactions,
+                    {
+                      emoji,
+                      count: 1,
+                      users: [user.id],
+                      hasReacted: true,
+                    },
+                  ],
                 };
               }
-              groups[reaction.emoji].count++;
-              groups[reaction.emoji].users.push(reaction.user_id);
-              if (reaction.user_id === currentUserId) {
-                groups[reaction.emoji].hasReacted = true;
-              }
-            });
-            return Object.values(groups);
+
+              const nextReactions = currentReactions.slice();
+              const currentReaction = nextReactions[existingReactionIndex];
+              nextReactions[existingReactionIndex] = {
+                ...currentReaction,
+                count: currentReaction.count + 1,
+                users: currentReaction.users.includes(user.id) ? currentReaction.users : [...currentReaction.users, user.id],
+                hasReacted: true,
+              };
+              return { ...message, reactions: nextReactions };
+            }),
           };
-
-          const reactions = groupReactions(reactionsData, user?.id);
-
-          setThreadMessages((prev) => {
-            if (!selectedThreadId || !prev[selectedThreadId]) return prev;
-            return {
-              ...prev,
-              [selectedThreadId]: prev[selectedThreadId].map((m) => (m.id === messageId ? { ...m, reactions } : m)),
-            };
-          });
-        }
+        });
 
         setShowEmojiPicker(null);
       } catch (error) {
