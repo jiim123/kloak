@@ -303,7 +303,7 @@ export const DMChatArea = () => {
   const isBlocked = isBlockedByMe || isBlockedByThem;
 
   return (
-    <div ref={swipeRef} className="h-full flex flex-col bg-layout-members">
+    <div ref={swipeRef} className="relative h-full flex flex-col bg-layout-members">
       {/* Header */}
       {isGroup ? (
         <GroupChatHeader conversation={currentConversation} participants={otherParticipants} />
@@ -312,10 +312,10 @@ export const DMChatArea = () => {
       )}
 
       {/* Messages container */}
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4" onScroll={handleScroll}>
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto pr-4" onScroll={handleScroll}>
         {/* Start of conversation */}
         {isGroup ? (
-          <div className="py-8 mb-4">
+          <div className="px-4 py-8 mb-4">
             <div className="flex items-center gap-4 mb-4">
               <StackedAvatars users={otherParticipants} size="lg" />
             </div>
@@ -326,7 +326,7 @@ export const DMChatArea = () => {
             </p>
           </div>
         ) : (
-          <div className="py-8 mb-4">
+          <div className="px-4 py-8 mb-4">
             <div className="flex items-center gap-4 mb-4">
               <div
                 className="w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-medium"
@@ -353,11 +353,11 @@ export const DMChatArea = () => {
 
         {/* Messages */}
         {isLoading && rawMessages.length === 0 ? (
-          <div className="flex items-center justify-center py-8">
+          <div className="flex items-center justify-center px-4 py-8">
             <div className="animate-pulse-subtle text-muted-foreground">Loading messages...</div>
           </div>
         ) : (
-          <div className="space-y-0.5">
+          <div>
             {groupedMessages.map(({ message, isFirst }) => (
               <MessageItem
                 key={message.id}
@@ -365,6 +365,7 @@ export const DMChatArea = () => {
                 isGrouped={!isFirst}
                 isHighlighted={message.id === highlightedMessageId}
                 dmActions={isBlocked ? undefined : dmActionsConfig}
+                flushOuterXPadding
               />
             ))}
           </div>
@@ -375,8 +376,8 @@ export const DMChatArea = () => {
 
       {/* Jump to present button */}
       {!isAtBottom && (
-        <div className="absolute bottom-24 left-1/2 -translate-x-1/2">
-          <Button variant="primary" size="sm" className="gap-2 shadow-lg" onClick={scrollToBottom}>
+        <div className="pointer-events-none absolute bottom-24 left-1/2 z-[80] -translate-x-1/2">
+          <Button variant="primary" size="sm" className="pointer-events-auto gap-2 shadow-lg" onClick={scrollToBottom}>
             <ArrowDown className="w-4 h-4" />
             {newMessageCount > 0 ? `${newMessageCount} new messages` : "Jump to Present"}
           </Button>

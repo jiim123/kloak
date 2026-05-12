@@ -131,6 +131,7 @@ interface MessageItemProps {
   };
   /** When provided, component operates in DM mode (skips server features) */
   dmActions?: DMActions;
+  flushOuterXPadding?: boolean;
 }
 
 const EMPTY_CUSTOM_EMOJI_MAP = new Map<string, string>();
@@ -293,6 +294,7 @@ export const MessageItem = memo(function MessageItem({
   globalEmojiMap: sharedGlobalEmojiMap,
   authorStyleFallback,
   dmActions,
+  flushOuterXPadding = false,
 }: MessageItemProps) {
   const isDM = !!dmActions;
   const effectiveAuthorStyle = isDM ? undefined : authorStyleFallback;
@@ -880,10 +882,10 @@ export const MessageItem = memo(function MessageItem({
   // Non-grouped (first in group): top margin for visual group separation
   // Grouped (chained): zero extra spacing for uniform line density
   const outerClassName = useMemo(() => {
-    const base = "px-2";
+    const base = flushOuterXPadding ? "px-0" : "px-2";
     const spacing = compactMode ? "py-0" : isGrouped ? "mt-[3px]" : "mt-[10px]";
     return `${base} ${spacing}`.trim();
-  }, [compactMode, isGrouped]);
+  }, [compactMode, flushOuterXPadding, isGrouped]);
 
   const isAnnouncementChannel = currentChannel?.type === "announcement";
 
@@ -1999,6 +2001,7 @@ export const MessageItem = memo(function MessageItem({
     prev.globalEmojiMap === next.globalEmojiMap &&
     prev.authorStyleFallback === next.authorStyleFallback &&
     prev.dmActions === next.dmActions &&
+    prev.flushOuterXPadding === next.flushOuterXPadding &&
     prev.onStartEdit === next.onStartEdit
   );
 });
