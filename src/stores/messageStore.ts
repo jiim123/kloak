@@ -8,7 +8,7 @@ import { useUserCacheStore, bulkSetUsersInCache, fetchAndCacheUser } from "@/sto
 import { resolveSignedUrls, isSupabaseAttachmentUrl } from "@/lib/signedUrl";
 import { afterNextPaint, beginChatPerf, endChatPerf, markChatPerf } from "@/lib/chatPerf";
 import { toast } from "sonner";
-import type { Message, MessageReply, ReactionGroup, User } from "@/types";
+import type { Message, MessageAttachment, MessageReply, ReactionGroup, User } from "@/types";
 
 interface ChannelMessages {
   messages: Message[];
@@ -106,6 +106,27 @@ interface MessageState {
 interface SendMessageOptions {
   optimisticAttachments?: Message["attachments"];
 }
+
+const isTemporaryAttachment = (attachment: MessageAttachment) =>
+  attachment.id.startsWith("temp-att-") || attachment.file_url.startsWith("blob:");
+
+const sanitizePersistedMessage = (message: Message): { message: Message; mutated: boolean } => {
+  const attachments = message.attachments || [];
+  if (attachments.length === 0) return { message, mutated: false };
+
+  const sanitizedAttachments = attachments.filter((attachment) => !isTemporaryAttachment(attachment));
+  if (sanitizedAttachments.length === attachments.length) {
+    return { message, mutated: false };
+  }
+
+  return {
+    message: {
+      ...message,
+      attachments: sanitizedAttachments,
+    },
+    mutated: true,
+  };
+};
 
 const groupReactions = (reactions: any[], currentUserId?: string): ReactionGroup[] => {
   const groups: Record<string, ReactionGroup> = {};
@@ -325,11 +346,13 @@ const readPersistedMessagesByChannel = (): Record<string, ChannelMessages> => {
 
     for (const [channelId, cache] of Object.entries(parsed || {})) {
       if (!cache || !Array.isArray(cache.messages)) continue;
-      if (now - Number(cache.lastFetched ?? 0) >= CACHE_EXPIRY_MS) continue;
+      const sanitizedMessages = (cache.messages as Message[]).map(sanitizePersistedMessage);
+      const didSanitize = sanitizedMessages.some((entry) => entry.mutated);
+      if (now - Number(cache.lastFetched ?? 0) >= CACHE_EXPIRY_MS && !didSanitize) continue;
       next[channelId] = {
-        messages: trimMessages(cache.messages),
+        messages: trimMessages(sanitizedMessages.map((entry) => entry.message)),
         hasMore: cache.hasMore ?? true,
-        lastFetched: Number(cache.lastFetched ?? now),
+        lastFetched: didSanitize ? 0 : Number(cache.lastFetched ?? now),
         oldestLoadedAt: cache.oldestLoadedAt ?? null,
       };
     }
@@ -347,7 +370,7 @@ const persistMessagesByChannel = (messagesByChannel: Record<string, ChannelMessa
       Object.entries(pruneMessagesByChannel(messagesByChannel)).map(([channelId, cache]) => [
         channelId,
         {
-          messages: cache.messages,
+          messages: cache.messages.map((message) => sanitizePersistedMessage(message).message),
           hasMore: cache.hasMore,
           lastFetched: cache.lastFetched,
           oldestLoadedAt: cache.oldestLoadedAt ?? null,

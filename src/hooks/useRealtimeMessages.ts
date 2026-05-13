@@ -115,9 +115,18 @@ export const useRealtimeMessages = (channelId: string | null) => {
       const attachments = message.attachments || [];
       if (attachments.some((entry) => entry.id === nextAttachment.id)) return;
 
+      const dedupedAttachments = attachments.filter((entry) => {
+        const isTemporary = entry.id.startsWith('temp-att-') || entry.file_url.startsWith('blob:');
+        if (!isTemporary) return true;
+        return !(
+          entry.file_name === nextAttachment.file_name &&
+          (entry.file_type || null) === (nextAttachment.file_type || null)
+        );
+      });
+
       useMessageStore.getState().updateMessage(message.id, {
         channel_id: channelId,
-        attachments: [...attachments, nextAttachment],
+        attachments: [...dedupedAttachments, nextAttachment],
       } as Partial<Message>);
     };
 
