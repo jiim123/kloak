@@ -33,6 +33,7 @@ import { useRateLimit } from "@/hooks/useRateLimit";
 import { rateLimitToast } from "@/lib/rateLimitToast";
 import { getProfileEffectSrc } from "@/lib/profileEffects";
 import { getEffectivePresence } from "@/lib/presence";
+import { hasRecentRealtimePresence } from "@/hooks/useRealtimeUsers";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -371,8 +372,23 @@ export const UserProfilePopup = () => {
           pronouns: d.pronouns ?? null,
           is_bot: d.is_bot ?? false,
         };
-        setProfileUser(nextProfileUser);
-        useUserCacheStore.getState().upsertUser(nextProfileUser);
+        const cachedUser = useUserCacheStore.getState().getUser(nextProfileUser.id);
+        const nextProfileWithFreshPresence: User =
+          cachedUser &&
+          (hasRecentRealtimePresence(nextProfileUser.id) ||
+            cachedUser.status !== nextProfileUser.status ||
+            cachedUser.last_seen !== nextProfileUser.last_seen ||
+            cachedUser.custom_status !== nextProfileUser.custom_status)
+            ? {
+                ...nextProfileUser,
+                status: cachedUser.status,
+                last_seen: cachedUser.last_seen,
+                custom_status: cachedUser.custom_status,
+              }
+            : nextProfileUser;
+
+        setProfileUser(nextProfileWithFreshPresence);
+        useUserCacheStore.getState().upsertUser(nextProfileWithFreshPresence);
 
         setUserBadges((Array.isArray(payload.badges) ? payload.badges : []) as Badge[]);
         const sharedServerIds = new Set((Array.isArray(payload.shared_server_ids) ? payload.shared_server_ids : []) as string[]);

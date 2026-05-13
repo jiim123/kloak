@@ -101,6 +101,55 @@ export const useFriendStore = create<FriendState>((set, get) => ({
           );
         }
 
+        const presenceTargetIds = Array.from(
+          new Set(
+            [
+              ...friendsData.map((f: any) => f?.user?.id),
+              ...pendingData.map((r: any) => r?.user?.id),
+              ...outgoingData.map((r: any) => r?.user?.id),
+              ...blockedData.map((b: any) => b?.user?.id),
+            ].filter((id: unknown): id is string => typeof id === 'string'),
+          ),
+        );
+
+        const presenceByUserId = new Map<string, { status: string | null; last_seen: string | null }>();
+        if (presenceTargetIds.length > 0) {
+          const { data: presenceData, error: presenceError } = await supabase.rpc('get_users_presence_secure', {
+            _user_id: userId,
+            _target_user_ids: presenceTargetIds,
+          });
+          if (presenceError) throw presenceError;
+          if (Array.isArray(presenceData)) {
+            for (const row of presenceData as Array<{ id?: string; status?: string | null; last_seen?: string | null }>) {
+              if (!row?.id) continue;
+              presenceByUserId.set(row.id, {
+                status: row.status ?? null,
+                last_seen: row.last_seen ?? null,
+              });
+            }
+          }
+        }
+
+        const withPresence = <T extends { user?: Record<string, unknown> | null }>(row: T): T => {
+          const targetUserId = typeof row.user?.id === 'string' ? row.user.id : null;
+          if (!targetUserId) return row;
+          const presence = presenceByUserId.get(targetUserId);
+          if (!presence) return row;
+          return {
+            ...row,
+            user: {
+              ...row.user,
+              status: presence.status ?? row.user?.status ?? null,
+              last_seen: presence.last_seen ?? null,
+            },
+          };
+        };
+
+        friendsData = friendsData.map(withPresence);
+        pendingData = pendingData.map(withPresence);
+        outgoingData = outgoingData.map(withPresence);
+        blockedData = blockedData.map(withPresence);
+
         const friends: FriendWithUser[] = friendsData.map((f: any) => ({
           ...f.user,
           friendship_id: f.id,

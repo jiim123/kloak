@@ -49,6 +49,7 @@ import { getEffectivePresence } from "@/lib/presence";
 import { hasRecentRealtimePresence } from "@/hooks/useRealtimeUsers";
 import { readCachedMemberCount, persistMemberCount } from "@/lib/serverMemberCount";
 import { LEFT_ALIGNED_USER_PROFILE_POPOVER, openUserProfileModal } from "@/lib/userProfilePopover";
+import { getUserFromCache, useUserCacheStore } from "@/stores/userCacheStore";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -396,6 +397,7 @@ export const MembersSidebar = () => {
 
   const openConversation = useDMStore((s) => s.openConversation);
   const blockedUserIds = useFriendStore((s) => s.visibilityBlockedUserIds);
+  const userCacheVersion = useUserCacheStore((s) => s._version);
 
   const [totalMemberCount, setTotalMemberCount] = useState<number | null>(null);
   const [isOfflineExpanded, setIsOfflineExpanded] = useState(false);
@@ -494,7 +496,7 @@ export const MembersSidebar = () => {
   }, [currentServer?.id, isMemberSidebarOpen, isMobile, user?.id]);
 
   // Filter out offline/invisible members
-  const onlineMembers = useMemo(() => {
+  const baseOnlineMembers = useMemo(() => {
     const online = members.filter((m) => !getMemberPresence(m).isOffline);
     if (!memberSearchQuery.trim()) return online;
     const q = memberSearchQuery.toLowerCase();
@@ -504,11 +506,37 @@ export const MembersSidebar = () => {
     });
   }, [members, memberSearchQuery]);
 
+  const hydratedOfflineMembers = useMemo(() => {
+    return offlineMembers.map((member) => {
+      const cachedUser = getUserFromCache(member.user_id);
+      if (!cachedUser) return member;
+      return {
+        ...member,
+        user: {
+          ...member.user,
+          ...cachedUser,
+        },
+      };
+    });
+  }, [offlineMembers, userCacheVersion]);
+
+  const onlineMemberUserIdSet = useMemo(() => new Set(baseOnlineMembers.map((m) => m.user_id)), [baseOnlineMembers]);
+
+  const promotedOfflineMembers = useMemo(() => {
+    return hydratedOfflineMembers.filter((member) => {
+      if (onlineMemberUserIdSet.has(member.user_id)) return false;
+      return !getMemberPresence(member).isOffline;
+    });
+  }, [hydratedOfflineMembers, onlineMemberUserIdSet]);
+
+  const onlineMembers = useMemo(() => {
+    if (promotedOfflineMembers.length === 0) return baseOnlineMembers;
+    return [...baseOnlineMembers, ...promotedOfflineMembers];
+  }, [baseOnlineMembers, promotedOfflineMembers]);
+
   // Keep refs in sync for confirmMassBan
   onlineMembersRef.current = onlineMembers;
-  offlineMembersRef.current = offlineMembers;
-
-  const onlineMemberUserIdSet = useMemo(() => new Set(onlineMembers.map((m) => m.user_id)), [onlineMembers]);
+  offlineMembersRef.current = hydratedOfflineMembers;
 
   // Reset paginated offline section on server change
   useEffect(() => {
@@ -646,8 +674,12 @@ export const MembersSidebar = () => {
   const currentUserMember = useMemo(() => members.find((m) => m.user_id === user?.id), [members, user?.id]);
 
   const onlineCount = onlineMembers.length;
-  const visibleCount = onlineMembers.length + offlineMembers.length;
-  const offlineDisplayCount = offlineCount ?? (offlineLoadedOnce ? offlineMembers.length : null);
+  const visibleOfflineMembers = useMemo(
+    () => hydratedOfflineMembers.filter((member) => getMemberPresence(member).isOffline),
+    [hydratedOfflineMembers],
+  );
+  const visibleCount = onlineMembers.length + visibleOfflineMembers.length;
+  const offlineDisplayCount = offlineCount ?? (offlineLoadedOnce ? visibleOfflineMembers.length : null);
 
   // FIX #13: Pre-compute isInvisibleSelf once instead of calling useAuthStore.getState()
   // inside MemberListItemContent for every single member row render
@@ -1075,7 +1107,7 @@ export const MembersSidebar = () => {
     rows.push({ kind: "offline-toggle", key: "offline-toggle" });
 
     if (isOfflineExpanded) {
-      offlineMembers.forEach((member) => {
+      visibleOfflineMembers.forEach((member) => {
         rows.push({ kind: "member", key: `member-offline-${member.id}`, member });
       });
 
@@ -1083,7 +1115,7 @@ export const MembersSidebar = () => {
         rows.push({ kind: "offline-loading", key: "offline-loading" });
       }
 
-      if (!offlineIsLoading && offlineLoadedOnce && offlineMembers.length === 0) {
+      if (!offlineIsLoading && offlineLoadedOnce && visibleOfflineMembers.length === 0) {
         rows.push({ kind: "offline-empty", key: "offline-empty" });
       }
 
@@ -1102,7 +1134,7 @@ export const MembersSidebar = () => {
     roleGroups,
     noRoleMembers,
     isOfflineExpanded,
-    offlineMembers,
+    visibleOfflineMembers,
     offlineIsLoading,
     offlineLoadedOnce,
     offlineHasMore,

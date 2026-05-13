@@ -19,6 +19,7 @@ import { FriendItemSkeleton } from "@/components/ui/skeletons";
 import { toast } from "sonner";
 import type { FriendWithUser, UserStatus } from "@/types";
 import { getEffectivePresence } from "@/lib/presence";
+import { hasRecentRealtimePresence } from "@/hooks/useRealtimeUsers";
 import { useLocation } from "react-router-dom";
 import { openUserProfileModal } from "@/lib/userProfilePopover";
 import { useUIStore } from "@/stores/uiStore";
@@ -28,6 +29,14 @@ import { rateLimitToast } from "@/lib/rateLimitToast";
 interface FriendsListProps {
   onOpenDM: () => void;
 }
+
+const getFriendListPresence = (friend: FriendWithUser) => {
+  const status = (friend.status as UserStatus) || "offline";
+  if (hasRecentRealtimePresence(friend.id)) {
+    return { status, isOffline: status === "offline" };
+  }
+  return getEffectivePresence(status, friend.last_seen, friend.id);
+};
 
 export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
   const location = useLocation();
@@ -77,7 +86,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
   }, [user?.id, isFriendsRoute, fetchFriends]);
 
   const onlineFriends = friends.filter((f) => {
-    const presence = getEffectivePresence((f.status as UserStatus) || "offline", f.last_seen, f.id);
+    const presence = getFriendListPresence(f);
     return !presence.isOffline;
   });
   const allFriends = friends;
@@ -165,7 +174,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
         <div className="relative flex-shrink-0">
           <AvatarWithDecoration user={friend} className="w-10 h-10" freezeGifUntilHover />
           {(() => {
-            const presence = getEffectivePresence((friend.status as UserStatus) || "offline", friend.last_seen, friend.id);
+            const presence = getFriendListPresence(friend);
             return (
               <div
                 className={cn(
@@ -185,7 +194,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
             <p className="text-sm text-muted-foreground truncate">{friend.custom_status}</p>
           ) : (
             (() => {
-              const presence = getEffectivePresence((friend.status as UserStatus) || "offline", friend.last_seen, friend.id);
+              const presence = getFriendListPresence(friend);
               return <p className="text-sm text-muted-foreground capitalize">{presence.status || "offline"}</p>;
             })()
           )}

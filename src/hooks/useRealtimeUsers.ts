@@ -215,6 +215,8 @@ const PRESENCE_MIN_HIDDEN_MS_FOR_REFETCH = 15_000;
 const PRESENCE_BACKSTOP_POLL_INTERVAL_MS = 300_000;
 const PRESENCE_ABSENT_GRACE_MS = 30_000;
 const RECENT_PRESENCE_WINDOW_MS = 2 * PRESENCE_POLL_INTERVAL_MS;
+const TARGET_CHANGE_APPLY_DEBOUNCE_MS = 120;
+const INITIAL_PRESENCE_BACKFILL_DELAY_MS = 250;
 
 const recentRealtimePresenceByUser = new Map<string, number>();
 
@@ -295,6 +297,7 @@ export const useRealtimeUsers = () => {
   const absenceStartedAtByUserRef = useRef<Map<string, number>>(new Map());
   const tabIdRef = useRef<string>(Math.random().toString(36).slice(2, 10));
   const applyPresenceRef = useRef<(() => void) | null>(null);
+  const pollPresenceRef = useRef<((opts?: { force?: boolean; bypassCooldown?: boolean }) => void) | null>(null);
 
   useEffect(() => {
     const userId = authUser?.id;
@@ -306,6 +309,7 @@ export const useRealtimeUsers = () => {
       absenceStartedAtByUserRef.current.clear();
       recentRealtimePresenceByUser.clear();
       applyPresenceRef.current = null;
+      pollPresenceRef.current = null;
       if (existing) {
         try {
           void existing.untrack();
@@ -405,7 +409,7 @@ export const useRealtimeUsers = () => {
     // FIX: Track target user IDs to break the feedback loop where
     // applyPresenceSnapshot → patchUserAcrossStores → store mutation → throttledApply → repeat
     let storeSubTimer: ReturnType<typeof setTimeout> | null = null;
-    let lastTargetIdsKey = '';
+    let lastTargetIdsKey = collectPresenceTargetUserIds().slice().sort().join(',');
     const throttledApply = () => {
       if (storeSubTimer) return;
       storeSubTimer = setTimeout(() => {
@@ -417,7 +421,8 @@ export const useRealtimeUsers = () => {
         if (currentKey === lastTargetIdsKey) return;
         lastTargetIdsKey = currentKey;
         applyPresenceSnapshot();
-      }, 2000);
+        void pollPresenceRef.current?.({ force: true, bypassCooldown: true });
+      }, TARGET_CHANGE_APPLY_DEBOUNCE_MS);
     };
     const unsubFriends = useFriendStore.subscribe(throttledApply);
     const unsubDMs = useDMStore.subscribe(throttledApply);
@@ -436,6 +441,7 @@ export const useRealtimeUsers = () => {
             void channel.track(payload).catch(() => undefined);
           }
           applyPresenceSnapshot();
+          void pollPresenceRef.current?.({ force: true, bypassCooldown: true });
           return;
         }
 
@@ -479,7 +485,7 @@ export const useRealtimeUsers = () => {
 
   useEffect(() => {
     // Targeted polling: only fetch presence for users we care about
-    const pollPresence = async (opts?: { force?: boolean }) => {
+    const pollPresence = async (opts?: { force?: boolean; bypassCooldown?: boolean }) => {
       const userId = useAuthStore.getState().user?.id;
       if (!userId) return;
 
@@ -493,7 +499,7 @@ export const useRealtimeUsers = () => {
         if (now - lastBackstopPollRef.current < PRESENCE_BACKSTOP_POLL_INTERVAL_MS) return;
         lastBackstopPollRef.current = now;
       }
-      if (now - lastPollRef.current < PRESENCE_FETCH_COOLDOWN_MS) return;
+      if (!opts?.bypassCooldown && now - lastPollRef.current < PRESENCE_FETCH_COOLDOWN_MS) return;
       lastPollRef.current = now;
 
       // Fetch only the columns we need (optimized query)
@@ -520,15 +526,19 @@ export const useRealtimeUsers = () => {
       });
     };
 
+    pollPresenceRef.current = (opts) => {
+      void pollPresence(opts);
+    };
+
     let initialPollTimer: ReturnType<typeof setTimeout> | null = null;
     if (document.visibilityState === 'visible') {
       initialPollTimer = setTimeout(() => {
         const lastSnapshotAt = lastPresenceSnapshotAtRef.current;
         const hasRecentSnapshot = lastSnapshotAt > 0 && Date.now() - lastSnapshotAt < 15_000;
         if (!hasRecentSnapshot) {
-          void pollPresence({ force: true });
+          void pollPresence({ force: true, bypassCooldown: true });
         }
-      }, 4_000);
+      }, INITIAL_PRESENCE_BACKFILL_DELAY_MS);
     }
 
     // Poll at reduced frequency while the tab is visible.
@@ -550,11 +560,14 @@ export const useRealtimeUsers = () => {
         hiddenAt = null;
         if (hiddenFor > 0 && hiddenFor < PRESENCE_MIN_HIDDEN_MS_FOR_REFETCH) return;
       }
-      pollPresence({ force: true });
+      void pollPresence({ force: true, bypassCooldown: true });
     };
     document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
+      if (pollPresenceRef.current) {
+        pollPresenceRef.current = null;
+      }
       if (initialPollTimer) clearTimeout(initialPollTimer);
       clearInterval(pollInterval);
       document.removeEventListener('visibilitychange', handleVisibility);

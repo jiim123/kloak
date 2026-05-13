@@ -87,6 +87,12 @@ interface DMHistoryMeta {
   prefetchedOlder?: DMPrefetchedOlderPage | null;
 }
 
+type PresenceSnapshotRow = {
+  id: string;
+  status: User["status"] | null;
+  last_seen: string | null;
+};
+
 const groupReactions = (reactions: any[], currentUserId?: string): ReactionGroup[] => {
   const groups: Record<string, ReactionGroup> = {};
 
@@ -137,6 +143,75 @@ const pruneDMMessageCache = (
     if (!keep.has(key)) delete result[key];
   }
   return result;
+};
+
+const hydrateConversationPresence = async (
+  conversations: DMConversation[],
+  userId: string,
+): Promise<DMConversation[]> => {
+  const targetUserIds = Array.from(
+    new Set(
+      conversations.flatMap((conversation) =>
+        (conversation.participants || [])
+          .map((participant) => participant.user_id)
+          .filter((participantUserId): participantUserId is string => !!participantUserId && participantUserId !== userId),
+      ),
+    ),
+  );
+
+  if (targetUserIds.length === 0) {
+    return conversations;
+  }
+
+  try {
+    const { data, error } = await supabase.rpc("get_users_presence_secure", {
+      _user_id: userId,
+      _target_user_ids: targetUserIds,
+    });
+
+    if (error) throw error;
+
+    const presenceByUserId = new Map<string, PresenceSnapshotRow>();
+    for (const row of Array.isArray(data) ? (data as PresenceSnapshotRow[]) : []) {
+      presenceByUserId.set(row.id, row);
+    }
+
+    return conversations.map((conversation) => {
+      const otherPresence = conversation.other_user?.id
+        ? presenceByUserId.get(conversation.other_user.id)
+        : undefined;
+
+      const participants = conversation.participants?.map((participant) => {
+        if (!participant.user || participant.user_id === userId) return participant;
+        const presence = presenceByUserId.get(participant.user_id);
+        if (!presence) return participant;
+        return {
+          ...participant,
+          user: {
+            ...participant.user,
+            status: (presence.status as User["status"]) || participant.user.status,
+            last_seen: presence.last_seen,
+          },
+        };
+      });
+
+      return {
+        ...conversation,
+        other_user:
+          conversation.other_user && otherPresence
+            ? {
+                ...conversation.other_user,
+                status: (otherPresence.status as User["status"]) || conversation.other_user.status,
+                last_seen: otherPresence.last_seen,
+              }
+            : conversation.other_user,
+        participants,
+      };
+    });
+  } catch (error) {
+    console.warn("Failed to hydrate DM conversation presence:", error);
+    return conversations;
+  }
 };
 
 const loadDMMessagePage = async (
@@ -292,7 +367,9 @@ export const useDMStore = create<DMState>((set, get) => ({
         };
       });
 
-      set({ conversations, isLoading: false });
+      const hydratedConversations = await hydrateConversationPresence(conversations, userId);
+
+      set({ conversations: hydratedConversations, isLoading: false });
     } catch (error) {
       console.error("Failed to fetch conversations:", error);
       set({ isLoading: false });
