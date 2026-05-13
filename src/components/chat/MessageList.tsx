@@ -71,7 +71,6 @@ const OVERFLOW_ANCHOR_NONE = { overflowAnchor: "none" as const };
 // overflowAnchor: none prevents Chrome's scroll anchoring from fighting with
 // the content-visibility transitions when rows enter/leave the viewport.
 const MESSAGE_ROW_STYLE: React.CSSProperties = {
-  contentVisibility: "auto",
   containIntrinsicSize: "auto 80px",
   overflowAnchor: "none",
 };

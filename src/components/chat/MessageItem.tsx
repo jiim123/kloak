@@ -8,6 +8,8 @@ import {
   Trash2,
   Pin,
   MoreHorizontal,
+  Share2,
+  Link2,
   CornerLeftDown,
   Copy,
   Eye,
@@ -31,6 +33,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -112,6 +115,7 @@ export interface DMActions {
   addReaction: (messageId: string, userId: string, emoji: string) => Promise<void>;
   removeReaction: (messageId: string, userId: string, emoji: string) => Promise<void>;
   onReply: (message: Message) => void;
+  conversationId?: string;
   /** Resolve display name for a user ID (for reaction tooltips) */
   nameForUserId?: (userId: string) => string;
 }
@@ -319,7 +323,6 @@ export const MessageItem = memo(function MessageItem({
   const getOptimisticStatus = useSyncStore((state) => state.getOptimisticStatus);
   const isMobile = useIsMobile();
   const topEmojis = useMemo(() => getTopEmojis(3), []);
-
   // Unified action wrappers — in DM mode, delegate to dmActions; in channel mode, use stores
   const editMessage = isDM
     ? (id: string, content: string, userId: string) => dmActions!.editMessage(id, userId, content)
@@ -854,6 +857,62 @@ export const MessageItem = memo(function MessageItem({
     navigator.clipboard.writeText(message.id);
   }, [message.id]);
 
+  const messageLink = useMemo(() => {
+    if (typeof window === "undefined") return "";
+
+    const origin = window.location.origin;
+    if (isDM) {
+      const params = new URLSearchParams();
+      if (dmActions?.conversationId) params.set("conversation", dmActions.conversationId);
+      params.set("message", message.id);
+      return `${origin}/app/friends?${params.toString()}`;
+    }
+
+    const serverId = currentServer?.id;
+    const channelId = message.channel_id || currentChannel?.id;
+    if (!serverId || !channelId) return "";
+
+    const params = new URLSearchParams({ message: message.id });
+    return `${origin}/app/servers/${serverId}/channels/${channelId}?${params.toString()}`;
+  }, [isDM, dmActions?.conversationId, message.id, message.channel_id, currentServer?.id, currentChannel?.id]);
+
+  const handleCopyMessageLink = useCallback(async () => {
+    if (!messageLink) {
+      toast.error("Message link is unavailable");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(messageLink);
+      toast.success("Message link copied");
+    } catch (error) {
+      console.error("Failed to copy message link:", error);
+      toast.error("Failed to copy message link");
+    }
+  }, [messageLink]);
+
+  const handleShareMessage = useCallback(async () => {
+    const readableContent = convertMentionsToReadable(message.content, usersMap, channelsMap);
+    const shareText = messageLink ? `${readableContent}\n${messageLink}`.trim() : readableContent;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          text: readableContent || undefined,
+          url: messageLink || undefined,
+        });
+        return;
+      }
+
+      await navigator.clipboard.writeText(shareText);
+      toast.success("Message copied for sharing");
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      console.error("Failed to share message:", error);
+      toast.error("Failed to share message");
+    }
+  }, [message.content, usersMap, channelsMap, messageLink]);
+
   const handleTouchStart = useCallback(() => {
     longPressTimerRef.current = setTimeout(() => {
       setShowMobileActions(true);
@@ -900,7 +959,7 @@ export const MessageItem = memo(function MessageItem({
 
   const innerClassName = useMemo(() => {
     const classes = [
-      "group relative flex px-4 rounded-lg hover:bg-muted/40",
+      "group relative z-0 hover:z-[80] focus-within:z-[80] flex px-4 rounded-lg hover:bg-muted/40",
       compactMode ? "gap-2 py-0.5" : isGrouped ? "gap-3 py-[1px]" : "gap-3 py-0.5",
     ];
     if (isAnnouncementChannel && !isGrouped) {
@@ -1089,7 +1148,7 @@ export const MessageItem = memo(function MessageItem({
         </div>
       )}
 
-      <div id={`message-${message.id}`} className={outerClassName} style={{ contain: "layout style" }}>
+      <div id={`message-${message.id}`} className={outerClassName}>
         {/* ContextMenu is disabled on mobile (use Drawer instead) */}
         <ContextMenu>
           <ContextMenuTrigger asChild disabled={isMobile}>
@@ -1464,8 +1523,14 @@ export const MessageItem = memo(function MessageItem({
 
               {/* Hover actions - Desktop only - skip for system messages */}
               {!isBeingEdited && !message.is_system_message && (
-                <div className="absolute right-2 -top-4 hidden md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 md:flex items-center gap-1 bg-background border border-border rounded-xl shadow-md p-1 transition-opacity duration-100">
-                  {/* Quick reactions - top 3 most used */}
+                <div
+                  className={cn(
+                    "absolute right-2 -top-4 z-[9999] hidden md:flex items-center gap-1 bg-[#171717] border border-border/70 rounded-xl shadow-xl p-1 transition-opacity duration-100",
+                    showMoreMenu || showDesktopEmojiPicker || isRowHovered
+                      ? "md:opacity-100"
+                      : "md:opacity-0",
+                  )}
+                >
                   {effectiveCanAddReactions &&
                     !isBlockedUser &&
                     topEmojis.map((emoji) => (
@@ -1496,6 +1561,9 @@ export const MessageItem = memo(function MessageItem({
                       </button>
                     </EmojiPicker>
                   )}
+                  {effectiveCanAddReactions && !isBlockedUser && (
+                    <div className="mx-1 h-5 w-px bg-border/80" aria-hidden="true" />
+                  )}
 
                   {/* Reply - Hide for blocked users */}
                   {!isBlockedUser && (
@@ -1509,47 +1577,28 @@ export const MessageItem = memo(function MessageItem({
                     </button>
                   )}
 
-                  {/* Edit (own messages) */}
-                  {isOwnMessage && (
+                  {/* Delete */}
+                  {(isOwnMessage || isAdmin) && (
                     <button
-                      className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                      onClick={handleStartEditing}
-                      aria-label="Edit"
-                      title="Edit"
+                      className="p-2 rounded-lg bg-transparent hover:bg-destructive/10 transition-colors text-destructive"
+                      onClick={handleShowDeleteModal}
+                      aria-label="Delete"
+                      title="Delete"
                     >
-                      <Pencil className="w-4 h-4" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   )}
-
-                  <div className="w-px h-5 bg-border mx-0.5" />
-
-                  {/* Pin - Hide for announcement channels */}
-                  {canPinMessages && (
-                    <button
-                      className={cn(
-                        "p-2 rounded-lg bg-transparent hover:bg-muted transition-colors",
-                        message.is_pinned ? "text-primary" : "text-muted-foreground hover:text-foreground",
-                      )}
-                      onClick={handlePin}
-                      aria-label={message.is_pinned ? "Unpin" : "Pin"}
-                      title={message.is_pinned ? "Unpin" : "Pin"}
-                    >
-                      <Pin className="w-4 h-4" />
-                    </button>
-                  )}
-
-                  {/* Copy */}
-                  <button
-                    className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                    onClick={handleCopyText}
-                    aria-label="Copy text"
-                    title="Copy text"
-                  >
-                    <Copy className="w-4 h-4" />
-                  </button>
 
                   {/* More menu */}
-                  <DropdownMenu open={showMoreMenu} onOpenChange={setShowMoreMenu}>
+                  <DropdownMenu
+                    open={showMoreMenu}
+                    onOpenChange={(open) => {
+                      setShowMoreMenu(open);
+                      if (!open) {
+                        setIsRowHovered(false);
+                      }
+                    }}
+                  >
                     <DropdownMenuTrigger asChild>
                       <button
                         className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
@@ -1559,28 +1608,32 @@ export const MessageItem = memo(function MessageItem({
                         <MoreHorizontal className="w-4 h-4" />
                       </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="min-w-[160px]">
-                      <DropdownMenuItem onClick={handleCopyMessageId}>
-                        <Copy className="w-4 h-4 mr-2" />
-                        Copy Message ID
+                    <DropdownMenuContent align="end" className="min-w-[190px] overflow-hidden p-0">
+                      {isOwnMessage && (
+                        <DropdownMenuItem onClick={handleStartEditing} className="rounded-none px-3 py-2.5">
+                          <Pencil className="w-4 h-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                      )}
+                      {isOwnMessage && <DropdownMenuSeparator className="mx-0 my-0" />}
+                      <DropdownMenuItem onClick={handleShareMessage} className="rounded-none px-3 py-2.5">
+                        <Share2 className="w-4 h-4 mr-2" />
+                        Share message
                       </DropdownMenuItem>
+                      <DropdownMenuSeparator className="mx-0 my-0" />
+                      <DropdownMenuItem onClick={handleCopyMessageLink} className="rounded-none px-3 py-2.5">
+                        <Link2 className="w-4 h-4 mr-2" />
+                        Copy link
+                      </DropdownMenuItem>
+                      {canPinMessages && <DropdownMenuSeparator className="mx-0 my-0" />}
+                      {canPinMessages && (
+                        <DropdownMenuItem onClick={handlePin} className="rounded-none px-3 py-2.5">
+                          <Pin className="w-4 h-4 mr-2" />
+                          {message.is_pinned ? "Unpin message" : "Pin message"}
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
-
-                  {/* Delete */}
-                  {(isOwnMessage || isAdmin) && (
-                    <>
-                      <div className="w-px h-5 bg-border mx-0.5" />
-                      <button
-                        className="p-2 rounded-lg bg-transparent hover:bg-destructive/10 transition-colors text-destructive"
-                  onClick={handleShowDeleteModal}
-                        aria-label="Delete"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </>
-                  )}
                 </div>
               )}
             </div>

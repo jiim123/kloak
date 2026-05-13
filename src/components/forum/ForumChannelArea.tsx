@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo, type CSSProperties } from "react";
 import { FluentEmoji } from "@/components/ui/FluentEmoji";
+import { getTopEmojis } from "@/lib/emojiRecents";
 import { useSignedUrl } from "@/hooks/useSignedUrl";
 import { ChannelHeader } from "@/components/chat/ChannelHeader";
 import { useServerStore } from "@/stores/serverStore";
@@ -28,6 +29,8 @@ import {
   Smile,
   Pencil,
   Trash2,
+  Share2,
+  Link2,
   CornerUpLeft,
   Users,
   Layers,
@@ -35,6 +38,7 @@ import {
   Pin,
   Lock,
   LockOpen,
+  MoreHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -60,6 +64,13 @@ import {
   Sheet,
   SheetContent,
 } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { secureUpload } from "@/lib/storageUpload";
 import { handleError, showSuccess, showWarning } from "@/lib/errorHandler";
@@ -313,11 +324,13 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState<Message | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
+  const [showMoreMenuForMessageId, setShowMoreMenuForMessageId] = useState<string | null>(null);
   const [showDeleteThreadModal, setShowDeleteThreadModal] = useState(false);
   const [threadToDelete, setThreadToDelete] = useState<Thread | null>(null);
   const [threadAttachmentLightboxUrl, setThreadAttachmentLightboxUrl] = useState<string | null>(null);
   const [jumpedThreadMessageId, setJumpedThreadMessageId] = useState<string | null>(null);
   const [reactionUserNameOverrides, setReactionUserNameOverrides] = useState<Map<string, string>>(new Map());
+  const topEmojis = useMemo(() => getTopEmojis(3), []);
   const createTopicTitleRef = useRef<HTMLInputElement>(null);
   const createTopicTextareaRef = useRef<HTMLTextAreaElement>(null);
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -2096,6 +2109,50 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
     [user, selectedThreadId],
   );
 
+  const buildForumMessageLink = useCallback((messageId: string) => {
+    if (typeof window === "undefined" || !currentServer?.id || !currentChannel?.id) return "";
+    const params = new URLSearchParams({ message: messageId });
+    if (selectedThreadId) params.set("thread", selectedThreadId);
+    return `${window.location.origin}/app/servers/${currentServer.id}/channels/${currentChannel.id}?${params.toString()}`;
+  }, [currentServer?.id, currentChannel?.id, selectedThreadId]);
+
+  const handleCopyForumMessageLink = useCallback(async (messageId: string) => {
+    const link = buildForumMessageLink(messageId);
+    if (!link) {
+      showWarning("Link unavailable", "This message link is not available right now.");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(link);
+      showSuccess("Message link copied");
+    } catch (error) {
+      handleError(error, "Failed to copy message link");
+    }
+  }, [buildForumMessageLink]);
+
+  const handleShareForumMessage = useCallback(async (messageId: string, content: string) => {
+    const readableContent = stripAttachmentUrls(content);
+    const link = buildForumMessageLink(messageId);
+    const shareText = link ? `${readableContent}\n${link}`.trim() : readableContent;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          text: readableContent || undefined,
+          url: link || undefined,
+        });
+        return;
+      }
+
+      await navigator.clipboard.writeText(shareText);
+      showSuccess("Message copied for sharing");
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      handleError(error, "Failed to share message");
+    }
+  }, [buildForumMessageLink]);
+
   const handleForumSend = useCallback(
     async (threadId: string, finalContent: string, replyToId: string | null) => {
       if (!user) return;
@@ -2969,18 +3026,35 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                                 </div>
 
                                 {/* Hover actions menu */}
-                                {(isHovered || showEmojiPicker === msg.id) && !isEditing && (
+                                {(isHovered || showEmojiPicker === msg.id || showMoreMenuForMessageId === msg.id) && !isEditing && (
                                   <div
                                     className="hover-actions-menu absolute right-2 -top-4 z-50 flex items-center gap-1 bg-background/95 backdrop-blur-sm border border-border rounded-xl shadow-xl p-1 transition-opacity duration-200"
                                     onMouseEnter={() => setHoveredMessageId(msg.id)}
                                     onMouseLeave={(e) => {
                                       const relatedTarget = e.relatedTarget as HTMLElement;
-                                      if (!relatedTarget || !relatedTarget.closest('[role="dialog"]')) {
+                                      if (!relatedTarget || !relatedTarget.closest('[role="dialog"], [role="menu"]')) {
                                         setHoveredMessageId(null);
                                       }
                                     }}
                                     onClick={(e) => e.stopPropagation()}
                                   >
+                                    {topEmojis.map((emoji) => (
+                                      <button
+                                        key={`forum-quick-${msg.id}-${emoji}`}
+                                        type="button"
+                                        className="p-1.5 rounded-lg bg-transparent hover:bg-muted transition-colors"
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          handleAddReaction(msg.id, emoji);
+                                        }}
+                                        onMouseDown={(e) => e.preventDefault()}
+                                        aria-label={`React with ${emoji}`}
+                                        title={`React with ${emoji}`}
+                                      >
+                                        <FluentEmoji emoji={emoji} size={18} />
+                                      </button>
+                                    ))}
                                     {/* Add Reaction */}
                                     <EmojiGifPicker
                                       open={showEmojiPicker === msg.id}
@@ -3007,6 +3081,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                                         <Smile className="w-4 h-4" />
                                       </button>
                                     </EmojiGifPicker>
+                                    <div className="mx-1 h-5 w-px bg-border/80" aria-hidden="true" />
 
                                     {/* Reply */}
                                     {canReplyToSelectedThread && (
@@ -3029,28 +3104,6 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                                       </button>
                                     )}
 
-                                    {/* Edit (own messages) */}
-                                    {isOwnMessage && (
-                                      <button
-                                        type="button"
-                                        className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                                        onClick={(e) => {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                          setEditingMessageId(msg.id);
-                                          setEditContent(msg.content);
-                                          setTimeout(() => editTextareaRef.current?.focus(), 0);
-                                        }}
-                                        onMouseDown={(e) => e.preventDefault()}
-                                        aria-label="Edit"
-                                        title="Edit"
-                                      >
-                                        <Pencil className="w-4 h-4" />
-                                      </button>
-                                    )}
-
-                                    <div className="w-px h-5 bg-border mx-0.5" />
-
                                     {/* Delete (own messages or admins) */}
                                     {canDeleteMessage && (
                                       <button
@@ -3072,6 +3125,61 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                                         <Trash2 className="w-4 h-4" />
                                       </button>
                                     )}
+
+                                    <DropdownMenu
+                                      open={showMoreMenuForMessageId === msg.id}
+                                      onOpenChange={(open) => {
+                                        setShowMoreMenuForMessageId(open ? msg.id : null);
+                                        if (open) {
+                                          setHoveredMessageId(msg.id);
+                                        } else {
+                                          setHoveredMessageId(null);
+                                        }
+                                      }}
+                                    >
+                                      <DropdownMenuTrigger asChild>
+                                        <button
+                                          type="button"
+                                          className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                                          aria-label="More actions"
+                                          title="More"
+                                          onMouseDown={(e) => e.preventDefault()}
+                                        >
+                                          <MoreHorizontal className="w-4 h-4" />
+                                        </button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end" className="min-w-[190px] overflow-hidden p-0">
+                                        {isOwnMessage && (
+                                          <DropdownMenuItem
+                                            onClick={() => {
+                                              setEditingMessageId(msg.id);
+                                              setEditContent(msg.content);
+                                              setTimeout(() => editTextareaRef.current?.focus(), 0);
+                                            }}
+                                            className="rounded-none px-3 py-2.5"
+                                          >
+                                            <Pencil className="w-4 h-4 mr-2" />
+                                            Edit
+                                          </DropdownMenuItem>
+                                        )}
+                                        {isOwnMessage && <DropdownMenuSeparator className="mx-0 my-0" />}
+                                        <DropdownMenuItem
+                                          onClick={() => void handleShareForumMessage(msg.id, msg.content)}
+                                          className="rounded-none px-3 py-2.5"
+                                        >
+                                          <Share2 className="w-4 h-4 mr-2" />
+                                          Share message
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator className="mx-0 my-0" />
+                                        <DropdownMenuItem
+                                          onClick={() => void handleCopyForumMessageLink(msg.id)}
+                                          className="rounded-none px-3 py-2.5"
+                                        >
+                                          <Link2 className="w-4 h-4 mr-2" />
+                                          Copy link
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
                                   </div>
                                 )}
                               </div>
@@ -3536,18 +3644,35 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                                 </div>
 
                                 {/* Hover actions menu */}
-                                {(isHovered || showEmojiPicker === msg.id) && !isEditing && (
+                                {(isHovered || showEmojiPicker === msg.id || showMoreMenuForMessageId === msg.id) && !isEditing && (
                                   <div
                                     className="hover-actions-menu absolute right-2 -top-4 z-50 flex items-center gap-1 bg-background/95 backdrop-blur-sm border border-border rounded-xl shadow-xl p-1 transition-opacity duration-200"
                                     onMouseEnter={() => setHoveredMessageId(msg.id)}
                                     onMouseLeave={(e) => {
                                       const relatedTarget = e.relatedTarget as HTMLElement;
-                                      if (!relatedTarget || !relatedTarget.closest('[role="dialog"]')) {
+                                      if (!relatedTarget || !relatedTarget.closest('[role="dialog"], [role="menu"]')) {
                                         setHoveredMessageId(null);
                                       }
                                     }}
                                     onClick={(e) => e.stopPropagation()}
                                   >
+                                    {topEmojis.map((emoji) => (
+                                      <button
+                                        key={`forum-quick-${msg.id}-${emoji}`}
+                                        type="button"
+                                        className="p-1.5 rounded-lg bg-transparent hover:bg-muted transition-colors"
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          handleAddReaction(msg.id, emoji);
+                                        }}
+                                        onMouseDown={(e) => e.preventDefault()}
+                                        aria-label={`React with ${emoji}`}
+                                        title={`React with ${emoji}`}
+                                      >
+                                        <FluentEmoji emoji={emoji} size={18} />
+                                      </button>
+                                    ))}
                                     {/* Add Reaction */}
                                     <EmojiGifPicker
                                       open={showEmojiPicker === msg.id}
@@ -3574,6 +3699,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                                         <Smile className="w-4 h-4" />
                                       </button>
                                     </EmojiGifPicker>
+                                    <div className="mx-1 h-5 w-px bg-border/80" aria-hidden="true" />
 
                                     {/* Reply */}
                                     {canReplyToSelectedThread && (
@@ -3596,28 +3722,6 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                                       </button>
                                     )}
 
-                                    {/* Edit (own messages) */}
-                                    {isOwnMessage && (
-                                      <button
-                                        type="button"
-                                        className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                                        onClick={(e) => {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                          setEditingMessageId(msg.id);
-                                          setEditContent(msg.content);
-                                          setTimeout(() => editTextareaRef.current?.focus(), 0);
-                                        }}
-                                        onMouseDown={(e) => e.preventDefault()}
-                                        aria-label="Edit"
-                                        title="Edit"
-                                      >
-                                        <Pencil className="w-4 h-4" />
-                                      </button>
-                                    )}
-
-                                    <div className="w-px h-5 bg-border mx-0.5" />
-
                                     {/* Delete (own messages or admins) */}
                                     {canDeleteMessage && (
                                       <button
@@ -3639,6 +3743,61 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                                         <Trash2 className="w-4 h-4" />
                                       </button>
                                     )}
+
+                                    <DropdownMenu
+                                      open={showMoreMenuForMessageId === msg.id}
+                                      onOpenChange={(open) => {
+                                        setShowMoreMenuForMessageId(open ? msg.id : null);
+                                        if (open) {
+                                          setHoveredMessageId(msg.id);
+                                        } else {
+                                          setHoveredMessageId(null);
+                                        }
+                                      }}
+                                    >
+                                      <DropdownMenuTrigger asChild>
+                                        <button
+                                          type="button"
+                                          className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                                          aria-label="More actions"
+                                          title="More"
+                                          onMouseDown={(e) => e.preventDefault()}
+                                        >
+                                          <MoreHorizontal className="w-4 h-4" />
+                                        </button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end" className="min-w-[190px] overflow-hidden p-0">
+                                        {isOwnMessage && (
+                                          <DropdownMenuItem
+                                            onClick={() => {
+                                              setEditingMessageId(msg.id);
+                                              setEditContent(msg.content);
+                                              setTimeout(() => editTextareaRef.current?.focus(), 0);
+                                            }}
+                                            className="rounded-none px-3 py-2.5"
+                                          >
+                                            <Pencil className="w-4 h-4 mr-2" />
+                                            Edit
+                                          </DropdownMenuItem>
+                                        )}
+                                        {isOwnMessage && <DropdownMenuSeparator className="mx-0 my-0" />}
+                                        <DropdownMenuItem
+                                          onClick={() => void handleShareForumMessage(msg.id, msg.content)}
+                                          className="rounded-none px-3 py-2.5"
+                                        >
+                                          <Share2 className="w-4 h-4 mr-2" />
+                                          Share message
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator className="mx-0 my-0" />
+                                        <DropdownMenuItem
+                                          onClick={() => void handleCopyForumMessageLink(msg.id)}
+                                          className="rounded-none px-3 py-2.5"
+                                        >
+                                          <Link2 className="w-4 h-4 mr-2" />
+                                          Copy link
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
                                   </div>
                                 )}
                               </div>

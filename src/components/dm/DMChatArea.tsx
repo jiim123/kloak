@@ -254,7 +254,8 @@ export const DMChatArea = () => {
       const raw = rawMessagesRef.current.find((m) => m.id === message.id);
       if (raw) setReplyingTo(raw);
     },
-  }), []);
+    conversationId: currentConversation?.id,
+  }), [currentConversation?.id]);
 
   // Determine if this is a group conversation
   const isGroup = currentConversation?.is_group || false;
