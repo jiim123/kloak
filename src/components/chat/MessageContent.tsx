@@ -498,6 +498,7 @@ export const MessageContent = ({
   const [isUpdatingRoleId, setIsUpdatingRoleId] = useState<string | null>(null);
   const [mentionedUsersMap, setMentionedUsersMap] = useState<Map<string, UserInfo>>(new Map());
   const contentRef = useRef<HTMLDivElement>(null);
+  const attachmentRetryTimersRef = useRef<number[]>([]);
   const segments = useMemo(() => parseMessageSegments(content), [content]);
   const effectiveCustomEmojiMap = providedCustomEmojiMap ?? localCustomEmojiMap;
   const effectiveGlobalEmojiMap = providedGlobalEmojiMap ?? localGlobalEmojiMap;
@@ -727,15 +728,29 @@ export const MessageContent = ({
     const el = contentRef.current;
     if (!el) return;
     let cancelled = false;
+    const retryDelaysMs = [800, 1500, 2500, 4000, 6000];
 
-    // Resolve kloak-attachment:// references (new format)
-    const attachmentEls = el.querySelectorAll<HTMLElement>("[data-attachment-path]");
-    attachmentEls.forEach((element) => {
-      const path = element.dataset.attachmentPath;
-      if (!path) return;
+    attachmentRetryTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+    attachmentRetryTimersRef.current = [];
 
+    const scheduleAttachmentRetry = (run: () => void, delayMs: number) => {
+      const timerId = window.setTimeout(() => {
+        attachmentRetryTimersRef.current = attachmentRetryTimersRef.current.filter((id) => id !== timerId);
+        run();
+      }, delayMs);
+      attachmentRetryTimersRef.current.push(timerId);
+    };
+
+    const resolveAttachmentPath = (element: HTMLElement, path: string, attempt = 0) => {
       getSignedAttachmentUrl(path).then((signedUrl) => {
-        if (cancelled || !signedUrl) return;
+        if (cancelled) return;
+
+        if (!signedUrl) {
+          if (attempt < retryDelaysMs.length) {
+            scheduleAttachmentRetry(() => resolveAttachmentPath(element, path, attempt + 1), retryDelaysMs[attempt]);
+          }
+          return;
+        }
 
         if (element instanceof HTMLImageElement) {
           const preloadImg = new Image();
@@ -753,7 +768,20 @@ export const MessageContent = ({
           element.target = "_blank";
           element.rel = "noopener noreferrer";
         }
+      }).catch(() => {
+        if (cancelled) return;
+        if (attempt < retryDelaysMs.length) {
+          scheduleAttachmentRetry(() => resolveAttachmentPath(element, path, attempt + 1), retryDelaysMs[attempt]);
+        }
       });
+    };
+
+    // Resolve kloak-attachment:// references (new format)
+    const attachmentEls = el.querySelectorAll<HTMLElement>("[data-attachment-path]");
+    attachmentEls.forEach((element) => {
+      const path = element.dataset.attachmentPath;
+      if (!path) return;
+      resolveAttachmentPath(element, path);
     });
 
     // Resolve legacy signed URLs for images
@@ -792,6 +820,8 @@ export const MessageContent = ({
 
     return () => {
       cancelled = true;
+      attachmentRetryTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+      attachmentRetryTimersRef.current = [];
     };
   }, [content]);
 

@@ -6,7 +6,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useServerStore } from '@/stores/serverStore';
 import { useUserCacheStore } from '@/stores/userCacheStore';
 import { resolveSignedUrls, isSupabaseAttachmentUrl } from '@/lib/signedUrl';
-import type { Message, MessageReply } from '@/types';
+import type { Message, MessageAttachment, MessageReply } from '@/types';
 import { getUserFromCache, getOrFetchUser } from '@/stores/userCacheStore';
 import type { User } from '@/types';
 import { canRevealGhostIdentityForUser, getGhostPseudonymousUserId } from '@/lib/ghostIdentity';
@@ -46,6 +46,17 @@ type BroadcastMutationPayload<T> = {
   old?: T;
 };
 
+type MessageAttachmentRealtimeRow = {
+  id?: string;
+  message_id?: string;
+  file_name?: string;
+  file_url?: string;
+  file_type?: string | null;
+  file_size?: number | null;
+  width?: number | null;
+  height?: number | null;
+};
+
 const getCacheCatchupState = (
   cacheEntry: { messages?: Array<unknown>; lastFetched?: number } | undefined,
   now: number,
@@ -83,6 +94,47 @@ export const useRealtimeMessages = (channelId: string | null) => {
     const RETRY_MAX_DELAY_MS = 60000;
     const messageFilter = { event: "messages", scope: listenerScopeRef.current };
     const reactionFilter = { event: "reactions", scope: listenerScopeRef.current };
+
+    const mergeAttachmentIntoMessage = (attachmentRow: MessageAttachmentRealtimeRow) => {
+      if (!attachmentRow.id || !attachmentRow.message_id) return;
+      const channelMessages = useMessageStore.getState().messagesByChannel[channelId]?.messages || [];
+      const message = channelMessages.find((entry) => entry.id === attachmentRow.message_id);
+      if (!message) return;
+
+      const nextAttachment: MessageAttachment = {
+        id: attachmentRow.id,
+        message_id: attachmentRow.message_id,
+        file_name: attachmentRow.file_name || 'attachment',
+        file_url: attachmentRow.file_url || '',
+        file_type: attachmentRow.file_type ?? null,
+        file_size: attachmentRow.file_size ?? null,
+        width: attachmentRow.width ?? null,
+        height: attachmentRow.height ?? null,
+      };
+
+      const attachments = message.attachments || [];
+      if (attachments.some((entry) => entry.id === nextAttachment.id)) return;
+
+      useMessageStore.getState().updateMessage(message.id, {
+        channel_id: channelId,
+        attachments: [...attachments, nextAttachment],
+      } as Partial<Message>);
+    };
+
+    const removeAttachmentFromMessage = (attachmentRow: MessageAttachmentRealtimeRow) => {
+      if (!attachmentRow.id || !attachmentRow.message_id) return;
+      const channelMessages = useMessageStore.getState().messagesByChannel[channelId]?.messages || [];
+      const message = channelMessages.find((entry) => entry.id === attachmentRow.message_id);
+      if (!message?.attachments?.length) return;
+
+      const nextAttachments = message.attachments.filter((entry) => entry.id !== attachmentRow.id);
+      if (nextAttachments.length === message.attachments.length) return;
+
+      useMessageStore.getState().updateMessage(message.id, {
+        channel_id: channelId,
+        attachments: nextAttachments,
+      } as Partial<Message>);
+    };
 
     const removeScopedBindings = (target: ReturnType<typeof supabase.channel> | null) => {
       if (!target) return;
@@ -410,6 +462,36 @@ export const useRealtimeMessages = (channelId: string | null) => {
               console.error('[Realtime] Error processing message event:', error);
             }
           }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'message_attachments',
+          },
+          (payload) => {
+            try {
+              mergeAttachmentIntoMessage(payload.new as MessageAttachmentRealtimeRow);
+            } catch (error) {
+              console.error('[Realtime] Error processing message attachment insert:', error);
+            }
+          },
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'message_attachments',
+          },
+          (payload) => {
+            try {
+              removeAttachmentFromMessage(payload.old as MessageAttachmentRealtimeRow);
+            } catch (error) {
+              console.error('[Realtime] Error processing message attachment delete:', error);
+            }
+          },
         )
         .on(
           'broadcast',

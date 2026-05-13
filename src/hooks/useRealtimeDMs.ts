@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useDMStore, registerDMChannel, unregisterDMChannel } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
 import { resolveSignedUrls, isSupabaseAttachmentUrl } from '@/lib/signedUrl';
-import type { DirectMessage } from '@/types';
+import type { DirectMessage, DMAttachment } from '@/types';
 import { getOrFetchUser, useUserCacheStore } from '@/stores/userCacheStore';
 
 
@@ -21,6 +21,17 @@ type DirectMessageRealtimeRow = {
   created_at?: string;
   edited_at?: string | null;
   reply_to_id?: string | null;
+};
+
+type DMAttachmentRealtimeRow = {
+  id?: string;
+  message_id?: string;
+  file_name?: string;
+  file_url?: string;
+  file_type?: string | null;
+  file_size?: number | null;
+  width?: number | null;
+  height?: number | null;
 };
 
 
@@ -180,6 +191,38 @@ export const useRealtimeDMs = ({
     [removeMessage],
   );
 
+  const mergeAttachmentIntoConversation = useCallback(
+    (attachmentRow: DMAttachmentRealtimeRow) => {
+      if (!attachmentRow.id || !attachmentRow.message_id) return;
+      const { messagesByConversation } = useDMStore.getState();
+
+      for (const [conversationId, messages] of Object.entries(messagesByConversation)) {
+        const message = messages.find((entry) => entry.id === attachmentRow.message_id);
+        if (!message) continue;
+
+        const nextAttachment: DMAttachment = {
+          id: attachmentRow.id,
+          message_id: attachmentRow.message_id,
+          file_name: attachmentRow.file_name || 'attachment',
+          file_url: attachmentRow.file_url || '',
+          file_type: attachmentRow.file_type ?? null,
+          file_size: attachmentRow.file_size ?? null,
+          width: attachmentRow.width ?? null,
+          height: attachmentRow.height ?? null,
+        };
+
+        const attachments = message.attachments || [];
+        if (attachments.some((entry) => entry.id === nextAttachment.id)) return;
+
+        updateMessage(conversationId, message.id, {
+          attachments: [...attachments, nextAttachment],
+        });
+        return;
+      }
+    },
+    [updateMessage],
+  );
+
   // Subscribe to the active conversation's broadcast channel
   useEffect(() => {
     if (!userId || !currentConversationId) return;
@@ -248,6 +291,22 @@ export const useRealtimeDMs = ({
       updateMessage(payload.conversation_id, payload.message_id, { reactions });
     });
 
+    channel.on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'dm_attachments',
+      },
+      (payload) => {
+        try {
+          mergeAttachmentIntoConversation(payload.new as DMAttachmentRealtimeRow);
+        } catch (error) {
+          console.error('[DM] Error processing attachment insert:', error);
+        }
+      },
+    );
+
     channel.subscribe((status, err) => {
       if (status === 'SUBSCRIBED') {
         console.log(`[DM] Listening on dm:${currentConversationId}`);
@@ -260,7 +319,7 @@ export const useRealtimeDMs = ({
       unregisterDMChannel(currentConversationId);
       supabase.removeChannel(channel);
     };
-  }, [userId, currentConversationId, handleNewMessage, handleMessageUpdate, handleMessageDelete]);
+  }, [userId, currentConversationId, handleNewMessage, handleMessageUpdate, handleMessageDelete, mergeAttachmentIntoConversation]);
 
   // Subscribe to background conversations for unread indicators (up to 10 most recent)
   useEffect(() => {
