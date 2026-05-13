@@ -43,6 +43,7 @@ import { canRevealGhostIdentityForUser } from "@/lib/ghostIdentity";
 import { encodeCustomEmojisForTransport } from "@/lib/globalEmojiResolver";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
 import { useServerEmojis } from "@/hooks/useServerEmojis";
+import { getSignedAttachmentUrl } from "@/lib/signedUrl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { MessageAttachment } from "@/types";
@@ -133,6 +134,48 @@ const ALLOWED_FILE_EXTENSIONS =
 const DRAFT_SAVE_DELAY = 500;
 const TYPING_STOP_DELAY = 2000;
 const KLOAK_ATTACHMENT_PREFIX = "kloak-attachment://";
+const ATTACHMENT_READY_RETRY_DELAYS_MS = [800, 1500, 2500, 4000, 6000];
+const ATTACHMENT_INSERT_RETRY_DELAYS_MS = [1200, 2500, 5000];
+
+const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+async function waitForAttachmentReady(storagePath: string): Promise<boolean> {
+  for (let attempt = 0; attempt <= ATTACHMENT_READY_RETRY_DELAYS_MS.length; attempt += 1) {
+    const signedUrl = await getSignedAttachmentUrl(storagePath);
+    if (signedUrl) return true;
+    if (attempt < ATTACHMENT_READY_RETRY_DELAYS_MS.length) {
+      await sleep(ATTACHMENT_READY_RETRY_DELAYS_MS[attempt]);
+    }
+  }
+  return false;
+}
+
+function isRetryableAttachmentInsertError(error: unknown): boolean {
+  const code = typeof error === "object" && error && "code" in error ? String((error as { code?: unknown }).code ?? "") : "";
+  const message =
+    typeof error === "object" && error && "message" in error ? String((error as { message?: unknown }).message ?? "") : "";
+  return code === "57014" || /timeout|timed out|still processing/i.test(message);
+}
+
+async function insertAttachmentsWithRetry(
+  table: "message_attachments" | "dm_attachments",
+  attachments: Array<{
+    message_id: string;
+    file_url: string;
+    file_name: string;
+    file_type: string | null;
+    file_size: number | null;
+  }>,
+): Promise<void> {
+  for (let attempt = 0; attempt <= ATTACHMENT_INSERT_RETRY_DELAYS_MS.length; attempt += 1) {
+    const { error } = await supabase.from(table).insert(attachments);
+    if (!error) return;
+    if (!isRetryableAttachmentInsertError(error) || attempt >= ATTACHMENT_INSERT_RETRY_DELAYS_MS.length) {
+      throw error;
+    }
+    await sleep(ATTACHMENT_INSERT_RETRY_DELAYS_MS[attempt]);
+  }
+}
 
 // Memoized action bar (full-width bottom bar)
 const ActionBar = memo(
@@ -770,7 +813,15 @@ export const MessageInput = ({
               }
             }
 
+            const attachmentReadiness = await Promise.all(
+              preparedAttachments.map(async (attachment) => {
+                if (!attachment.storagePath) return true;
+                return waitForAttachmentReady(attachment.storagePath);
+              }),
+            );
+
             const persistedAttachments = preparedAttachments
+              .filter((_, i) => attachmentReadiness[i])
               .map((attachment, i) => ({
                 message_id: sentMessage.id,
                 file_url: attachment.contentUrl,
@@ -782,42 +833,11 @@ export const MessageInput = ({
 
             if (persistedAttachments.length === 0) return;
 
-            const { data: insertedAttachments, error: attachError } = await supabase
-              .from(isDM ? "dm_attachments" : "message_attachments")
-              .insert(persistedAttachments)
-              .select();
-
-            if (attachError) {
-              throw attachError;
-            }
-
-            if (insertedAttachments && insertedAttachments.length > 0) {
-              const formattedAttachments = insertedAttachments.map((a: any) => ({
-                id: a.id,
-                message_id: a.message_id,
-                file_url: a.file_url,
-                file_name: a.file_name,
-                file_type: a.file_type,
-                file_size: a.file_size,
-                width: a.width,
-                height: a.height,
-              }));
-
-              if (isDM) {
-                useDMStore.getState().updateMessage(targetId, sentMessage.id, {
-                  attachments: formattedAttachments,
-                });
-              } else {
-                useMessageStore.getState().updateMessage(sentMessage.id, {
-                  channel_id: targetId,
-                  attachments: formattedAttachments,
-                } as any);
-              }
-            }
+            await insertAttachmentsWithRetry(isDM ? "dm_attachments" : "message_attachments", persistedAttachments);
           } catch (attachmentError) {
             console.error("[MessageInput] Attachment finalize error:", attachmentError);
-            toast.error("Attachment upload is still processing", {
-              description: "Your message was sent, but one or more attachments could not be finalized.",
+            toast.error("Attachment processing is delayed", {
+              description: "Your message was sent. The attachment will appear once storage finishes syncing.",
             });
           }
         })();
