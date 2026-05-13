@@ -988,6 +988,68 @@ body {
   box-shadow: none !important;
 }
 
+/* Screenshot-inspired app shell. Scoped so public/landing pages keep their brand treatment. */
+.discord-inspired {
+  --background: 225 8% 20%;
+  --foreground: 220 14% 92%;
+  --card: 225 8% 22%;
+  --card-foreground: 220 14% 92%;
+  --popover: 225 8% 19%;
+  --popover-foreground: 220 14% 92%;
+  --primary: 47 100% 50%;
+  --primary-foreground: 225 10% 8%;
+  --secondary: 226 8% 27%;
+  --secondary-foreground: 220 14% 92%;
+  --muted: 226 8% 27%;
+  --muted-foreground: 225 9% 70%;
+  --accent: 142 46% 52%;
+  --accent-foreground: 225 10% 8%;
+  --border: 226 8% 30%;
+  --input: 226 8% 27%;
+  --sidebar: 225 9% 17%;
+  --sidebar-secondary: 225 10% 12%;
+  --chat: 225 8% 20%;
+  --members: 225 8% 22%;
+  --sidebar-background: 225 9% 17%;
+  --sidebar-foreground: 225 9% 70%;
+  --sidebar-accent: 226 8% 27%;
+  --sidebar-accent-foreground: 220 14% 92%;
+  --kloak-online: 113 76% 54%;
+  --kloak-idle: 45 100% 50%;
+  --kloak-dnd: 358 77% 58%;
+  --kloak-offline: 225 5% 56%;
+  background: hsl(var(--chat));
+}
+
+.discord-inspired .channel-sidebar-scroll {
+  scrollbar-color: hsl(var(--muted-foreground) / 0.35) transparent;
+}
+
+.discord-inspired [data-messages-container] {
+  padding: 10px 0 8px;
+}
+
+.discord-inspired [data-message-row] > div {
+  border-radius: 0;
+}
+
+.discord-inspired [data-message-row] > div:hover {
+  background: hsl(225 7% 24% / 0.72);
+}
+
+.discord-inspired .mention,
+.discord-inspired .mention-role,
+.discord-inspired .mention-self {
+  background: hsl(142 42% 42% / 0.34);
+  color: hsl(139 48% 60%);
+  font-weight: 700;
+}
+
+.discord-inspired .channel-tag {
+  background: hsl(142 42% 42% / 0.28);
+  color: hsl(139 48% 60%);
+}
+
 /* ── Kloak Toast Animations ── */
 @keyframes kloak-toast-enter {
   from {

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import poweredByKlipy from "@/assets/powered-by-klipy.svg";
 import { Search, X, Clock, TrendingUp, LayoutGrid } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,7 +19,8 @@ import {
 } from "@/lib/klipyApi";
 
 interface GifPickerProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
+  anchor?: React.ReactNode;
   onSelect: (url: string) => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -274,7 +275,7 @@ function GifPickerContent({
   );
 }
 
-export const GifPicker = ({ children, onSelect, open, onOpenChange }: GifPickerProps) => {
+export const GifPicker = ({ children, anchor, onSelect, open, onOpenChange }: GifPickerProps) => {
   const user = useAuthStore((s) => s.user);
   const isMobile = useIsMobile();
   const [tab, setTab] = useState<Tab>("trending");
@@ -287,6 +288,7 @@ export const GifPicker = ({ children, onSelect, open, onOpenChange }: GifPickerP
   const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ignoreOutsideCloseRef = useRef(false);
 
   useEffect(() => {
     if (!open) return;
@@ -367,6 +369,15 @@ export const GifPicker = ({ children, onSelect, open, onOpenChange }: GifPickerP
   }, []);
 
   useEffect(() => {
+    if (open) {
+      ignoreOutsideCloseRef.current = true;
+      const timer = window.setTimeout(() => {
+        ignoreOutsideCloseRef.current = false;
+      }, 120);
+
+      return () => window.clearTimeout(timer);
+    }
+
     if (!open) {
       setQuery("");
       setTab("trending");
@@ -396,7 +407,7 @@ export const GifPicker = ({ children, onSelect, open, onOpenChange }: GifPickerP
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerTrigger asChild>{children}</DrawerTrigger>
+        {children && <DrawerTrigger asChild>{children}</DrawerTrigger>}
         <DrawerContent className="h-[70vh] max-h-[90vh] p-0 bg-card border-border/50 rounded-t-2xl overflow-hidden flex flex-col">
           <GifPickerContent {...contentProps} />
         </DrawerContent>
@@ -406,13 +417,18 @@ export const GifPicker = ({ children, onSelect, open, onOpenChange }: GifPickerP
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
-      <PopoverTrigger asChild>{children}</PopoverTrigger>
+      {anchor ? <PopoverAnchor asChild>{anchor}</PopoverAnchor> : children && <PopoverTrigger asChild>{children}</PopoverTrigger>}
       <PopoverContent
         className="w-[380px] p-0 bg-card border-border/50 rounded-2xl shadow-2xl overflow-hidden"
         side="top"
         align="end"
         sideOffset={12}
         onOpenAutoFocus={(e) => e.preventDefault()}
+        onInteractOutside={(e) => {
+          if (ignoreOutsideCloseRef.current) {
+            e.preventDefault();
+          }
+        }}
       >
         <GifPickerContent {...contentProps} />
       </PopoverContent>

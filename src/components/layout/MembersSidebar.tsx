@@ -13,6 +13,7 @@ import {
   ChevronDown,
   Loader2,
   ListChecks,
+  Plus,
   X,
   Check,
   Search,
@@ -245,8 +246,8 @@ const MemberListItemContent = forwardRef<HTMLDivElement, MemberListItemContentPr
       <div
         ref={ref}
         className={cn(
-          "group flex items-center gap-2.5 mx-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors",
-          "hover:bg-secondary/60 active:bg-secondary/80",
+          "group flex items-center gap-2 mx-2 px-1.5 py-1 rounded-md cursor-pointer transition-colors",
+          "hover:bg-secondary/45 active:bg-secondary/70",
           className,
         )}
         style={mergedStyle}
@@ -258,12 +259,12 @@ const MemberListItemContent = forwardRef<HTMLDivElement, MemberListItemContentPr
         <div className="relative flex-shrink-0">
           <AvatarWithDecoration
             user={member.user}
-            className={cn("w-8 h-8 rounded-full", memberIsOffline && "opacity-40 grayscale-[30%]")}
+            className={cn("w-7 h-7 rounded-full", memberIsOffline && "opacity-50 grayscale-[30%]")}
             showDecoration={false}
             freezeGifUntilHover
             active={isHovered}
           />
-          <div className="absolute -bottom-0.5 -right-0.5 p-[2px] bg-background rounded-full">
+          <div className="absolute -bottom-0.5 -right-0.5 p-[2px] bg-layout-members rounded-full">
             <StatusIndicator
               status={presence.status}
               isStale={presence.isOffline && presence.isStale}
@@ -277,7 +278,7 @@ const MemberListItemContent = forwardRef<HTMLDivElement, MemberListItemContentPr
             {isServerOwner && <Crown className="w-3 h-3 text-amber-400 flex-shrink-0" />}
             <span
               className={cn(
-                "text-[13px] font-medium truncate leading-tight font-[Inter,system-ui,sans-serif]",
+                "text-[13px] font-semibold truncate leading-tight",
                 memberIsOffline ? "text-muted-foreground/70" : priorityCustomRoleColor ? "" : "text-foreground",
               )}
               style={nameStyle}
@@ -291,7 +292,7 @@ const MemberListItemContent = forwardRef<HTMLDivElement, MemberListItemContentPr
           {member.user?.custom_status && (
             <p
               className={cn(
-                "text-[11px] truncate mt-0.5 max-w-[140px]",
+                "text-[11px] truncate mt-0.5 max-w-[154px]",
                 memberIsOffline ? "text-muted-foreground/60" : "text-muted-foreground/80",
               )}
               title={member.user.custom_status}
@@ -323,19 +324,19 @@ const SectionHeader = memo(
     icon?: string | null;
     serverId?: string;
   }) => (
-    <div className="flex items-center gap-2 px-3 py-2">
-      {icon && serverId ? (
+    <div className="flex items-center gap-1 px-3 pb-1.5 pt-3">
+      {false && icon && serverId ? (
         <RoleIconPreview icon={icon} serverId={serverId} className="flex-shrink-0" />
       ) : colorDot ? (
         <div
-          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+          className="hidden w-2.5 h-2.5 rounded-full flex-shrink-0"
           style={colorDot.startsWith("linear-gradient") ? { background: colorDot } : { backgroundColor: colorDot }}
         />
       ) : null}
-      <span className="text-[11px] font-medium uppercase tracking-wider" style={color ? { color } : undefined}>
-        {label}
+      <span className="text-[12px] font-bold text-muted-foreground">
+        {count}
       </span>
-      <span className="text-[11px] font-medium text-muted-foreground/70">{count}</span>
+      <span className="text-[12px] font-bold text-muted-foreground">{label}</span>
     </div>
   ),
 );
@@ -672,6 +673,7 @@ export const MembersSidebar = () => {
   // Permissions
   const { hasPermission: checkPermission, isOwner: currentUserIsOwner } = useMemberPermissions();
   const currentUserMember = useMemo(() => members.find((m) => m.user_id === user?.id), [members, user?.id]);
+  const canCreateInvite = currentUserIsOwner || checkPermission("create_instant_invite") || checkPermission("manage_invites");
 
   const onlineCount = onlineMembers.length;
   const visibleOfflineMembers = useMemo(
@@ -1062,6 +1064,10 @@ export const MembersSidebar = () => {
     setMemberSearchQuery("");
   }, []);
 
+  const handleOpenInvite = useCallback(() => {
+    openModal("invite");
+  }, [openModal]);
+
   const handleCloseSidebar = useCallback(() => {
     setMemberSidebarOpen(false);
   }, [setMemberSidebarOpen]);
@@ -1166,19 +1172,19 @@ export const MembersSidebar = () => {
           return (
             <button
               type="button"
-              className="w-full flex items-center gap-2 px-3 py-2 hover:bg-secondary/40 transition-colors mt-2"
+              className="w-full flex items-center gap-1 px-3 pb-1.5 pt-3 hover:bg-secondary/30 transition-colors mt-1 text-left"
               onClick={handleToggleOfflineSection}
             >
               <ChevronDown
                 className={cn(
-                  "w-3.5 h-3.5 text-muted-foreground transition-transform",
+                  "hidden w-3.5 h-3.5 text-muted-foreground transition-transform",
                   isOfflineExpanded && "rotate-180",
                 )}
               />
-              <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Offline</span>
               {offlineDisplayCount != null && (
-                <span className="text-[11px] font-medium text-muted-foreground/70">{offlineDisplayCount}</span>
+                <span className="text-[12px] font-bold text-muted-foreground">{offlineDisplayCount}</span>
               )}
+              <span className="text-[12px] font-bold text-muted-foreground">Offline</span>
             </button>
           );
         case "offline-loading":
@@ -1228,11 +1234,11 @@ export const MembersSidebar = () => {
     <div
       className={cn(
         "h-full flex flex-col w-full overflow-hidden relative",
-        "bg-card rounded-[10px] border border-border/50",
+        "bg-layout-chat border-l border-border/60",
       )}
     >
       {/* Header */}
-      <div className={cn("px-3 py-2.5 border-b border-border/10", isMobile && "px-3 py-3")}>
+      <div className={cn("px-3 py-2.5 border-b border-border/10", !isMobile && "hidden", isMobile && "px-3 py-3")}>
         {massBanMode ? (
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-destructive">Select members to ban</p>
@@ -1279,11 +1285,54 @@ export const MembersSidebar = () => {
         )}
       </div>
 
+      {!isMobile && !massBanMode && (
+        <div className="mx-4 mt-4 shrink-0">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
+            <input
+              type="text"
+              placeholder="Search members"
+              value={memberSearchQuery}
+              onChange={handleSearchChange}
+              className="h-9 w-full rounded-md border border-border/50 bg-layout-members pl-9 pr-9 text-[13px] text-foreground outline-none transition-colors placeholder:text-muted-foreground/55 focus:border-primary/80"
+            />
+            {memberSearchQuery && (
+              <button
+                type="button"
+                className="absolute right-1.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
+                onClick={handleClearSearch}
+                aria-label="Clear member search"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Members List */}
-      <div ref={listViewportRef} className="flex-1 overflow-y-auto py-2">
-        <ViewportList viewportRef={listViewportRef} items={memberListRows} itemSize={44} overscan={14}>
+      <div
+        ref={listViewportRef}
+        className={cn(
+          "flex-1 overflow-y-auto py-2",
+          !isMobile && "mx-4 mb-10 mt-4 rounded bg-layout-members px-1.5",
+        )}
+      >
+        <ViewportList viewportRef={listViewportRef} items={memberListRows} itemSize={40} overscan={14}>
           {renderRow}
         </ViewportList>
+        {!isMobile && canCreateInvite && (
+          <button
+            type="button"
+            onClick={handleOpenInvite}
+            className="mt-1 flex w-full items-center gap-3 rounded-md px-2 py-2 text-left text-muted-foreground transition-colors hover:bg-secondary/45 hover:text-foreground"
+          >
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+              <Plus className="h-5 w-5" />
+            </span>
+            <span className="text-[13px] font-medium">Invite</span>
+          </button>
+        )}
       </div>
 
       {/* Mass ban floating action bar */}

@@ -14,6 +14,8 @@ import {
   Info,
   Check,
   Pencil,
+  Plus,
+  ClipboardList,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthStore } from "@/stores/authStore";
@@ -46,6 +48,13 @@ import { useServerEmojis } from "@/hooks/useServerEmojis";
 import { getSignedAttachmentUrl } from "@/lib/signedUrl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { MessageAttachment } from "@/types";
 
 export interface DMInputConfig {
@@ -197,39 +206,110 @@ const ActionBar = memo(
     currentServer,
     onAttachClick,
     allowExternalEmojis,
+    textareaNode,
   }: any) => {
     const showCharacterWarning = content.length > MAX_LENGTH - 200;
-    const isMobile = useIsMobile();
     const canSend = (content.trim() || hasAttachments) && !isSending && canSubmitMessage;
 
     const iconBtnClass =
-      "flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/6 hover:text-foreground transition-colors";
+      "flex h-10 w-10 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground transition-colors disabled:cursor-not-allowed disabled:opacity-40";
+    const menuItemClass =
+      "min-h-[36px] cursor-pointer gap-2.5 px-3 py-2 text-[13px] font-semibold text-[#dbdee1] focus:bg-white/[0.07] hover:bg-white/[0.07]";
 
     return (
-      <div className="flex items-center justify-between px-2 sm:px-3 pb-2 pt-0.5">
-        {/* Left actions */}
-        <div className="flex items-center gap-0.5">
-          {onAttachClick && (
-            <button onClick={onAttachClick} disabled={!canSendMessage} className={iconBtnClass}>
-              <Paperclip className="w-5 h-5" />
-            </button>
-          )}
-          {setShowCreatePoll && (
-            <>
-              <div className="w-px h-5 bg-foreground/8 mx-0.5" />
+      <div className="flex min-h-[44px] items-end gap-1">
+        <div className="relative h-11 w-11 shrink-0">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                onClick={() => setShowCreatePoll(true)}
                 disabled={!canSendMessage}
-                className={iconBtnClass}
+                className="flex h-11 w-11 items-center justify-center border-r border-white/10 text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                aria-label="Open message actions"
               >
-                <SquareChartGantt className="w-5 h-5" />
+                <Plus className="h-6 w-6" />
               </button>
-            </>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              side="top"
+              sideOffset={8}
+              className="w-[292px] rounded-md border border-white/10 bg-[#4E505C] p-0 shadow-[0_10px_28px_rgba(0,0,0,0.35)]"
+            >
+              {onAttachClick && (
+                <DropdownMenuItem
+                  disabled={!canSendMessage}
+                  onSelect={onAttachClick}
+                  className={menuItemClass}
+                >
+                  <Paperclip className="h-4 w-4 text-[#b5bac1]" />
+                  <span>Media or file</span>
+                </DropdownMenuItem>
+              )}
+
+              {setShowGifPicker && (
+                <DropdownMenuItem
+                  disabled={!canSendMessage}
+                  onSelect={() => {
+                    window.requestAnimationFrame(() => setShowGifPicker(true));
+                  }}
+                  className={menuItemClass}
+                >
+                  <ImagePlay className="h-4 w-4 text-[#b5bac1]" />
+                  <span>GIF</span>
+                </DropdownMenuItem>
+              )}
+
+              {setShowCreatePoll && (
+                <>
+                  <DropdownMenuSeparator className="bg-white/[0.06]" />
+                  <DropdownMenuItem
+                    disabled={!canSendMessage}
+                    onSelect={() => setShowCreatePoll(true)}
+                    className={`${menuItemClass} items-start`}
+                  >
+                    <SquareChartGantt className="mt-0.5 h-4 w-4 text-[#b5bac1]" />
+                    <span className="flex flex-col leading-tight">
+                      <span>Poll</span>
+                      <span className="mt-0.5 text-[13px] font-medium text-[#b5bac1]">
+                        A single or multiple-choice question.
+                      </span>
+                    </span>
+                  </DropdownMenuItem>
+                </>
+              )}
+
+              <DropdownMenuItem
+                disabled={!canSendMessage}
+                onSelect={() => toast.info("Forms are coming soon")}
+                className={`${menuItemClass} items-start`}
+              >
+                <ClipboardList className="mt-0.5 h-4 w-4 text-[#b5bac1]" />
+                <span className="flex flex-col leading-tight">
+                  <span>Form</span>
+                  <span className="mt-0.5 text-[13px] font-medium text-[#b5bac1]">
+                    Multiple questions with various question types.
+                  </span>
+                </span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {setShowGifPicker && (
+            <GifPicker
+              open={showGifPicker}
+              onOpenChange={setShowGifPicker}
+              onSelect={onGifSelect}
+              anchor={<span className="absolute inset-0 pointer-events-none" />}
+            />
           )}
+        </div>
 
-          <div className="w-px h-5 bg-foreground/8 mx-0.5" />
+        <div className="min-w-0 flex-1 px-1 py-1.5">
+          {textareaNode}
+        </div>
 
+        <div className="flex shrink-0 items-center pr-1.5">
           <EmojiPicker
             open={showEmojiPicker}
             onOpenChange={setShowEmojiPicker}
@@ -242,17 +322,6 @@ const ActionBar = memo(
             </button>
           </EmojiPicker>
 
-          {setShowGifPicker && (
-            <GifPicker open={showGifPicker} onOpenChange={setShowGifPicker} onSelect={onGifSelect}>
-              <button type="button" className={iconBtnClass} onMouseDown={(e) => e.preventDefault()}>
-                <ImagePlay className="w-5 h-5" />
-              </button>
-            </GifPicker>
-          )}
-        </div>
-
-        {/* Right side */}
-        <div className="flex items-center gap-1.5">
           <AnimatePresence>
             {showCharacterWarning && (
               <motion.span
@@ -260,7 +329,7 @@ const ActionBar = memo(
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
                 transition={{ duration: 0.15, ease: "easeOut" }}
-                className={`text-[13px] font-sans ${content.length > MAX_LENGTH - 50 ? "text-destructive" : "text-muted-foreground"}`}
+                className={`mr-1 text-[13px] font-sans ${content.length > MAX_LENGTH - 50 ? "text-destructive" : "text-muted-foreground"}`}
               >
                 {MAX_LENGTH - content.length}
               </motion.span>
@@ -1051,7 +1120,7 @@ export const MessageInput = ({
   }
 
   return (
-    <div className="px-4 pb-4 sm:pb-5 relative bg-transparent">
+    <div className="px-5 pb-5 pt-2 relative bg-transparent">
       <input
         ref={fileInputRef}
         type="file"
@@ -1356,13 +1425,13 @@ const MobileOptimizedInput = memo(
     const hasAttachments = pendingAttachments.length > 0;
 
     return (
-      <div
-        className={`rounded-[14px] bg-card/55 border transition-all duration-200 shadow-[0_8px_30px_rgba(0,0,0,0.12)] ${
-          isFocused
-            ? "border-border shadow-[0_10px_34px_rgba(0,0,0,0.18)] bg-card/55"
-            : "border-border/50 hover:border-border/50"
+        <div
+          className={`rounded-lg bg-muted/35 border transition-all duration-200 shadow-none ${
+            isFocused
+            ? "border-border bg-muted/35"
+            : "border-border/60 hover:border-border"
         } ${replyingTo || isEditMode || (showMentions && hasMentionOptions) || (showChannels && hasChannelOptions) ? "!rounded-t-none" : ""}`}
-      >
+        >
         <AnimatePresence>
           {hasAttachments && (
             <motion.div
@@ -1382,33 +1451,6 @@ const MobileOptimizedInput = memo(
           )}
         </AnimatePresence>
 
-        {/* Textarea area */}
-        <div className="px-3.5 sm:px-4 pt-2.5">
-          <textarea
-            ref={textareaRef}
-            value={content}
-            onChange={handleChange}
-            onFocus={(e) => {
-              setIsFocused(true);
-              onInputFocus?.(e);
-            }}
-            onBlur={() => setIsFocused(false)}
-            onMouseDown={onInputMouseDown}
-            onKeyDown={handleKeyDown}
-            onPaste={handlePaste}
-            placeholder={forumPlaceholder || (dmPlaceholder ? (hasAttachments ? "Add a comment..." : `Message @${dmPlaceholder.length > (isMobile ? 12 : 17) ? dmPlaceholder.slice(0, isMobile ? 12 : 17) + "…" : dmPlaceholder}`) : (isLockedByNotice ? "Write a message..." : canSendMessage ? "Write a message..." : "Locked"))}
-            disabled={!canSendMessage}
-            rows={1}
-            className="message-input-textarea w-full bg-transparent resize-none outline-none py-1 min-h-[36px] max-h-[160px] overflow-y-auto text-foreground placeholder:text-muted-foreground/60 font-[Inter,system-ui,sans-serif]"
-            style={{
-              fontSize: "15px",
-              lineHeight: "1.45",
-              fontWeight: 400,
-            }}
-          />
-        </div>
-
-        {/* Action bar */}
         <ActionBar
           showCreatePoll={showCreatePoll}
           setShowCreatePoll={setShowCreatePoll}
@@ -1427,6 +1469,30 @@ const MobileOptimizedInput = memo(
           currentServer={currentServer}
           allowExternalEmojis={allowExternalEmojis}
           onAttachClick={onAttachClick}
+          textareaNode={
+            <textarea
+              ref={textareaRef}
+              value={content}
+              onChange={handleChange}
+              onFocus={(e) => {
+                setIsFocused(true);
+                onInputFocus?.(e);
+              }}
+              onBlur={() => setIsFocused(false)}
+              onMouseDown={onInputMouseDown}
+              onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
+              placeholder={forumPlaceholder || (dmPlaceholder ? (hasAttachments ? "Add a comment..." : `Message @${dmPlaceholder.length > (isMobile ? 12 : 17) ? dmPlaceholder.slice(0, isMobile ? 12 : 17) + "..." : dmPlaceholder}`) : (isLockedByNotice ? "Write a message..." : canSendMessage ? `Message ${channelName || "channel"}` : "Locked"))}
+              disabled={!canSendMessage}
+              rows={1}
+              className="message-input-textarea block w-full resize-none bg-transparent py-1.5 text-foreground outline-none min-h-[34px] max-h-[160px] overflow-y-auto placeholder:text-muted-foreground/60 font-[Inter,system-ui,sans-serif]"
+              style={{
+                fontSize: "15px",
+                lineHeight: "1.45",
+                fontWeight: 400,
+              }}
+            />
+          }
         />
       </div>
     );

@@ -499,7 +499,7 @@ const AppLayout = () => {
       <div className="h-screen flex flex-col overflow-hidden app-layout-font">
         <div className="flex-1 flex overflow-hidden">
           {!isMobileRaw && <div className="w-[72px] shrink-0 bg-layout-sidebar" />}
-          {!isMobileRaw && <div className="w-[278px] shrink-0 bg-[hsl(var(--layout-channels))]" />}
+          {!isMobileRaw && <div className="w-[288px] shrink-0 bg-[hsl(var(--layout-channels))]" />}
           <div className="flex-1 bg-layout-chat flex items-center justify-center">
             <KloakDrawLoader />
           </div>
@@ -531,7 +531,7 @@ const AppLayout = () => {
       <UnreadDMsContext.Provider value={unreadDMsContextValue}>
         <UnreadChannelsContext.Provider value={unreadChannelsContextValue}>
         <SEO title={desktopTitle} noIndex />
-        <div className="h-screen flex flex-col overflow-hidden app-layout-font app-no-motion">
+        <div className="h-screen flex flex-col overflow-hidden app-layout-font app-no-motion discord-inspired">
           <DesktopTitleBar title={desktopTitle} />
 
           {MAINTENANCE_MODE && (
@@ -592,11 +592,11 @@ const AppLayout = () => {
               </div>
             ) : (
               /* Desktop layout */
-              <div className="flex flex-col flex-1 overflow-hidden bg-background">
+              <div className="flex flex-col flex-1 overflow-hidden bg-layout-chat">
                 {/* Alpha notice banner */}
                 {!isFullscreenSettingsOverlayOpen && <AlphaNoticeBanner />}
 
-                <div className="flex flex-1 overflow-hidden relative p-2 gap-2">
+                <div className="flex flex-1 overflow-hidden relative">
                   {/* Server list on left - hidden during full-screen settings */}
                   {!isFullscreenSettingsOverlayOpen && <ServerSidebar />}
 
@@ -619,8 +619,8 @@ const AppLayout = () => {
 
                   {/* Main layout - ALWAYS mounted so VoicePersistentHost never unmounts */}
                   <div className={cn("flex-1 overflow-hidden", isFullscreenSettingsOverlayOpen && "invisible")}>
-                    <div className="flex h-full gap-2">
-                      <div className="w-[278px] shrink-0 overflow-hidden bg-card rounded-[10px] border border-border/50">
+                    <div className="flex h-full">
+                      <div className="w-[288px] shrink-0 overflow-hidden bg-layout-sidebar">
                         {isDMView ? (
                           <DMSidebar
                             showFriends={showFriends}
@@ -635,7 +635,7 @@ const AppLayout = () => {
 
                       <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
                         {showDesktopUnifiedChannelHeader && currentChannel && (
-                          <div className="flex-shrink-0 overflow-visible pb-2">
+                          <div className="flex-shrink-0 overflow-visible">
                             <ChannelHeader
                               channel={currentChannel}
                               showMessageActions={currentChannel.type !== "tasks"}
@@ -643,8 +643,8 @@ const AppLayout = () => {
                           </div>
                         )}
 
-                        <div className="min-h-0 flex flex-1 gap-2">
-                          <div className="min-w-0 flex-1 rounded-[10px] border border-border/50 bg-transparent relative overflow-hidden">
+                        <div className="min-h-0 flex flex-1">
+                          <div className="min-w-0 flex-1 bg-layout-chat relative overflow-hidden">
                             <VoicePersistentHost />
                             {/* Keep all views mounted, toggle visibility with CSS to prevent remount sluggishness */}
                             {currentConversation && (
@@ -676,7 +676,7 @@ const AppLayout = () => {
                           </div>
 
                           {!isDMView && !isServerSpecialView && isMemberSidebarOpen && (
-                            <div className="w-[260px] shrink-0 rounded-[10px] overflow-hidden">
+                            <div className="w-[304px] shrink-0 overflow-hidden">
                               <MembersSidebar />
                             </div>
                           )}

@@ -1327,7 +1327,9 @@ export const MessageItem = memo(function MessageItem({
                                 <span className="inline-flex items-center mr-1.5 cursor-help">{roleIconNode}</span>
                               </RoleIconWrapper>
                             </TooltipTrigger>
-                            <TooltipContent>{priorityRoleWithIcon.name}</TooltipContent>
+                            <TooltipContent className="border-transparent bg-[#4F515D] text-white">
+                              {priorityRoleWithIcon.name}
+                            </TooltipContent>
                           </Tooltip>
                         )}
                         {message.is_pinned && <Pin className="w-3 h-3 text-muted-foreground inline mr-1" />}
@@ -1351,7 +1353,9 @@ export const MessageItem = memo(function MessageItem({
                                   <span className="inline-flex items-center cursor-help">{roleIconNode}</span>
                                 </RoleIconWrapper>
                               </TooltipTrigger>
-                              <TooltipContent>{priorityRoleWithIcon.name}</TooltipContent>
+                              <TooltipContent className="border-transparent bg-[#4F515D] text-white">
+                                {priorityRoleWithIcon.name}
+                              </TooltipContent>
                             </Tooltip>
                           )}
                           {showTimestamps && (
@@ -1500,7 +1504,9 @@ export const MessageItem = memo(function MessageItem({
                         <TooltipTrigger asChild>
                           <span className="text-[10px] text-muted-foreground cursor-help ml-1">(edited)</span>
                         </TooltipTrigger>
-                        <TooltipContent>{new Date(message.edited_at).toLocaleString()}</TooltipContent>
+                        <TooltipContent className="border-transparent bg-[#4F515D] text-white">
+                          {new Date(message.edited_at).toLocaleString()}
+                        </TooltipContent>
                       </Tooltip>
                     )}
 
@@ -1525,7 +1531,7 @@ export const MessageItem = memo(function MessageItem({
               {!isBeingEdited && !message.is_system_message && (
                 <div
                   className={cn(
-                    "absolute right-2 -top-4 z-[9999] hidden md:flex items-center gap-1 bg-[#171717] border border-border/70 rounded-xl shadow-xl p-1 transition-opacity duration-100",
+                    "absolute right-2 -top-4 z-[9999] hidden md:flex items-center gap-0.5 bg-[#4E505C] border border-border/70 rounded-md shadow-xl p-0.5 transition-opacity duration-100",
                     showMoreMenu || showDesktopEmojiPicker || isRowHovered
                       ? "md:opacity-100"
                       : "md:opacity-0",
@@ -1536,7 +1542,7 @@ export const MessageItem = memo(function MessageItem({
                     topEmojis.map((emoji) => (
                       <button
                         key={`quick-${emoji}`}
-                        className="p-1.5 rounded-lg bg-transparent hover:bg-muted transition-colors"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-transparent transition-colors hover:bg-muted"
                         onClick={() => handleAddReaction(emoji)}
                         aria-label={`React with ${emoji}`}
                         title={`React with ${emoji}`}
@@ -1553,7 +1559,7 @@ export const MessageItem = memo(function MessageItem({
                       serverId={currentServer?.id}
                     >
                       <button
-                        className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         aria-label="Add reaction"
                         title="Add reaction"
                       >
@@ -1562,13 +1568,13 @@ export const MessageItem = memo(function MessageItem({
                     </EmojiPicker>
                   )}
                   {effectiveCanAddReactions && !isBlockedUser && (
-                    <div className="mx-1 h-5 w-px bg-border/80" aria-hidden="true" />
+                    <div className="mx-0.5 h-4 w-px bg-white/20" aria-hidden="true" />
                   )}
 
                   {/* Reply - Hide for blocked users */}
                   {!isBlockedUser && (
                     <button
-                      className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                       onClick={handleReply}
                       aria-label="Reply"
                       title="Reply"
@@ -1580,7 +1586,7 @@ export const MessageItem = memo(function MessageItem({
                   {/* Delete */}
                   {(isOwnMessage || isAdmin) && (
                     <button
-                      className="p-2 rounded-lg bg-transparent hover:bg-destructive/10 transition-colors text-destructive"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-transparent text-destructive transition-colors hover:bg-destructive/10"
                       onClick={handleShowDeleteModal}
                       aria-label="Delete"
                       title="Delete"
@@ -1601,34 +1607,34 @@ export const MessageItem = memo(function MessageItem({
                   >
                     <DropdownMenuTrigger asChild>
                       <button
-                        className="p-2 rounded-lg bg-transparent hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         aria-label="More actions"
                         title="More"
                       >
                         <MoreHorizontal className="w-4 h-4" />
                       </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="min-w-[190px] overflow-hidden p-0">
+                    <DropdownMenuContent align="end" className="min-w-[190px] overflow-hidden rounded-md bg-[#4E505C] p-0">
                       {isOwnMessage && (
-                        <DropdownMenuItem onClick={handleStartEditing} className="rounded-none px-3 py-2.5">
-                          <Pencil className="w-4 h-4 mr-2" />
+                        <DropdownMenuItem onClick={handleStartEditing} className="rounded-none px-3 py-2">
+                          <Pencil className="h-4 w-4 shrink-0 mr-2" />
                           Edit
                         </DropdownMenuItem>
                       )}
-                      {isOwnMessage && <DropdownMenuSeparator className="mx-0 my-0" />}
-                      <DropdownMenuItem onClick={handleShareMessage} className="rounded-none px-3 py-2.5">
-                        <Share2 className="w-4 h-4 mr-2" />
+                      {isOwnMessage && <DropdownMenuSeparator className="mx-0 my-0 bg-white/10" />}
+                      <DropdownMenuItem onClick={handleShareMessage} className="rounded-none px-3 py-2">
+                        <Share2 className="h-4 w-4 shrink-0 mr-2" />
                         Share message
                       </DropdownMenuItem>
-                      <DropdownMenuSeparator className="mx-0 my-0" />
-                      <DropdownMenuItem onClick={handleCopyMessageLink} className="rounded-none px-3 py-2.5">
-                        <Link2 className="w-4 h-4 mr-2" />
+                      <DropdownMenuSeparator className="mx-0 my-0 bg-white/10" />
+                      <DropdownMenuItem onClick={handleCopyMessageLink} className="rounded-none px-3 py-2">
+                        <Link2 className="h-4 w-4 shrink-0 mr-2" />
                         Copy link
                       </DropdownMenuItem>
-                      {canPinMessages && <DropdownMenuSeparator className="mx-0 my-0" />}
+                      {canPinMessages && <DropdownMenuSeparator className="mx-0 my-0 bg-white/10" />}
                       {canPinMessages && (
-                        <DropdownMenuItem onClick={handlePin} className="rounded-none px-3 py-2.5">
-                          <Pin className="w-4 h-4 mr-2" />
+                        <DropdownMenuItem onClick={handlePin} className="rounded-none px-3 py-2">
+                          <Pin className="h-4 w-4 shrink-0 mr-2" />
                           {message.is_pinned ? "Unpin message" : "Pin message"}
                         </DropdownMenuItem>
                       )}
@@ -1639,7 +1645,7 @@ export const MessageItem = memo(function MessageItem({
             </div>
           </ContextMenuTrigger>
 
-          <ContextMenuContent>
+          <ContextMenuContent className="w-56">
             {!isBlockedUser && (
               <ContextMenuItem onClick={handleReply}>
                 <Reply className="w-4 h-4" />

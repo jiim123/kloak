@@ -1304,7 +1304,7 @@ export const ServerSidebar = () => {
   );
 
   return (
-    <div className="h-full w-[68px] shrink-0 flex flex-col items-center relative overflow-hidden bg-layout-sidebar">
+    <div className="h-full w-[72px] shrink-0 flex flex-col items-center relative overflow-hidden bg-layout-sidebar">
       <DndContext
         sensors={sensors}
         onDragStart={handleDragStart}

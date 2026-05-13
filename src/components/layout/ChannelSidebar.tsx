@@ -1077,6 +1077,7 @@ export const ChannelSidebar = () => {
   const [overCategoryId, setOverCategoryId] = useState<string | null>(null);
   const [isSortingMode, setIsSortingMode] = useState(false);
   const [bgDrawerOpen, setBgDrawerOpen] = useState(false);
+  const [isServerHeaderCondensed, setIsServerHeaderCondensed] = useState(false);
 
   const channelIds = useMemo(() => (channels || []).map((c) => c.id), [channels]);
   const { getChannelUnread, markAsRead } = useUnreadChannelsContext();
@@ -1249,6 +1250,15 @@ export const ChannelSidebar = () => {
   );
 
   const isDraggingAny = activeId !== null;
+
+  useEffect(() => {
+    setIsServerHeaderCondensed(false);
+  }, [currentServer?.id]);
+
+  const handleChannelListScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
+    const shouldCondense = event.currentTarget.scrollTop > 20;
+    setIsServerHeaderCondensed((prev) => (prev === shouldCondense ? prev : shouldCondense));
+  }, []);
 
   const toggleCategory = useCallback((categoryId: string) => {
     setCollapsedCategories((prev) => {
@@ -1581,7 +1591,7 @@ export const ChannelSidebar = () => {
 
   if (!currentServer) {
     return (
-      <div className="h-full flex flex-col p-2 bg-layout-sidebar">
+      <div className="h-full flex flex-col bg-layout-sidebar">
         <div className="flex-1 flex flex-col bg-card/50 rounded-2xl border border-border/50 items-center justify-center">
           <div className="text-center animate-fade-in">
             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-secondary/50 flex items-center justify-center">
@@ -1593,6 +1603,13 @@ export const ChannelSidebar = () => {
       </div>
     );
   }
+
+  const serverBannerUrl = currentServer.banner_url
+    ? currentServer.banner_url.includes("blob:")
+      ? currentServer.banner_url
+      : `${currentServer.banner_url}${currentServer.banner_url.includes("?") ? "&" : "?"}cb=${encodeURIComponent(currentServer.banner_url.split("/").pop()?.split("?")[0] ?? "")}`
+    : null;
+  const isDefaultServerBanner = !serverBannerUrl || serverBannerUrl.includes("/default_server_banner.png");
 
   // Shared channel list rendering (used by both mobile and desktop)
   const renderChannelList = (
@@ -1775,25 +1792,52 @@ export const ChannelSidebar = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="group w-full overflow-hidden text-left transition-colors active:scale-[0.995]">
-                <div className="relative h-32 overflow-hidden">
-                  {currentServer.banner_url ? (
+                <div
+                  className={cn(
+                    "relative overflow-hidden transition-[height] duration-200 ease-out",
+                    isServerHeaderCondensed ? "h-16" : "h-[124px]",
+                  )}
+                >
+                  {serverBannerUrl ? (
                     <img
-                      src={
-                        currentServer.banner_url?.includes("blob:")
-                          ? currentServer.banner_url
-                          : `${currentServer.banner_url}${currentServer.banner_url?.includes("?") ? "&" : "?"}cb=${encodeURIComponent(currentServer.banner_url?.split("/").pop()?.split("?")[0] ?? "")}`
-                      }
+                      src={serverBannerUrl}
                       alt={`${currentServer.name} banner`}
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                      className={cn(
+                        "h-full w-full object-cover transition-[filter,transform] duration-200 ease-out",
+                        isServerHeaderCondensed ? "scale-150 [filter:blur(32px)]" : "group-hover:scale-[1.02]",
+                      )}
                     />
                   ) : (
-                    <div className="h-full w-full bg-[radial-gradient(circle_at_top_left,hsl(var(--neutral-400)/0.14),transparent_34%),linear-gradient(160deg,hsl(var(--neutral-300)),hsl(var(--neutral-100))_72%)]" />
+                    <div
+                      className={cn(
+                        "h-full w-full bg-[linear-gradient(135deg,hsl(350_42%_23%),hsl(31_31%_25%)_68%,hsl(var(--sidebar)))] transition-[filter,transform] duration-200 ease-out",
+                        isServerHeaderCondensed && "scale-150 [filter:blur(32px)]",
+                      )}
+                    />
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[hsl(var(--neutral-100))]" />
-                  <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[hsl(var(--neutral-100))] via-[hsl(var(--neutral-100)/0.82)] to-transparent" />
+                  {isServerHeaderCondensed ? (
+                    <div className="absolute inset-0 bg-[hsl(var(--sidebar)/0.38)] backdrop-blur-xl" />
+                  ) : !isDefaultServerBanner ? (
+                    <>
+                      <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-[hsl(var(--sidebar)/0.75)]" />
+                      <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[hsl(var(--sidebar))] via-[hsl(var(--sidebar)/0.76)] to-transparent" />
+                    </>
+                  ) : (
+                    <div className="absolute inset-0 bg-black/10" />
+                  )}
 
-                  <div className="absolute inset-x-0 bottom-0 flex items-center gap-3 px-4 pb-3">
-                    <h2 className="min-w-0 flex-1 truncate text-[20px] font-normal leading-tight tracking-[-0.02em] text-foreground drop-shadow-[0_1px_8px_rgba(0,0,0,0.45)]">
+                  <div
+                    className={cn(
+                      "absolute inset-x-0 flex items-center gap-3 px-4 transition-[bottom,padding] duration-200 ease-out",
+                      isServerHeaderCondensed ? "bottom-0 py-3" : "bottom-0 pb-3",
+                    )}
+                  >
+                    <h2
+                      className={cn(
+                        "min-w-0 flex-1 truncate font-semibold leading-tight text-foreground drop-shadow-[0_1px_8px_rgba(0,0,0,0.45)] transition-[font-size] duration-200 ease-out",
+                        isServerHeaderCondensed ? "text-[16px]" : "text-[20px]",
+                      )}
+                    >
                       {currentServer.name}
                     </h2>
                     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-black/30 text-white/80 backdrop-blur-sm transition-colors group-hover:bg-black/40">
@@ -1804,32 +1848,32 @@ export const ChannelSidebar = () => {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              className="w-56 p-1.5 rounded-xl border-border/50 bg-popover shadow-xl"
+              className="w-[var(--radix-dropdown-menu-trigger-width)] overflow-hidden rounded-md bg-[#4E505C] p-0"
               align="start"
               sideOffset={4}
             >
               {/* Invite People */}
               <DropdownMenuItem
                 onClick={handleOpenInvite}
-                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-secondary/60 focus:bg-secondary/80 transition-colors"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-white/[0.04] focus:bg-white/[0.06]"
               >
-                <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <UserPlusIcon className="w-3.5 h-3.5 text-primary" />
+                <div className="flex h-5 w-5 items-center justify-center flex-shrink-0">
+                  <UserPlusIcon className="h-4 w-4" />
                 </div>
                 <span className="text-sm font-medium">Invite People</span>
               </DropdownMenuItem>
 
               {canSeeServerSettings && (
                 <>
-                  <DropdownMenuSeparator className="my-1 bg-border/50" />
+                  <DropdownMenuSeparator className="mx-0 my-0 bg-white/10" />
 
                   {/* Server Settings */}
                   <DropdownMenuItem
                     onClick={handleOpenServerSettings}
-                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-secondary/60 focus:bg-secondary/80 transition-colors"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-white/[0.04] focus:bg-white/[0.06]"
                   >
-                    <div className="w-6 h-6 rounded-lg bg-secondary/80 flex items-center justify-center flex-shrink-0">
-                      <SettingsIcon className="w-3.5 h-3.5 text-muted-foreground" />
+                    <div className="flex h-5 w-5 items-center justify-center flex-shrink-0">
+                      <SettingsIcon className="h-4 w-4" />
                     </div>
                     <span className="text-sm font-medium">Server Settings</span>
                   </DropdownMenuItem>
@@ -1839,10 +1883,10 @@ export const ChannelSidebar = () => {
                       {/* Create Channel */}
                       <DropdownMenuItem
                         onClick={handleOpenCreateChannel}
-                        className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-secondary/60 focus:bg-secondary/80 transition-colors"
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-white/[0.04] focus:bg-white/[0.06]"
                       >
-                        <div className="w-6 h-6 rounded-lg bg-secondary/80 flex items-center justify-center flex-shrink-0">
-                          <HashIcon className="w-3.5 h-3.5 text-muted-foreground" />
+                        <div className="flex h-5 w-5 items-center justify-center flex-shrink-0">
+                          <HashIcon className="h-4 w-4" />
                         </div>
                         <span className="text-sm font-medium">Create Channel</span>
                       </DropdownMenuItem>
@@ -1850,10 +1894,10 @@ export const ChannelSidebar = () => {
                       {/* Create Category */}
                       <DropdownMenuItem
                         onClick={handleOpenCreateCategory}
-                        className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-secondary/60 focus:bg-secondary/80 transition-colors"
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-white/[0.04] focus:bg-white/[0.06]"
                       >
-                        <div className="w-6 h-6 rounded-lg bg-secondary/80 flex items-center justify-center flex-shrink-0">
-                          <FolderPlusIcon className="w-3.5 h-3.5 text-muted-foreground" />
+                        <div className="flex h-5 w-5 items-center justify-center flex-shrink-0">
+                          <FolderPlusIcon className="h-4 w-4" />
                         </div>
                         <span className="text-sm font-medium">Create Category</span>
                       </DropdownMenuItem>
@@ -1864,15 +1908,15 @@ export const ChannelSidebar = () => {
 
               {!isOwner && (
                 <>
-                  <DropdownMenuSeparator className="my-1 bg-border/50" />
+                  <DropdownMenuSeparator className="mx-0 my-0 bg-white/10" />
 
                   {/* Leave Server */}
                   <DropdownMenuItem
                     onClick={handleLeaveServer}
-                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer text-destructive hover:bg-destructive/10 focus:text-destructive focus:bg-destructive/10 transition-colors"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-white/[0.04] focus:bg-white/[0.06]"
                   >
-                    <div className="w-6 h-6 rounded-lg bg-destructive/10 flex items-center justify-center flex-shrink-0">
-                      <LogOutIcon className="w-3.5 h-3.5" />
+                    <div className="flex h-5 w-5 items-center justify-center flex-shrink-0">
+                      <LogOutIcon className="h-4 w-4" />
                     </div>
                     <span className="text-sm font-medium">Leave Server</span>
                   </DropdownMenuItem>
@@ -1907,11 +1951,12 @@ export const ChannelSidebar = () => {
             <>
               <div
                 className={cn(
-                  "flex-1 overflow-y-auto px-2 py-2 channel-sidebar-scroll",
+                  "flex-1 overflow-y-auto px-2.5 py-5 channel-sidebar-scroll",
                   isSortingMode && "bg-foreground/[0.03] border-2 border-dashed border-border/50 rounded-xl mx-1 my-1",
                 )}
                 style={{ touchAction: "pan-y" }}
                 onContextMenu={handleBgContextMenu}
+                onScroll={handleChannelListScroll}
               >
                 {renderChannelList}
               </div>
@@ -1956,10 +2001,11 @@ export const ChannelSidebar = () => {
             <ContextMenuTrigger asChild disabled={isSortingMode}>
               <div
                 className={cn(
-                  "flex-1 overflow-y-auto px-2 py-2 channel-sidebar-scroll",
+                  "flex-1 overflow-y-auto px-2.5 py-5 channel-sidebar-scroll",
                   isSortingMode && "bg-foreground/[0.03] border-2 border-dashed border-border/50 rounded-xl mx-1 my-1",
                 )}
                 style={{ touchAction: "pan-y" }}
+                onScroll={handleChannelListScroll}
               >
                 {renderChannelList}
               </div>
