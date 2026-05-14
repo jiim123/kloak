@@ -238,6 +238,7 @@ HeaderLoader.displayName = "HeaderLoader";
 interface RowProps {
   item: ListItem;
   authorStyle: any;
+  replyAuthorStyle: any;
   customEmojiMap: Map<string, string>;
   globalEmojiMap: Map<string, ResolvedEmoji>;
   highlightedMessageId: string | null;
@@ -261,13 +262,14 @@ const areRowPropsEqual = (prev: RowProps, next: RowProps) => {
     prev.item.previousMessage === next.item.previousMessage &&
     prev.item.isNewMessagesDivider === next.item.isNewMessagesDivider &&
     prev.authorStyle === next.authorStyle &&
+    prev.replyAuthorStyle === next.replyAuthorStyle &&
     prev.customEmojiMap === next.customEmojiMap &&
     prev.globalEmojiMap === next.globalEmojiMap &&
     prevWasHighlighted === nextWasHighlighted
   );
 };
 
-const Row = memo(({ item, authorStyle, customEmojiMap, globalEmojiMap, highlightedMessageId }: RowProps) => {
+const Row = memo(({ item, authorStyle, replyAuthorStyle, customEmojiMap, globalEmojiMap, highlightedMessageId }: RowProps) => {
   if (item.type === "dateDivider") {
     return <DateDivider label={item.label} />;
   }
@@ -282,6 +284,7 @@ const Row = memo(({ item, authorStyle, customEmojiMap, globalEmojiMap, highlight
         showNewDivider={isNewMessagesDivider}
         isHighlighted={message.id === highlightedMessageId}
         authorStyleFallback={authorStyle}
+        replyAuthorStyleFallback={replyAuthorStyle}
         customEmojiMap={customEmojiMap}
         globalEmojiMap={globalEmojiMap}
       />
@@ -376,6 +379,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     for (let i = 0; i < deduplicatedMessages.length; i++) {
       const msg = deduplicatedMessages[i];
       if (msg.user_id) authorIds.add(msg.user_id);
+      if (msg.reply_to?.user_id) authorIds.add(msg.reply_to.user_id);
 
       const msgDate = new Date(msg.created_at);
       const prevMsg = i > 0 ? deduplicatedMessages[i - 1] : null;
@@ -1047,11 +1051,14 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
                     ? `date-divider-${item.date.toISOString().slice(0, 10)}-${index}`
                     : getStableMessageKey(item.message);
                 const authorStyle = item.type === "message" ? authorStyleMap[item.message.user_id] : undefined;
+                const replyAuthorStyle =
+                  item.type === "message" ? authorStyleMap[item.message.reply_to?.user_id ?? ""] : undefined;
                 return (
                   <Row
                     key={key}
                     item={item}
                     authorStyle={authorStyle}
+                    replyAuthorStyle={replyAuthorStyle}
                     customEmojiMap={customEmojiMap}
                     globalEmojiMap={globalEmojiMap}
                     highlightedMessageId={highlightedMessageId}

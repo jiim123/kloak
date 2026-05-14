@@ -7,8 +7,6 @@ import {
   Loader2,
   Upload,
   Trash2,
-  Users,
-  Settings,
   Ban,
   Crown,
   Shield,
@@ -25,7 +23,6 @@ import {
   Smile,
   GripVertical,
   Download,
-  Plug,
   Pencil,
   Search,
   CircleUser,
@@ -60,7 +57,7 @@ import { useRealtimeMembers } from "@/hooks";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { getCdnUrl } from "@/lib/bunny-upload";
-import { secureUpload, secureDelete, secureListAndDelete } from "@/lib/storageUpload";
+import { secureUpload, secureDelete } from "@/lib/storageUpload";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { invalidateServerEmojis } from "@/lib/serverEmojis";
@@ -75,7 +72,6 @@ import { BannerCropModal } from "../modals/BannerCropModal";
 import { RoleColorPicker } from "../modals/RoleColorPicker";
 import { RoleIconPreview } from "@/components/ui/role-icon-preview";
 import { Separator } from "@/components/ui/separator";
-import { Save } from "lucide-react";
 import { EmojiGifPicker } from "../modals/EmojiGifPicker";
 import {
   DropdownMenu,
@@ -137,6 +133,12 @@ type PublicationEligibility = {
   requirements?: PublicationRequirement[];
   unmet_requirements?: string[];
   error?: string;
+};
+
+type PendingTabOp = {
+  id: string;
+  label: string;
+  run: () => Promise<void>;
 };
 
 const getRoleIcon = (role: ServerRole) => {
@@ -412,13 +414,20 @@ const PERMISSION_GROUPS: Array<{
   },
 ];
 // Inline permissions editor component (without modal wrapper, unified with role details)
-const RolePermissionsEditorInline = ({ role, serverId }: { role: CustomServerRole; serverId: string }) => {
+const RolePermissionsEditorInline = ({
+  role,
+  serverId,
+  stageRolePermissionsOp,
+}: {
+  role: CustomServerRole;
+  serverId: string;
+  stageRolePermissionsOp?: (roleId: string, op: PendingTabOp | null) => void;
+}) => {
   const { user } = useAuthStore();
   const { rolePermissions, fetchRolePermissions, setRolePermission, deleteRolePermission } = useServerStore();
 
   const [permissionStates, setPermissionStates] = useState<Map<Permission, boolean | null>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const loadPermissions = async () => {
@@ -489,43 +498,50 @@ const RolePermissionsEditorInline = ({ role, serverId }: { role: CustomServerRol
     }
   };
 
-  const handleSave = async () => {
-    if (!user) return;
+  useEffect(() => {
+    if (!user || isLoading || !stageRolePermissionsOp) return;
 
-    setIsSaving(true);
-    try {
-      const currentDbPermissions = rolePermissions.filter((rp) => rp.role_id === role.id);
+    const currentDbPermissions = rolePermissions.filter((rp) => rp.role_id === role.id);
+    const currentDbPermMap = new Map(currentDbPermissions.map((rp) => [rp.permission, rp]));
+    const hasChanges = Array.from(permissionStates.entries()).some(([permission, state]) => {
+      const currentDb = currentDbPermMap.get(permission);
+      if (state === null) return !!currentDb;
+      if (!currentDb) return true;
+      return currentDb.allowed !== state;
+    });
 
-      const currentDbPermMap = new Map(currentDbPermissions.map((rp) => [rp.permission, rp]));
+    if (!hasChanges) {
+      stageRolePermissionsOp(role.id, null);
+      return;
+    }
 
-      const savePromises: Promise<void>[] = [];
-
-      for (const [permission, state] of permissionStates.entries()) {
-        const currentDb = currentDbPermMap.get(permission);
-
-        if (state !== null) {
-          if (currentDb) {
-            if (currentDb.allowed !== state) {
+    const op: PendingTabOp = {
+      id: `role-perms-${role.id}`,
+      label: `Update permissions for ${role.name}`,
+      run: async () => {
+        const latestDbPermissions = rolePermissions.filter((rp) => rp.role_id === role.id);
+        const latestDbPermMap = new Map(latestDbPermissions.map((rp) => [rp.permission, rp]));
+        const savePromises: Promise<void>[] = [];
+        for (const [permission, state] of permissionStates.entries()) {
+          const currentDb = latestDbPermMap.get(permission);
+          if (state !== null) {
+            if (currentDb) {
+              if (currentDb.allowed !== state) {
+                savePromises.push(setRolePermission(serverId, user.id, permission, role.id, undefined, state));
+              }
+            } else {
               savePromises.push(setRolePermission(serverId, user.id, permission, role.id, undefined, state));
             }
-          } else {
-            savePromises.push(setRolePermission(serverId, user.id, permission, role.id, undefined, state));
+          } else if (currentDb) {
+            savePromises.push(deleteRolePermission(currentDb.id, user.id));
           }
-        } else if (currentDb) {
-          savePromises.push(deleteRolePermission(currentDb.id, user.id));
         }
-      }
-
-      await Promise.all(savePromises);
-      await fetchRolePermissions(serverId);
-      toast.success("Permissions saved successfully");
-    } catch (error) {
-      console.error("Failed to save permissions:", error);
-      toast.error("Failed to save permissions");
-    } finally {
-      setIsSaving(false);
-    }
-  };
+        await Promise.all(savePromises);
+        await fetchRolePermissions(serverId);
+      },
+    };
+    stageRolePermissionsOp(role.id, op);
+  }, [permissionStates, rolePermissions, role.id, role.name, serverId, user, isLoading, stageRolePermissionsOp, setRolePermission, deleteRolePermission, fetchRolePermissions]);
 
   if (isLoading) {
     return (
@@ -633,20 +649,8 @@ const RolePermissionsEditorInline = ({ role, serverId }: { role: CustomServerRol
         </div>
       ))}
 
-      <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t border-border py-3 -mx-6 px-6">
-        <Button onClick={handleSave} disabled={isSaving} size="sm">
-          {isSaving ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <Save className="w-4 h-4 mr-2" />
-              Save Permissions
-            </>
-          )}
-        </Button>
+      <div className="pt-1 text-xs text-muted-foreground">
+        Permission changes are staged and saved with sidebar Save changes.
       </div>
 
       {/* Confirmation dialog for global Deny/Allow All */}
@@ -725,6 +729,8 @@ export const ServerSettingsPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  const [isSavingTabChanges, setIsSavingTabChanges] = useState(false);
+  const [pendingTabOps, setPendingTabOps] = useState<Record<string, PendingTabOp[]>>({});
 
   // Transfer ownership state
   const [transferTargetId, setTransferTargetId] = useState<string | null>(null);
@@ -755,6 +761,9 @@ export const ServerSettingsPage = () => {
   const [inviteMaxUses, setInviteMaxUses] = useState<string>("unlimited");
   const [publicationEligibility, setPublicationEligibility] = useState<PublicationEligibility | null>(null);
   const [isLoadingPublicationEligibility, setIsLoadingPublicationEligibility] = useState(false);
+  const [isNsfwDraft, setIsNsfwDraft] = useState(false);
+  const [minAccountAgeDraft, setMinAccountAgeDraft] = useState<number>(0);
+  const [isPublishedDraft, setIsPublishedDraft] = useState(false);
   const [editingRole, setEditingRole] = useState<CustomServerRole | null>(null);
   const [roleName, setRoleName] = useState("");
   const [roleColor, setRoleColor] = useState("#5865F2");
@@ -762,6 +771,7 @@ export const ServerSettingsPage = () => {
   const [roleIsSelfAssignable, setRoleIsSelfAssignable] = useState(false);
   const [activeRoleId, setActiveRoleId] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<CustomServerRole | null>(null);
+  const [pendingDeletedRoleIds, setPendingDeletedRoleIds] = useState<Set<string>>(new Set());
   const [mobileRoleCreateView, setMobileRoleCreateView] = useState(false);
 
   const [colorType, setColorType] = useState<"solid" | "gradient">("solid");
@@ -832,7 +842,11 @@ export const ServerSettingsPage = () => {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  const roleIds = useMemo(() => roles.map((r) => r.id), [roles]);
+  const visibleRoles = useMemo(
+    () => roles.filter((r) => !pendingDeletedRoleIds.has(r.id)),
+    [roles, pendingDeletedRoleIds],
+  );
+  const roleIds = useMemo(() => visibleRoles.map((r) => r.id), [visibleRoles]);
 
   const handleRoleDragStart = (event: DragStartEvent) => {
     setActiveRoleId(event.active.id as string);
@@ -849,20 +863,18 @@ export const ServerSettingsPage = () => {
     if (!server?.id || !user?.id) return;
     if (active.id === over.id) return;
 
-    const oldIndex = roles.findIndex((r) => r.id === active.id);
-    const newIndex = roles.findIndex((r) => r.id === over.id);
+    const oldIndex = visibleRoles.findIndex((r) => r.id === active.id);
+    const newIndex = visibleRoles.findIndex((r) => r.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
 
-    const newOrder = arrayMove(roles, oldIndex, newIndex);
-    try {
+    const newOrder = arrayMove(visibleRoles, oldIndex, newIndex);
+    queueTabOp("roles", "Reorder roles", async () => {
       await reorderRoles(
         server.id,
         user.id,
         newOrder.map((r) => r.id),
       );
-    } catch {
-      toast.error("Failed to reorder roles");
-    }
+    });
   };
 
   const SortableRoleRow = ({ role }: { role: CustomServerRole }) => {
@@ -990,10 +1002,73 @@ export const ServerSettingsPage = () => {
     }
   };
 
+  const queueTabOp = (tab: string, label: string, run: () => Promise<void>) => {
+    const opId = `${tab}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    setPendingTabOps((prev) => ({
+      ...prev,
+      [tab]: [...(prev[tab] || []), { id: opId, label, run }],
+    }));
+  };
+
+  const clearTabOps = (tab: string) => {
+    setPendingTabOps((prev) => ({ ...prev, [tab]: [] }));
+  };
+
+  const stageRolePermissionsOp = (roleId: string, op: PendingTabOp | null) => {
+    const opId = `role-perms-${roleId}`;
+    setPendingTabOps((prev) => {
+      const rolesOps = (prev.roles || []).filter((item) => item.id !== opId);
+      return {
+        ...prev,
+        roles: op ? [...rolesOps, { ...op, id: opId }] : rolesOps,
+      };
+    });
+  };
+
+  const saveActiveTabChanges = async () => {
+    if (!server || !user) return;
+
+    if (activeTab === "overview") {
+      await handleSubmit(onSubmit)();
+      return;
+    }
+
+    const ops = pendingTabOps[activeTab] || [];
+    if (!ops.length) return;
+
+    setIsSavingTabChanges(true);
+    try {
+      for (const op of ops) {
+        await op.run();
+      }
+      clearTabOps(activeTab);
+      await fetchServers(user.id);
+      if (activeTab === "roles") {
+        await fetchRoles(server.id);
+        setPendingDeletedRoleIds(new Set());
+      }
+      if (activeTab === "members") await fetchMembers(server.id, { force: true, full: true });
+      if (activeTab === "invites") await loadInvites();
+      if (activeTab === "emojis") {
+        const { data } = await supabase
+          .from("server_emojis")
+          .select("id, name, file_path")
+          .eq("server_id", server.id)
+          .order("created_at", { ascending: true });
+        setServerEmojis((data ?? []) as Array<{ id: string; name: string; file_path: string }>);
+      }
+      toast.success("Changes saved");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to save changes");
+    } finally {
+      setIsSavingTabChanges(false);
+    }
+  };
+
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isDirty },
     getValues,
     reset,
   } = useForm<ServerSettingsForm>({
@@ -1109,6 +1184,11 @@ export const ServerSettingsPage = () => {
       // Initialize system message channel settings
       setSystemChannelJoinId(server.system_channel_join_id || "");
       setSystemChannelLeaveId(server.system_channel_leave_id || "");
+      setIsNsfwDraft(!!server.is_nsfw);
+      setMinAccountAgeDraft(Number(server.min_account_age_days || 0));
+      setIsPublishedDraft(!!server.is_published);
+      setPendingTabOps({});
+      setPendingDeletedRoleIds(new Set());
 
       // Reset icon state
       setIconFile(null);
@@ -1262,24 +1342,15 @@ export const ServerSettingsPage = () => {
 
     const maxUsesValue = inviteMaxUses === "unlimited" ? null : parseInt(inviteMaxUses, 10);
 
-    setIsCreatingInvite(true);
-    try {
+    queueTabOp("invites", "Create invite", async () => {
       const { error } = await supabase.rpc("create_server_invite", {
         _server_id: server.id,
         _user_id: user.id,
         _expires_in_seconds: expiresInSeconds,
         _max_uses: maxUsesValue,
       });
-
       if (error) throw error;
-
-      await loadInvites();
-      toast.success("Invite created");
-    } catch {
-      toast.error("Failed to create invite");
-    } finally {
-      setIsCreatingInvite(false);
-    }
+    });
   };
 
   const revokeInvite = async (inviteId: string) => {
@@ -1287,19 +1358,13 @@ export const ServerSettingsPage = () => {
     if (!canManageInvites) return;
     if (!confirm("Revoke this invite?")) return;
 
-    try {
+    queueTabOp("invites", "Revoke invite", async () => {
       const { error } = await supabase.rpc("revoke_server_invite", {
         _invite_id: inviteId,
         _user_id: user.id,
       });
-
       if (error) throw error;
-
-      await loadInvites();
-      toast.success("Invite revoked");
-    } catch {
-      toast.error("Failed to revoke invite");
-    }
+    });
   };
 
   const copyInviteLink = async (code: string, inviteId: string) => {
@@ -1384,51 +1449,26 @@ export const ServerSettingsPage = () => {
       return;
     }
 
-    setIsUploadingEmoji(true);
-    try {
-      const ext = (emojiFile.name.split(".").pop() || "png").toLowerCase();
+    const selectedFile = emojiFile;
+    queueTabOp("emojis", `Upload emoji :${normalized}:`, async () => {
+      const ext = (selectedFile.name.split(".").pop() || "png").toLowerCase();
       const filePath = `${server.id}/${normalized}-${crypto.randomUUID()}.${ext}`;
-
-      await secureUpload("server-emojis", filePath, emojiFile, {
-        contentType: emojiFile.type,
+      await secureUpload("server-emojis", filePath, selectedFile, {
+        contentType: selectedFile.type,
         upsert: false,
       });
-
       const { error: insertError } = await (supabase.rpc as any)("upload_server_emoji", {
         _server_id: server.id,
         _user_id: user.id,
         _name: normalized,
         _file_path: filePath,
       });
-
       if (insertError) throw insertError;
-
-      // Refresh list
-      const { data, error } = await supabase
-        .from("server_emojis")
-        .select("id,name,file_path")
-        .eq("server_id", server.id)
-        .order("created_at", { ascending: true });
-
-      if (error) throw error;
-      setServerEmojis((data ?? []) as Array<{ id: string; name: string; file_path: string }>);
-      toast.success("Emoji uploaded");
       invalidateServerEmojis(server.id);
       invalidateGlobalEmojiCache();
       window.dispatchEvent(new CustomEvent("server-emojis-changed", { detail: { serverId: server.id } }));
-      clearEmoji();
-    } catch (err: any) {
-      const msg = err?.message || "Failed to upload emoji";
-      if (msg.includes("server_emojis_server_id_name_key")) {
-        toast.error("That emoji name is already taken");
-      } else if (msg.toLowerCase().includes("server emoji limit reached")) {
-        toast.error(`This server already has ${MAX_SERVER_EMOJIS} custom emojis`);
-      } else {
-        toast.error(msg);
-      }
-    } finally {
-      setIsUploadingEmoji(false);
-    }
+    });
+    clearEmoji();
   };
 
   const renameServerEmoji = async (emojiId: string, newName: string) => {
@@ -1446,27 +1486,19 @@ export const ServerSettingsPage = () => {
       toast.error("That emoji name is already taken");
       return;
     }
-    try {
+    queueTabOp("emojis", `Rename emoji to :${trimmed}:`, async () => {
       const { error } = await (supabase.rpc as any)("rename_server_emoji", {
         _emoji_id: emojiId,
         _user_id: user.id,
         _new_name: trimmed,
       });
       if (error) throw error;
-      setServerEmojis((prev) => prev.map((e) => (e.id === emojiId ? { ...e, name: trimmed } : e)));
       invalidateServerEmojis(server.id);
       invalidateGlobalEmojiCache();
       window.dispatchEvent(new CustomEvent("server-emojis-changed", { detail: { serverId: server.id } }));
-      setEditingEmojiId(null);
-      toast.success("Emoji renamed");
-    } catch (err: any) {
-      const msg = err?.message || "Failed to rename emoji";
-      if (msg.includes("server_emojis_server_id_name_key")) {
-        toast.error("That emoji name is already taken");
-      } else {
-        toast.error(msg);
-      }
-    }
+    });
+    setServerEmojis((prev) => prev.map((e) => (e.id === emojiId ? { ...e, name: trimmed } : e)));
+    setEditingEmojiId(null);
   };
 
   const deleteServerEmoji = async (emoji: { id: string; name: string; file_path: string }) => {
@@ -1477,26 +1509,18 @@ export const ServerSettingsPage = () => {
     }
     if (!confirm(`Delete emoji "${emoji.name}"?`)) return;
 
-    try {
+    queueTabOp("emojis", `Delete emoji :${emoji.name}:`, async () => {
       const { data: filePath, error } = await (supabase.rpc as any)("delete_server_emoji", {
         _emoji_id: emoji.id,
         _user_id: user.id,
       });
-
       if (error) throw error;
-      if (filePath) {
-        await secureDelete("server-emojis", filePath as string);
-      }
-
-      setServerEmojis((prev) => prev.filter((e) => e.id !== emoji.id));
+      if (filePath) await secureDelete("server-emojis", filePath as string);
       invalidateServerEmojis(server.id);
       invalidateGlobalEmojiCache();
       window.dispatchEvent(new CustomEvent("server-emojis-changed", { detail: { serverId: server.id } }));
-      toast.success("Emoji deleted");
-    } catch (error) {
-      console.error("Failed to delete emoji:", error);
-      toast.error("Failed to delete emoji");
-    }
+    });
+    setServerEmojis((prev) => prev.filter((e) => e.id !== emoji.id));
   };
 
   const bulkDeleteEmojis = async () => {
@@ -1506,37 +1530,23 @@ export const ServerSettingsPage = () => {
     )
       return;
 
-    setIsDeletingEmojis(true);
-    let success = 0;
-    let failed = 0;
-
-    for (const emojiId of selectedEmojiIds) {
-      try {
+    const ids = Array.from(selectedEmojiIds);
+    queueTabOp("emojis", `Delete ${ids.length} selected emojis`, async () => {
+      for (const emojiId of ids) {
         const { data: filePath, error } = await (supabase.rpc as any)("delete_server_emoji", {
           _emoji_id: emojiId,
           _user_id: user.id,
         });
         if (error) throw error;
         if (filePath) await secureDelete("server-emojis", filePath as string);
-        success++;
-      } catch {
-        failed++;
       }
-    }
-
+      invalidateServerEmojis(server.id);
+      invalidateGlobalEmojiCache();
+      window.dispatchEvent(new CustomEvent("server-emojis-changed", { detail: { serverId: server.id } }));
+    });
     setServerEmojis((prev) => prev.filter((e) => !selectedEmojiIds.has(e.id)));
-    invalidateServerEmojis(server.id);
-    invalidateGlobalEmojiCache();
-    window.dispatchEvent(new CustomEvent("server-emojis-changed", { detail: { serverId: server.id } }));
     setSelectedEmojiIds(new Set());
     setIsMultiSelectMode(false);
-    setIsDeletingEmojis(false);
-
-    if (failed === 0) {
-      toast.success(`Deleted ${success} emoji${success > 1 ? "s" : ""}`);
-    } else {
-      toast.warning(`Deleted ${success}, failed ${failed}`);
-    }
   };
 
   const handleIconSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1611,7 +1621,6 @@ export const ServerSettingsPage = () => {
     const preview = URL.createObjectURL(croppedBlob);
     setBannerPreview(preview);
     setBannerRemoved(false);
-    setIsUploadingBanner(true);
 
     // Close crop modal
     if (cropImageSrc) {
@@ -1624,20 +1633,13 @@ export const ServerSettingsPage = () => {
       const rawFile = new File([croppedBlob], "banner.webp", { type: "image/webp" });
       const { compressImage } = await import("@/lib/imageCompression");
       const compressed = await compressImage(rawFile, "server-banner");
-      const uploadedUrl = await uploadBanner(server.id, compressed);
-      if (!uploadedUrl) throw new Error("Upload returned null");
-
-      await updateServer(server.id, user.id, { banner_url: uploadedUrl });
-      setBannerPreview(uploadedUrl);
-      setBannerFile(null);
-      toast.success("Server banner updated");
+      setBannerFile(compressed);
+      // staged until sidebar Save changes
     } catch (err) {
       console.error("Failed to upload banner:", err);
-      toast.error("Failed to upload server banner");
+      toast.error("Failed to process server banner");
       URL.revokeObjectURL(preview);
       setBannerPreview(null);
-    } finally {
-      setIsUploadingBanner(false);
     }
   };
 
@@ -1675,56 +1677,18 @@ export const ServerSettingsPage = () => {
 
   const handleRemoveBanner = async () => {
     if (!server || !user) return;
-
-    setIsUploadingBanner(true);
-    try {
-      // Delete banner files from storage
-      const extensions = ["webp", "png", "jpg", "jpeg"];
-      const filesToRemove = extensions.map((ext) => `${server.id}/banner.${ext}`);
-      try {
-        await secureDelete("server-icons", filesToRemove);
-      } catch {
-        /* ignore */
-      }
-
-      await updateServer(server.id, user.id, { banner_url: null });
-
-      if (bannerPreview) URL.revokeObjectURL(bannerPreview);
-      setBannerPreview(null);
-      setBannerFile(null);
-      setBannerRemoved(true);
-      toast.success("Server banner removed");
-    } catch (error) {
-      toast.error("Failed to remove banner");
-    } finally {
-      setIsUploadingBanner(false);
-    }
+    setBannerPreview(null);
+    setBannerFile(null);
+    setBannerRemoved(true);
+    // staged until sidebar Save changes
   };
 
   const handleRemoveIcon = async () => {
     if (!server || !user) return;
-
-    setIsUploadingIcon(true);
-    try {
-      // Delete icon files from storage
-      try {
-        await secureListAndDelete("server-icons", server.id, "icon");
-      } catch {
-        /* ignore */
-      }
-
-      await updateServer(server.id, user.id, { icon_url: null });
-
-      if (iconPreview) URL.revokeObjectURL(iconPreview);
-      setIconPreview(null);
-      setIconFile(null);
-      setIconRemoved(true);
-      toast.success("Server icon removed");
-    } catch (error) {
-      toast.error("Failed to remove icon");
-    } finally {
-      setIsUploadingIcon(false);
-    }
+    setIconPreview(null);
+    setIconFile(null);
+    setIconRemoved(true);
+    // staged until sidebar Save changes
   };
 
   const onSubmit = async (data: ServerSettingsForm) => {
@@ -1733,7 +1697,7 @@ export const ServerSettingsPage = () => {
     setIsLoading(true);
     try {
       let iconUrl = iconRemoved ? null : server.icon_url;
-      const bannerUrl = bannerRemoved ? null : server.banner_url;
+      let bannerUrl = bannerRemoved ? null : server.banner_url;
 
       // Upload new icon if selected
       if (iconFile) {
@@ -1745,7 +1709,14 @@ export const ServerSettingsPage = () => {
         setIsUploadingIcon(false);
       }
 
-      // Banner is uploaded immediately via crop modal, no deferred upload needed
+      if (bannerFile) {
+        setIsUploadingBanner(true);
+        const uploadedBannerUrl = await uploadBanner(server.id, bannerFile);
+        if (uploadedBannerUrl) {
+          bannerUrl = uploadedBannerUrl;
+        }
+        setIsUploadingBanner(false);
+      }
 
       const aboutValue = (data.about || "").trim();
 
@@ -1769,6 +1740,9 @@ export const ServerSettingsPage = () => {
       updates.system_channel_leave_id = systemChannelLeaveId || null;
       updates.enable_join_messages = !!systemChannelJoinId;
       updates.enable_leave_messages = !!systemChannelLeaveId;
+      updates.is_nsfw = !!isNsfwDraft;
+      updates.min_account_age_days = Number(minAccountAgeDraft || 0);
+      updates.is_published = !!isPublishedDraft;
 
       await updateServer(server.id, user.id, updates);
 
@@ -1778,8 +1752,12 @@ export const ServerSettingsPage = () => {
       // Update local state from the refreshed server data
       const updatedServer = useServerStore.getState().currentServer;
       if (updatedServer) {
+        reset({ name: updatedServer.name, about: updatedServer.about || "" });
         setSystemChannelJoinId(updatedServer.system_channel_join_id || "");
         setSystemChannelLeaveId(updatedServer.system_channel_leave_id || "");
+        setIsNsfwDraft(!!updatedServer.is_nsfw);
+        setMinAccountAgeDraft(Number(updatedServer.min_account_age_days || 0));
+        setIsPublishedDraft(!!updatedServer.is_published);
       }
 
       await loadPublicationEligibility();
@@ -1787,6 +1765,7 @@ export const ServerSettingsPage = () => {
       toast.success("Server settings updated!");
       clearIcon();
       clearBanner();
+      clearTabOps("overview");
     } catch (error) {
       toast.error("Failed to update server");
     } finally {
@@ -1810,45 +1789,20 @@ export const ServerSettingsPage = () => {
     }
   };
 
-  const handlePublishedChange = async (checked: boolean) => {
-    if (!server || !user) return;
-
-    setIsLoading(true);
-    try {
-      await updateServer(server.id, user.id, { is_published: checked });
-      await fetchServers(user.id);
-      await loadPublicationEligibility();
-      toast.success(checked ? "Server is now public" : "Server is no longer public");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update public status");
-      await loadPublicationEligibility();
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleKickMember = async (member: ServerMember) => {
     if (!server) return;
     if (!checkModLimit()) { rateLimitToast("Moderation actions too fast"); return; }
-
-    try {
+    queueTabOp("members", `Kick ${member.user?.username || "user"}`, async () => {
       await kickMember(server.id, member.user_id);
-      toast.success(`${member.user?.username || "User"} has been kicked`);
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to kick member");
-    }
+    });
   };
 
   const handleBanMember = async (member: ServerMember) => {
     if (!server) return;
     if (!checkModLimit()) { rateLimitToast("Moderation actions too fast"); return; }
-
-    try {
+    queueTabOp("members", `Ban ${member.user?.username || "user"}`, async () => {
       await banMember(server.id, member.user_id);
-      toast.success(`${member.user?.username || "User"} has been banned`);
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to ban member");
-    }
+    });
   };
 
   const handleCreateRole = async () => {
@@ -1856,7 +1810,7 @@ export const ServerSettingsPage = () => {
 
     const finalColor = colorType === "gradient" ? createGradientString(gradientColors, gradientAngle) : roleColor;
 
-    try {
+    queueTabOp("roles", `Create role ${roleName.trim()}`, async () => {
       await createRole(
         server.id,
         user.id,
@@ -1865,28 +1819,15 @@ export const ServerSettingsPage = () => {
         roleIcon.trim() ? roleIcon.trim() : null,
         roleIsSelfAssignable,
       );
-      // Refetch roles to ensure UI is up to date
-      await fetchRoles(server.id);
-      toast.success("Role created");
-      setRoleName("");
-      setRoleColor("#5865F2");
-      setRoleIcon("");
-      setRoleIsSelfAssignable(false);
-      setColorType("solid");
-      setGradientColors(["#5865F2", "#7289DA"]);
-      setGradientAngle(135);
-      setSelectedRole(null);
-    } catch (error: any) {
-      console.error("Failed to create role:", error);
-      const errorMessage = error?.message || "Failed to create role";
-      if (errorMessage.includes("migration")) {
-        toast.error("Database migration required. Please apply the migration file first.", {
-          duration: 10000,
-        });
-      } else {
-        toast.error(errorMessage);
-      }
-    }
+    });
+    setRoleName("");
+    setRoleColor("#5865F2");
+    setRoleIcon("");
+    setRoleIsSelfAssignable(false);
+    setColorType("solid");
+    setGradientColors(["#5865F2", "#7289DA"]);
+    setGradientAngle(135);
+    setSelectedRole(null);
   };
 
   const handleUpdateRole = async () => {
@@ -1897,43 +1838,18 @@ export const ServerSettingsPage = () => {
     const currentSelfAssignable = Boolean(selectedRole.is_self_assignable);
     const selfAssignableChanged = nextSelfAssignable !== currentSelfAssignable;
 
-    try {
-      const updates: { name?: string; color?: string; icon?: string | null; is_self_assignable?: boolean } = {
-        name: roleName.trim(),
-        color: finalColor,
-        icon: roleIcon.trim() ? roleIcon.trim() : null,
-      };
+    const updates: { name?: string; color?: string; icon?: string | null; is_self_assignable?: boolean } = {
+      name: roleName.trim(),
+      color: finalColor,
+      icon: roleIcon.trim() ? roleIcon.trim() : null,
+    };
 
-      if (selfAssignableChanged) {
-        updates.is_self_assignable = nextSelfAssignable;
-      }
-
-      await updateRole(selectedRole.id, user.id, updates);
-      // Refetch roles to ensure UI is up to date
-      await fetchRoles(server.id);
-      toast.success("Role updated");
-      // Keep the role selected but update its data
-      const updatedRole = roles.find((r) => r.id === selectedRole.id);
-      if (updatedRole) {
-        setSelectedRole(updatedRole);
-        setEditingRole(updatedRole);
-        setRoleName(updatedRole.name);
-        const parsed = parseColorValue(updatedRole.color);
-        if (parsed.type === "gradient") {
-          setColorType("gradient");
-          setGradientColors(parsed.colors || ["#5865F2", "#7289DA"]);
-          setGradientAngle(parsed.angle || 135);
-        } else {
-          setColorType("solid");
-          setRoleColor(parsed.color || "#5865F2");
-        }
-        setRoleIcon(updatedRole.icon || "");
-        setRoleIsSelfAssignable(Boolean(updatedRole.is_self_assignable));
-      }
-    } catch (error) {
-      console.error("Failed to update role:", error);
-      toast.error((error as any)?.message || "Failed to update role");
+    if (selfAssignableChanged) {
+      updates.is_self_assignable = nextSelfAssignable;
     }
+    queueTabOp("roles", `Update role ${selectedRole.name}`, async () => {
+      await updateRole(selectedRole.id, user.id, updates);
+    });
   };
 
   const handleDeleteRole = async (role: CustomServerRole) => {
@@ -1941,47 +1857,39 @@ export const ServerSettingsPage = () => {
 
     if (!confirm(`Are you sure you want to delete the role "${role.name}"?`)) return;
 
-    try {
+    queueTabOp("roles", `Delete role ${role.name}`, async () => {
       await deleteRole(role.id, user.id);
-      // Refetch roles to ensure UI is up to date
-      await fetchRoles(server.id);
-      toast.success("Role deleted");
-      // Clear selection after delete
-      setSelectedRole(null);
-      setEditingRole(null);
-      setRoleName("");
-      setRoleColor("#5865F2");
-      setRoleIcon("");
-      setRoleIsSelfAssignable(false);
-      setColorType("solid");
-      setGradientColors(["#5865F2", "#7289DA"]);
-      setGradientAngle(135);
-    } catch (error) {
-      console.error("Failed to delete role:", error);
-      toast.error("Failed to delete role");
-    }
+    });
+    setPendingDeletedRoleIds((prev) => {
+      const next = new Set(prev);
+      next.add(role.id);
+      return next;
+    });
+    setSelectedRole(null);
+    setEditingRole(null);
+    setRoleName("");
+    setRoleColor("#5865F2");
+    setRoleIcon("");
+    setRoleIsSelfAssignable(false);
+    setColorType("solid");
+    setGradientColors(["#5865F2", "#7289DA"]);
+    setGradientAngle(135);
   };
 
   const handleAssignRole = async (member: ServerMember, role: CustomServerRole) => {
     if (!server || !user) return;
 
-    try {
+    queueTabOp("members", `Assign ${role.name} to ${member.user?.username || "user"}`, async () => {
       await assignRoleToMember(member.id, role.id, user.id);
-      toast.success(`Role "${role.name}" assigned`);
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to assign role");
-    }
+    });
   };
 
   const handleRemoveRole = async (member: ServerMember, role: CustomServerRole) => {
     if (!server || !user) return;
 
-    try {
+    queueTabOp("members", `Remove ${role.name} from ${member.user?.username || "user"}`, async () => {
       await removeRoleFromMember(member.id, role.id, user.id);
-      toast.success(`Role "${role.name}" removed`);
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to remove role");
-    }
+    });
   };
 
   if (!server) {
@@ -1992,6 +1900,19 @@ export const ServerSettingsPage = () => {
   const displayIconUrl = iconRemoved ? null : iconPreview || server.icon_url;
   // Determine which banner to show
   const displayBannerUrl = bannerRemoved ? null : bannerPreview || server.banner_url;
+  const overviewDirty =
+    isDirty ||
+    systemChannelJoinId !== (server.system_channel_join_id || "") ||
+    systemChannelLeaveId !== (server.system_channel_leave_id || "") ||
+    isNsfwDraft !== !!server.is_nsfw ||
+    minAccountAgeDraft !== Number(server.min_account_age_days || 0) ||
+    isPublishedDraft !== !!server.is_published ||
+    !!iconFile ||
+    !!bannerFile ||
+    iconRemoved ||
+    bannerRemoved;
+  const activeTabPendingCount = (pendingTabOps[activeTab] || []).length;
+  const showSidebarSave = activeTab === "overview" ? overviewDirty : activeTabPendingCount > 0;
 
   return (
     <>
@@ -2018,145 +1939,135 @@ export const ServerSettingsPage = () => {
         className="hidden"
       />
 
-      <div className="h-full flex bg-background">
+      <div className="server-settings-reference h-full flex bg-[#363944] text-[#dbdee1]">
         {/* Sidebar Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex overflow-hidden">
-          <div className="w-56 flex-shrink-0 border-r border-border bg-secondary/20 flex flex-col overflow-hidden">
+          <div className="w-[250px] flex-shrink-0 bg-[#171a1f] flex flex-col overflow-hidden">
             {/* Server Name Header */}
-            <div className="px-4 pt-5 pb-3">
-              <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground truncate">
-                {server.name}
+            <div className="px-[30px] pt-[32px] pb-[12px]">
+              <h2 className="text-xs font-medium uppercase tracking-widest text-[#a9adb7] truncate">
+                Server settings
               </h2>
             </div>
 
             {/* Nav Items */}
-            <ScrollArea className="flex-1 px-2 pb-4">
-              <TabsList className="flex flex-col items-start w-full bg-transparent p-0 gap-0.5 rounded-none h-auto">
+            <ScrollArea className="flex-1 pb-6">
+              <TabsList className="flex flex-col items-start w-full bg-transparent p-0 gap-0 rounded-none h-auto">
                 {/* Overview */}
                 <TabsTrigger
                   value="overview"
-                  className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-secondary/60 data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
+                  className="w-full h-9 justify-start rounded-none px-[30px] py-0 text-sm font-medium leading-none text-[#d7d9df] data-[state=active]:bg-[#2b2e34] data-[state=active]:text-white data-[state=active]:shadow-none data-[state=inactive]:hover:bg-[#202329] data-[state=inactive]:hover:text-white transition-colors"
                 >
-                  <Settings className="w-4 h-4" />
                   Overview
                 </TabsTrigger>
 
-                {/* Customization Section */}
                 {canManageEmojis && (
-                  <>
-                    <div className="px-3 pt-4 pb-1.5 w-full">
-                      <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">
-                        Customization
-                      </span>
-                    </div>
-                    <TabsTrigger
-                      value="emojis"
-                      className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-secondary/60 data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
-                    >
-                      <Smile className="w-4 h-4" />
-                      Emojis
-                    </TabsTrigger>
-                  </>
+                  <TabsTrigger
+                    value="emojis"
+                    className="w-full h-9 justify-start rounded-none px-[30px] py-0 text-sm font-medium leading-none text-[#d7d9df] data-[state=active]:bg-[#2b2e34] data-[state=active]:text-white data-[state=active]:shadow-none data-[state=inactive]:hover:bg-[#202329] data-[state=inactive]:hover:text-white transition-colors"
+                  >
+                    Emojis
+                  </TabsTrigger>
                 )}
 
-                {/* User Management Section */}
-                <div className="px-3 pt-4 pb-1.5 w-full">
-                  <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">
-                    User Management
-                  </span>
-                </div>
                 <TabsTrigger
                   value="roles"
-                  className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-secondary/60 data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
+                  className="w-full h-9 justify-start rounded-none px-[30px] py-0 text-sm font-medium leading-none text-[#d7d9df] data-[state=active]:bg-[#2b2e34] data-[state=active]:text-white data-[state=active]:shadow-none data-[state=inactive]:hover:bg-[#202329] data-[state=inactive]:hover:text-white transition-colors"
                 >
-                  <Palette className="w-4 h-4" />
                   Roles
                 </TabsTrigger>
                 {canManageInvites && (
                   <TabsTrigger
                     value="invites"
-                    className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-secondary/60 data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
+                    className="w-full h-9 justify-start rounded-none px-[30px] py-0 text-sm font-medium leading-none text-[#d7d9df] data-[state=active]:bg-[#2b2e34] data-[state=active]:text-white data-[state=active]:shadow-none data-[state=inactive]:hover:bg-[#202329] data-[state=inactive]:hover:text-white transition-colors"
                   >
-                    <Link2 className="w-4 h-4" />
                     Invites
                   </TabsTrigger>
                 )}
                 <TabsTrigger
                   value="members"
-                  className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-secondary/60 data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
+                  className="w-full h-9 justify-start rounded-none px-[30px] py-0 text-sm font-medium leading-none text-[#d7d9df] data-[state=active]:bg-[#2b2e34] data-[state=active]:text-white data-[state=active]:shadow-none data-[state=inactive]:hover:bg-[#202329] data-[state=inactive]:hover:text-white transition-colors"
                 >
-                  <Users className="w-4 h-4" />
                   Members
                 </TabsTrigger>
                 <TabsTrigger
                   value="bans"
-                  className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-secondary/60 data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
+                  className="w-full h-9 justify-start rounded-none px-[30px] py-0 text-sm font-medium leading-none text-[#d7d9df] data-[state=active]:bg-[#2b2e34] data-[state=active]:text-white data-[state=active]:shadow-none data-[state=inactive]:hover:bg-[#202329] data-[state=inactive]:hover:text-white transition-colors"
                 >
-                  <Ban className="w-4 h-4" />
                   Bans
                 </TabsTrigger>
 
-                {/* Integrations */}
                 {canManageChannels && (
-                  <>
-                    <div className="px-3 pt-4 pb-1.5 w-full">
-                      <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">
-                        Integrations
-                      </span>
-                    </div>
-                    <TabsTrigger
-                      value="integrations"
-                      className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-secondary/60 data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
-                    >
-                      <Plug className="w-4 h-4" />
-                      Integrations
-                    </TabsTrigger>
-                  </>
+                  <TabsTrigger
+                    value="integrations"
+                    className="w-full h-9 justify-start rounded-none px-[30px] py-0 text-sm font-medium leading-none text-[#d7d9df] data-[state=active]:bg-[#2b2e34] data-[state=active]:text-white data-[state=active]:shadow-none data-[state=inactive]:hover:bg-[#202329] data-[state=inactive]:hover:text-white transition-colors"
+                  >
+                    Integrations
+                  </TabsTrigger>
                 )}
 
                 {/* Transfer Ownership & Delete Server - at bottom, separated */}
                 {isOwner && (
                   <>
-                    <Separator className="my-3" />
+                    <Separator className="my-5 bg-[#2b2e34]" />
                     <TabsTrigger
                       value="transfer"
-                      className="w-full justify-start gap-2.5 text-sm font-medium px-3 py-2 rounded-md data-[state=active]:bg-secondary/60 data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-secondary/60 data-[state=inactive]:hover:text-foreground transition-colors"
+                      className="w-full h-9 justify-start rounded-none px-[30px] py-0 text-sm font-medium leading-none text-[#d7d9df] data-[state=active]:bg-[#2b2e34] data-[state=active]:text-white data-[state=active]:shadow-none data-[state=inactive]:hover:bg-[#202329] data-[state=inactive]:hover:text-white transition-colors"
                     >
-                      <Crown className="w-4 h-4" />
                       Transfer Ownership
                     </TabsTrigger>
                     <button
                       type="button"
                       onClick={() => setShowDeleteConfirm(true)}
-                      className="w-full flex items-center gap-2.5 text-sm font-medium px-3 py-2 rounded-md text-destructive hover:bg-destructive/10 transition-colors"
+                      className="w-full h-9 flex items-center px-[30px] py-0 text-sm font-medium leading-none text-[#f05d5d] hover:bg-[#202329] transition-colors"
                     >
-                      <Trash2 className="w-4 h-4" />
                       Delete Server
                     </button>
                   </>
                 )}
               </TabsList>
             </ScrollArea>
+
+            {showSidebarSave && (
+              <div className="px-4 pb-4 pt-2 border-t border-[#2b2e34] space-y-2">
+                <Button
+                  type="button"
+                  onClick={saveActiveTabChanges}
+                  disabled={isSavingTabChanges || isLoading || isUploadingIcon || isUploadingBanner}
+                  className="w-full h-9 bg-[#f1c40f] hover:bg-[#ddb40d] text-[#1a1c21] font-semibold"
+                >
+                  {(isSavingTabChanges || isLoading || isUploadingIcon || isUploadingBanner) && (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  )}
+                  Save changes
+                </Button>
+                <button
+                  type="button"
+                  onClick={closeServerSettings}
+                  className="w-full h-7 text-xs text-[#9ea2ad] hover:text-white transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Main Content Area */}
-          <div className="flex-1 overflow-y-auto relative">
+          <div className="flex-1 overflow-y-auto relative bg-[#363944]">
             {/* Close Button (ESC) */}
             <button
               type="button"
               onClick={closeServerSettings}
-              className="absolute top-4 right-4 z-10 flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors group"
+              className="absolute top-[48px] right-[46px] z-10 text-[#aeb1bb] hover:text-white transition-colors"
+              aria-label="Close server settings"
             >
-              <div className="w-9 h-9 rounded-full border border-border bg-secondary/50 flex items-center justify-center group-hover:bg-secondary group-hover:border-muted-foreground/50 transition-colors">
-                <X className="w-4 h-4" />
-              </div>
-              <span className="text-[10px] font-medium uppercase tracking-wider">ESC</span>
+              <X className="w-7 h-7" />
             </button>
 
             {/* Overview Tab */}
-            <TabsContent value="overview" className="m-0 p-6 pr-16">
-              <h2 className="text-xl font-medium mb-6">Overview</h2>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 max-w-3xl">
+            <TabsContent value="overview" className="m-0 px-[40px] py-[32px] pr-[84px]">
+              <h2 className="text-[20px] leading-7 font-bold mb-[26px] text-white">Overview</h2>
+              <form id="server-settings-overview-form" onSubmit={handleSubmit(onSubmit)} className="space-y-5 max-w-3xl">
                 {/* Server Information */}
                 <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-4">
                   <Label className="text-sm font-medium">Server Information</Label>
@@ -2297,16 +2208,8 @@ export const ServerSettingsPage = () => {
                         </p>
                       </div>
                       <Switch
-                        checked={server?.is_nsfw ?? false}
-                        onCheckedChange={async (checked) => {
-                          if (!server || !user) return;
-                          try {
-                            await updateServer(server.id, user.id, { is_nsfw: checked });
-                            toast.success(checked ? 'Server marked as NSFW' : 'Server NSFW removed');
-                          } catch {
-                            toast.error('Failed to update NSFW setting');
-                          }
-                        }}
+                        checked={isNsfwDraft}
+                        onCheckedChange={setIsNsfwDraft}
                         disabled={isLoading || isUploadingIcon || isUploadingBanner}
                       />
                     </div>
@@ -2322,16 +2225,8 @@ export const ServerSettingsPage = () => {
                         Require new members to have an account older than this to join your server. Helps prevent raids from freshly created accounts.
                       </p>
                       <Select
-                        value={String(server?.min_account_age_days ?? 0)}
-                        onValueChange={async (value) => {
-                          if (!server || !user) return;
-                          try {
-                            await updateServer(server.id, user.id, { min_account_age_days: Number(value) });
-                            toast.success('Minimum account age updated');
-                          } catch {
-                            toast.error('Failed to update minimum account age');
-                          }
-                        }}
+                        value={String(minAccountAgeDraft)}
+                        onValueChange={(value) => setMinAccountAgeDraft(Number(value))}
                         disabled={isLoading || isUploadingIcon || isUploadingBanner}
                       >
                         <SelectTrigger className="w-full sm:w-[220px] bg-background/50">
@@ -2361,9 +2256,9 @@ export const ServerSettingsPage = () => {
                           </p>
                         </div>
                         <Switch
-                          checked={!!server.is_published}
-                          onCheckedChange={handlePublishedChange}
-                          disabled={isLoading || isLoadingPublicationEligibility || (!server.is_published && !publicationEligibility?.eligible)}
+                          checked={isPublishedDraft}
+                          onCheckedChange={setIsPublishedDraft}
+                          disabled={isLoading || isLoadingPublicationEligibility || (!isPublishedDraft && !publicationEligibility?.eligible)}
                         />
                       </div>
 
@@ -2467,21 +2362,11 @@ export const ServerSettingsPage = () => {
                   </div>
                 )}
 
-                {canManageServer && (
-                  <div className="fixed bottom-6 right-6 z-50">
-                    <Button type="submit" disabled={isLoading || isUploadingIcon || isUploadingBanner} size="sm" className="shadow-lg">
-                      {(isLoading || isUploadingIcon || isUploadingBanner) && (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      )}
-                      Save Changes
-                    </Button>
-                  </div>
-                )}
               </form>
             </TabsContent>
 
             {/* Members Tab */}
-            <TabsContent value="members" className="m-0 p-6 pr-16">
+            <TabsContent value="members" className="m-0 px-[40px] py-[32px] pr-[84px]">
               <h2 className="text-xl font-medium mb-1">Members</h2>
               <p className="text-sm text-muted-foreground mb-4">
                 {members.length} member{members.length !== 1 ? "s" : ""}
@@ -2587,7 +2472,7 @@ export const ServerSettingsPage = () => {
                                           </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end" className="w-48">
-                                          {roles.filter((r) => r.name !== "@everyone").map((role) => {
+                                          {visibleRoles.filter((r) => r.name !== "@everyone").map((role) => {
                                             const hasRole = memberRoles.some((r) => r.id === role.id);
                                             return (
                                               <DropdownMenuItem
@@ -2657,7 +2542,7 @@ export const ServerSettingsPage = () => {
             </TabsContent>
 
             {/* Roles Tab */}
-            <TabsContent value="roles" className="m-0 h-full pr-16">
+            <TabsContent value="roles" className="m-0 h-full pr-[84px]">
               {canManageRoles ? (
                 <div className="flex h-full">
                   {/* Left Side - Roles List (hidden on mobile when editing) */}
@@ -2701,7 +2586,7 @@ export const ServerSettingsPage = () => {
                           >
                             <SortableContext items={roleIds} strategy={verticalListSortingStrategy}>
                               <div className="space-y-1">
-                                {roles.map((role) => (
+                                {visibleRoles.map((role) => (
                                   <SortableRoleRow key={role.id} role={role} />
                                 ))}
                               </div>
@@ -2874,7 +2759,11 @@ export const ServerSettingsPage = () => {
                           <p className="text-sm text-muted-foreground mb-4">
                             Configure what members with this role can do. Greyed-out permissions are not yet available.
                           </p>
-                          <RolePermissionsEditorInline role={selectedRole} serverId={server.id} />
+                          <RolePermissionsEditorInline
+                            role={selectedRole}
+                            serverId={server.id}
+                            stageRolePermissionsOp={stageRolePermissionsOp}
+                          />
                         </div>
 
                         {/* Delete Role - hidden for @everyone */}
@@ -3036,7 +2925,7 @@ export const ServerSettingsPage = () => {
             </TabsContent>
 
             {/* Invites Tab */}
-            <TabsContent value="invites" className="m-0 p-6 pr-16">
+            <TabsContent value="invites" className="m-0 px-[40px] py-[32px] pr-[84px]">
               {canManageInvites ? (
                 <div className="space-y-4 max-w-4xl">
                   <h2 className="text-xl font-medium">Invites</h2>
@@ -3208,7 +3097,7 @@ export const ServerSettingsPage = () => {
             </TabsContent>
 
             {/* Bans Tab */}
-            <TabsContent value="bans" className="m-0 p-6 pr-16">
+            <TabsContent value="bans" className="m-0 px-[40px] py-[32px] pr-[84px]">
               <h2 className="text-xl font-medium mb-4">Bans</h2>
               {bannedMembers.length > 0 ? (
                 <ScrollArea className="h-[calc(100vh-16rem)] pr-4">
@@ -3228,18 +3117,16 @@ export const ServerSettingsPage = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={async () => {
-                              try {
+                            onClick={() => {
+                              if (!user) return;
+                              queueTabOp("bans", `Unban ${member.user?.username || "user"}`, async () => {
                                 const { error } = await supabase.rpc("unban_member", {
                                   _server_id: server.id,
-                                  _user_id: user!.id,
+                                  _user_id: user.id,
                                   _target_user_id: member.user_id,
                                 });
                                 if (error) throw error;
-                                toast.success(`${member.user?.username} has been unbanned`);
-                              } catch {
-                                toast.error("Failed to unban");
-                              }
+                              });
                             }}
                             className="text-xs h-8 px-3 flex-shrink-0"
                           >
@@ -3260,7 +3147,7 @@ export const ServerSettingsPage = () => {
             </TabsContent>
 
             {/* Emojis Tab */}
-            <TabsContent value="emojis" className="m-0 p-6 pr-16">
+            <TabsContent value="emojis" className="m-0 px-[40px] py-[32px] pr-[84px]">
               {canManageEmojis ? (
                 <div className="space-y-5 max-w-4xl">
                   <h2 className="text-xl font-medium">Emojis</h2>
@@ -3550,7 +3437,7 @@ export const ServerSettingsPage = () => {
 
             {/* Integrations Tab */}
             {canManageChannels && (
-              <TabsContent value="integrations" className="m-0 p-6 pr-16">
+              <TabsContent value="integrations" className="m-0 px-[40px] py-[32px] pr-[84px]">
                 <div className="space-y-5 max-w-3xl">
                   <h2 className="text-xl font-medium">Integrations</h2>
                   <p className="text-sm text-muted-foreground">
@@ -3586,7 +3473,7 @@ export const ServerSettingsPage = () => {
 
             {/* Transfer Ownership Tab */}
             {isOwner && (
-              <TabsContent value="transfer" className="m-0 p-6 pr-16">
+              <TabsContent value="transfer" className="m-0 px-[40px] py-[32px] pr-[84px]">
                 <div className="space-y-5 max-w-3xl">
                   <div>
                     <h2 className="text-xl font-medium text-destructive">Transfer Ownership</h2>

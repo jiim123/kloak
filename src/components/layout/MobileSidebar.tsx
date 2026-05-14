@@ -8,13 +8,9 @@ import { DMSidebar } from '@/components/dm/DMSidebar';
 
 interface MobileSidebarProps {
   isDMView: boolean;
-  showFriends: boolean;
-  onShowFriendsChange: (show: boolean) => void;
-  showExplore: boolean;
-  onShowExploreChange: (show: boolean) => void;
 }
 
-export const MobileSidebar = ({ isDMView, showFriends, onShowFriendsChange, showExplore, onShowExploreChange }: MobileSidebarProps) => {
+export const MobileSidebar = ({ isDMView }: MobileSidebarProps) => {
   const location = useLocation();
   const { isMobileSidebarOpen, setMobileSidebarOpen, closeMobileSidebars } = useUIStore();
   
@@ -46,21 +42,6 @@ export const MobileSidebar = ({ isDMView, showFriends, onShowFriendsChange, show
     wasOpenRef.current = isMobileSidebarOpen;
   }, [isMobileSidebarOpen]);
 
-  // Handle friends change with sidebar close
-  const handleShowFriendsChange = (show: boolean) => {
-    onShowFriendsChange(show);
-    if (show) {
-      closeMobileSidebars();
-    }
-  };
-
-  const handleShowExploreChange = (show: boolean) => {
-    onShowExploreChange(show);
-    if (show) {
-      closeMobileSidebars();
-    }
-  };
-
   return (
     <Drawer direction="left" open={isMobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
       <DrawerContent
@@ -79,12 +60,7 @@ export const MobileSidebar = ({ isDMView, showFriends, onShowFriendsChange, show
           {/* Channel/DM sidebar */}
           <div className="flex-1 min-w-0 bg-card rounded-[10px] border border-border/50 h-full overflow-hidden">
             {isDMView ? (
-              <DMSidebar 
-                showFriends={showFriends} 
-                onShowFriendsChange={handleShowFriendsChange} 
-                showExplore={showExplore}
-                onShowExploreChange={handleShowExploreChange}
-              />
+              <DMSidebar />
             ) : (
               <ChannelSidebar />
             )}

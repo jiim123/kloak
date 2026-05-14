@@ -8,25 +8,21 @@ import { Button } from "@/components/ui/button";
 
 interface MobileHeaderProps {
   isDMView: boolean;
-  showFriends: boolean;
-  showExplore: boolean;
 }
 
 const safeAreaStyle = { paddingTop: "env(safe-area-inset-top, 0px)" } as const;
 
-export const MobileHeader = memo(({ isDMView, showFriends, showExplore }: MobileHeaderProps) => {
+export const MobileHeader = memo(({ isDMView }: MobileHeaderProps) => {
   const { currentServer, currentChannel } = useServerStore();
   const { currentConversation } = useDMStore();
   const { setMobileSidebarOpen, isMemberSidebarOpen, setMemberSidebarOpen, openModal } = useUIStore();
 
   const title = useMemo(() => {
     if (isDMView) {
-      if (showFriends) return "Friends";
-      if (showExplore) return "Explore";
       if (currentConversation?.other_user) {
         return currentConversation.other_user.display_name || currentConversation.other_user.username;
       }
-      return "Home";
+      return "Direct Messages";
     }
 
     if (currentChannel) {
@@ -34,7 +30,7 @@ export const MobileHeader = memo(({ isDMView, showFriends, showExplore }: Mobile
     }
 
     return currentServer?.name || "Kloak";
-  }, [isDMView, showFriends, showExplore, currentConversation, currentChannel, currentServer]);
+  }, [isDMView, currentConversation, currentChannel, currentServer]);
 
   const channelIcon = useMemo(() => {
     if (isDMView || !currentChannel) return null;

@@ -31,7 +31,6 @@ import { useUIStore } from "@/stores/uiStore";
 import { useUnreadDMsContext } from "@/hooks/useUnreadDMsContext";
 import { useUnreadChannelsContext } from "@/hooks/useUnreadChannelsContext";
 import { useDMStore } from "@/stores/dmStore";
-import { useFriendStore } from "@/stores/friendStore";
 import { supabase } from "@/integrations/supabase/client";
 import {
   DndContext,
@@ -111,10 +110,10 @@ const pillVariants = {
 
 const iconVariants = {
   initial: { scale: 0.8, opacity: 0 },
-  animate: { scale: 1, opacity: 1, borderRadius: 6 },
+  animate: { scale: 1, opacity: 1, borderRadius: 12 },
   hover: { borderRadius: 10 },
   tap: { scale: 0.95 },
-  active: { scale: 1, borderRadius: 12 },
+  active: { scale: 1, borderRadius: 10 },
 };
 
 const serverItemVariants = {
@@ -152,6 +151,7 @@ const dmItemTransition = {
 };
 
 const homeIconTransition = { duration: 0.15 };
+const bottomActionIconTransition = { duration: 0.15 };
 
 // FIX #1: Static animation objects for the "Add Server" dashed border
 // Previously these were inline object literals, re-created every render
@@ -224,12 +224,12 @@ const ServerIconVisual = memo(({ server }: { server: ServerWithMembership }) => 
     <div className="relative">
       <div
         className={cn(
-          "w-12 h-12 overflow-hidden rounded-full flex items-center justify-center",
-          !server.icon_url && getServerColor(server.name),
+          "w-11 h-11 overflow-hidden rounded-[12px] flex items-center justify-center border border-white/8 shadow-[0_6px_18px_rgba(0,0,0,0.28)]",
+          !server.icon_url ? "bg-[#2f323d]" : "bg-[#23262f]",
         )}
       >
         {server.icon_url ? (
-          <Avatar className="w-12 h-12 border-0">
+          <Avatar className="w-11 h-11 border-0 rounded-[12px]">
             <AvatarImage src={server.icon_url} alt={server.name} className="object-cover" />
             <AvatarFallback className={getServerColor(server.name)}>{getServerInitials(server.name)}</AvatarFallback>
           </Avatar>
@@ -297,7 +297,7 @@ const FolderItem = memo(
             <TooltipTrigger asChild>
               <MotionButton
                 ref={setNodeRef}
-                className={cn("relative group", isOver && "ring-1 ring-primary/50 rounded-[6px]")}
+                className={cn("relative group", isOver && "ring-1 ring-primary/50 rounded-[12px]")}
                 onClick={handleToggle}
                 whileHover="hover"
                 whileTap="tap"
@@ -309,15 +309,15 @@ const FolderItem = memo(
                   whileHover="hover"
                   whileTap="tap"
                   transition={iconSpringTransition}
-                  className="w-12 h-12 flex items-center justify-center text-white relative"
+                  className="w-10 h-10 rounded-[12px] flex items-center justify-center text-white relative border border-white/10 shadow-[0_8px_20px_rgba(0,0,0,0.28)]"
                   style={{ backgroundColor: folder.color }}
                 >
-                  <Folder className="w-5 h-5" />
+                  <Folder className="w-[18px] h-[18px]" />
                   <span className="absolute top-1 right-1 text-white/90">
                     {folder.isCollapsed ? (
-                      <ChevronRight className="w-3.5 h-3.5" />
+                      <ChevronRight className="w-3 h-3" />
                     ) : (
-                      <ChevronDown className="w-3.5 h-3.5" />
+                      <ChevronDown className="w-3 h-3" />
                     )}
                   </span>
                 </motion.div>
@@ -482,7 +482,7 @@ const DraggableServerItem = memo(
                   >
                     {/* Indicator pill */}
                     <motion.span
-                      className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full"
+                      className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 bg-white rounded-r-full shadow-[0_0_10px_rgba(255,255,255,0.35)]"
                       variants={pillVariants}
                       initial="hidden"
                       animate={pillState}
@@ -496,14 +496,16 @@ const DraggableServerItem = memo(
                       whileTap="tap"
                       transition={iconSpringTransition}
                       className={cn(
-                        "w-12 h-12 overflow-hidden rounded-full",
-                        isActive && !server.icon_url && "ring-2 ring-white/15",
-                        !server.icon_url && getServerColor(server.name),
-                        server.icon_url && "border-0",
+                        "w-11 h-11 overflow-hidden rounded-[12px] border shadow-[0_8px_20px_rgba(0,0,0,0.28)]",
+                        isActive
+                          ? "border-[#ffd23c] bg-[#ffd23c] text-[#1f222a]"
+                          : "border-white/8 bg-[#262933] text-white hover:border-white/16 hover:bg-[#2c2f39]",
+                        !server.icon_url && !isActive && getServerColor(server.name),
+                        server.icon_url && "border-white/8",
                       )}
                     >
                       {server.icon_url ? (
-                        <Avatar className="w-12 h-12 border-0">
+                        <Avatar className="w-11 h-11 border-0 rounded-[12px]">
                           <AvatarImage src={server.icon_url} alt={server.name} className="object-cover" />
                           <AvatarFallback className={getServerColor(server.name)}>
                             {getServerInitials(server.name)}
@@ -511,7 +513,9 @@ const DraggableServerItem = memo(
                         </Avatar>
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <span className="text-sm font-bold text-white">{getServerInitials(server.name)}</span>
+                          <span className={cn("text-sm font-bold", isActive ? "text-[#1f222a]" : "text-white")}>
+                            {getServerInitials(server.name)}
+                          </span>
                         </div>
                       )}
                     </motion.div>
@@ -604,8 +608,9 @@ const UnreadDMShortcut = memo(
             <button className="relative group" onClick={handleClick}>
               <motion.div
                 className={cn(
-                  "w-12 h-12 rounded-[16px] flex items-center justify-center overflow-hidden transition-all duration-200",
-                  "bg-secondary/80 hover:bg-secondary hover:rounded-[12px]",
+                  "w-10 h-10 rounded-[12px] flex items-center justify-center overflow-hidden transition-all duration-200 border border-white/8 shadow-[0_8px_20px_rgba(0,0,0,0.28)]",
+                  "w-11 h-11 rounded-[12px] flex items-center justify-center overflow-hidden transition-all duration-200 border border-white/8 shadow-[0_8px_20px_rgba(0,0,0,0.28)]",
+                  "bg-[#262933] hover:bg-[#2c2f39] hover:border-white/16",
                 )}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -647,7 +652,7 @@ const LoadingSkeleton = memo(() => (
     {[0, 1, 2].map((i) => (
       <motion.div
         key={i}
-        className="w-12 h-12 rounded-[6px] bg-secondary/50"
+        className="w-11 h-11 rounded-[12px] bg-white/10"
         animate={{ opacity: [0.5, 1, 0.5] }}
         transition={{ repeat: Infinity, duration: 1.5, delay: i * 0.2 }}
       />
@@ -708,9 +713,8 @@ export const ServerSidebar = () => {
   const [isFolderStateLoaded, setIsFolderStateLoaded] = useState(false);
   const [orderedServerIds, setOrderedServerIds] = useState<string[]>([]);
 
-  const pendingFriendCount = useFriendStore((s) => s.pendingRequests.length);
-  const totalHomeBadge = totalDMUnread + pendingFriendCount;
-  const hasHomeUnread = hasDMUnread || pendingFriendCount > 0;
+  const totalHomeBadge = totalDMUnread;
+  const hasHomeUnread = hasDMUnread;
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
@@ -1304,7 +1308,7 @@ export const ServerSidebar = () => {
   );
 
   return (
-    <div className="h-full w-[72px] shrink-0 flex flex-col items-center relative overflow-hidden bg-layout-sidebar">
+    <div className="h-full w-[68px] shrink-0 flex flex-col items-center relative overflow-hidden bg-[#1E2025]">
       <DndContext
         sensors={sensors}
         onDragStart={handleDragStart}
@@ -1316,8 +1320,8 @@ export const ServerSidebar = () => {
             <div
               ref={setRootDroppableRef}
               className={cn(
-                "flex-1 flex flex-col items-center gap-3 overflow-y-auto scrollbar-overlay scrollbar-hide w-full px-2 pt-0 pb-24",
-                isOverRoot && "outline outline-2 outline-primary/30 outline-offset-[-2px] rounded-md",
+                "flex-1 flex flex-col items-center gap-2.5 overflow-y-auto scrollbar-overlay scrollbar-hide w-full px-3 pt-3 pb-24",
+                isOverRoot && "outline outline-2 outline-primary/30 outline-offset-[-2px] rounded-xl",
               )}
             >
               {/* Loading skeleton */}
@@ -1335,7 +1339,7 @@ export const ServerSidebar = () => {
                     whileTap="tap"
                   >
                     <motion.span
-                      className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full"
+                      className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 bg-white rounded-r-full shadow-[0_0_10px_rgba(255,255,255,0.35)]"
                       variants={pillVariants}
                       initial="hidden"
                       animate={homePillState}
@@ -1349,10 +1353,10 @@ export const ServerSidebar = () => {
                       whileTap="tap"
                       transition={iconSpringTransition}
                       className={cn(
-                        "w-12 h-12 flex items-center justify-center rounded-full",
+                        "w-11 h-11 flex items-center justify-center rounded-[12px] border shadow-[0_8px_20px_rgba(0,0,0,0.28)]",
                         currentServer === null
-                          ? "bg-secondary text-foreground"
-                          : "bg-muted text-muted-foreground hover:bg-secondary hover:text-foreground",
+                          ? "border-[#ffd23c] bg-[#ffd23c] text-[#1f222a]"
+                          : "border-white/8 bg-[#262933] text-white/75 hover:border-white/16 hover:bg-[#2c2f39] hover:text-white",
                       )}
                     >
                       <AnimatePresence mode="wait" initial={false}>
@@ -1364,7 +1368,7 @@ export const ServerSidebar = () => {
                             exit={{ opacity: 0 }}
                             transition={homeIconTransition}
                           >
-                            <Home className="w-5 h-5" />
+                            <Home className="w-[18px] h-[18px]" />
                           </motion.span>
                         ) : (
                           <motion.span
@@ -1374,7 +1378,7 @@ export const ServerSidebar = () => {
                             exit={{ opacity: 0 }}
                             transition={homeIconTransition}
                           >
-                            <Mail className="w-5 h-5" />
+                            <Mail className="w-[18px] h-[18px]" />
                           </motion.span>
                         )}
                       </AnimatePresence>
@@ -1412,7 +1416,7 @@ export const ServerSidebar = () => {
               </AnimatePresence>
 
               {/* Separator */}
-              <div className="w-8 h-px bg-foreground/10 mb-1 shrink-0" />
+              <div className="w-5 h-px bg-white/14 my-1 shrink-0" />
 
               {/* Folder items + servers */}
               <AnimatePresence>
@@ -1464,9 +1468,72 @@ export const ServerSidebar = () => {
       </DndContext>
 
       {/* Sticky Add Server button at bottom */}
-      <div className="absolute bottom-0 left-0 right-0 pl-3 pr-2 pb-3 pt-2 bg-layout-sidebar z-10">
-        <div className="w-8 h-0.5 bg-border rounded-full shrink-0 mx-auto mb-2" />
-        <div className="flex justify-center">
+      <div className="absolute bottom-0 left-0 right-0 px-3 pb-3 pt-2 bg-[#1E2025] z-10">
+        <div className="w-5 h-px bg-white/14 rounded-full shrink-0 mx-auto mb-2" />
+        <div className="flex flex-col items-center gap-2">
+          <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
+            <TooltipTrigger asChild>
+              <MotionButton
+                className="relative group"
+                onMouseEnter={handleHomeHover}
+                onMouseLeave={handleHoverLeave}
+                onClick={handleHomeClick}
+                whileHover="hover"
+                whileTap="tap"
+              >
+                <motion.span
+                  className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 bg-white rounded-r-full shadow-[0_0_10px_rgba(255,255,255,0.35)]"
+                  variants={pillVariants}
+                  initial="hidden"
+                  animate={homePillState}
+                />
+
+                <motion.div
+                  variants={iconVariants}
+                  initial="animate"
+                  animate={currentServer === null ? "active" : "animate"}
+                  whileHover="hover"
+                  whileTap="tap"
+                  transition={iconSpringTransition}
+                  className={cn(
+                    "w-11 h-11 flex items-center justify-center rounded-[12px] border shadow-[0_8px_20px_rgba(0,0,0,0.28)]",
+                    currentServer === null
+                      ? "border-[#ffd23c] bg-[#ffd23c] text-[#1f222a]"
+                      : "border-white/8 bg-[#262933] text-white/75 hover:border-white/16 hover:bg-[#2c2f39] hover:text-white",
+                  )}
+                >
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.span
+                      key={currentServer === null ? "dm-active-icon" : "dm-inactive-icon"}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={bottomActionIconTransition}
+                    >
+                      <Mail className="w-[18px] h-[18px]" />
+                    </motion.span>
+                  </AnimatePresence>
+                </motion.div>
+
+                <AnimatePresence>
+                  {totalHomeBadge > 0 && currentServer !== null && (
+                    <motion.span
+                      initial={badgeInitial}
+                      animate={badgeAnimate}
+                      exit={badgeExit}
+                      className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
+                    >
+                      {totalHomeBadge > 99 ? "99+" : totalHomeBadge}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </MotionButton>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="font-medium">
+              Direct Messages{totalHomeBadge > 0 ? ` (${totalHomeBadge} unread)` : ""}
+            </TooltipContent>
+          </Tooltip>
+
           <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
             <TooltipTrigger asChild>
               <MotionButton
@@ -1474,7 +1541,7 @@ export const ServerSidebar = () => {
                 whileHover="hover"
                 initial="default"
                 onClick={handleAddServer}
-                className="relative w-12 h-12 rounded-[6px] text-muted-foreground hover:text-foreground transition-colors duration-200 flex items-center justify-center overflow-hidden"
+                className="relative w-11 h-11 rounded-[12px] border border-white/10 bg-[#262933] text-white/75 hover:text-white hover:bg-[#2c2f39] transition-colors duration-200 flex items-center justify-center overflow-hidden shadow-[0_8px_20px_rgba(0,0,0,0.28)]"
               >
                 <motion.svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 48 48">
                   <motion.rect
@@ -1482,7 +1549,7 @@ export const ServerSidebar = () => {
                     y="1"
                     width="46"
                     height="46"
-                    rx="5"
+                    rx="11"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="1.5"

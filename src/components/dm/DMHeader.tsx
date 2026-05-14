@@ -86,8 +86,8 @@ export const DMHeader = ({ otherUser }: DMHeaderProps) => {
   if (!otherUser) return null;
 
   return (
-    <div className="w-full bg-card rounded-[10px] border border-border/50 sticky top-0 z-40" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
-      <div className="flex items-center justify-between px-4 py-3">
+    <div className="w-full bg-card border-b border-border/50 sticky top-0 z-40" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
+      <div className="flex items-center justify-between px-4 py-3 bg-[#292B31]">
         {/* Left side - Back button (mobile) + User info */}
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <button
@@ -98,7 +98,7 @@ export const DMHeader = ({ otherUser }: DMHeaderProps) => {
           </button>
           <button
             onClick={handleUserClick}
-            className="flex items-center gap-2 min-w-0 flex-1 hover:opacity-80 transition-opacity"
+            className="flex items-center gap-2 min-w-0 flex-1 px-3 py-2 hover:opacity-80 transition-opacity"
           >
             <div className="relative flex-shrink-0">
               <AvatarWithDecoration

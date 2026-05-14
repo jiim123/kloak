@@ -246,7 +246,7 @@ const MemberListItemContent = forwardRef<HTMLDivElement, MemberListItemContentPr
       <div
         ref={ref}
         className={cn(
-          "group flex items-center gap-2 mx-2 px-1.5 py-1 rounded-md cursor-pointer transition-colors",
+          "group flex items-center gap-2 mx-1.5 my-0.5 px-1 py-1.5 rounded-md cursor-pointer transition-colors",
           "hover:bg-secondary/45 active:bg-secondary/70",
           className,
         )}
@@ -1286,7 +1286,7 @@ export const MembersSidebar = () => {
       </div>
 
       {!isMobile && !massBanMode && (
-        <div className="mx-4 mt-4 shrink-0">
+        <div className="mx-2 mt-2 shrink-0">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
             <input
@@ -1315,10 +1315,10 @@ export const MembersSidebar = () => {
         ref={listViewportRef}
         className={cn(
           "flex-1 overflow-y-auto py-2",
-          !isMobile && "mx-4 mb-10 mt-4 rounded bg-layout-members px-1.5",
+          !isMobile && "mx-2 mb-2 mt-2 rounded bg-layout-members px-0.5 pb-2",
         )}
       >
-        <ViewportList viewportRef={listViewportRef} items={memberListRows} itemSize={40} overscan={14}>
+        <ViewportList viewportRef={listViewportRef} items={memberListRows} itemSize={44} overscan={14}>
           {renderRow}
         </ViewportList>
         {!isMobile && canCreateInvite && (

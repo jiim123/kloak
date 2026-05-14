@@ -10,7 +10,6 @@ import {
   MoreHorizontal,
   Share2,
   Link2,
-  CornerLeftDown,
   Copy,
   Eye,
   EyeOff,
@@ -133,6 +132,11 @@ interface MessageItemProps {
     nickname?: string | null;
     roles?: CustomServerRole[];
   };
+  replyAuthorStyleFallback?: {
+    role?: ServerRole | null;
+    nickname?: string | null;
+    roles?: CustomServerRole[];
+  };
   /** When provided, component operates in DM mode (skips server features) */
   dmActions?: DMActions;
   flushOuterXPadding?: boolean;
@@ -177,6 +181,15 @@ const RoleIconWrapper = forwardRef<HTMLSpanElement, RoleIconWrapperProps>(
   ),
 );
 RoleIconWrapper.displayName = "RoleIconWrapper";
+
+const ReplyConnector = memo(function ReplyConnector() {
+  return (
+    <span aria-hidden="true" className="relative h-3.5 w-7 flex-shrink-0 text-muted-foreground/70">
+      <span className="absolute left-1 top-[2px] h-2.5 w-5 rounded-tl-md border-l-2 border-t-2 border-current" />
+    </span>
+  );
+});
+ReplyConnector.displayName = "ReplyConnector";
 
 // Renders a single attachment, using a signed URL for private bucket images
 const AttachmentItem = memo(function AttachmentItem({
@@ -297,6 +310,7 @@ export const MessageItem = memo(function MessageItem({
   customEmojiMap: sharedCustomEmojiMap,
   globalEmojiMap: sharedGlobalEmojiMap,
   authorStyleFallback,
+  replyAuthorStyleFallback,
   dmActions,
   flushOuterXPadding = false,
 }: MessageItemProps) {
@@ -727,6 +741,15 @@ export const MessageItem = memo(function MessageItem({
   const showGhostIdentity = isGhostMode && !showMessageAuthorIdentity;
 
   const replyUser = useMessageUser(message.reply_to?.user_id);
+  const replyMember = useMemo(() => {
+    if (isDM || !message.reply_to?.user_id) return undefined;
+    return messageMemberByUserId.get(message.reply_to.user_id);
+  }, [isDM, message.reply_to?.user_id, messageMemberByUserId]);
+  const replyRoles = useMemo(
+    () => (isDM ? [] : (replyMember?.roles ?? replyAuthorStyleFallback?.roles ?? [])),
+    [isDM, replyAuthorStyleFallback?.roles, replyMember?.roles],
+  );
+  const replyBaseRole = isDM ? undefined : (replyMember?.role ?? replyAuthorStyleFallback?.role);
 
   const showReplyAuthorIdentity = useMemo(
     () =>
@@ -735,8 +758,51 @@ export const MessageItem = memo(function MessageItem({
         authorUserId: message.reply_to?.user_id,
         members: membersList,
         ownerId: currentServer?.owner_id,
-      }),
+    }),
     [isGhostMode, message.reply_to?.user_id, membersList, currentServer?.owner_id],
+  );
+
+  const topReplyCustomRoleColor = useMemo(() => {
+    if (isDM || replyRoles.length === 0) return null;
+
+    const resolved = replyRoles.map((mr) => roles.find((r) => r.id === mr.id) ?? mr).filter(Boolean);
+
+    let best: CustomServerRole | null = null;
+    for (const r of resolved as CustomServerRole[]) {
+      if (!best) {
+        best = r;
+        continue;
+      }
+      const aPos = typeof r.position === "number" ? r.position : Number.POSITIVE_INFINITY;
+      const bPos = typeof best.position === "number" ? best.position : Number.POSITIVE_INFINITY;
+      if (aPos < bPos) best = r;
+    }
+
+    return best?.color ?? null;
+  }, [isDM, replyRoles, roles]);
+
+  const replyUsernameColorClass = useMemo(() => {
+    if (isDM) return "text-foreground";
+    if (!topReplyCustomRoleColor) return getRoleColor(replyBaseRole ?? undefined);
+    return isGradientColor(topReplyCustomRoleColor) ? "text-transparent" : "text-foreground";
+  }, [isDM, replyBaseRole, topReplyCustomRoleColor]);
+
+  const replyUsernameColorStyle = useMemo(() => {
+    if (!topReplyCustomRoleColor) return undefined;
+    return isGradientColor(topReplyCustomRoleColor)
+      ? getGradientTextStyle(topReplyCustomRoleColor)
+      : ({ color: topReplyCustomRoleColor } as React.CSSProperties);
+  }, [topReplyCustomRoleColor]);
+
+  const replyDisplayName = useMemo(
+    () =>
+      pickFirstNonBlank(
+        replyMember?.nickname,
+        replyAuthorStyleFallback?.nickname,
+        replyUser?.display_name,
+        replyUser?.username,
+      ) ?? "unknown",
+    [replyAuthorStyleFallback?.nickname, replyMember?.nickname, replyUser?.display_name, replyUser?.username],
   );
 
   // Memoize formatted timestamps
@@ -959,7 +1025,7 @@ export const MessageItem = memo(function MessageItem({
 
   const innerClassName = useMemo(() => {
     const classes = [
-      "group relative z-0 hover:z-[80] focus-within:z-[80] flex px-4 rounded-lg hover:bg-muted/40",
+      "group relative z-0 hover:z-10 focus-within:z-10 flex px-4 rounded-lg hover:bg-muted/40",
       compactMode ? "gap-2 py-0.5" : isGrouped ? "gap-3 py-[1px]" : "gap-3 py-0.5",
     ];
     if (isAnnouncementChannel && !isGrouped) {
@@ -1138,6 +1204,72 @@ export const MessageItem = memo(function MessageItem({
     [message.reply_to?.id],
   );
 
+  const replyReferenceNode = message.reply_to ? (
+    <button
+      type="button"
+      className="mb-0.5 flex max-w-full cursor-pointer items-center gap-1.5 overflow-hidden text-left text-[11px] leading-4 text-muted-foreground transition-colors duration-150 hover:text-foreground/90 sm:text-[12px]"
+      onClick={handleReplyClick}
+      onTouchStart={stopTouchPropagation}
+      onTouchEnd={stopTouchPropagation}
+    >
+      <ReplyConnector />
+      {showReplyAuthorIdentity && replyUser ? (
+        <>
+          <img src={replyUser.avatar_url || undefined} alt="" className="h-4 w-4 flex-shrink-0 rounded-full object-cover" />
+          <span className={cn("flex-shrink-0 font-medium", replyUsernameColorClass)} style={replyUsernameColorStyle}>
+            {replyDisplayName}
+          </span>
+        </>
+      ) : showReplyAuthorIdentity ? (
+        <span className={cn("flex-shrink-0 font-medium", replyUsernameColorClass)} style={replyUsernameColorStyle}>
+          {replyDisplayName}
+        </span>
+      ) : (
+        <span className="flex-shrink-0 font-medium italic">Anonymous</span>
+      )}
+      {(() => {
+        const replyContent = message.reply_to.content;
+        if (isPollMessageContent(replyContent)) {
+          return <span className="flex-shrink-0 italic">poll</span>;
+        }
+        if (isImageOnlyMessage(replyContent)) {
+          return (
+            <span className="flex flex-shrink-0 items-center gap-1 italic">
+              <Paperclip className="h-3 w-3" />
+              attachment
+            </span>
+          );
+        }
+        const attachmentUrlPattern =
+          /https?:\/\/[^\s]*(?:supabase\.co\/storage\/v1\/|\.(?:jpg|jpeg|png|gif|webp|mp4|mov|pdf|zip|rar|doc|docx|xls|xlsx))(?:[^\s]*)/gi;
+        const kloakAttachmentPattern = /kloak-attachment:\/\/[^\s]*/g;
+        const textOnly = replyContent
+          .split("\n")
+          .map((line) => line.replace(attachmentUrlPattern, "").replace(kloakAttachmentPattern, "").trim())
+          .filter((line) => line.length > 0)
+          .join(" ");
+        if (!textOnly) {
+          return (
+            <span className="flex flex-shrink-0 items-center gap-1 italic">
+              <Paperclip className="h-3 w-3" />
+              attachment
+            </span>
+          );
+        }
+        return (
+          <span className="truncate text-muted-foreground/90 sm:max-w-[320px] max-w-[190px]">
+            <ReplyPreview
+              content={textOnly}
+              maxLength={50}
+              customEmojiMap={customEmojiMap}
+              globalEmojiMap={globalEmojiMap}
+            />
+          </span>
+        );
+      })()}
+    </button>
+  ) : null;
+
   return (
     <>
       {showNewDivider && (
@@ -1309,6 +1441,8 @@ export const MessageItem = memo(function MessageItem({
                   })()
                 ) : (
                   <>
+                    {replyReferenceNode}
+
                     {/* Header */}
                     {compactMode ? (
                       <span className="inline font-[Inter,system-ui,sans-serif]">
@@ -1366,79 +1500,6 @@ export const MessageItem = memo(function MessageItem({
                           {message.is_pinned && <Pin className="w-3 h-3 text-muted-foreground" />}
                         </div>
                       )
-                    )}
-
-                    {/* Reply reference */}
-                    {message.reply_to && (
-                      <div
-                        className="flex items-center gap-2 text-[11px] sm:text-[12px] text-foreground/70 cursor-pointer hover:text-foreground/90 flex-nowrap overflow-hidden transition-colors duration-150 pl-0.5"
-                        onClick={handleReplyClick}
-                        onTouchStart={stopTouchPropagation}
-                        onTouchEnd={stopTouchPropagation}
-                      >
-                        <CornerLeftDown className="w-3.5 h-3.5 flex-shrink-0" />
-                        {showReplyAuthorIdentity && replyUser ? (
-                          <>
-                            <img
-                              src={replyUser.avatar_url || undefined}
-                              alt=""
-                              className="w-4 h-4 rounded-full flex-shrink-0 object-cover"
-                            />
-                            <span className="font-medium flex-shrink-0">
-                              {replyUser.display_name || replyUser.username || "unknown"}
-                            </span>
-                          </>
-                        ) : showReplyAuthorIdentity ? (
-                          <span className="font-medium flex-shrink-0">
-                            {replyUser?.display_name || replyUser?.username || "unknown"}
-                          </span>
-                        ) : (
-                          <span className="font-medium italic flex-shrink-0">Anonymous</span>
-                        )}
-                        {(() => {
-                          const replyContent = message.reply_to.content;
-                          if (isPollMessageContent(replyContent)) {
-                            return <span className="italic flex-shrink-0">poll</span>;
-                          }
-                          if (isImageOnlyMessage(replyContent)) {
-                            return (
-                              <span className="italic flex-shrink-0 flex items-center gap-1">
-                                <Paperclip className="w-3 h-3" />
-                                attachment
-                              </span>
-                            );
-                          }
-                          // Strip attachment/image URLs and kloak-attachment:// references from content for preview
-                          const attachmentUrlPattern =
-                            /https?:\/\/[^\s]*(?:supabase\.co\/storage\/v1\/|\.(?:jpg|jpeg|png|gif|webp|mp4|mov|pdf|zip|rar|doc|docx|xls|xlsx))(?:[^\s]*)/gi;
-                          const kloakAttachmentPattern = /kloak-attachment:\/\/[^\s]*/g;
-                          const textOnly = replyContent
-                            .split("\n")
-                            .map((line) =>
-                              line.replace(attachmentUrlPattern, "").replace(kloakAttachmentPattern, "").trim(),
-                            )
-                            .filter((line) => line.length > 0)
-                            .join(" ");
-                          if (!textOnly) {
-                            return (
-                              <span className="italic flex-shrink-0 flex items-center gap-1">
-                                <Paperclip className="w-3 h-3" />
-                                attachment
-                              </span>
-                            );
-                          }
-                          return (
-                            <span className="truncate max-w-[150px] sm:max-w-[250px]">
-                              <ReplyPreview
-                                content={textOnly}
-                                maxLength={40}
-                                customEmojiMap={customEmojiMap}
-                                globalEmojiMap={globalEmojiMap}
-                              />
-                            </span>
-                          );
-                        })()}
-                      </div>
                     )}
 
                     {/* Message content */}
@@ -1531,7 +1592,7 @@ export const MessageItem = memo(function MessageItem({
               {!isBeingEdited && !message.is_system_message && (
                 <div
                   className={cn(
-                    "absolute right-2 -top-4 z-[9999] hidden md:flex items-center gap-0.5 bg-[#4E505C] border border-border/70 rounded-md shadow-xl p-0.5 transition-opacity duration-100",
+                    "absolute right-2 -top-4 z-20 hidden md:flex items-center gap-0.5 bg-[#4E505C] border border-border/70 rounded-md shadow-xl p-0.5 transition-opacity duration-100",
                     showMoreMenu || showDesktopEmojiPicker || isRowHovered
                       ? "md:opacity-100"
                       : "md:opacity-0",
@@ -2076,6 +2137,7 @@ export const MessageItem = memo(function MessageItem({
     prev.customEmojiMap === next.customEmojiMap &&
     prev.globalEmojiMap === next.globalEmojiMap &&
     prev.authorStyleFallback === next.authorStyleFallback &&
+    prev.replyAuthorStyleFallback === next.replyAuthorStyleFallback &&
     prev.dmActions === next.dmActions &&
     prev.flushOuterXPadding === next.flushOuterXPadding &&
     prev.onStartEdit === next.onStartEdit

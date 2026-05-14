@@ -1050,6 +1050,79 @@ body {
   color: hsl(139 48% 60%);
 }
 
+/* Server settings full-screen layout, matched to the provided reference. */
+.server-settings-reference {
+  --background: 225 8% 24%;
+  --foreground: 220 14% 88%;
+  --card: 225 8% 24%;
+  --card-foreground: 220 14% 88%;
+  --popover: 225 8% 19%;
+  --popover-foreground: 220 14% 88%;
+  --primary: 47 100% 50%;
+  --primary-foreground: 225 10% 8%;
+  --secondary: 226 8% 27%;
+  --secondary-foreground: 220 14% 88%;
+  --muted: 226 8% 27%;
+  --muted-foreground: 225 8% 70%;
+  --accent: 142 46% 52%;
+  --accent-foreground: 225 10% 8%;
+  --border: 225 8% 30%;
+  --input: 226 8% 27%;
+  --ring: 47 100% 50%;
+}
+
+.server-settings-reference h2 {
+  letter-spacing: -0.02em;
+}
+
+.server-settings-reference label,
+.server-settings-reference [class*="text-muted-foreground"] {
+  color: #b2b5be;
+}
+
+.server-settings-reference input,
+.server-settings-reference textarea,
+.server-settings-reference [role="combobox"] {
+  background: #30333d;
+  border-color: #444853;
+  color: #e2e4e9;
+  border-radius: 4px;
+}
+
+.server-settings-reference input:focus,
+.server-settings-reference textarea:focus,
+.server-settings-reference [role="combobox"]:focus {
+  border-color: #ffd400;
+  box-shadow: 0 0 0 1px #ffd400;
+}
+
+.server-settings-reference .rounded-xl.border,
+.server-settings-reference .rounded-lg.border {
+  background: transparent;
+  border-color: #4b4f5c;
+  border-radius: 0.25rem;
+  box-shadow: none;
+}
+
+.server-settings-reference .rounded-xl.border:not([class*="p-0"]),
+.server-settings-reference .rounded-lg.border:not([class*="p-0"]) {
+  padding: 18px;
+}
+
+.server-settings-reference button[data-state],
+.server-settings-reference [role="tab"] {
+  font-family: inherit;
+}
+
+.server-settings-reference button:not([role="tab"]):not([aria-label="Close server settings"]) {
+  border-radius: 4px;
+}
+
+.server-settings-reference .border-b,
+.server-settings-reference .divide-y > :not([hidden]) ~ :not([hidden]) {
+  border-color: #30333d;
+}
+
 /* ── Kloak Toast Animations ── */
 @keyframes kloak-toast-enter {
   from {

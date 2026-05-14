@@ -781,12 +781,10 @@ export const ChannelSettingsPage = () => {
           <button
             type="button"
             onClick={handleClose}
-            className="absolute top-4 right-4 z-10 flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors group"
+            className="absolute top-[48px] right-[46px] z-10 text-[#aeb1bb] hover:text-white transition-colors"
+            aria-label="Close channel settings"
           >
-            <div className="w-9 h-9 rounded-full border border-border bg-secondary/50 flex items-center justify-center group-hover:bg-secondary group-hover:border-muted-foreground/50 transition-colors">
-              <X className="w-4 h-4" />
-            </div>
-            <span className="text-[10px] font-medium uppercase tracking-wider">ESC</span>
+            <X className="w-7 h-7" />
           </button>
 
           {activeTab === "permissions" ? (

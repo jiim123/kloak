@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, MessageSquare, Radar, UserRoundPlus, Users, LogOut, Ban } from "lucide-react";
+import { Search, MessageSquare, UserRoundPlus, LogOut, Ban } from "lucide-react";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -27,14 +27,7 @@ import type { DMConversation, UserStatus, User } from "@/types";
 import { useRateLimit } from "@/hooks/useRateLimit";
 import { rateLimitToast } from "@/lib/rateLimitToast";
 
-interface DMSidebarProps {
-  showFriends: boolean;
-  onShowFriendsChange: (show: boolean) => void;
-  showExplore: boolean;
-  onShowExploreChange: (show: boolean) => void;
-}
-
-export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onShowExploreChange }: DMSidebarProps) => {
+export const DMSidebar = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const {
@@ -47,7 +40,6 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
     isLoading,
   } = useDMStore();
   const { getUnreadCount, markAsRead } = useUnreadDMsContext();
-  const pendingFriendCount = useFriendStore((s) => s.pendingRequests.length);
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateGroup, setShowCreateGroup] = useState(false);
 
@@ -114,51 +106,23 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
   };
 
   return (
-    <div className="h-full flex flex-col bg-card rounded-[10px] overflow-hidden">
-        {/* Header */}
-        <div className="h-12 px-4 flex items-center border-b border-border/50">
-          <h2 className="font-medium text-lg text-foreground">
-            {showFriends ? "Friends" : showExplore ? "Explore" : "Direct Messages"}
-          </h2>
-        </div>
-
-        {/* Friends Button */}
-        <div className="px-2 pt-2 mb-1">
+    <div className="h-full flex flex-col bg-[#373941] overflow-hidden">
+        {/* Section header with Create Group */}
+        <div className="px-4 pt-3 pb-2 flex items-center justify-between border-b border-white/10">
+          <h3 className="text-xs font-semibold text-foreground/85 uppercase tracking-[0.12em]">Direct Messages</h3>
           <Button
             variant="ghost"
-            className={cn("w-full justify-start gap-3 h-10 rounded-md", showFriends && "bg-secondary")}
-            onClick={() => {
-              setCurrentConversation(null);
-              onShowFriendsChange(true);
-            }}
+            size="icon-sm"
+            className="h-6 w-6 text-foreground/80 hover:text-foreground hover:bg-white/10"
+            onClick={() => setShowCreateGroup(true)}
+            title="Create Group"
           >
-            <Users className="w-5 h-5" />
-            <span>Friends</span>
-            {pendingFriendCount > 0 && (
-              <span className="ml-auto min-w-[20px] h-5 bg-destructive rounded-full text-xs text-destructive-foreground flex items-center justify-center px-1.5 font-medium">
-                {pendingFriendCount > 99 ? "99+" : pendingFriendCount}
-              </span>
-            )}
-          </Button>
-        </div>
-
-        {/* Explore Button */}
-        <div className="px-2 mb-2">
-          <Button
-            variant="ghost"
-            className={cn("w-full justify-start gap-3 h-10 rounded-md", showExplore && "bg-secondary")}
-            onClick={() => {
-              setCurrentConversation(null);
-              onShowExploreChange(true);
-            }}
-          >
-            <Radar className="w-5 h-5" />
-            <span>Explore</span>
+            <UserRoundPlus className="w-4 h-4" />
           </Button>
         </div>
 
         {/* Search */}
-        <div className="px-2 pb-2">
+        <div className="px-2 pt-2 pb-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -173,20 +137,6 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
 
         {/* User search results (when searching) */}
         {searchQuery.length >= 2 && <UserSearchResults query={searchQuery} />}
-
-        {/* Section header with Create Group */}
-        <div className="px-4 py-2 flex items-center justify-between">
-          <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Direct Messages</h3>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="h-6 w-6"
-            onClick={() => setShowCreateGroup(true)}
-            title="Create Group"
-          >
-            <UserRoundPlus className="w-4 h-4" />
-          </Button>
-        </div>
 
         {/* Conversations list */}
         <div className="flex-1 overflow-y-auto scrollbar-overlay px-2 space-y-0.5">
@@ -241,7 +191,7 @@ export const DMSidebar = ({ showFriends, onShowFriendsChange, showExplore, onSho
                   <div
                     className={cn(
                       "group flex items-center gap-3 px-2 py-2 rounded-md cursor-pointer transition-smooth",
-                      currentConversation?.id === conversation.id && !showFriends
+                      currentConversation?.id === conversation.id
                         ? "bg-secondary"
                         : "hover:bg-secondary/50",
                     )}

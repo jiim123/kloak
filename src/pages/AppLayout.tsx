@@ -9,8 +9,6 @@ import { useVoiceSettingsStore } from "@/stores/voiceSettingsStore";
 import { fetchAndCacheUser } from "@/stores/userCacheStore";
 import { getLastChannel } from "@/lib/storage";
 import { ServerSidebar } from "@/components/layout/ServerSidebar";
-import { HomeLanding } from "@/components/home/HomeLanding";
-import { ExploreServers } from "@/components/home/ExploreServers";
 import { ChannelSidebar } from "@/components/layout/ChannelSidebar";
 import { ChatArea } from "@/components/layout/ChatArea";
 import { MembersSidebar } from "@/components/layout/MembersSidebar";
@@ -20,7 +18,7 @@ import { MobileHeader } from "@/components/layout/MobileHeader";
 import { MobileSidebar } from "@/components/layout/MobileSidebar";
 import { ConnectionStatus } from "@/components/ui/ConnectionStatus";
 import KloakDrawLoader from "@/components/ui/KloakDrawLoader";
-import { DMSidebar, FriendsList, DMChatArea } from "@/components/dm";
+import { DMSidebar, DMChatArea } from "@/components/dm";
 import { ServerSettingsPage, ChannelSettingsPage } from "@/components/settings";
 
 import { UserSettingsPage } from "@/components/modals/UserSettingsModal";
@@ -138,10 +136,13 @@ const AppLayout = () => {
 
   // Determine current view based on route
   const currentPath = location.pathname.replace("/app", "") || "/";
-  const showFriends = currentPath === "/friends";
-  const showExplore = currentPath === "/explore";
   const isServerOverviewView = !!params.serverId && currentPath === `/servers/${params.serverId}/overview`;
   
+  useEffect(() => {
+    if (currentServer === null && (currentPath === "/friends" || currentPath === "/explore")) {
+      navigate("/app", { replace: true });
+    }
+  }, [currentPath, currentServer, navigate]);
 
   const isServerSpecialView = isServerOverviewView;
   const currentChannelType = currentChannel?.type;
@@ -550,9 +551,7 @@ const AppLayout = () => {
                 <AlphaNoticeBanner />
 
                 {/* Mobile header - hide when in DM conversation (DMHeader handles it) */}
-                {!(isDMView && currentConversation) && (
-                  <MobileHeader isDMView={isDMView} showFriends={showFriends} showExplore={showExplore} />
-                )}
+                {!(isDMView && currentConversation) && <MobileHeader isDMView={isDMView} />}
 
                 {/* Mobile layout */}
                 <div className="flex-1 overflow-hidden bg-layout-chat relative w-full">
@@ -564,17 +563,9 @@ const AppLayout = () => {
                     </div>
                   )}
                   {isDMView && !currentConversation && (
-                    <>
-                      <div className={showFriends ? "block h-full" : "hidden"}>
-                        <FriendsList onOpenDM={() => navigate("/app")} />
-                      </div>
-                      <div className={showExplore ? "block h-full" : "hidden"}>
-                        <ExploreServers />
-                      </div>
-                      <div className={!showFriends && !showExplore ? "block h-full" : "hidden"}>
-                        <HomeLanding />
-                      </div>
-                    </>
+                    <div className="flex h-full items-center justify-center bg-layout-members px-4 text-center text-muted-foreground">
+                      <p>Select a direct message or start one from the sidebar.</p>
+                    </div>
                   )}
                   {currentServer && (
                     <>
@@ -622,12 +613,7 @@ const AppLayout = () => {
                     <div className="flex h-full">
                       <div className="w-[288px] shrink-0 overflow-hidden bg-layout-sidebar">
                         {isDMView ? (
-                          <DMSidebar
-                            showFriends={showFriends}
-                            onShowFriendsChange={(show: boolean) => navigate(show ? "/app/friends" : "/app")}
-                            showExplore={showExplore}
-                            onShowExploreChange={(show: boolean) => navigate(show ? "/app/explore" : "/app")}
-                          />
+                          <DMSidebar />
                         ) : (
                           <ChannelSidebar />
                         )}
@@ -653,17 +639,9 @@ const AppLayout = () => {
                               </div>
                             )}
                             {isDMView && !currentConversation && (
-                              <>
-                                <div className={showFriends ? "block h-full" : "hidden"}>
-                                  <FriendsList onOpenDM={() => navigate("/app")} />
-                                </div>
-                                <div className={showExplore ? "block h-full" : "hidden"}>
-                                  <ExploreServers />
-                                </div>
-                                <div className={!showFriends && !showExplore ? "block h-full" : "hidden"}>
-                                  <HomeLanding />
-                                </div>
-                              </>
+                              <div className="flex h-full items-center justify-center bg-layout-members px-4 text-center text-muted-foreground">
+                                <p>Select a direct message or start one from the sidebar.</p>
+                              </div>
                             )}
                             {currentServer && (
                               <>
@@ -692,13 +670,7 @@ const AppLayout = () => {
 
         {/* Mobile Sidebars */}
         {isMobile && (
-          <MobileSidebar
-            isDMView={isDMView}
-            showFriends={showFriends}
-            onShowFriendsChange={(show: boolean) => navigate(show ? "/app/friends" : "/app")}
-            showExplore={showExplore}
-            onShowExploreChange={(show: boolean) => navigate(show ? "/app/explore" : "/app")}
-          />
+          <MobileSidebar isDMView={isDMView} />
         )}
         {/* Mobile members drawer — always mounted so Sheet close animation works */}
         {!isDMView && !isServerSpecialView && isMobile && <MembersSidebar />}
