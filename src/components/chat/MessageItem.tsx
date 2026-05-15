@@ -534,18 +534,18 @@ export const MessageItem = memo(function MessageItem({
     (emoji: string) => {
       const url = resolveCustomEmojiUrl(emoji);
       if (url && isSafeEmojiUrl(url)) {
-        return <img src={url} alt={emoji} className="w-6 h-6 object-contain" decoding="async" />;
+        return <img src={url} alt={emoji} className="w-5 h-5 object-contain" decoding="async" />;
       }
       // Check if it looks like a custom emoji that we can't resolve locally
       if (/^:[a-z0-9_]{2,12}:$/i.test(emoji)) {
         const m = emoji.match(/^:([a-z0-9_]{2,12}):$/i);
         const fallbackUrl = m ? fallbackEmojiUrls.get(m[1]) : null;
         if (fallbackUrl && isSafeEmojiUrl(fallbackUrl)) {
-          return <img src={fallbackUrl} alt={emoji} className="w-6 h-6 object-contain" decoding="async" />;
+          return <img src={fallbackUrl} alt={emoji} className="w-5 h-5 object-contain" decoding="async" />;
         }
-        return <span className="text-sm leading-none text-muted-foreground">{emoji}</span>;
+        return <span className="text-xs leading-none text-muted-foreground">{emoji}</span>;
       }
-      return <FluentEmoji emoji={emoji} size={24} />;
+      return <FluentEmoji emoji={emoji} size={20} />;
     },
     [fallbackEmojiUrls, resolveCustomEmojiUrl],
   );
@@ -1333,7 +1333,7 @@ export const MessageItem = memo(function MessageItem({
                                   onClick={handleKickUser}
                                   className="text-orange-400 focus:text-orange-400"
                                 >
-                                  <UserX className="w-4 h-4" />
+                                  <UserX className="w-4 h-4 text-[#fc6464]" />
                                   Kick {displayName}
                                 </ContextMenuItem>
                               )}
@@ -1342,7 +1342,7 @@ export const MessageItem = memo(function MessageItem({
                                   onClick={handleBanUser}
                                   className="text-destructive focus:text-destructive"
                                 >
-                                  <Ban className="w-4 h-4" />
+                                  <Ban className="w-4 h-4 text-[#fc6464]" />
                                   Ban {displayName}
                                 </ContextMenuItem>
                               )}
@@ -1448,7 +1448,7 @@ export const MessageItem = memo(function MessageItem({
                       <span className="inline font-[Inter,system-ui,sans-serif]">
                         <span
                           onClick={handleUsernameClick}
-                          className={`text-[13px] font-medium leading-tight hover:underline cursor-pointer mr-1.5 ${usernameColorClass}`}
+                          className={`text-[14px] font-medium leading-tight hover:underline cursor-pointer mr-1.5 ${usernameColorClass}`}
                           style={usernameColorStyle}
                         >
                           {displayName}
@@ -1474,7 +1474,7 @@ export const MessageItem = memo(function MessageItem({
                         <div className="flex items-baseline gap-1.5 font-[Inter,system-ui,sans-serif]">
                           <span
                             onClick={handleUsernameClick}
-                            className={`text-[13px] font-medium leading-tight hover:underline cursor-pointer ${usernameColorClass}`}
+                            className={`text-[14px] font-medium leading-tight hover:underline cursor-pointer ${usernameColorClass}`}
                             style={usernameColorStyle}
                           >
                             {displayName}
@@ -1652,7 +1652,7 @@ export const MessageItem = memo(function MessageItem({
                       aria-label="Delete"
                       title="Delete"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-4 h-4 text-[#fc6464]" />
                     </button>
                   )}
 
@@ -1760,14 +1760,14 @@ export const MessageItem = memo(function MessageItem({
               <>
                 <ContextMenuSeparator />
                 {canKickUser && (
-                  <ContextMenuItem onClick={handleKickUser} className="text-orange-400 focus:text-orange-400">
-                    <UserX className="w-4 h-4" />
+                  <ContextMenuItem onClick={handleKickUser}>
+                    <UserX className="w-4 h-4 text-[#fc6464]" />
                     Kick {displayName}
                   </ContextMenuItem>
                 )}
                 {canBanUser && (
-                  <ContextMenuItem onClick={handleBanUser} className="text-destructive focus:text-destructive">
-                    <Ban className="w-4 h-4" />
+                  <ContextMenuItem onClick={handleBanUser}>
+                    <Ban className="w-4 h-4 text-[#fc6464]" />
                     Ban {displayName}
                   </ContextMenuItem>
                 )}
@@ -1778,7 +1778,7 @@ export const MessageItem = memo(function MessageItem({
 
         {/* Reactions - rendered outside ContextMenu to avoid interfering with message actions */}
         {!message.is_system_message && message.reactions && message.reactions.length > 0 && (
-          <div className={cn("mt-1.5 flex flex-wrap items-center gap-3 px-4", compactMode ? "pl-4" : "pl-[68px]")}>
+          <div className={cn("mt-1 flex flex-wrap items-center gap-1.5 px-4", compactMode ? "pl-4" : "pl-[68px]")}>
             {message.reactions.map((reaction) => (
               <HoverCard
                 key={reaction.emoji}
@@ -1799,17 +1799,19 @@ export const MessageItem = memo(function MessageItem({
                       onTouchEnd={clearReactionLongPress}
                       onTouchMove={clearReactionLongPress}
                       disabled={!effectiveCanAddReactions}
-                      className={cn(
-                        "inline-flex items-center gap-1 rounded-md border px-2 py-1 transition-colors duration-150",
+                        className={cn(
+                        "inline-flex h-7 items-center gap-1 rounded-full border px-2 py-0 transition-colors duration-150",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1 focus-visible:ring-offset-background",
                         reaction.hasReacted
-                          ? "border-primary/60 bg-primary/15 text-foreground"
-                          : "border-border/70 bg-muted/30 text-muted-foreground hover:bg-muted/55 hover:border-border",
+                          ? "border-[#73716c] bg-[#5F5E5B] text-white hover:bg-[#6a6965]"
+                          : "border-[#5f626d] bg-[#50504f4a] text-[#d8dbe2] hover:bg-[#5a5a585e]",
                         !effectiveCanAddReactions && "opacity-50 cursor-not-allowed",
                       )}
                     >
                       {reactionEmojiNode(reaction.emoji)}
-                      <span className="text-[11px] font-semibold font-mono">{reaction.count}</span>
+                      <span className={cn("text-[11px] leading-none text-[#d7dae2]", reaction.hasReacted ? "font-semibold" : "font-normal")}>
+                        {reaction.count}
+                      </span>
                     </button>
                   </span>
                 </HoverCardTrigger>

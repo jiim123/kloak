@@ -166,11 +166,40 @@ const FolderPlusIcon = memo(({ className }: { className?: string }) => (
 FolderPlusIcon.displayName = "FolderPlusIcon";
 
 const InfoIcon = memo(({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <path d="M16.19 2H12.75V8V8.75V13.75H22V8.75V8V7.81C22 4.17 19.83 2 16.19 2Z" fill="#A2A2AB" />
+    <path d="M2 10.25V15.25V15.75V16.19C2 19.83 4.17 22 7.81 22H11.25V15.75V15.25V10.25H2Z" fill="#A2A2AB" />
+    <path d="M11.25 2V8.75H2V7.81C2 4.17 4.17 2 7.81 2H11.25Z" fill="#A2A2AB" />
+    <path d="M22 15.25V16.19C22 19.83 19.83 22 16.19 22H12.75V15.25H22Z" fill="#A2A2AB" />
   </svg>
 ));
 InfoIcon.displayName = "InfoIcon";
+
+const MembersIcon = memo(({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M5 9.5C5 7.01472 7.01472 5 9.5 5C11.9853 5 14 7.01472 14 9.5C14 11.9853 11.9853 14 9.5 14C7.01472 14 5 11.9853 5 9.5Z"
+      fill="#A2A2AB"
+    />
+    <path
+      d="M14.3675 12.0632C14.322 12.1494 14.3413 12.2569 14.4196 12.3149C15.0012 12.7454 15.7209 13 16.5 13C18.433 13 20 11.433 20 9.5C20 7.567 18.433 6 16.5 6C15.7209 6 15.0012 6.2546 14.4196 6.68513C14.3413 6.74313 14.322 6.85058 14.3675 6.93679C14.7714 7.70219 15 8.5744 15 9.5C15 10.4256 14.7714 11.2978 14.3675 12.0632Z"
+      fill="#A2A2AB"
+    />
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M4.64115 15.6993C5.87351 15.1644 7.49045 15 9.49995 15C11.5112 15 13.1293 15.1647 14.3621 15.7008C15.705 16.2847 16.5212 17.2793 16.949 18.6836C17.1495 19.3418 16.6551 20 15.9738 20H3.02801C2.34589 20 1.85045 19.3408 2.05157 18.6814C2.47994 17.2769 3.29738 16.2826 4.64115 15.6993Z"
+      fill="#A2A2AB"
+    />
+    <path
+      d="M14.8185 14.0364C14.4045 14.0621 14.3802 14.6183 14.7606 14.7837V14.7837C15.803 15.237 16.5879 15.9043 17.1508 16.756C17.6127 17.4549 18.33 18 19.1677 18H20.9483C21.6555 18 22.1715 17.2973 21.9227 16.6108C21.9084 16.5713 21.8935 16.5321 21.8781 16.4932C21.5357 15.6286 20.9488 14.9921 20.0798 14.5864C19.2639 14.2055 18.2425 14.0483 17.0392 14.0008L17.0194 14H16.9997C16.2909 14 15.5506 13.9909 14.8185 14.0364Z"
+      fill="#A2A2AB"
+    />
+  </svg>
+));
+MembersIcon.displayName = "MembersIcon";
 
 const Edit2Icon = memo(({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -491,7 +520,7 @@ const SortableChannel = memo(({
         onFocus={onPrefetch}
         aria-label={ariaLabel}
         className={cn(
-          "group relative flex-1 min-w-0 flex items-center gap-2 px-2.5 py-2 md:py-1.5 text-[13px] font-medium select-none rounded-[3px]",
+          "group relative flex-1 min-w-0 flex items-center gap-2 px-2.5 py-2 md:py-1.5 text-[14px] font-medium select-none rounded-[3px]",
           "transition-colors duration-150",
           "hover:bg-foreground/[0.04]",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-1",
@@ -1145,6 +1174,7 @@ export const ChannelSidebar = () => {
   const canManageChannels = hasPermission("manage_channels");
   const canManageServer = hasPermission("manage_server");
   const canManageRoles = hasPermission("manage_roles");
+  const canViewMembersShortcut = hasPermission("view_channels");
   const isAdmin = canManageChannels;
   const canSeeServerSettings = canManageChannels || canManageServer || canManageRoles;
 
@@ -1343,6 +1373,16 @@ export const ChannelSidebar = () => {
     setCurrentChannel(null);
     navigate(`/app/servers/${currentServer.id}/overview`);
   }, [currentServer, setCurrentChannel, navigate]);
+
+  const handleSelectMembersShortcut = useCallback(() => {
+    localStorage.setItem("kloak:server-settings-tab", "members");
+    if (isMobile) {
+      openServerSettings();
+      closeMobileSidebars();
+      return;
+    }
+    openServerSettingsPage();
+  }, [isMobile, openServerSettings, openServerSettingsPage, closeMobileSidebars]);
 
   const handleLeaveServer = useCallback(async () => {
     if (!currentServer || !user || isOwner) return;
@@ -1634,16 +1674,34 @@ export const ChannelSidebar = () => {
               isOverviewActive ? "opacity-100" : "opacity-0",
             )}
           />
-          <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
-            <InfoIcon
-              className={cn(
-                "w-4 h-4 flex-shrink-0 transition-colors translate-y-[0.5px]",
-                isOverviewActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground",
-              )}
-            />
-          </div>
+            <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
+              <InfoIcon
+                className={cn(
+                "w-4 h-4 flex-shrink-0",
+                )}
+              />
+            </div>
           <span className="truncate flex-1 text-left">Overview</span>
         </button>
+        {canViewMembersShortcut && (
+          <button
+            onClick={handleSelectMembersShortcut}
+            aria-label="Open members settings"
+            className={cn(
+              "group relative w-full flex items-center gap-2 px-2.5 py-1.5 text-sm select-none",
+              "transition-colors duration-150",
+              "hover:bg-foreground/[0.04]",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-1 rounded-sm",
+              "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
+              <MembersIcon className="w-4 h-4 flex-shrink-0" />
+            </div>
+            <span className="truncate flex-1 text-left">Members</span>
+          </button>
+        )}
+        <div className="mx-2 my-1 h-px bg-border/40" aria-hidden="true" />
       </div>
 
       <UncategorizedDropZone

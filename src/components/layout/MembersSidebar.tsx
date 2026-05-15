@@ -17,8 +17,10 @@ import {
   X,
   Check,
   Search,
+  CalendarDays,
+  Globe,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useUIStore } from "@/stores/uiStore";
@@ -259,7 +261,7 @@ const MemberListItemContent = forwardRef<HTMLDivElement, MemberListItemContentPr
         <div className="relative flex-shrink-0">
           <AvatarWithDecoration
             user={member.user}
-            className={cn("w-7 h-7 rounded-full", memberIsOffline && "opacity-50 grayscale-[30%]")}
+            className={cn("w-8 h-8 rounded-full", memberIsOffline && "opacity-50 grayscale-[30%]")}
             showDecoration={false}
             freezeGifUntilHover
             active={isHovered}
@@ -278,7 +280,7 @@ const MemberListItemContent = forwardRef<HTMLDivElement, MemberListItemContentPr
             {isServerOwner && <Crown className="w-3 h-3 text-amber-400 flex-shrink-0" />}
             <span
               className={cn(
-                "text-[13px] font-semibold truncate leading-tight",
+                "text-[14px] font-semibold truncate leading-tight",
                 memberIsOffline ? "text-muted-foreground/70" : priorityCustomRoleColor ? "" : "text-foreground",
               )}
               style={nameStyle}
@@ -333,10 +335,10 @@ const SectionHeader = memo(
           style={colorDot.startsWith("linear-gradient") ? { background: colorDot } : { backgroundColor: colorDot }}
         />
       ) : null}
-      <span className="text-[12px] font-bold text-muted-foreground">
+      <span className="text-[13px] font-bold text-muted-foreground">
         {count}
       </span>
-      <span className="text-[12px] font-bold text-muted-foreground">{label}</span>
+      <span className="text-[13px] font-bold text-muted-foreground">{label}</span>
     </div>
   ),
 );
@@ -375,11 +377,13 @@ OfflineEmptyRow.displayName = "OfflineEmptyRow";
 export const MembersSidebar = () => {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // FIX #8: Already using individual selectors — good. But useAuthStore was
   // destructured with `{ user }` which subscribes to all fields. Use selector.
   const members = useServerStore((s) => s.members);
   const currentServer = useServerStore((s) => s.currentServer);
+  const channels = useServerStore((s) => s.channels);
   const roles = useServerStore((s) => s.roles);
   const isMembersLoading = useServerStore((s) => s.isMembersLoading);
   const fetchMembers = useServerStore((s) => s.fetchMembers);
@@ -416,6 +420,14 @@ export const MembersSidebar = () => {
   // Mass ban
   const [massBanMode, setMassBanMode] = useState(false);
   const [massBanSelected, setMassBanSelected] = useState<Set<string>>(new Set());
+  const isOverviewView = !!currentServer?.id && location.pathname === `/app/servers/${currentServer.id}/overview`;
+  const sidebarOwner = useMemo(
+    () => members.find((m) => m.user_id === currentServer?.owner_id) || members.find((m) => m.role === "owner") || null,
+    [members, currentServer?.owner_id],
+  );
+  const sidebarOwnerName =
+    sidebarOwner?.nickname || sidebarOwner?.user?.display_name || sidebarOwner?.user?.username || "Unknown";
+  const sidebarCreatedAt = currentServer?.created_at ? new Date(currentServer.created_at) : null;
 
   const toggleMassBanSelection = useCallback((userId: string) => {
     setMassBanSelected((prev) => {
@@ -1250,6 +1262,37 @@ export const MembersSidebar = () => {
               <X className="w-4 h-4 text-muted-foreground" />
             </button>
           </div>
+        ) : isOverviewView ? (
+          <div className="rounded-xl border border-border/30 bg-muted/20 px-3 py-2.5">
+            <div className="text-sm font-semibold text-muted-foreground">About</div>
+            <div className="text-sm font-normal text-foreground/95 truncate">
+              {currentServer?.about?.trim() || `Official ${currentServer?.name || "Server"}`}
+            </div>
+
+            <div className="mt-3 space-y-2 text-sm text-foreground/85">
+              <div className="flex items-center gap-2">
+                <Globe className="h-4 w-4 text-muted-foreground" />
+                <span>Community</span>
+              </div>
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <span>{totalMemberCount ?? members.length} members</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <ListChecks className="h-4 w-4 text-muted-foreground" />
+              <span>{channels.length} channels</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              <span>{sidebarCreatedAt ? `Since ${sidebarCreatedAt.toLocaleDateString()}` : "Since unknown"}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Crown className="h-4 w-4 text-yellow-500" />
+              <span>{sidebarOwnerName}</span>
+            </div>
+          </div>
+          </div>
+
         ) : (
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
@@ -1285,7 +1328,47 @@ export const MembersSidebar = () => {
         )}
       </div>
 
-      {!isMobile && !massBanMode && (
+      {!isMobile && !massBanMode && isOverviewView && (
+        <div className="mx-2 mt-2 shrink-0 rounded-xl border border-border/30 bg-muted/20 px-3 py-2.5">
+          <div className="text-sm font-semibold text-muted-foreground">About</div>
+          <div className="mt-2 text-sm font-normal text-foreground/95">
+            {currentServer?.about?.trim() || `Official ${currentServer?.name || "Server"}`}
+          </div>
+
+          <div className="mt-3 space-y-2 text-sm text-foreground/85">
+            <div className="flex items-center gap-2">
+              <Globe className="h-4 w-4 text-muted-foreground" />
+              <span>Community</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <span>{totalMemberCount ?? members.length} members</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <ListChecks className="h-4 w-4 text-muted-foreground" />
+              <span>{channels.length} channels</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              <span>
+                {sidebarCreatedAt
+                  ? `Since ${sidebarCreatedAt.toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}`
+                  : "Since unknown"}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Crown className="h-4 w-4 text-yellow-500" />
+              <span>{sidebarOwnerName}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!isMobile && !massBanMode && !isOverviewView && (
         <div className="mx-2 mt-2 shrink-0">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />

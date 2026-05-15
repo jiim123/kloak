@@ -15,7 +15,6 @@ import {
   Check,
   Pencil,
   Plus,
-  ClipboardList,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthStore } from "@/stores/authStore";
@@ -52,7 +51,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { MessageAttachment } from "@/types";
@@ -208,6 +206,7 @@ const ActionBar = memo(
     allowExternalEmojis,
     textareaNode,
   }: any) => {
+    const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
     const showCharacterWarning = content.length > MAX_LENGTH - 200;
     const canSend = (content.trim() || hasAttachments) && !isSending && canSubmitMessage;
 
@@ -217,9 +216,9 @@ const ActionBar = memo(
       "min-h-[36px] cursor-pointer gap-2.5 px-3 py-2 text-[13px] font-semibold text-[#dbdee1] focus:bg-white/[0.07] hover:bg-white/[0.07]";
 
     return (
-      <div className="flex min-h-[44px] items-end gap-1">
+      <div className="flex min-h-[44px] items-center gap-1">
         <div className="relative h-11 w-11 shrink-0">
-          <DropdownMenu>
+          <DropdownMenu open={isActionsMenuOpen} onOpenChange={setIsActionsMenuOpen}>
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
@@ -247,51 +246,21 @@ const ActionBar = memo(
                 </DropdownMenuItem>
               )}
 
-              {setShowGifPicker && (
+              {setShowCreatePoll && (
                 <DropdownMenuItem
                   disabled={!canSendMessage}
-                  onSelect={() => {
-                    window.requestAnimationFrame(() => setShowGifPicker(true));
-                  }}
-                  className={menuItemClass}
+                  onSelect={() => setShowCreatePoll(true)}
+                  className={`${menuItemClass} items-start`}
                 >
-                  <ImagePlay className="h-4 w-4 text-[#b5bac1]" />
-                  <span>GIF</span>
+                  <SquareChartGantt className="mt-0.5 h-4 w-4 text-[#b5bac1]" />
+                  <span className="flex flex-col leading-tight">
+                    <span>Poll</span>
+                    <span className="mt-0.5 text-[13px] font-medium text-[#b5bac1]">
+                      A single or multiple-choice question.
+                    </span>
+                  </span>
                 </DropdownMenuItem>
               )}
-
-              {setShowCreatePoll && (
-                <>
-                  <DropdownMenuSeparator className="bg-white/[0.06]" />
-                  <DropdownMenuItem
-                    disabled={!canSendMessage}
-                    onSelect={() => setShowCreatePoll(true)}
-                    className={`${menuItemClass} items-start`}
-                  >
-                    <SquareChartGantt className="mt-0.5 h-4 w-4 text-[#b5bac1]" />
-                    <span className="flex flex-col leading-tight">
-                      <span>Poll</span>
-                      <span className="mt-0.5 text-[13px] font-medium text-[#b5bac1]">
-                        A single or multiple-choice question.
-                      </span>
-                    </span>
-                  </DropdownMenuItem>
-                </>
-              )}
-
-              <DropdownMenuItem
-                disabled={!canSendMessage}
-                onSelect={() => toast.info("Forms are coming soon")}
-                className={`${menuItemClass} items-start`}
-              >
-                <ClipboardList className="mt-0.5 h-4 w-4 text-[#b5bac1]" />
-                <span className="flex flex-col leading-tight">
-                  <span>Form</span>
-                  <span className="mt-0.5 text-[13px] font-medium text-[#b5bac1]">
-                    Multiple questions with various question types.
-                  </span>
-                </span>
-              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -310,6 +279,18 @@ const ActionBar = memo(
         </div>
 
         <div className="flex shrink-0 items-center pr-1.5">
+          {setShowGifPicker && (
+            <button
+              type="button"
+              className={iconBtnClass}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setShowGifPicker(true)}
+              aria-label="Open GIF picker"
+            >
+              <ImagePlay className="w-5 h-5" />
+            </button>
+          )}
+
           <EmojiPicker
             open={showEmojiPicker}
             onOpenChange={setShowEmojiPicker}
@@ -1485,7 +1466,7 @@ const MobileOptimizedInput = memo(
               placeholder={forumPlaceholder || (dmPlaceholder ? (hasAttachments ? "Add a comment..." : `Message @${dmPlaceholder.length > (isMobile ? 12 : 17) ? dmPlaceholder.slice(0, isMobile ? 12 : 17) + "..." : dmPlaceholder}`) : (isLockedByNotice ? "Write a message..." : canSendMessage ? `Message ${channelName || "channel"}` : "Locked"))}
               disabled={!canSendMessage}
               rows={1}
-              className="message-input-textarea block w-full resize-none bg-transparent py-1.5 text-foreground outline-none min-h-[34px] max-h-[160px] overflow-y-auto placeholder:text-muted-foreground/60 font-[Inter,system-ui,sans-serif]"
+              className="message-input-textarea block w-full resize-none bg-transparent py-1.5 text-foreground outline-none min-h-[40px] max-h-[160px] overflow-y-auto placeholder:text-muted-foreground/60 font-[Inter,system-ui,sans-serif]"
               style={{
                 fontSize: "15px",
                 lineHeight: "1.45",

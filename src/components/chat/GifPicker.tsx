@@ -289,6 +289,15 @@ export const GifPicker = ({ children, anchor, onSelect, open, onOpenChange }: Gi
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ignoreOutsideCloseRef = useRef(false);
+  const safeOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      // When opened from another floating UI (e.g. plus-menu), suppress immediate
+      // close signals fired during the handoff animation/focus transfer.
+      if (!nextOpen && ignoreOutsideCloseRef.current) return;
+      onOpenChange(nextOpen);
+    },
+    [onOpenChange],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -406,7 +415,7 @@ export const GifPicker = ({ children, anchor, onSelect, open, onOpenChange }: Gi
 
   if (isMobile) {
     return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
+      <Drawer open={open} onOpenChange={safeOpenChange}>
         {children && <DrawerTrigger asChild>{children}</DrawerTrigger>}
         <DrawerContent className="h-[70vh] max-h-[90vh] p-0 bg-card border-border/50 rounded-t-2xl overflow-hidden flex flex-col">
           <GifPickerContent {...contentProps} />
@@ -416,7 +425,7 @@ export const GifPicker = ({ children, anchor, onSelect, open, onOpenChange }: Gi
   }
 
   return (
-    <Popover open={open} onOpenChange={onOpenChange}>
+    <Popover open={open} onOpenChange={safeOpenChange}>
       {anchor ? <PopoverAnchor asChild>{anchor}</PopoverAnchor> : children && <PopoverTrigger asChild>{children}</PopoverTrigger>}
       <PopoverContent
         className="w-[380px] p-0 bg-card border-border/50 rounded-2xl shadow-2xl overflow-hidden"

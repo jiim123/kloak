@@ -3,15 +3,22 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Upload, Plus, Users, X, Compass } from "lucide-react";
+import {
+  Camera,
+  Compass,
+  Plus,
+  Trash2,
+  Users,
+  ArrowLeft,
+} from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { CheckmarkAnimation } from "@/components/ui/checkmark-animation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useUIStore } from "@/stores/uiStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
-import { supabase } from "@/integrations/supabase/client";
 import { secureUpload } from "@/lib/storageUpload";
 import { toast } from "sonner";
 
@@ -44,6 +51,8 @@ export const CreateServerModal = () => {
   });
 
   const isOpen = activeModal === "create-server";
+  const serverName = createForm.watch("name");
+  const canContinue = serverName.trim().length > 0 && !isLoading;
 
   const handleIconSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -110,6 +119,7 @@ export const CreateServerModal = () => {
         toast.success(`Server "${server.name}" created!`);
         setCurrentServer(serverWithBanner);
         await fetchChannels(server.id);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
         navigate(`/app/servers/${server.id}`);
         handleClose();
       }
@@ -145,7 +155,7 @@ export const CreateServerModal = () => {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="sm:max-w-md max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-hidden bg-background/95 backdrop-blur-xl border-border/50 rounded-2xl p-0">
+      <DialogContent className="sm:max-w-xl max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-hidden bg-background/95 backdrop-blur-xl border-border/50 rounded-2xl p-0">
         {/* Hidden file input */}
         <input
           ref={fileInputRef}
@@ -211,81 +221,104 @@ export const CreateServerModal = () => {
         {/* Create View */}
         {view === "create" && (
           <div className="p-4 sm:p-6">
-            <DialogHeader className="pb-4">
-              <div className="text-center">
-                <DialogTitle className="text-xl font-medium">Create Your Server</DialogTitle>
-                <DialogDescription className="text-sm text-muted-foreground mt-1">
-                  Make yours and start talking
-                </DialogDescription>
-              </div>
-            </DialogHeader>
+            <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="rounded-xl border border-border/50 bg-card/60 p-5 sm:p-6">
+              {isLoading ? (
+                <div className="flex min-h-[320px] w-full flex-col items-center justify-center gap-4">
+                  <CheckmarkAnimation size={72} />
+                  <p className="text-sm font-medium text-foreground">Creating server...</p>
+                </div>
+              ) : (
+                <>
+                  <DialogHeader className="pb-5">
+                    <div className="flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={handleBack}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
+                        aria-label="Back"
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                      </button>
+                      <DialogTitle className="text-lg font-medium text-center">Personalize your server</DialogTitle>
+                      <div className="h-8 w-8" />
+                    </div>
+                    <DialogDescription className="mx-auto mt-2 max-w-[360px] text-center text-sm text-muted-foreground">
+                      Your server is where everyone gets to chat. Give it an avatar and name. You can always change it later.
+                    </DialogDescription>
+                  </DialogHeader>
 
-            <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-5">
-              {/* Icon Upload */}
-              <div className="flex flex-col items-center gap-2 p-4 bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30">
-                <div className="relative">
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-secondary flex items-center justify-center border-2 border-dashed border-muted-foreground/30 cursor-pointer hover:border-primary/50 transition-all duration-200 overflow-hidden"
-                  >
-                    {iconPreview ? (
-                      <img src={iconPreview} alt="Server icon preview" className="w-full h-full object-cover" />
-                    ) : (
-                      <Upload className="w-6 h-6 text-muted-foreground" />
+                  <div className="mb-6 flex flex-col items-center">
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="relative flex h-24 w-24 flex-col items-center justify-center gap-1 overflow-hidden rounded-xl border-2 border-dashed border-border bg-secondary/40 text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
+                        aria-label="Upload server icon"
+                      >
+                        {iconPreview ? (
+                          <img src={iconPreview} alt="Server icon preview" className="h-full w-full object-cover" />
+                        ) : (
+                          <>
+                            <Camera className="h-5 w-5" />
+                            <span className="text-xs font-medium">Upload</span>
+                          </>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md transition-colors hover:bg-primary-hover"
+                        aria-label="Choose server icon"
+                      >
+                        <Plus className="h-4 w-4" strokeWidth={3} />
+                      </button>
+                      {iconPreview && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            clearIcon();
+                          }}
+                          className="absolute -top-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-background/95 text-muted-foreground shadow-md transition-colors hover:bg-secondary hover:text-foreground"
+                          aria-label="Remove server icon"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mx-auto mb-7 w-full max-w-[320px] space-y-2">
+                    <Label htmlFor="name" className="text-xs font-medium text-muted-foreground">
+                      Server Name
+                    </Label>
+                    <Input
+                      id="name"
+                      aria-label="Enter your server name"
+                      {...createForm.register("name")}
+                      className="h-10 rounded-xl border-border/60 bg-background/50 px-3 text-base text-foreground"
+                      autoFocus
+                      maxLength={50}
+                    />
+                    {createForm.formState.errors.name && (
+                      <p className="text-xs font-medium text-destructive">{createForm.formState.errors.name.message}</p>
                     )}
                   </div>
-                  {iconPreview && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        clearIcon();
-                      }}
-                      className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/90 transition-colors shadow-lg"
+
+                  <div className="mx-auto flex w-full max-w-[320px] flex-col gap-2">
+                    <Button
+                      type="submit"
+                      disabled={!canContinue}
+                      className="h-10 rounded-xl bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary-hover"
                     >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">Click to upload an icon (optional)</p>
-              </div>
-
-              {/* Server Name */}
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-xs font-medium uppercase text-muted-foreground tracking-wide">
-                  Server Name
-                </Label>
-                <Input
-                  id="name"
-                  placeholder="My Awesome Server"
-                  {...createForm.register("name")}
-                  className={`rounded-xl ${createForm.formState.errors.name ? "border-destructive focus-visible:ring-destructive" : ""}`}
-                  autoFocus
-                />
-                {createForm.formState.errors.name && (
-                  <p className="text-xs text-destructive">{createForm.formState.errors.name.message}</p>
-                )}
-              </div>
-
-              <p className="text-xs text-muted-foreground">
-                By creating a server, you agree to our Community Guidelines.
-              </p>
-
-              {/* Actions */}
-              <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-2 sm:gap-3 pt-2 border-t border-border/30">
-                <Button type="button" variant="outline" rounded="xl" onClick={handleBack} className="flex-1 sm:flex-none">
-                  Back
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  rounded="xl"
-                  className="flex-1 sm:flex-none"
-                >
-                  {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Create Server
-                </Button>
-              </div>
+                      Continue
+                    </Button>
+                    <Button type="button" variant="outline" rounded="xl" onClick={handleBack}>
+                      Cancel
+                    </Button>
+                  </div>
+                </>
+              )}
             </form>
           </div>
         )}

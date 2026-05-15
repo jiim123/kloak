@@ -20,6 +20,7 @@ import { ConnectionStatus } from "@/components/ui/ConnectionStatus";
 import KloakDrawLoader from "@/components/ui/KloakDrawLoader";
 import { DMSidebar, DMChatArea } from "@/components/dm";
 import { ServerSettingsPage, ChannelSettingsPage } from "@/components/settings";
+import { ExploreServers } from "@/components/home/ExploreServers";
 
 import { UserSettingsPage } from "@/components/modals/UserSettingsModal";
 
@@ -73,7 +74,7 @@ import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useBackgroundSync } from "@/hooks/useBackgroundSync";
 import { usePreferencesSync } from "@/hooks/usePreferencesSync";
-import type { User } from "@/types";
+import type { Channel, User } from "@/types";
 import { PresenceDebugOverlay } from "@/components/debug/PresenceDebugOverlay";
 import { SEO } from "@/components/seo";
 import { getAuthEntryPath, resizeWindowForApp } from "@/lib/tauriRuntime";
@@ -139,7 +140,7 @@ const AppLayout = () => {
   const isServerOverviewView = !!params.serverId && currentPath === `/servers/${params.serverId}/overview`;
   
   useEffect(() => {
-    if (currentServer === null && (currentPath === "/friends" || currentPath === "/explore")) {
+    if (currentServer === null && currentPath === "/friends") {
       navigate("/app", { replace: true });
     }
   }, [currentPath, currentServer, navigate]);
@@ -150,6 +151,30 @@ const AppLayout = () => {
     currentChannelType !== "voice";
   const showDesktopUnifiedChannelHeader =
     !isMobile && currentServer !== null && !isServerSpecialView && canUseUnifiedHeader && Boolean(currentChannel);
+  const overviewHeaderChannel: Channel | null = useMemo(() => {
+    if (!currentServer) return null;
+    return {
+      id: `overview-${currentServer.id}`,
+      server_id: currentServer.id,
+      category_id: null,
+      linked_voice_channel_id: null,
+      name: "Overview",
+      topic: null,
+      chat_notice: null,
+      type: "text",
+      position: -1,
+      is_nsfw: false,
+      slowmode_seconds: 0,
+      is_read_only: false,
+      is_private: false,
+      icon: null,
+      created_at: currentServer.created_at || new Date().toISOString(),
+      block_links: false,
+      allowed_link_domains: [],
+      ghost_mode: false,
+      block_attachments: false,
+    };
+  }, [currentServer]);
 
   // Extract serverId and channelId from URL params
   const urlServerId = params.serverId;
@@ -432,6 +457,7 @@ const AppLayout = () => {
 
   // DM View (no server selected)
   const isDMView = currentServer === null;
+  const isExploreView = isDMView && currentPath === "/explore";
 
   const serverIdsKey = useMemo(() => {
     if (!servers || servers.length === 0) return "";
@@ -563,9 +589,15 @@ const AppLayout = () => {
                     </div>
                   )}
                   {isDMView && !currentConversation && (
-                    <div className="flex h-full items-center justify-center bg-layout-members px-4 text-center text-muted-foreground">
-                      <p>Select a direct message or start one from the sidebar.</p>
-                    </div>
+                    isExploreView ? (
+                      <div className="h-full overflow-y-auto">
+                        <ExploreServers />
+                      </div>
+                    ) : (
+                      <div className="flex h-full items-center justify-center bg-layout-members px-4 text-center text-muted-foreground">
+                        <p>Select a direct message or start one from the sidebar.</p>
+                      </div>
+                    )
                   )}
                   {currentServer && (
                     <>
@@ -611,23 +643,25 @@ const AppLayout = () => {
                   {/* Main layout - ALWAYS mounted so VoicePersistentHost never unmounts */}
                   <div className={cn("flex-1 overflow-hidden", isFullscreenSettingsOverlayOpen && "invisible")}>
                     <div className="flex h-full">
-                      <div className="w-[288px] shrink-0 overflow-hidden bg-layout-sidebar">
-                        {isDMView ? (
-                          <DMSidebar />
-                        ) : (
-                          <ChannelSidebar />
-                        )}
-                      </div>
+                      {!isExploreView && (
+                        <div className="w-[288px] shrink-0 overflow-hidden bg-layout-sidebar">
+                          {isDMView ? (
+                            <DMSidebar />
+                          ) : (
+                            <ChannelSidebar />
+                          )}
+                        </div>
+                      )}
 
                       <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
-                        {showDesktopUnifiedChannelHeader && currentChannel && (
+                        {(showDesktopUnifiedChannelHeader && currentChannel) || (isServerOverviewView && overviewHeaderChannel) ? (
                           <div className="flex-shrink-0 overflow-visible">
                             <ChannelHeader
-                              channel={currentChannel}
-                              showMessageActions={currentChannel.type !== "tasks"}
+                              channel={isServerOverviewView ? overviewHeaderChannel! : currentChannel!}
+                              showMessageActions={isServerOverviewView ? false : currentChannel?.type !== "tasks"}
                             />
                           </div>
-                        )}
+                        ) : null}
 
                         <div className="min-h-0 flex flex-1">
                           <div className="min-w-0 flex-1 bg-layout-chat relative overflow-hidden">
@@ -639,9 +673,15 @@ const AppLayout = () => {
                               </div>
                             )}
                             {isDMView && !currentConversation && (
-                              <div className="flex h-full items-center justify-center bg-layout-members px-4 text-center text-muted-foreground">
-                                <p>Select a direct message or start one from the sidebar.</p>
-                              </div>
+                              isExploreView ? (
+                                <div className="h-full overflow-y-auto">
+                                  <ExploreServers />
+                                </div>
+                              ) : (
+                                <div className="flex h-full items-center justify-center bg-layout-members px-4 text-center text-muted-foreground">
+                                  <p>Select a direct message or start one from the sidebar.</p>
+                                </div>
+                              )
                             )}
                             {currentServer && (
                               <>
@@ -653,7 +693,7 @@ const AppLayout = () => {
                             )}
                           </div>
 
-                          {!isDMView && !isServerSpecialView && isMemberSidebarOpen && (
+                          {!isDMView && isMemberSidebarOpen && (
                             <div className="w-[304px] shrink-0 overflow-hidden">
                               <MembersSidebar />
                             </div>
@@ -673,7 +713,7 @@ const AppLayout = () => {
           <MobileSidebar isDMView={isDMView} />
         )}
         {/* Mobile members drawer — always mounted so Sheet close animation works */}
-        {!isDMView && !isServerSpecialView && isMobile && <MembersSidebar />}
+        {!isDMView && isMobile && <MembersSidebar />}
 
         {/* Always-mounted modals (preserve internal form state, lazy for code splitting) */}
         <Suspense fallback={null}><ServerSettingsModal /></Suspense>

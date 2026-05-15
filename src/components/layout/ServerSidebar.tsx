@@ -1,13 +1,10 @@
 import { useState, useMemo, useEffect, useCallback, forwardRef, memo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Folder,
   FolderPlus,
-  Plus,
   Settings,
-  Home,
-  Mail,
   Columns3,
   ChevronDown,
   ChevronRight,
@@ -155,18 +152,6 @@ const bottomActionIconTransition = { duration: 0.15 };
 
 // FIX #1: Static animation objects for the "Add Server" dashed border
 // Previously these were inline object literals, re-created every render
-const dashedBorderDefault = { strokeDashoffset: 0, opacity: 0.5 };
-const dashedBorderHover = {
-  strokeDashoffset: -10,
-  opacity: 0,
-  transition: {
-    strokeDashoffset: { duration: 0.6, ease: "linear" as const },
-    opacity: { duration: 0.2, delay: 0.4 },
-  },
-};
-const solidBorderDefault = { opacity: 0 };
-const solidBorderHover = { opacity: 1 };
-const solidBorderTransition = { duration: 0.2 };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // UTILITIES
@@ -667,6 +652,7 @@ LoadingSkeleton.displayName = "LoadingSkeleton";
 
 export const ServerSidebar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuthStore();
 
   // FIX #13: Use individual selectors from Zustand stores instead of destructuring
@@ -714,7 +700,8 @@ export const ServerSidebar = () => {
   const [orderedServerIds, setOrderedServerIds] = useState<string[]>([]);
 
   const totalHomeBadge = totalDMUnread;
-  const hasHomeUnread = hasDMUnread;
+  const isExploreActive = location.pathname === "/app/explore";
+  const isDMActive = location.pathname === "/app" && currentServer === null;
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
@@ -1101,15 +1088,16 @@ export const ServerSidebar = () => {
 
   // FIX #16: Stabilize callbacks passed into server item maps — these were inline
   // arrow functions creating new references every render, defeating memo() on children.
-  const handleHomeClick = useCallback(() => {
+  const handleExploreClick = useCallback(() => {
     setCurrentServer(null);
     setCurrentConversation(null);
     closeServerSettings();
     closeModal();
-    navigate("/app");
+    navigate("/app/explore");
   }, [setCurrentServer, setCurrentConversation, closeServerSettings, closeModal, navigate]);
 
-  const handleHomeHover = useCallback(() => setHoveredServer("home"), []);
+  const handleExploreHover = useCallback(() => setHoveredServer("explore"), []);
+  const handleDMHover = useCallback(() => setHoveredServer("dm"), []);
   const handleHoverLeave = useCallback(() => setHoveredServer(null), []);
 
   const handleDMSelect = useCallback(
@@ -1123,6 +1111,13 @@ export const ServerSidebar = () => {
     },
     [setCurrentServer, setCurrentConversation, closeServerSettings, closeModal, navigate, markAsRead],
   );
+  const handleDMClick = useCallback(() => {
+    setCurrentServer(null);
+    setCurrentConversation(null);
+    closeServerSettings();
+    closeModal();
+    navigate("/app");
+  }, [setCurrentServer, setCurrentConversation, closeServerSettings, closeModal, navigate]);
 
   const handleAddServer = useCallback(() => openModal("create-server"), [openModal]);
 
@@ -1133,12 +1128,17 @@ export const ServerSidebar = () => {
   }, []);
 
   // FIX #17: Pre-compute pill state for the home button
-  const homePillState = useMemo(() => {
-    if (currentServer === null) return "active";
-    if (hoveredServer === "home") return "hover";
-    if (hasHomeUnread) return "unread";
+  const explorePillState = useMemo(() => {
+    if (isExploreActive) return "active";
+    if (hoveredServer === "explore") return "hover";
     return "hidden";
-  }, [currentServer, hoveredServer, hasHomeUnread]);
+  }, [isExploreActive, hoveredServer]);
+  const dmPillState = useMemo(() => {
+    if (isDMActive) return "active";
+    if (hoveredServer === "dm") return "hover";
+    if (hasDMUnread) return "unread";
+    return "hidden";
+  }, [isDMActive, hoveredServer, hasDMUnread]);
 
   // FIX #18: Helper to compute pill state for a server (called in render map)
   const computePillState = useCallback(
@@ -1327,14 +1327,14 @@ export const ServerSidebar = () => {
               {/* Loading skeleton */}
               {isLoading && servers.length === 0 && <LoadingSkeleton />}
 
-              {/* Home / Direct Messages button */}
+              {/* Explore button */}
               <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
                 <TooltipTrigger asChild>
                   <MotionButton
                     className="relative group mb-1"
-                    onMouseEnter={handleHomeHover}
+                    onMouseEnter={handleExploreHover}
                     onMouseLeave={handleHoverLeave}
-                    onClick={handleHomeClick}
+                    onClick={handleExploreClick}
                     whileHover="hover"
                     whileTap="tap"
                   >
@@ -1342,50 +1342,47 @@ export const ServerSidebar = () => {
                       className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 bg-white rounded-r-full shadow-[0_0_10px_rgba(255,255,255,0.35)]"
                       variants={pillVariants}
                       initial="hidden"
-                      animate={homePillState}
+                      animate={explorePillState}
                     />
 
                     <motion.div
                       variants={iconVariants}
                       initial="animate"
-                      animate={currentServer === null ? "active" : "animate"}
+                      animate={isExploreActive ? "active" : "animate"}
                       whileHover="hover"
                       whileTap="tap"
                       transition={iconSpringTransition}
-                      className={cn(
-                        "w-11 h-11 flex items-center justify-center rounded-[12px] border shadow-[0_8px_20px_rgba(0,0,0,0.28)]",
-                        currentServer === null
-                          ? "border-[#ffd23c] bg-[#ffd23c] text-[#1f222a]"
-                          : "border-white/8 bg-[#262933] text-white/75 hover:border-white/16 hover:bg-[#2c2f39] hover:text-white",
-                      )}
+                      className="w-11 h-11 flex items-center justify-center"
                     >
                       <AnimatePresence mode="wait" initial={false}>
-                        {currentServer === null ? (
-                          <motion.span
-                            key="active-icon"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            transition={homeIconTransition}
+                        <motion.span
+                          key={isExploreActive ? "explore-active-icon" : "explore-inactive-icon"}
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={homeIconTransition}
+                        >
+                          <svg
+                            viewBox="0 0 612 612"
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="w-[36px] h-[36px]"
+                            aria-hidden="true"
                           >
-                            <Home className="w-[18px] h-[18px]" />
-                          </motion.span>
-                        ) : (
-                          <motion.span
-                            key="inactive-icon"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            transition={homeIconTransition}
-                          >
-                            <Mail className="w-[18px] h-[18px]" />
-                          </motion.span>
-                        )}
+                            <path
+                              d="M306,0C137.272,0,0,137.27,0,305.997C0,474.727,137.272,612,306,612s306-137.273,306-306.003C612,137.27,474.73,0,306,0z M306,576.657c-149.24,0-270.657-121.418-270.657-270.66C35.343,156.759,156.76,35.343,306,35.343 s270.657,121.416,270.657,270.655C576.657,455.24,455.24,576.657,306,576.657z"
+                              fill={isExploreActive ? "#FFFFFF" : "#9E9EA7"}
+                            />
+                            <path
+                              d="M474.47,144.734c-4.623-8.599-15.336-11.818-23.933-7.197L251.64,244.485c-3.053,1.642-5.556,4.144-7.197,7.198 L137.538,450.536c-3.782,7.035-2.309,15.489,3.063,20.861c1.191,1.193,2.574,2.232,4.137,3.07 c5.313,2.857,11.436,2.71,16.428,0.155l0.003,0.004l0.075-0.04c0.072-0.037,0.143-0.077,0.214-0.115l198.995-106.87 c3.054-1.64,5.556-4.142,7.2-7.197l106.477-198.361c0.233-0.401,0.455-0.806,0.655-1.222l0.144-0.267l-0.018-0.006 C477.174,155.671,477.211,149.833,474.47,144.734z M196.403,415.684l67.933-126.361l58.418,58.42L196.403,415.684z M347.76,322.764l-58.421-58.421l126.351-67.94"
+                              fill={isExploreActive ? "#FFFFFF" : "#9E9EA7"}
+                            />
+                          </svg>
+                        </motion.span>
                       </AnimatePresence>
                     </motion.div>
 
                     <AnimatePresence>
-                      {totalHomeBadge > 0 && currentServer !== null && (
+                      {totalHomeBadge > 0 && !isDMActive && (
                         <motion.span
                           initial={badgeInitial}
                           animate={badgeAnimate}
@@ -1399,24 +1396,28 @@ export const ServerSidebar = () => {
                   </MotionButton>
                 </TooltipTrigger>
                 <TooltipContent side="right" className="font-medium">
-                  Home{totalHomeBadge > 0 ? ` (${totalHomeBadge} unread)` : ""}
+                  Explore
                 </TooltipContent>
               </Tooltip>
 
-              {/* Unread DM conversation shortcuts */}
-              <AnimatePresence mode="popLayout">
-                {unreadConversations.map((conv) => (
-                  <UnreadDMShortcut
-                    key={conv.id}
-                    conv={conv}
-                    tooltipsEnabled={tooltipsEnabled}
-                    onSelect={handleDMSelect}
-                  />
-                ))}
-              </AnimatePresence>
+              {unreadConversations.length > 0 && (
+                <>
+                  {/* Unread DM conversation shortcuts */}
+                  <AnimatePresence mode="popLayout">
+                    {unreadConversations.map((conv) => (
+                      <UnreadDMShortcut
+                        key={conv.id}
+                        conv={conv}
+                        tooltipsEnabled={tooltipsEnabled}
+                        onSelect={handleDMSelect}
+                      />
+                    ))}
+                  </AnimatePresence>
 
-              {/* Separator */}
-              <div className="w-5 h-px bg-white/14 my-1 shrink-0" />
+                  {/* Separator */}
+                  <div className="w-5 h-px bg-white/14 my-1 shrink-0" />
+                </>
+              )}
 
               {/* Folder items + servers */}
               <AnimatePresence>
@@ -1475,9 +1476,9 @@ export const ServerSidebar = () => {
             <TooltipTrigger asChild>
               <MotionButton
                 className="relative group"
-                onMouseEnter={handleHomeHover}
+                onMouseEnter={handleDMHover}
                 onMouseLeave={handleHoverLeave}
-                onClick={handleHomeClick}
+                onClick={handleDMClick}
                 whileHover="hover"
                 whileTap="tap"
               >
@@ -1485,22 +1486,17 @@ export const ServerSidebar = () => {
                   className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 bg-white rounded-r-full shadow-[0_0_10px_rgba(255,255,255,0.35)]"
                   variants={pillVariants}
                   initial="hidden"
-                  animate={homePillState}
+                  animate={dmPillState}
                 />
 
                 <motion.div
                   variants={iconVariants}
                   initial="animate"
-                  animate={currentServer === null ? "active" : "animate"}
+                  animate={isDMActive ? "active" : "animate"}
                   whileHover="hover"
                   whileTap="tap"
                   transition={iconSpringTransition}
-                  className={cn(
-                    "w-11 h-11 flex items-center justify-center rounded-[12px] border shadow-[0_8px_20px_rgba(0,0,0,0.28)]",
-                    currentServer === null
-                      ? "border-[#ffd23c] bg-[#ffd23c] text-[#1f222a]"
-                      : "border-white/8 bg-[#262933] text-white/75 hover:border-white/16 hover:bg-[#2c2f39] hover:text-white",
-                  )}
+                  className="w-11 h-11 flex items-center justify-center"
                 >
                   <AnimatePresence mode="wait" initial={false}>
                     <motion.span
@@ -1510,13 +1506,33 @@ export const ServerSidebar = () => {
                       exit={{ opacity: 0 }}
                       transition={bottomActionIconTransition}
                     >
-                      <Mail className="w-[18px] h-[18px]" />
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="w-[36px] h-[36px]"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M17 3.33782C15.5291 2.48697 13.8214 2 12 2C6.47715 2 2 6.47715 2 12C2 13.5997 2.37562 15.1116 3.04346 16.4525C3.22094 16.8088 3.28001 17.2161 3.17712 17.6006L2.58151 19.8267C2.32295 20.793 3.20701 21.677 4.17335 21.4185L6.39939 20.8229C6.78393 20.72 7.19121 20.7791 7.54753 20.9565C8.88837 21.6244 10.4003 22 12 22C17.5228 22 22 17.5228 22 12C22 10.1786 21.513 8.47087 20.6622 7"
+                          stroke={isDMActive ? "#FFFFFF" : "#9E9EA7"}
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                        />
+                        <path
+                          d="M8 12H8.009M11.991 12H12M15.991 12H16"
+                          stroke={isDMActive ? "#FFFFFF" : "#9E9EA7"}
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
                     </motion.span>
                   </AnimatePresence>
                 </motion.div>
 
                 <AnimatePresence>
-                  {totalHomeBadge > 0 && currentServer !== null && (
+                  {totalHomeBadge > 0 && !isDMActive && (
                     <motion.span
                       initial={badgeInitial}
                       animate={badgeAnimate}
@@ -1541,30 +1557,23 @@ export const ServerSidebar = () => {
                 whileHover="hover"
                 initial="default"
                 onClick={handleAddServer}
-                className="relative w-11 h-11 rounded-[12px] border border-white/10 bg-[#262933] text-white/75 hover:text-white hover:bg-[#2c2f39] transition-colors duration-200 flex items-center justify-center overflow-hidden shadow-[0_8px_20px_rgba(0,0,0,0.28)]"
+                className="relative w-11 h-11 flex items-center justify-center"
               >
-                <motion.svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 48 48">
-                  <motion.rect
-                    x="1"
-                    y="1"
-                    width="46"
-                    height="46"
-                    rx="11"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeDasharray="6 4"
-                    variants={{ default: dashedBorderDefault, hover: dashedBorderHover }}
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-[36px] h-[36px]"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M6 12H18M12 6V18"
+                    stroke="#9E9EA7"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                   />
-                </motion.svg>
-
-                <motion.div
-                  className="absolute inset-0 rounded-[6px] border border-muted-foreground/50 pointer-events-none"
-                  variants={{ default: solidBorderDefault, hover: solidBorderHover }}
-                  transition={solidBorderTransition}
-                />
-
-                <Plus className="w-5 h-5 relative z-10" />
+                </svg>
               </MotionButton>
             </TooltipTrigger>
             <TooltipContent side="right" className="font-medium">
