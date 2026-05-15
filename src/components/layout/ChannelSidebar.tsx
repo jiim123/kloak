@@ -396,11 +396,14 @@ const UnreadDot = memo(() => (
 ));
 UnreadDot.displayName = "UnreadDot";
 
+const SIDEBAR_ITEM_ICON_SLOT = "flex-shrink-0 w-5 h-5 flex items-center justify-center";
+const SIDEBAR_ITEM_ICON = "block w-4 h-4 flex-shrink-0";
+
 // ─── Channel icon resolver (memoized helper) ───
 
 const ChannelIcon = memo(({ channel, isUnread, isActive }: { channel: Channel; isUnread: boolean; isActive: boolean }) => {
   const iconCn = cn(
-    "w-4 h-4 flex-shrink-0 transition-colors",
+    `${SIDEBAR_ITEM_ICON} transition-colors`,
     isUnread && !isActive ? "text-foreground opacity-100" : "text-muted-foreground",
   );
 
@@ -520,7 +523,7 @@ const SortableChannel = memo(({
         onFocus={onPrefetch}
         aria-label={ariaLabel}
         className={cn(
-          "group relative flex-1 min-w-0 flex items-center gap-2 px-2.5 py-2 md:py-1.5 text-[14px] font-medium select-none rounded-[3px]",
+          "group relative flex-1 min-w-0 flex items-center gap-2 px-2.5 py-2 md:py-1.5 text-[14px] leading-5 font-medium select-none rounded-[3px]",
           "transition-colors duration-150",
           "hover:bg-foreground/[0.04]",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-1",
@@ -541,12 +544,12 @@ const SortableChannel = memo(({
         />
 
         {/* Channel icon */}
-        <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
+        <div className={SIDEBAR_ITEM_ICON_SLOT}>
           <ChannelIcon channel={channel} isUnread={isUnread} isActive={isActive} />
         </div>
 
         {/* Channel name */}
-        <span className="truncate flex-1 text-left">{channel.name}</span>
+        <span className="truncate flex-1 text-left leading-5">{channel.name}</span>
 
         {/* Private indicator (only if no custom icon already showing lock) */}
         {channel.is_private && !channel.icon && <LockIcon className="w-3 h-3 text-muted-foreground flex-shrink-0" />}
@@ -1655,12 +1658,13 @@ export const ChannelSidebar = () => {
   const renderChannelList = (
     <>
       {/* Default sections */}
-      <div className="mb-2 space-y-0.5">
+      <div className="mb-2 ml-1 space-y-0.5">
         <button
           onClick={handleSelectOverview}
           aria-label="Server overview"
           className={cn(
             "group relative w-full flex items-center gap-2 px-2.5 py-1.5 text-sm select-none",
+            "leading-5",
             "transition-colors duration-150",
             "hover:bg-foreground/[0.04]",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-1 rounded-sm",
@@ -1674,14 +1678,14 @@ export const ChannelSidebar = () => {
               isOverviewActive ? "opacity-100" : "opacity-0",
             )}
           />
-            <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
+            <div className={SIDEBAR_ITEM_ICON_SLOT}>
               <InfoIcon
                 className={cn(
-                "w-4 h-4 flex-shrink-0",
+                SIDEBAR_ITEM_ICON,
                 )}
               />
             </div>
-          <span className="truncate flex-1 text-left">Overview</span>
+          <span className="truncate flex-1 text-left leading-5">Overview</span>
         </button>
         {canViewMembersShortcut && (
           <button
@@ -1689,16 +1693,17 @@ export const ChannelSidebar = () => {
             aria-label="Open members settings"
             className={cn(
               "group relative w-full flex items-center gap-2 px-2.5 py-1.5 text-sm select-none",
+              "leading-5",
               "transition-colors duration-150",
               "hover:bg-foreground/[0.04]",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-1 rounded-sm",
               "text-muted-foreground hover:text-foreground",
             )}
           >
-            <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
-              <MembersIcon className="w-4 h-4 flex-shrink-0" />
+            <div className={SIDEBAR_ITEM_ICON_SLOT}>
+              <MembersIcon className={SIDEBAR_ITEM_ICON} />
             </div>
-            <span className="truncate flex-1 text-left">Members</span>
+            <span className="truncate flex-1 text-left leading-5">Members</span>
           </button>
         )}
         <div className="mx-2 my-1 h-px bg-border/40" aria-hidden="true" />

@@ -9,7 +9,14 @@ import {
   Plus,
   Trash2,
   Users,
-  ArrowLeft,
+  Gamepad2,
+  Gift,
+  Headphones,
+  IceCream,
+  Mic2,
+  Music2,
+  Paintbrush,
+  Sparkles,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -31,6 +38,32 @@ const createServerSchema = z.object({
 
 type CreateServerForm = z.infer<typeof createServerSchema>;
 type ModalView = "choose" | "create";
+
+const CreateServerBackdrop = () => {
+  const iconClass = "absolute h-7 w-7 text-[#a7adb9]/70 animate-[create-server-icon-float_18s_linear_infinite]";
+
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 overflow-hidden bg-[#202329]"
+    >
+      <Sparkles className={`${iconClass} left-[17%] top-[25%] rotate-[-8deg]`} strokeWidth={1.4} />
+      <IceCream className={`${iconClass} left-[42%] top-[4%] rotate-[-5deg] [animation-delay:-7s]`} strokeWidth={1.4} />
+      <Headphones className={`${iconClass} right-[16%] top-[2%] [animation-delay:-12s]`} strokeWidth={1.4} />
+      <Gift className={`${iconClass} right-[4%] top-[-1%] [animation-delay:-3s]`} strokeWidth={1.4} />
+      <Mic2 className={`${iconClass} right-[29%] top-[34%] [animation-delay:-15s]`} strokeWidth={1.4} />
+      <Gamepad2 className={`${iconClass} right-[10%] top-[38%] [animation-delay:-5s]`} strokeWidth={1.4} />
+      <Music2 className={`${iconClass} left-[33%] top-[48%] rotate-[10deg] [animation-delay:-10s]`} strokeWidth={1.4} />
+      <Paintbrush className={`${iconClass} right-[24%] top-[63%] rotate-[8deg] [animation-delay:-2s]`} strokeWidth={1.4} />
+      <Gamepad2 className={`${iconClass} bottom-[8%] right-[6%] [animation-delay:-13s]`} strokeWidth={1.4} />
+      <Mic2 className={`${iconClass} bottom-[7%] left-[7%] [animation-delay:-8s]`} strokeWidth={1.4} />
+      <Sparkles className={`${iconClass} bottom-[16%] left-[14%] rotate-[7deg] [animation-delay:-16s]`} strokeWidth={1.4} />
+      <IceCream className={`${iconClass} bottom-[2%] left-[36%] [animation-delay:-4s]`} strokeWidth={1.4} />
+      <Gift className={`${iconClass} bottom-[31%] right-[0.5%] rotate-[8deg] [animation-delay:-11s]`} strokeWidth={1.4} />
+      <Paintbrush className={`${iconClass} top-[64%] left-[75%] rotate-[-12deg] [animation-delay:-6s]`} strokeWidth={1.4} />
+    </div>
+  );
+};
 
 export const CreateServerModal = () => {
   const navigate = useNavigate();
@@ -148,14 +181,15 @@ export const CreateServerModal = () => {
     navigate("/app/explore");
   };
 
-  const handleBack = () => {
-    setView("choose");
-    clearIcon();
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="sm:max-w-xl max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-hidden bg-background/95 backdrop-blur-xl border-border/50 rounded-2xl p-0">
+      <DialogContent
+        className={
+          view === "create"
+            ? "!left-0 !top-0 !h-screen !w-screen !max-w-none !translate-x-0 !translate-y-0 overflow-hidden border-0 bg-transparent p-0 shadow-none sm:rounded-none [&>button]:right-5 [&>button]:top-5 [&>button]:text-[#a7adb9] [&>button:hover]:text-white"
+            : "sm:max-w-xl max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-hidden bg-background/95 backdrop-blur-xl border-border/50 rounded-2xl p-0"
+        }
+      >
         {/* Hidden file input */}
         <input
           ref={fileInputRef}
@@ -220,29 +254,26 @@ export const CreateServerModal = () => {
 
         {/* Create View */}
         {view === "create" && (
-          <div className="p-4 sm:p-6">
-            <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="rounded-xl border border-border/50 bg-card/60 p-5 sm:p-6">
+          <div className="relative flex min-h-screen w-full items-center justify-center px-4 py-10 text-white">
+            <CreateServerBackdrop />
+            <form
+              onSubmit={createForm.handleSubmit(onCreateSubmit)}
+              className="relative z-10 w-full max-w-[400px] rounded-[5px] border border-white/[0.03] bg-[#363941] px-8 pb-8 pt-7 shadow-[0_18px_40px_rgba(0,0,0,0.35)] sm:px-10"
+            >
               {isLoading ? (
                 <div className="flex min-h-[320px] w-full flex-col items-center justify-center gap-4">
                   <CheckmarkAnimation size={72} />
-                  <p className="text-sm font-medium text-foreground">Creating server...</p>
+                  <p className="text-sm font-medium text-white">Creating server...</p>
                 </div>
               ) : (
                 <>
-                  <DialogHeader className="pb-5">
-                    <div className="flex items-center justify-between gap-2">
-                      <button
-                        type="button"
-                        onClick={handleBack}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
-                        aria-label="Back"
-                      >
-                        <ArrowLeft className="h-4 w-4" />
-                      </button>
-                      <DialogTitle className="text-lg font-medium text-center">Personalize your server</DialogTitle>
-                      <div className="h-8 w-8" />
+                  <DialogHeader className="pb-6 text-center sm:text-center">
+                    <div className="relative flex items-center justify-center">
+                      <DialogTitle className="text-[20px] font-medium leading-6 text-white">
+                        Personalize your server
+                      </DialogTitle>
                     </div>
-                    <DialogDescription className="mx-auto mt-2 max-w-[360px] text-center text-sm text-muted-foreground">
+                    <DialogDescription className="mx-auto mt-2 max-w-[310px] text-center text-[12px] font-normal leading-[16px] text-[#f2f3f5]">
                       Your server is where everyone gets to chat. Give it an avatar and name. You can always change it later.
                     </DialogDescription>
                   </DialogHeader>
@@ -252,22 +283,22 @@ export const CreateServerModal = () => {
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="relative flex h-24 w-24 flex-col items-center justify-center gap-1 overflow-hidden rounded-xl border-2 border-dashed border-border bg-secondary/40 text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
+                        className="relative flex h-[74px] w-[74px] flex-col items-center justify-center gap-1 overflow-hidden rounded-[12px] border-2 border-dashed border-[#b5bac1] bg-transparent text-[#b5bac1] transition-colors hover:border-white hover:text-white"
                         aria-label="Upload server icon"
                       >
                         {iconPreview ? (
                           <img src={iconPreview} alt="Server icon preview" className="h-full w-full object-cover" />
                         ) : (
                           <>
-                            <Camera className="h-5 w-5" />
-                            <span className="text-xs font-medium">Upload</span>
+                            <Camera className="h-6 w-6" />
+                            <span className="text-[10px] font-normal uppercase leading-none">Upload</span>
                           </>
                         )}
                       </button>
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md transition-colors hover:bg-primary-hover"
+                        className="absolute -bottom-3 -right-3 flex h-8 w-8 items-center justify-center rounded-full bg-[#f0b800] text-[#1e1f22] shadow-[0_3px_8px_rgba(0,0,0,0.35)] transition-colors hover:bg-[#ffca1a]"
                         aria-label="Choose server icon"
                       >
                         <Plus className="h-4 w-4" strokeWidth={3} />
@@ -279,7 +310,7 @@ export const CreateServerModal = () => {
                             e.stopPropagation();
                             clearIcon();
                           }}
-                          className="absolute -top-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-background/95 text-muted-foreground shadow-md transition-colors hover:bg-secondary hover:text-foreground"
+                          className="absolute -top-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-[#1e1f22] text-[#b5bac1] shadow-md transition-colors hover:bg-[#2b2d31] hover:text-white"
                           aria-label="Remove server icon"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -288,32 +319,41 @@ export const CreateServerModal = () => {
                     </div>
                   </div>
 
-                  <div className="mx-auto mb-7 w-full max-w-[320px] space-y-2">
-                    <Label htmlFor="name" className="text-xs font-medium text-muted-foreground">
-                      Server Name
+                  <div className="mx-auto mb-8 w-full max-w-[235px] space-y-1 text-center">
+                    <Label htmlFor="name" className="block text-center text-[12px] font-normal leading-4 text-[#b5bac1]">
+                      Enter your server name
                     </Label>
                     <Input
                       id="name"
                       aria-label="Enter your server name"
                       {...createForm.register("name")}
-                      className="h-10 rounded-xl border-border/60 bg-background/50 px-3 text-base text-foreground"
+                      className="mx-auto h-8 rounded-none border-0 border-b border-[#b5bac1]/75 bg-transparent px-0 text-center text-[15px] font-normal text-white shadow-none outline-none ring-0 placeholder:text-[#b5bac1] focus-visible:border-white focus-visible:ring-0 focus-visible:ring-offset-0"
                       autoFocus
                       maxLength={50}
                     />
                     {createForm.formState.errors.name && (
-                      <p className="text-xs font-medium text-destructive">{createForm.formState.errors.name.message}</p>
+                      <p className="text-xs font-normal text-red-300">{createForm.formState.errors.name.message}</p>
                     )}
                   </div>
 
-                  <div className="mx-auto flex w-full max-w-[320px] flex-col gap-2">
+                  <div className="mx-auto flex w-full max-w-[235px] flex-col items-center gap-3">
                     <Button
                       type="submit"
                       disabled={!canContinue}
-                      className="h-10 rounded-xl bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary-hover"
+                      className={`h-[28px] w-full rounded-[3px] text-[12px] font-normal disabled:opacity-100 ${
+                        canContinue
+                          ? "bg-[#f0b800] text-[#1e1f22] hover:bg-[#ffca1a]"
+                          : "bg-[#d7d9df] text-[#4e5058]/70"
+                      }`}
                     >
                       Continue
                     </Button>
-                    <Button type="button" variant="outline" rounded="xl" onClick={handleBack}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={handleClose}
+                      className="h-6 rounded-[3px] px-3 text-[12px] font-normal text-[#b5bac1] hover:bg-transparent hover:text-white"
+                    >
                       Cancel
                     </Button>
                   </div>
