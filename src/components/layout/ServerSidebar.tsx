@@ -147,7 +147,6 @@ const dmItemTransition = {
   layout: { duration: 0.3, ease: [0.25, 0.1, 0.25, 1] as const },
 };
 
-const homeIconTransition = { duration: 0.15 };
 const bottomActionIconTransition = { duration: 0.15 };
 
 // FIX #1: Static animation objects for the "Add Server" dashed border
@@ -209,7 +208,7 @@ const ServerIconVisual = memo(({ server }: { server: ServerWithMembership }) => 
     <div className="relative">
       <div
         className={cn(
-          "w-11 h-11 overflow-hidden rounded-[12px] flex items-center justify-center border border-white/8 shadow-[0_6px_18px_rgba(0,0,0,0.28)]",
+          "w-11 h-11 overflow-hidden rounded-[12px] flex items-center justify-center shadow-[0_6px_18px_rgba(0,0,0,0.28)]",
           !server.icon_url ? "bg-[#2f323d]" : "bg-[#23262f]",
         )}
       >
@@ -481,28 +480,34 @@ const DraggableServerItem = memo(
                       whileTap="tap"
                       transition={iconSpringTransition}
                       className={cn(
-                        "w-11 h-11 overflow-hidden rounded-[12px] border shadow-[0_8px_20px_rgba(0,0,0,0.28)]",
+                        "w-11 h-11 overflow-hidden rounded-[12px] shadow-[0_8px_20px_rgba(0,0,0,0.28)]",
                         isActive
-                          ? "border-[#ffd23c] bg-[#ffd23c] text-[#1f222a]"
-                          : "border-white/8 bg-[#262933] text-white hover:border-white/16 hover:bg-[#2c2f39]",
+                          ? "p-[2px] bg-[#3A3D44] text-[#1f222a]"
+                          : "bg-[#262933] text-white hover:bg-[#2c2f39]",
                         !server.icon_url && !isActive && getServerColor(server.name),
-                        server.icon_url && "border-white/8",
                       )}
                     >
-                      {server.icon_url ? (
-                        <Avatar className="w-11 h-11 border-0 rounded-[12px]">
-                          <AvatarImage src={server.icon_url} alt={server.name} className="object-cover" />
-                          <AvatarFallback className={getServerColor(server.name)}>
-                            {getServerInitials(server.name)}
-                          </AvatarFallback>
-                        </Avatar>
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <span className={cn("text-sm font-bold", isActive ? "text-[#1f222a]" : "text-white")}>
-                            {getServerInitials(server.name)}
-                          </span>
-                        </div>
-                      )}
+                      <div
+                        className={cn(
+                          "w-full h-full overflow-hidden rounded-[9px]",
+                          isActive && !server.icon_url && "bg-primary",
+                        )}
+                      >
+                        {server.icon_url ? (
+                          <Avatar className="w-full h-full border-0 rounded-[9px]">
+                            <AvatarImage src={server.icon_url} alt={server.name} className="object-cover" />
+                            <AvatarFallback className={getServerColor(server.name)}>
+                              {getServerInitials(server.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <span className={cn("text-sm font-bold", isActive ? "text-[#1f222a]" : "text-white")}>
+                              {getServerInitials(server.name)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </motion.div>
 
                     {/* Mention badge */}
@@ -1320,85 +1325,12 @@ export const ServerSidebar = () => {
             <div
               ref={setRootDroppableRef}
               className={cn(
-                "flex-1 flex flex-col items-center gap-2.5 overflow-y-auto scrollbar-overlay scrollbar-hide w-full px-3 pt-3 pb-24",
+                "flex-1 flex flex-col items-center gap-2.5 overflow-y-auto scrollbar-overlay scrollbar-hide w-full px-3 pt-3 pb-52",
                 isOverRoot && "outline outline-2 outline-primary/30 outline-offset-[-2px] rounded-xl",
               )}
             >
               {/* Loading skeleton */}
               {isLoading && servers.length === 0 && <LoadingSkeleton />}
-
-              {/* Explore button */}
-              <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
-                <TooltipTrigger asChild>
-                  <MotionButton
-                    className="relative group mb-1"
-                    onMouseEnter={handleExploreHover}
-                    onMouseLeave={handleHoverLeave}
-                    onClick={handleExploreClick}
-                    whileHover="hover"
-                    whileTap="tap"
-                  >
-                    <motion.span
-                      className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 bg-white rounded-r-full shadow-[0_0_10px_rgba(255,255,255,0.35)]"
-                      variants={pillVariants}
-                      initial="hidden"
-                      animate={explorePillState}
-                    />
-
-                    <motion.div
-                      variants={iconVariants}
-                      initial="animate"
-                      animate={isExploreActive ? "active" : "animate"}
-                      whileHover="hover"
-                      whileTap="tap"
-                      transition={iconSpringTransition}
-                      className="w-11 h-11 flex items-center justify-center"
-                    >
-                      <AnimatePresence mode="wait" initial={false}>
-                        <motion.span
-                          key={isExploreActive ? "explore-active-icon" : "explore-inactive-icon"}
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          transition={homeIconTransition}
-                        >
-                          <svg
-                            viewBox="0 0 612 612"
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="w-[36px] h-[36px]"
-                            aria-hidden="true"
-                          >
-                            <path
-                              d="M306,0C137.272,0,0,137.27,0,305.997C0,474.727,137.272,612,306,612s306-137.273,306-306.003C612,137.27,474.73,0,306,0z M306,576.657c-149.24,0-270.657-121.418-270.657-270.66C35.343,156.759,156.76,35.343,306,35.343 s270.657,121.416,270.657,270.655C576.657,455.24,455.24,576.657,306,576.657z"
-                              fill={isExploreActive ? "#FFFFFF" : "#9E9EA7"}
-                            />
-                            <path
-                              d="M474.47,144.734c-4.623-8.599-15.336-11.818-23.933-7.197L251.64,244.485c-3.053,1.642-5.556,4.144-7.197,7.198 L137.538,450.536c-3.782,7.035-2.309,15.489,3.063,20.861c1.191,1.193,2.574,2.232,4.137,3.07 c5.313,2.857,11.436,2.71,16.428,0.155l0.003,0.004l0.075-0.04c0.072-0.037,0.143-0.077,0.214-0.115l198.995-106.87 c3.054-1.64,5.556-4.142,7.2-7.197l106.477-198.361c0.233-0.401,0.455-0.806,0.655-1.222l0.144-0.267l-0.018-0.006 C477.174,155.671,477.211,149.833,474.47,144.734z M196.403,415.684l67.933-126.361l58.418,58.42L196.403,415.684z M347.76,322.764l-58.421-58.421l126.351-67.94"
-                              fill={isExploreActive ? "#FFFFFF" : "#9E9EA7"}
-                            />
-                          </svg>
-                        </motion.span>
-                      </AnimatePresence>
-                    </motion.div>
-
-                    <AnimatePresence>
-                      {totalHomeBadge > 0 && !isDMActive && (
-                        <motion.span
-                          initial={badgeInitial}
-                          animate={badgeAnimate}
-                          exit={badgeExit}
-                          className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
-                        >
-                          {totalHomeBadge > 99 ? "99+" : totalHomeBadge}
-                        </motion.span>
-                      )}
-                    </AnimatePresence>
-                  </MotionButton>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="font-medium">
-                  Explore
-                </TooltipContent>
-              </Tooltip>
 
               {unreadConversations.length > 0 && (
                 <>
@@ -1472,6 +1404,56 @@ export const ServerSidebar = () => {
       <div className="absolute bottom-0 left-0 right-0 px-3 pb-3 pt-2 bg-[#1E2025] z-10">
         <div className="w-5 h-px bg-white/14 rounded-full shrink-0 mx-auto mb-2" />
         <div className="flex flex-col items-center gap-2">
+          <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
+            <TooltipTrigger asChild>
+              <MotionButton
+                className="relative group"
+                onMouseEnter={handleExploreHover}
+                onMouseLeave={handleHoverLeave}
+                onClick={handleExploreClick}
+                whileHover="hover"
+                whileTap="tap"
+              >
+                <motion.span
+                  className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 bg-white rounded-r-full shadow-[0_0_10px_rgba(255,255,255,0.35)]"
+                  variants={pillVariants}
+                  initial="hidden"
+                  animate={explorePillState}
+                />
+
+                <motion.div
+                  variants={iconVariants}
+                  initial="animate"
+                  animate={isExploreActive ? "active" : "animate"}
+                  whileHover="hover"
+                  whileTap="tap"
+                  transition={iconSpringTransition}
+                  className="w-11 h-11 flex items-center justify-center"
+                >
+                  <svg
+                    viewBox="0 0 612 612"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="w-[36px] h-[36px]"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M306,0C137.272,0,0,137.27,0,305.997C0,474.727,137.272,612,306,612s306-137.273,306-306.003C612,137.27,474.73,0,306,0z M306,576.657c-149.24,0-270.657-121.418-270.657-270.66C35.343,156.759,156.76,35.343,306,35.343 s270.657,121.416,270.657,270.655C576.657,455.24,455.24,576.657,306,576.657z"
+                      fill={isExploreActive ? "#FFFFFF" : "#9E9EA7"}
+                    />
+                    <path
+                      d="M474.47,144.734c-4.623-8.599-15.336-11.818-23.933-7.197L251.64,244.485c-3.053,1.642-5.556,4.144-7.197,7.198 L137.538,450.536c-3.782,7.035-2.309,15.489,3.063,20.861c1.191,1.193,2.574,2.232,4.137,3.07 c5.313,2.857,11.436,2.71,16.428,0.155l0.003,0.004l0.075-0.04c0.072-0.037,0.143-0.077,0.214-0.115l198.995-106.87 c3.054-1.64,5.556-4.142,7.2-7.197l106.477-198.361c0.233-0.401,0.455-0.806,0.655-1.222l0.144-0.267l-0.018-0.006 C477.174,155.671,477.211,149.833,474.47,144.734z M196.403,415.684l67.933-126.361l58.418,58.42L196.403,415.684z M347.76,322.764l-58.421-58.421l126.351-67.94"
+                      fill={isExploreActive ? "#FFFFFF" : "#9E9EA7"}
+                    />
+                  </svg>
+                </motion.div>
+
+              </MotionButton>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="font-medium">
+              Explore
+            </TooltipContent>
+          </Tooltip>
+
           <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
             <TooltipTrigger asChild>
               <MotionButton

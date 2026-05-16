@@ -264,14 +264,6 @@ const ActionBar = memo(
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {setShowGifPicker && (
-            <GifPicker
-              open={showGifPicker}
-              onOpenChange={setShowGifPicker}
-              onSelect={onGifSelect}
-              anchor={<span className="absolute inset-0 pointer-events-none" />}
-            />
-          )}
         </div>
 
         <div className="min-w-0 flex-1 px-1 py-1.5">
@@ -280,15 +272,20 @@ const ActionBar = memo(
 
         <div className="flex shrink-0 items-center pr-1.5">
           {setShowGifPicker && (
-            <button
-              type="button"
-              className={iconBtnClass}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => setShowGifPicker(true)}
-              aria-label="Open GIF picker"
+            <GifPicker
+              open={showGifPicker}
+              onOpenChange={setShowGifPicker}
+              onSelect={onGifSelect}
             >
-              <ImagePlay className="w-5 h-5" />
-            </button>
+              <button
+                type="button"
+                className={iconBtnClass}
+                onMouseDown={(e) => e.preventDefault()}
+                aria-label="Open GIF picker"
+              >
+                <ImagePlay className="w-5 h-5" />
+              </button>
+            </GifPicker>
           )}
 
           <EmojiPicker

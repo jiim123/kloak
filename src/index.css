@@ -1006,7 +1006,7 @@ body {
   --card-foreground: 220 14% 92%;
   --popover: 225 8% 19%;
   --popover-foreground: 220 14% 92%;
-  --primary: 47 100% 50%;
+  --primary: 0 0% 100%;
   --primary-foreground: 225 10% 8%;
   --secondary: 226 8% 27%;
   --secondary-foreground: 220 14% 92%;
@@ -1068,7 +1068,7 @@ body {
   --card-foreground: 220 14% 88%;
   --popover: 225 8% 19%;
   --popover-foreground: 220 14% 88%;
-  --primary: 47 100% 50%;
+  --primary: 0 0% 100%;
   --primary-foreground: 225 10% 8%;
   --secondary: 226 8% 27%;
   --secondary-foreground: 220 14% 88%;
@@ -1078,7 +1078,7 @@ body {
   --accent-foreground: 225 10% 8%;
   --border: 225 8% 30%;
   --input: 226 8% 27%;
-  --ring: 47 100% 50%;
+  --ring: 0 0% 100%;
 }
 
 .server-settings-reference h2 {
@@ -1102,8 +1102,8 @@ body {
 .server-settings-reference input:focus,
 .server-settings-reference textarea:focus,
 .server-settings-reference [role="combobox"]:focus {
-  border-color: #ffd400;
-  box-shadow: 0 0 0 1px #ffd400;
+  border-color: #ffffff;
+  box-shadow: 0 0 0 1px #ffffff;
 }
 
 .server-settings-reference .rounded-xl.border,
@@ -1217,3 +1217,4 @@ body {
     min-height: 44px;
   }
 }
+

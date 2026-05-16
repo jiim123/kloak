@@ -206,7 +206,7 @@ const RegularChannelEmpty = memo(
             This is the start of the <span className="font-medium">#{channelName}</span> channel.
           </p>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Sparkles className="w-4 h-4 text-yellow-500" />
+            <Sparkles className="w-4 h-4 text-primary" />
             <span>Be the first to send a message!</span>
           </div>
         </>

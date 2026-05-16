@@ -1,20 +1,30 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import { FluentEmoji } from "@/components/ui/FluentEmoji";
-import { Search, X, Clock, ChevronLeft, ChevronRight } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Apple,
+  Car,
+  Cat,
+  Clock,
+  Flag,
+  Heart,
+  Lightbulb,
+  Search,
+  Smile,
+  Trophy,
+  X,
+} from "lucide-react";
 import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
-import { getServerInitials, getServerColor } from "@/lib/serverUtils";
-import { useServerStore } from "@/stores/serverStore";
-import { fetchServerEmojis, ServerEmoji } from "@/lib/serverEmojis";
-import { getGlobalEmojiDuplicates } from "@/lib/globalEmojiResolver";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { EMOJI_DATA, EmojiCategory } from "@/data/emojiData";
-import { getRecentEmojis, saveRecentEmoji } from "@/lib/emojiRecents";
+import { FluentEmoji } from "@/components/ui/FluentEmoji";
+import { EMOJI_DATA } from "@/data/emojiData";
 import { getCdnUrl } from "@/lib/bunny-upload";
+import { getGlobalEmojiDuplicates } from "@/lib/globalEmojiResolver";
+import { getRecentEmojis, saveRecentEmoji } from "@/lib/emojiRecents";
+import { fetchServerEmojis, ServerEmoji } from "@/lib/serverEmojis";
+import { getServerInitials } from "@/lib/serverUtils";
+import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useServerStore } from "@/stores/serverStore";
 
 interface EmojiPickerProps {
   children: React.ReactNode;
@@ -26,7 +36,55 @@ interface EmojiPickerProps {
   allowExternalEmojis?: boolean;
 }
 
-const INLINE_CUSTOM_EMOJI_TOKEN_REGEX = /^:ce\[([a-z0-9_]{2,12})\|([a-z0-9/_\.-]{1,300})\]:$/;
+type PreviewEmoji = {
+  label: string;
+  native?: string;
+  url?: string;
+};
+
+type LegacyCustomEmojiToken = {
+  name: string;
+  serverName?: string;
+};
+
+const INLINE_CUSTOM_EMOJI_TOKEN_REGEX = /^:ce\[([a-z0-9_]{2,12})\|([a-z0-9/_.-]{1,300})\]:$/;
+const LEGACY_CUSTOM_EMOJI_TOKEN_REGEX = /^:([a-z0-9_]{2,12})(?:~([^:]{1,64}))?:$/;
+const NATIVE_EMOJI_SET = new Set(
+  Object.values(EMOJI_DATA).flatMap((category) => category.emojis.map((entry) => entry.emoji)),
+);
+
+function parseLegacyCustomEmojiToken(token: string): LegacyCustomEmojiToken | null {
+  const match = token.match(LEGACY_CUSTOM_EMOJI_TOKEN_REGEX);
+  if (!match) return null;
+  return { name: match[1], serverName: match[2] };
+}
+
+function getStoredEmojiPreview(emoji: string): PreviewEmoji {
+  const inlineMatch = emoji.match(INLINE_CUSTOM_EMOJI_TOKEN_REGEX);
+  if (inlineMatch) {
+    return { label: `:${inlineMatch[1]}:`, url: getCdnUrl("server-emojis", inlineMatch[2]) };
+  }
+
+  const legacyMatch = parseLegacyCustomEmojiToken(emoji);
+  if (legacyMatch) {
+    return { label: `:${legacyMatch.name}:` };
+  }
+
+  return { label: emoji, native: emoji };
+}
+
+const CATEGORY_ICON_MAP = {
+  recent: Clock,
+  smileys: Smile,
+  people: Smile,
+  animals: Cat,
+  food: Apple,
+  activities: Trophy,
+  travel: Car,
+  objects: Lightbulb,
+  symbols: Heart,
+  flags: Flag,
+} as const;
 
 export const EmojiPicker = ({
   children,
@@ -42,55 +100,57 @@ export const EmojiPicker = ({
   const [selectedServerForEmoji, setSelectedServerForEmoji] = useState<string | null>(null);
   const [serverEmojis, setServerEmojis] = useState<Record<string, ServerEmoji[]>>({});
   const [loadingServers, setLoadingServers] = useState<Set<string>>(new Set());
+  const [previewEmoji, setPreviewEmoji] = useState<PreviewEmoji | null>(null);
   const loadedServersRef = useRef<Set<string>>(new Set());
   const loadingServersRef = useRef<Set<string>>(new Set());
   const searchInputRef = useRef<HTMLInputElement>(null);
   const categoryScrollRef = useRef<HTMLDivElement>(null);
-  const serverScrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
 
+  const isMobile = useIsMobile();
   const servers = useServerStore((state) => state.servers);
 
-  // Refresh recent emojis when picker opens
-  const recentEmojis = useMemo(() => {
-    if (open) {
-      return getRecentEmojis();
-    }
-    return [];
-  }, [open]);
+  const recentEmojis = useMemo(() => (open ? getRecentEmojis() : []), [open]);
+  const selectedServer = servers.find((server) => server.id === selectedServerForEmoji);
+  const currentServerEmojis = selectedServerForEmoji ? serverEmojis[selectedServerForEmoji] || [] : [];
 
-  // Fetch server emojis when a server is selected
-  const loadServerEmojis = useCallback(
-    async (sId: string, opts?: { force?: boolean }) => {
-      const force = opts?.force ?? false;
-      if (!force && loadedServersRef.current.has(sId)) return;
-      if (loadingServersRef.current.has(sId)) return;
-
-      loadingServersRef.current.add(sId);
-      setLoadingServers((prev) => new Set([...prev, sId]));
-      try {
-        const emojis = await fetchServerEmojis(sId, { force });
-        loadedServersRef.current.add(sId);
-        setServerEmojis((prev) => ({ ...prev, [sId]: emojis }));
-      } catch (error) {
-        console.error("Failed to fetch server emojis:", error);
-        setServerEmojis((prev) => ({ ...prev, [sId]: [] }));
-      } finally {
-        loadingServersRef.current.delete(sId);
-        setLoadingServers((prev) => {
-          const next = new Set(prev);
-          next.delete(sId);
-          return next;
-        });
-      }
-    },
-    [],
+  const categories = useMemo(
+    () =>
+      Object.entries(EMOJI_DATA).map(([key, cat]) => ({
+        key,
+        name: cat.name,
+        icon: cat.icon,
+        emojis: key === "recent" ? recentEmojis : cat.emojis.map((emoji) => emoji.emoji),
+      })),
+    [recentEmojis],
   );
 
-  // When emojis change elsewhere (upload/rename/delete), refresh any loaded lists.
+  const loadServerEmojis = useCallback(async (sId: string, opts?: { force?: boolean }) => {
+    const force = opts?.force ?? false;
+    if (!force && loadedServersRef.current.has(sId)) return;
+    if (loadingServersRef.current.has(sId)) return;
+
+    loadingServersRef.current.add(sId);
+    setLoadingServers((prev) => new Set([...prev, sId]));
+    try {
+      const emojis = await fetchServerEmojis(sId, { force });
+      loadedServersRef.current.add(sId);
+      setServerEmojis((prev) => ({ ...prev, [sId]: emojis }));
+    } catch (error) {
+      console.error("Failed to fetch server emojis:", error);
+      setServerEmojis((prev) => ({ ...prev, [sId]: [] }));
+    } finally {
+      loadingServersRef.current.delete(sId);
+      setLoadingServers((prev) => {
+        const next = new Set(prev);
+        next.delete(sId);
+        return next;
+      });
+    }
+  }, []);
+
   useEffect(() => {
     if (!open) return;
+
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail as { serverId?: string } | undefined;
       const changedServerId = detail?.serverId;
@@ -98,47 +158,30 @@ export const EmojiPicker = ({
       if (!serverEmojis[changedServerId] && selectedServerForEmoji !== changedServerId) return;
       loadServerEmojis(changedServerId, { force: true });
     };
+
     window.addEventListener("server-emojis-changed", handler);
     return () => window.removeEventListener("server-emojis-changed", handler);
-  }, [open, serverEmojis, selectedServerForEmoji, loadServerEmojis]);
+  }, [loadServerEmojis, open, selectedServerForEmoji, serverEmojis]);
 
-  // Load current server emojis when picker opens
   useEffect(() => {
-    if (open) {
-      setSelectedServerForEmoji(serverId);
+    if (!open) {
+      setSearch("");
+      return;
     }
+
+    const recent = getRecentEmojis();
+    setActiveCategory(recent.length > 0 ? "recent" : "smileys");
+    setSelectedServerForEmoji(serverId || null);
+    const previewRecent = recent.find((emoji) => INLINE_CUSTOM_EMOJI_TOKEN_REGEX.test(emoji) || NATIVE_EMOJI_SET.has(emoji));
+    setPreviewEmoji(previewRecent ? getStoredEmojiPreview(previewRecent) : null);
   }, [open, serverId]);
 
-  // Load emojis when selecting a different server
   useEffect(() => {
     if (open && selectedServerForEmoji) {
       loadServerEmojis(selectedServerForEmoji);
     }
-  }, [open, selectedServerForEmoji, loadServerEmojis]);
+  }, [loadServerEmojis, open, selectedServerForEmoji]);
 
-  // Check scroll state for category bar
-  const updateScrollState = useCallback(() => {
-    const container = categoryScrollRef.current;
-    if (container) {
-      const { scrollLeft, scrollWidth, clientWidth } = container;
-      setCanScrollLeft(scrollLeft > 2);
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 2);
-    }
-  }, []);
-
-  // Scroll category bar
-  const scrollCategories = useCallback((direction: "left" | "right") => {
-    const container = categoryScrollRef.current;
-    if (container) {
-      const scrollAmount = 120;
-      container.scrollBy({
-        left: direction === "left" ? -scrollAmount : scrollAmount,
-        behavior: "smooth",
-      });
-    }
-  }, []);
-
-  // Handle emoji selection
   const handleSelect = useCallback(
     (emoji: string) => {
       saveRecentEmoji(emoji);
@@ -148,7 +191,6 @@ export const EmojiPicker = ({
     [onEmojiSelect, onOpenChange],
   );
 
-  // Handle custom emoji selection — qualify with server name when duplicate
   const handleCustomEmojiSelect = useCallback(
     (emoji: ServerEmoji) => {
       if (customEmojiFormat === "inline_token") {
@@ -160,16 +202,9 @@ export const EmojiPicker = ({
       }
 
       const duplicates = getGlobalEmojiDuplicates();
-      const isDuplicate = duplicates.has(emoji.name);
-
-      // If duplicate, find which server this emoji belongs to and qualify it
-      let customEmojiString = `:${emoji.name}:`;
-      if (isDuplicate && selectedServerForEmoji) {
-        const server = servers.find((s) => s.id === selectedServerForEmoji);
-        if (server) {
-          customEmojiString = `:${emoji.name}~${server.name}:`;
-        }
-      }
+      const server = selectedServerForEmoji ? servers.find((s) => s.id === selectedServerForEmoji) : null;
+      const customEmojiString =
+        duplicates.has(emoji.name) && server ? `:${emoji.name}~${server.name}:` : `:${emoji.name}:`;
 
       saveRecentEmoji(customEmojiString);
       onEmojiSelect(customEmojiString);
@@ -178,491 +213,361 @@ export const EmojiPicker = ({
     [customEmojiFormat, onEmojiSelect, onOpenChange, selectedServerForEmoji, servers],
   );
 
-  // Reset search and set category when picker opens/closes
-  useEffect(() => {
-    if (!open) {
-      setSearch("");
-      return;
-    }
-
-    // When opening, show recent if available, otherwise smileys
-    const recent = getRecentEmojis();
-    setActiveCategory(recent.length > 0 ? "recent" : "smileys");
-
-    // Check scroll state after render
-    const frameId = requestAnimationFrame(() => {
-      updateScrollState();
-    });
-
-    return () => {
-      cancelAnimationFrame(frameId);
-    };
-  }, [open, updateScrollState]);
-
-  // Update scroll state on resize
-  useEffect(() => {
-    if (!open) return;
-
-    const container = categoryScrollRef.current;
-    if (!container) return;
-
-    const resizeObserver = new ResizeObserver(() => {
-      updateScrollState();
-    });
-
-    resizeObserver.observe(container);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [open, updateScrollState]);
-
-  // Get current server's custom emojis
-  const currentServerEmojis = selectedServerForEmoji ? serverEmojis[selectedServerForEmoji] || [] : [];
-
-  // Filter emojis based on search
   const filteredEmojis = useMemo(() => {
     const trimmedSearch = search.trim().toLowerCase();
     if (!trimmedSearch) return null;
 
     const results: Array<{ type: "native"; emoji: string } | { type: "custom"; emoji: ServerEmoji }> = [];
 
-    // Search through all native categories
     Object.values(EMOJI_DATA).forEach((category) => {
-      if (category.emojis) {
-        category.emojis.forEach((emojiData) => {
-          if (emojiData.keywords.some((keyword) => keyword.includes(trimmedSearch))) {
-            results.push({ type: "native", emoji: emojiData.emoji });
-          }
-        });
-      }
-    });
-
-    // Search through custom emojis from all loaded servers
-    Object.values(serverEmojis).forEach((emojis) => {
-      emojis.forEach((emoji) => {
-        if (emoji.name.toLowerCase().includes(trimmedSearch)) {
-          // Avoid duplicates
-          if (!results.some((r) => r.type === "custom" && (r.emoji as ServerEmoji).id === emoji.id)) {
-            results.push({ type: "custom", emoji });
-          }
+      category.emojis.forEach((emojiData) => {
+        if (emojiData.keywords.some((keyword) => keyword.includes(trimmedSearch))) {
+          results.push({ type: "native", emoji: emojiData.emoji });
         }
       });
     });
 
-    return results.slice(0, 50);
+    Object.values(serverEmojis).forEach((emojis) => {
+      emojis.forEach((emoji) => {
+        if (
+          emoji.name.toLowerCase().includes(trimmedSearch) &&
+          !results.some((result) => result.type === "custom" && result.emoji.id === emoji.id)
+        ) {
+          results.push({ type: "custom", emoji });
+        }
+      });
+    });
+
+    return results.slice(0, 72);
   }, [search, serverEmojis]);
 
-  // Build categories with recent emojis
-  const categories = useMemo(() => {
-    return Object.entries(EMOJI_DATA).map(([key, cat]) => ({
-      key,
-      name: cat.name,
-      icon: cat.icon,
-      emojis: key === "recent" ? recentEmojis : cat.emojis.map((e) => e.emoji),
-    }));
-  }, [recentEmojis]);
+  const renderEmojiButton = (
+    key: string,
+    emoji: string,
+    options?: {
+      label?: string;
+      url?: string;
+      disabled?: boolean;
+      onClick?: () => void;
+      className?: string;
+      textFallback?: string;
+    },
+  ) => {
+    const label = options?.label || emoji;
 
-  const isMobile = useIsMobile();
+    return (
+      <button
+        key={key}
+        type="button"
+        className={cn(
+          "flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-[4px] transition-colors duration-100",
+          "hover:bg-[#3b3f45] focus:bg-[#3b3f45] focus:outline-none active:bg-[#454950]",
+          options?.disabled && "pointer-events-none opacity-40",
+          options?.className,
+        )}
+        onClick={options?.onClick ?? (() => handleSelect(emoji))}
+        onMouseDown={(event) => event.preventDefault()}
+        onMouseEnter={() => {
+          if (options?.url) {
+            setPreviewEmoji({ label, url: options.url });
+          } else if (options?.textFallback) {
+            setPreviewEmoji({ label });
+          } else {
+            setPreviewEmoji({ label, native: emoji });
+          }
+        }}
+        title={label}
+      >
+        {options?.url ? (
+          <img src={options.url} alt={label} className="h-[20px] w-[20px] object-contain" loading="lazy" />
+        ) : options?.textFallback ? (
+          <span className="block max-w-full truncate text-[9px] leading-none text-[#b9bbbe]">{options.textFallback}</span>
+        ) : (
+          <FluentEmoji emoji={emoji} size={20} />
+        )}
+      </button>
+    );
+  };
 
-  const pickerContent = (
-    <>
-        {/* Search Header */}
-        <div className="p-3 border-b border-border/30">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50 pointer-events-none" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search emoji..."
-              className="w-full h-11 pl-10 pr-10 rounded-xl bg-muted/30 border border-border/30 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/30 focus:bg-muted/40 transition-all"
-            />
-            {search && (
-              <button
-                type="button"
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-                onClick={() => {
-                  setSearch("");
-                  searchInputRef.current?.focus();
-                }}
-              >
-                <X className="w-4 h-4" />
-              </button>
+  const renderServerEmojiGrid = () => {
+    if (!selectedServerForEmoji || !selectedServer) return null;
+
+    const isExternalServer = selectedServerForEmoji !== serverId;
+    const isDisabledSection = isExternalServer && !allowExternalEmojis;
+
+    return (
+      <div>
+        <div className="mb-1.5 px-0.5 text-[10px] font-semibold leading-none text-[#b9bbbe]">
+          {selectedServer.name}
+          {isDisabledSection && <span className="ml-1 text-[#8e9297]">- External disabled</span>}
+        </div>
+        {loadingServers.has(selectedServerForEmoji) ? (
+          <div className="flex h-[120px] items-center justify-center text-center">
+            <p className="text-[11px] text-[#8e9297]">Loading emojis...</p>
+          </div>
+        ) : currentServerEmojis.length > 0 ? (
+          <div className={cn("grid grid-cols-9 gap-[1px]", isDisabledSection && "pointer-events-none opacity-50")}>
+            {currentServerEmojis.map((emoji) =>
+              renderEmojiButton(`server-${emoji.id}`, `:${emoji.name}:`, {
+                label: `:${emoji.name}:`,
+                url: emoji.url,
+                onClick: () => handleCustomEmojiSelect(emoji),
+              }),
             )}
           </div>
+        ) : (
+          <div className="flex h-[120px] items-center justify-center text-center">
+            <p className="text-[11px] font-medium text-[#8e9297]">No custom emojis</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderNativeCategory = () =>
+    categories.map((cat) => {
+      if (cat.key !== activeCategory) return null;
+
+      return (
+        <div key={cat.key}>
+          <div className="mb-1.5 px-0.5 text-[10px] font-semibold leading-none text-[#b9bbbe]">
+            {cat.key === "recent" ? "Frequently used" : cat.name}
+          </div>
+
+          {cat.emojis.length > 0 ? (
+            <div className="grid grid-cols-9 gap-[1px]">
+              {cat.emojis
+                .map((emoji, index) => renderRecentOrNativeEmoji(cat.key, emoji, index))
+                .filter(Boolean)}
+            </div>
+          ) : (
+            <div className="flex h-[34px] items-center">
+              <p className="px-0.5 text-[11px] font-medium text-[#8e9297]">No recently used emoji</p>
+            </div>
+          )}
+
+          {cat.key === "recent" && selectedServer && (
+            <div className="mt-2">
+              <div className="mb-1.5 px-0.5 text-[10px] font-semibold leading-none text-[#b9bbbe]">
+                {selectedServer.name}
+              </div>
+              {loadingServers.has(selectedServer.id) ? (
+                <p className="px-0.5 text-[11px] text-[#8e9297]">Loading emojis...</p>
+              ) : currentServerEmojis.length > 0 ? (
+                <div className="grid grid-cols-9 gap-[1px]">
+                  {currentServerEmojis.slice(0, 54).map((emoji) =>
+                    renderEmojiButton(`server-inline-${emoji.id}`, `:${emoji.name}:`, {
+                      label: `:${emoji.name}:`,
+                      url: emoji.url,
+                      onClick: () => handleCustomEmojiSelect(emoji),
+                    }),
+                  )}
+                </div>
+              ) : null}
+            </div>
+          )}
         </div>
+      );
+    });
 
-        {/* Category Tabs - Scrollable */}
-        {!search.trim() && (
-          <div className="relative border-b border-border/30">
-            {/* Left scroll button */}
-            {canScrollLeft && (
-              <button
-                type="button"
-                onClick={() => scrollCategories("left")}
-                onMouseDown={(e) => e.preventDefault()}
-                className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-card via-card/95 to-transparent z-10 flex items-center justify-start pl-1"
-              >
-                <ChevronLeft className="w-4 h-4 text-muted-foreground" />
-              </button>
-            )}
+  const renderRecentOrNativeEmoji = (categoryKey: string, emoji: string, index: number) => {
+    const key = `${categoryKey}-${emoji}-${index}`;
+    const isCustomEmoji = categoryKey === "recent" && emoji.startsWith(":") && emoji.endsWith(":") && emoji.length > 2;
 
-            {/* Scrollable container */}
-            <div
-              ref={categoryScrollRef}
-              className="flex px-2 py-2 gap-0.5 overflow-x-auto scrollbar-hide scroll-smooth"
-              onScroll={updateScrollState}
-            >
-              {categories.map((cat) => (
+    if (!isCustomEmoji) {
+      if (categoryKey === "recent" && !NATIVE_EMOJI_SET.has(emoji)) return null;
+      return renderEmojiButton(key, emoji);
+    }
+
+    const inlineMatch = emoji.match(INLINE_CUSTOM_EMOJI_TOKEN_REGEX);
+    if (inlineMatch) {
+      const url = getCdnUrl("server-emojis", inlineMatch[2]);
+      return renderEmojiButton(key, emoji, {
+        label: `:${inlineMatch[1]}:`,
+        url,
+        onClick: () => handleSelect(emoji),
+      });
+    }
+
+    const legacyMatch = parseLegacyCustomEmojiToken(emoji);
+    const emojiName = legacyMatch?.name ?? emoji.slice(1, -1);
+    const customEmoji = Object.values(serverEmojis)
+      .flat()
+      .find((item) => {
+        if (item.name !== emojiName) return false;
+        if (!legacyMatch?.serverName) return true;
+        const server = servers.find((candidate) =>
+          serverEmojis[candidate.id]?.some((serverEmoji) => serverEmoji.id === item.id),
+        );
+        return server?.name === legacyMatch.serverName;
+      });
+
+    if (customEmoji) {
+      return renderEmojiButton(key, emoji, {
+        label: emoji,
+        url: customEmoji.url,
+        onClick: () => handleCustomEmojiSelect(customEmoji),
+      });
+    }
+
+    return null;
+  };
+
+  const pickerContent = (
+    <div className="flex h-full min-h-0 flex-col bg-[#282b30] text-[#dcddde]">
+      {!search.trim() && (
+        <div className="border-b border-[#202225] bg-[#24272c] px-1.5 py-1">
+          <div ref={categoryScrollRef} className="flex h-[25px] items-center gap-[2px] overflow-x-auto scrollbar-hide">
+            {categories.map((cat) => {
+              const Icon = CATEGORY_ICON_MAP[cat.key as keyof typeof CATEGORY_ICON_MAP] || Smile;
+              const isActive = activeCategory === cat.key;
+              return (
                 <button
                   key={cat.key}
                   type="button"
                   className={cn(
-                    "flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-200",
-                    activeCategory === cat.key
-                      ? "bg-primary/10 ring-1 ring-primary/20"
-                      : "hover:bg-muted/50 text-muted-foreground hover:text-foreground",
+                    "flex h-[23px] w-[24px] shrink-0 items-center justify-center rounded-[3px] text-[#8e9297] transition-colors",
+                    isActive && activeCategory !== "server"
+                      ? "bg-[#36393f] text-[#f2f3f5]"
+                      : "hover:bg-[#303339] hover:text-[#dcddde]",
                   )}
                   onClick={() => {
                     setActiveCategory(cat.key);
-                    setSelectedServerForEmoji(null); // Deselect server when switching to native category
+                    setSelectedServerForEmoji(serverId || null);
                   }}
                   title={cat.name}
                 >
-                  {cat.key === "recent" ? (
-                    <Clock
-                      className={cn(
-                        "w-5 h-5 transition-colors",
-                        activeCategory === cat.key ? "text-primary" : "text-muted-foreground",
-                      )}
-                    />
-                  ) : (
-                    <FluentEmoji emoji={cat.icon} size={22} />
-                  )}
+                  <Icon className="h-4 w-4" strokeWidth={2.2} />
                 </button>
-              ))}
-            </div>
-
-            {/* Right scroll button */}
-            {canScrollRight && (
-              <button
-                type="button"
-                onClick={() => scrollCategories("right")}
-                onMouseDown={(e) => e.preventDefault()}
-                className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-card via-card/95 to-transparent z-10 flex items-center justify-end pr-1"
-              >
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </button>
-            )}
+              );
+            })}
           </div>
-        )}
-
-        {/* Emoji Grid */}
-        <ScrollArea className={isMobile ? "flex-1 min-h-0 overflow-y-auto" : "h-[220px] sm:h-[280px]"}>
-          <div className="p-2 sm:p-3">
-            {search.trim() ? (
-              // Search results
-              filteredEmojis && filteredEmojis.length > 0 ? (
-                <>
-                  <div className="flex items-center gap-2 mb-2 px-1">
-                    <Search className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Results for "{search.trim()}"
-                    </span>
-                  </div>
-                   <div className="grid grid-cols-4 gap-1">
-                    {filteredEmojis.map((item, i) =>
-                      item.type === "native" ? (
-                        <button
-                          key={`search-native-${item.emoji}-${i}`}
-                          type="button"
-                          className="aspect-square hover:bg-muted/50 active:scale-90 rounded-lg flex items-center justify-center transition-all duration-150 p-1"
-                          onClick={() => handleSelect(item.emoji)}
-                          onMouseDown={(e) => e.preventDefault()}
-                        >
-                          <FluentEmoji emoji={item.emoji} size={36} />
-                        </button>
-                      ) : (() => {
-                        const isExternal = !allowExternalEmojis && serverId && !serverEmojis[serverId]?.some(e => e.id === item.emoji.id);
-                        return (
-                          <button
-                            key={`search-custom-${item.emoji.id}`}
-                            type="button"
-                            className={cn(
-                              "aspect-square hover:bg-muted/50 active:scale-90 rounded-lg flex items-center justify-center transition-all duration-150 p-1",
-                              isExternal && "opacity-50 pointer-events-none",
-                            )}
-                            onClick={() => handleCustomEmojiSelect(item.emoji)}
-                            onMouseDown={(e) => e.preventDefault()}
-                            title={isExternal ? "External emojis disabled" : `:${item.emoji.name}:`}
-                          >
-                            <img
-                              src={item.emoji.url}
-                              alt={item.emoji.name}
-                               className="w-9 h-9 object-contain"
-                            />
-                          </button>
-                        );
-                      })(),
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <div className="w-12 h-12 rounded-xl bg-muted/40 flex items-center justify-center mb-3">
-                    <Search className="w-6 h-6 text-muted-foreground/40" />
-                  </div>
-                  <p className="text-sm font-medium text-muted-foreground">No emoji found</p>
-                  <p className="text-xs text-muted-foreground/60 mt-1">Try "happy", "love", or "fire"</p>
-                </div>
-              )
-            ) : selectedServerForEmoji ? (
-              // Custom server emoji view
-              (() => {
-                const isExternalServer = selectedServerForEmoji !== serverId;
-                const isDisabledSection = isExternalServer && !allowExternalEmojis;
-                return (
-                  <div>
-                    <div className="flex items-center gap-2 mb-2 px-1">
-                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        {servers.find((s) => s.id === selectedServerForEmoji)?.name || "Server"} Emojis
-                      </span>
-                      {isDisabledSection && (
-                        <span className="text-[10px] text-muted-foreground/60 italic">
-                          — External emojis disabled
-                        </span>
-                      )}
-                    </div>
-                    {loadingServers.has(selectedServerForEmoji) ? (
-                      <div className="flex flex-col items-center justify-center py-12 text-center">
-                        <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mb-3" />
-                        <p className="text-sm text-muted-foreground">Loading emojis...</p>
-                      </div>
-                    ) : currentServerEmojis.length > 0 ? (
-                       <div className={cn("grid grid-cols-4 gap-1", isDisabledSection && "opacity-50 pointer-events-none")}>
-                        {currentServerEmojis.map((emoji) => (
-                          <button
-                            key={emoji.id}
-                            type="button"
-                            className="aspect-square hover:bg-muted/50 active:scale-90 rounded-lg flex items-center justify-center transition-all duration-150 p-1"
-                            onClick={() => handleCustomEmojiSelect(emoji)}
-                            onMouseDown={(e) => e.preventDefault()}
-                            title={`:${emoji.name}:`}
-                          >
-                            <img src={emoji.url} alt={emoji.name} className="w-9 h-9 object-contain" />
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <div className="w-12 h-12 rounded-xl bg-muted/30 flex items-center justify-center mb-3">
-                      <FluentEmoji emoji="😢" size={28} />
-                    </div>
-                    <p className="text-sm font-medium text-muted-foreground">No custom emojis</p>
-                    <p className="text-xs text-muted-foreground/60 mt-1.5 max-w-[180px]">
-                      This server doesn't have any custom emojis yet
-                    </p>
-                  </div>
-                )}
-                  </div>
-                );
-              })()
-            ) : (
-              // Category view
-              categories.map(
-                (cat) =>
-                  cat.key === activeCategory && (
-                    <div key={cat.key}>
-                      {/* Category Header */}
-                      <div className="flex items-center gap-2 mb-2 px-1">
-                        {cat.key === "recent" ? (
-                          <Clock className="w-4 h-4 text-muted-foreground" />
-                        ) : (
-                          <FluentEmoji emoji={cat.icon} size={18} />
-                        )}
-                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                          {cat.name}
-                        </span>
-                      </div>
-
-                      {cat.emojis.length > 0 ? (
-                        <div className="grid grid-cols-4 gap-1">
-                          {cat.emojis.map((emoji, i) => {
-                            // Check if this is a custom emoji (format: :name:)
-                            const isCustomEmoji =
-                              cat.key === "recent" && emoji.startsWith(":") && emoji.endsWith(":") && emoji.length > 2;
-                            
-                            if (isCustomEmoji) {
-                              const inlineMatch = emoji.match(INLINE_CUSTOM_EMOJI_TOKEN_REGEX);
-                              if (inlineMatch) {
-                                const filePath = inlineMatch[2];
-                                const emojiUrl = getCdnUrl("server-emojis", filePath);
-                                return (
-                                  <button
-                                    key={`${cat.key}-${emoji}-${i}`}
-                                    type="button"
-                                    className="aspect-square hover:bg-muted/50 active:scale-90 rounded-lg flex items-center justify-center transition-all duration-150 p-1"
-                                    onClick={() => handleSelect(emoji)}
-                                    onMouseDown={(e) => e.preventDefault()}
-                                    title={emoji}
-                                  >
-                                    <img
-                                      src={emojiUrl}
-                                      alt={inlineMatch[1]}
-                                      className="w-9 h-9 object-contain"
-                                    />
-                                  </button>
-                                );
-                              }
-
-                              // Find the custom emoji in loaded server emojis
-                              const emojiName = emoji.slice(1, -1);
-                              let customEmoji: ServerEmoji | undefined;
-                              
-                              for (const emojis of Object.values(serverEmojis)) {
-                                customEmoji = emojis.find((e) => e.name === emojiName);
-                                if (customEmoji) break;
-                              }
-                              
-                              if (customEmoji) {
-                                return (
-                                  <button
-                                    key={`${cat.key}-${emoji}-${i}`}
-                                    type="button"
-                                    className="aspect-square hover:bg-muted/50 active:scale-90 rounded-lg flex items-center justify-center transition-all duration-150 p-1"
-                                    onClick={() => handleCustomEmojiSelect(customEmoji!)}
-                                    onMouseDown={(e) => e.preventDefault()}
-                                    title={emoji}
-                                  >
-                                    <img
-                                      src={customEmoji.url}
-                                      alt={emojiName}
-                                      className="w-9 h-9 object-contain"
-                                    />
-                                  </button>
-                                );
-                              }
-                              
-                              // Custom emoji not found - show placeholder
-                              return (
-                                <button
-                                  key={`${cat.key}-${emoji}-${i}`}
-                                  type="button"
-                                  className="aspect-square hover:bg-muted/50 active:scale-90 rounded-lg flex items-center justify-center transition-all duration-150 p-1"
-                                  onClick={() => handleSelect(emoji)}
-                                  onMouseDown={(e) => e.preventDefault()}
-                                  title={emoji}
-                                >
-                                  <span className="text-xs text-muted-foreground truncate max-w-full px-0.5">
-                                    {emoji}
-                                  </span>
-                                </button>
-                              );
-                            }
-                            
-                            // Native emoji
-                            return (
-                              <button
-                                key={`${cat.key}-${emoji}-${i}`}
-                                type="button"
-                                className="aspect-square hover:bg-muted/50 active:scale-90 rounded-lg flex items-center justify-center transition-all duration-150 p-1"
-                                onClick={() => handleSelect(emoji)}
-                                onMouseDown={(e) => e.preventDefault()}
-                              >
-                                <FluentEmoji emoji={emoji} size={36} />
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center py-12 text-center">
-                          <div className="w-12 h-12 rounded-xl bg-muted/30 flex items-center justify-center mb-3">
-                            <Clock className="w-6 h-6 text-muted-foreground/40" />
-                          </div>
-                          <p className="text-sm font-medium text-muted-foreground">No recently used emoji</p>
-                          <p className="text-xs text-muted-foreground/60 mt-1.5 max-w-[180px]">
-                            Emoji you use will appear here
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  ),
-              )
-            )}
-          </div>
-        </ScrollArea>
-
-        {/* Server Selector Bar */}
-        {servers.length > 0 && !search.trim() && (
-          <div className="border-t border-border/30 p-2">
-            <div className="flex items-center gap-1.5 mb-1.5 px-1">
-              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-                Server Emojis
-              </span>
-            </div>
-            <div
-              ref={serverScrollRef}
-              className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5"
-              onWheel={(e) => {
-                if (serverScrollRef.current && e.deltaY !== 0) {
-                  e.preventDefault();
-                  serverScrollRef.current.scrollLeft += e.deltaY;
-                }
-              }}
-            >
+          {servers.length > 0 && (
+            <div className="mt-1 flex h-[26px] items-center gap-[3px] overflow-x-auto scrollbar-hide">
               {servers.map((server) => {
                 const isExternal = server.id !== serverId;
                 const isDisabled = isExternal && !allowExternalEmojis;
+                const isActive = activeCategory === "server" && selectedServerForEmoji === server.id;
+
                 return (
-                  <Tooltip key={server.id}>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (isDisabled) return;
-                          setSelectedServerForEmoji(server.id);
-                          setActiveCategory(""); // Deselect native category
-                        }}
-                        className={cn(
-                          "flex-shrink-0 w-9 h-9 rounded-lg transition-all duration-200",
-                          selectedServerForEmoji === server.id
-                            ? "opacity-100"
-                            : "opacity-50 grayscale hover:opacity-70 hover:grayscale-[50%]",
-                          isDisabled && "!opacity-30 cursor-not-allowed pointer-events-auto",
-                        )}
-                        title={isDisabled ? undefined : server.name}
-                      >
-                        <Avatar className="w-full h-full rounded-lg">
-                          {server.icon_url ? (
-                            <AvatarImage src={server.icon_url} alt={server.name} className="object-cover" />
-                          ) : null}
-                          <AvatarFallback className={cn("rounded-lg text-xs font-medium text-white", getServerColor(server.name))}>
-                            {getServerInitials(server.name)}
-                          </AvatarFallback>
-                        </Avatar>
-                      </button>
-                    </TooltipTrigger>
-                    {isDisabled && (
-                      <TooltipContent side="top" className="text-xs">
-                        External emojis are disabled in this channel
-                      </TooltipContent>
+                  <button
+                    key={server.id}
+                    type="button"
+                    className={cn(
+                      "flex h-[24px] w-[24px] shrink-0 items-center justify-center overflow-hidden rounded-[5px] border border-transparent bg-[#36393f] text-[8px] font-semibold text-[#dcddde] transition-colors",
+                      "hover:border-[#555b64] hover:bg-[#3b3f45]",
+                      isActive && "border-[#8e9297] bg-[#42464d]",
+                      isDisabled && "cursor-not-allowed opacity-35 hover:border-transparent",
                     )}
-                  </Tooltip>
+                    onClick={() => {
+                      if (isDisabled) return;
+                      setSelectedServerForEmoji(server.id);
+                      setActiveCategory("server");
+                      loadServerEmojis(server.id);
+                    }}
+                    title={isDisabled ? `${server.name} - external emojis disabled` : server.name}
+                  >
+                    {server.icon_url ? (
+                      <img src={server.icon_url} alt={server.name} className="h-full w-full object-cover" loading="lazy" />
+                    ) : (
+                      getServerInitials(server.name)
+                    )}
+                  </button>
                 );
               })}
             </div>
+          )}
+        </div>
+      )}
+
+      <div className="px-2 pb-1.5 pt-1.5">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-[#7b8088]" />
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search"
+            className="h-[24px] w-full rounded-full border border-[#22252a] bg-[#25282d] pl-7 pr-7 text-[10px] leading-none text-[#dcddde] outline-none placeholder:text-[#8e9297] focus:border-[#343940] focus:bg-[#24272c]"
+          />
+          {search && (
+            <button
+              type="button"
+              className="absolute right-1.5 top-1/2 flex h-4 w-4 -translate-y-1/2 items-center justify-center rounded-full text-[#8e9297] hover:text-[#dcddde]"
+              onClick={() => {
+                setSearch("");
+                searchInputRef.current?.focus();
+              }}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      <ScrollArea className={isMobile ? "min-h-0 flex-1 overflow-y-auto" : "h-[196px]"}>
+        <div className="px-2 pb-1 pt-0.5">
+          {search.trim() ? (
+            filteredEmojis && filteredEmojis.length > 0 ? (
+              <>
+                <div className="mb-1.5 px-0.5 text-[10px] font-semibold leading-none text-[#b9bbbe]">
+                  Results for "{search.trim()}"
+                </div>
+                <div className="grid grid-cols-9 gap-[1px]">
+                  {filteredEmojis.map((item, index) => {
+                    if (item.type === "native") {
+                      return renderEmojiButton(`search-native-${item.emoji}-${index}`, item.emoji);
+                    }
+
+                    const isExternal =
+                      !allowExternalEmojis && serverId && !serverEmojis[serverId]?.some((emoji) => emoji.id === item.emoji.id);
+                    return renderEmojiButton(`search-custom-${item.emoji.id}`, `:${item.emoji.name}:`, {
+                      label: isExternal ? "External emojis disabled" : `:${item.emoji.name}:`,
+                      url: item.emoji.url,
+                      disabled: !!isExternal,
+                      onClick: () => handleCustomEmojiSelect(item.emoji),
+                    });
+                  })}
+                </div>
+              </>
+            ) : (
+              <div className="flex h-[120px] items-center justify-center text-center">
+                <p className="text-[11px] font-medium text-[#8e9297]">No emoji found</p>
+              </div>
+            )
+          ) : activeCategory === "server" ? (
+            renderServerEmojiGrid()
+          ) : (
+            renderNativeCategory()
+          )}
+        </div>
+      </ScrollArea>
+
+      <div className="flex h-[32px] shrink-0 items-center justify-between border-t border-[#202225] bg-[#333743] px-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="flex h-6 w-6 items-center justify-center rounded-[4px]">
+            {previewEmoji?.url ? (
+              <img src={previewEmoji.url} alt={previewEmoji.label} className="h-[24px] w-[24px] object-contain" />
+            ) : previewEmoji?.native ? (
+              <FluentEmoji emoji={previewEmoji.native} size={22} />
+            ) : (
+              <Smile className="h-4 w-4 text-[#b9bbbe]" />
+            )}
           </div>
-        )}
-    </>
+          <span className="truncate text-[10px] font-medium text-[#b9bbbe]">
+            {previewEmoji?.label?.replace(/^:/, "").replace(/:$/, "") || "Select an emoji"}
+          </span>
+        </div>
+      </div>
+    </div>
   );
 
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerTrigger asChild>{children}</DrawerTrigger>
-        <DrawerContent className="h-[70vh] max-h-[90vh] p-0 bg-card border-border/50 rounded-t-2xl overflow-hidden flex flex-col">
+        <DrawerContent className="flex h-[70vh] max-h-[90vh] flex-col overflow-hidden rounded-t-[4px] border-[#202225] bg-[#282b30] p-0">
           {pickerContent}
         </DrawerContent>
       </Drawer>
@@ -673,11 +578,11 @@ export const EmojiPicker = ({
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
       <PopoverContent
-        className="w-[280px] sm:w-[340px] p-0 bg-card border-border/50 rounded-2xl shadow-2xl overflow-hidden"
+        className="w-[272px] overflow-hidden rounded-[4px] border-[#202225] bg-[#282b30] p-0 shadow-[0_8px_22px_rgba(0,0,0,0.35)]"
         side="top"
         align="end"
-        sideOffset={12}
-        onOpenAutoFocus={(e) => e.preventDefault()}
+        sideOffset={8}
+        onOpenAutoFocus={(event) => event.preventDefault()}
       >
         {pickerContent}
       </PopoverContent>
