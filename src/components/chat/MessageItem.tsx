@@ -1031,7 +1031,7 @@ export const MessageItem = memo(function MessageItem({
     if (isAnnouncementChannel && !isGrouped) {
       classes.push("bg-primary/5 border-l-2 border-l-primary/50 ml-1");
     }
-    if (isMentioned) classes.push("bg-amber-950/50 border-l-2 border-l-amber-500");
+    if (isMentioned) classes.push("bg-[rgb(30_30_30_/_59%)] border-l-2 border-l-amber-500");
     if (isHighlighted) classes.push("animate-highlight-message bg-primary/20 ring-2 ring-primary/50");
     if (isPending) classes.push("opacity-70");
     return classes.join(" ");

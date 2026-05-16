@@ -7,9 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Hash, Volume2, MessageSquare, Megaphone, Film, ClipboardList, Loader2, type LucideIcon } from "lucide-react";
+import {
+  CheckSquare,
+  FileVideo,
+  Grid2X2,
+  Hash,
+  Loader2,
+  Megaphone,
+  Volume2,
+  type LucideIcon,
+} from "lucide-react";
 import type { ChannelType } from "@/types";
 import { useRateLimit } from "@/hooks/useRateLimit";
 import { rateLimitToast } from "@/lib/rateLimitToast";
@@ -36,32 +44,32 @@ const CHANNEL_TYPE_OPTIONS: {
     value: "forum",
     label: "Forum",
     description: "Organize long-running conversations into dedicated posts.",
-    icon: MessageSquare,
+    icon: Grid2X2,
   },
   {
     value: "announcement",
     label: "Announcements",
-    description: "Share one-way updates from admins and moderators with the whole server.",
+    description: "Share one-way updates from admins with the whole server.",
     icon: Megaphone,
   },
   {
     value: "tasks",
     label: "Tasks",
     description: "Create tasks, assign tasks, and track progress.",
-    icon: ClipboardList,
+    icon: CheckSquare,
   },
   {
     value: "media",
     label: "Media",
     description: "A dedicated space for sharing images, videos, and visual inspiration.",
-    icon: Film,
+    icon: FileVideo,
   },
 ];
 
 const ChannelTypePreview = ({ type }: { type: ChannelType }) => {
   if (type === "voice") {
     return (
-      <div className="flex h-full flex-col justify-between rounded-xl border border-border/50 bg-secondary/30 p-3">
+      <div className="flex h-[144px] flex-col justify-between rounded-xl border border-border/50 bg-secondary/30 p-3">
         <div className="mb-3 flex items-center gap-2">
           <div className="h-7 w-7 rounded-full bg-primary/20" />
           <div className="h-7 w-7 rounded-full bg-primary/30" />
@@ -81,7 +89,7 @@ const ChannelTypePreview = ({ type }: { type: ChannelType }) => {
 
   if (type === "forum") {
     return (
-      <div className="flex h-full flex-col gap-2 rounded-xl border border-border/50 bg-secondary/30 p-3">
+      <div className="flex h-[144px] flex-col gap-2 rounded-xl border border-border/50 bg-secondary/30 p-3">
         <div className="rounded-lg border border-border/40 bg-background/40 p-2">
           <div className="h-2 w-24 rounded bg-muted-foreground/30" />
           <div className="mt-2 h-2 w-40 rounded bg-muted-foreground/20" />
@@ -96,7 +104,7 @@ const ChannelTypePreview = ({ type }: { type: ChannelType }) => {
 
   if (type === "announcement") {
     return (
-      <div className="h-full rounded-xl border border-border/50 bg-secondary/30 p-3">
+      <div className="h-[144px] rounded-xl border border-border/50 bg-secondary/30 p-3">
         <div className="rounded-lg bg-primary/15 px-2 py-1.5">
           <div className="h-2 w-16 rounded bg-primary/50" />
         </div>
@@ -110,7 +118,7 @@ const ChannelTypePreview = ({ type }: { type: ChannelType }) => {
 
   if (type === "tasks") {
     return (
-      <div className="h-full space-y-2 rounded-xl border border-border/50 bg-secondary/30 p-3">
+      <div className="h-[144px] space-y-2 rounded-xl border border-border/50 bg-secondary/30 p-3">
         <div className="flex items-center gap-2">
           <div className="h-3.5 w-3.5 rounded border border-primary/60 bg-primary/15" />
           <div className="h-2 w-32 rounded bg-muted-foreground/30" />
@@ -129,7 +137,7 @@ const ChannelTypePreview = ({ type }: { type: ChannelType }) => {
 
   if (type === "media") {
     return (
-      <div className="grid h-full grid-cols-3 grid-rows-2 gap-2 rounded-xl border border-border/50 bg-secondary/30 p-3">
+      <div className="grid h-[144px] grid-cols-3 grid-rows-2 gap-2 rounded-xl border border-border/50 bg-secondary/30 p-3">
         <div className="rounded-md bg-primary/20" />
         <div className="rounded-md bg-primary/30" />
         <div className="rounded-md bg-primary/15" />
@@ -141,7 +149,7 @@ const ChannelTypePreview = ({ type }: { type: ChannelType }) => {
   }
 
   return (
-    <div className="h-full space-y-2 rounded-xl border border-border/50 bg-secondary/30 p-3">
+    <div className="h-[144px] space-y-2 rounded-xl border border-border/50 bg-secondary/30 p-3">
       <div className="flex items-center gap-2">
         <div className="h-2 w-2 rounded-full bg-primary/80" />
         <div className="h-2 w-24 rounded bg-muted-foreground/30" />
@@ -155,15 +163,75 @@ const ChannelTypePreview = ({ type }: { type: ChannelType }) => {
   );
 };
 
+const CategoryForm = ({
+  name,
+  setName,
+}: {
+  name: string;
+  setName: (value: string) => void;
+}) => {
+  return (
+    <div className="px-6 py-4">
+      <Label htmlFor="name" className="text-xs font-medium uppercase tracking-wide text-[#c4c8d0]">
+        Category name
+      </Label>
+      <Input
+        id="name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder=""
+        className="mt-2 h-9 rounded-none border-0 border-b border-white/80 bg-transparent px-0 text-sm text-[#f3f4f7] shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
+        maxLength={100}
+      />
+    </div>
+  );
+};
+
+const ChannelIconButton = ({
+  icon: Icon,
+  id,
+  value,
+  isSelected,
+  disabled,
+}: {
+  icon: LucideIcon;
+  id: string;
+  value?: string;
+  isSelected?: boolean;
+  disabled?: boolean;
+}) => {
+  const content = (
+    <div
+      className={`flex h-9 w-9 items-center justify-center rounded-[2px] border transition-colors ${
+        isSelected
+          ? "border-white/90 bg-[#4a5046] text-[#f4f5f7]"
+          : "border-transparent bg-transparent text-[#9ea4af] hover:bg-[#3e434d] hover:text-[#d7dbe3]"
+      } ${disabled ? "cursor-not-allowed opacity-45" : "cursor-pointer"}`}
+    >
+      <Icon className="h-4 w-4" />
+      </div>
+  );
+
+  if (disabled || !value) {
+    return content;
+  }
+
+  return (
+    <Label htmlFor={id} className="block">
+      {content}
+      <RadioGroupItem value={value} id={id} className="sr-only" />
+    </Label>
+  );
+};
+
 export const CreateChannelModal = () => {
   const { activeModal, modalData, closeModal } = useUIStore();
-  const { currentServer, categories, createChannel, createCategory } = useServerStore();
+  const { currentServer, createChannel, createCategory } = useServerStore();
   const { user } = useAuthStore();
 
   const [mode, setMode] = useState<"channel" | "category">("channel");
   const [name, setName] = useState("");
   const [selectedChannelType, setSelectedChannelType] = useState<"text" | "voice" | "forum" | "announcement" | "tasks" | "media">("text");
-  const [categoryId, setCategoryId] = useState<string>("none");
   const [isPrivate, setIsPrivate] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -190,7 +258,6 @@ export const CreateChannelModal = () => {
   const handleClose = () => {
     setName("");
     setSelectedChannelType("text");
-    setCategoryId(presetCategoryId || "none");
     setIsPrivate(false);
     setError("");
     closeModal();
@@ -219,7 +286,7 @@ export const CreateChannelModal = () => {
           return;
         }
       } else {
-        const selectedCategoryId = presetCategoryId || (categoryId === "none" ? undefined : categoryId);
+        const selectedCategoryId = presetCategoryId;
         const actualChannelType: ChannelType = selectedChannelType;
         const result = await createChannel(currentServer.id, name.trim(), actualChannelType, user.id, selectedCategoryId, undefined, isPrivate, false);
         if (!result) {
@@ -244,144 +311,100 @@ export const CreateChannelModal = () => {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-hidden bg-background/95 backdrop-blur-xl border-border/50 rounded-2xl p-0 gap-0">
-        <form onSubmit={handleSubmit} className="flex max-h-[85vh] flex-col overflow-hidden">
-          <div className="border-b border-border/50 px-6 py-4">
-            <div className="text-lg font-medium tracking-tight">
+      <DialogContent className="max-h-[90vh] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-[4px] border border-[#4a4f5a] bg-[#333842] p-0 text-[#f4f5f7] shadow-2xl sm:max-w-[448px]">
+        <form onSubmit={handleSubmit} className="flex max-h-[82vh] flex-col overflow-hidden">
+          <div className="border-b border-[#2b3039] bg-[#2f343d] px-5 py-3">
+            <div className="text-base font-medium leading-none tracking-tight">
               {mode === "category" ? "Create a category" : "Create a channel"}
             </div>
           </div>
 
-          <div className="space-y-5 overflow-y-auto px-6 py-5">
-            {mode === "channel" && (
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <div className="overflow-y-auto">
+            {mode === "category" ? (
+              <CategoryForm name={name} setName={setName} />
+            ) : (
+              <div className="px-6 py-4">
+                <Label htmlFor="name" className="text-xs font-medium uppercase tracking-wide text-[#c4c8d0]">
                   Channel name
                 </Label>
                 <Input
                   id="name"
                   value={name}
                   onChange={(e) => setName(formatChannelName(e.target.value))}
-                  placeholder="new-channel"
-                  className="h-10 rounded-xl border-border/50 bg-secondary/30"
+                  placeholder=""
+                  className="mt-2 h-9 rounded-none border-0 border-b border-white/80 bg-transparent px-0 text-sm text-[#f3f4f7] shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
                   maxLength={50}
-                />
-              </div>
-            )}
-
-            {mode === "category" && (
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Category name
-                </Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="New Category"
-                  className="h-10 rounded-xl border-border/50 bg-secondary/30"
-                  maxLength={100}
                 />
               </div>
             )}
 
           {mode === "channel" && (
             <>
-              <div className="space-y-2">
-                <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Channel Type
+              <div className="px-6 pb-4">
+                <Label className="text-sm font-medium text-[#c4c8d0]">
+                  Channel type
                 </Label>
                 <RadioGroup
                   value={selectedChannelType}
                   onValueChange={(value) => setSelectedChannelType(value as "text" | "voice" | "forum" | "announcement" | "tasks" | "media")}
-                  className="space-y-3 rounded-xl border border-border/50 bg-secondary/20 p-3"
+                  className="mt-2"
                 >
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-                    <div className="grid w-full self-start content-start grid-cols-3 gap-x-2 gap-y-1">
-                      {CHANNEL_TYPE_OPTIONS.map((option) => {
-                        const Icon = option.icon;
-                        const isSelected = selectedChannelType === option.value;
-                        return (
-                          <Label
+                  <div className="grid gap-4 sm:grid-cols-[130px_minmax(0,1fr)]">
+                    <div className="min-w-0">
+                      <div className="grid w-max grid-cols-3 gap-x-2 gap-y-1">
+                        {CHANNEL_TYPE_OPTIONS.map((option) => (
+                          <ChannelIconButton
                             key={option.value}
-                            htmlFor={`channel-type-${option.value}`}
-                            className={`flex h-10 w-full cursor-pointer items-center justify-center rounded-lg border transition-colors ${
-                              isSelected
-                                ? "border-primary/50 bg-primary/10 text-primary"
-                                : "border-border/50 bg-secondary/40 text-muted-foreground hover:border-primary/30 hover:text-foreground"
-                            }`}
-                          >
-                            <Icon className="h-4 w-4" />
-                            <RadioGroupItem value={option.value} id={`channel-type-${option.value}`} className="sr-only" />
-                          </Label>
-                        );
-                      })}
+                            id={`channel-type-${option.value}`}
+                            value={option.value}
+                            icon={option.icon}
+                            isSelected={selectedChannelType === option.value}
+                          />
+                        ))}
+                      </div>
                     </div>
-                    <div className="hidden h-[138px] min-w-0 sm:block">
+                    <div className="min-w-0">
                       <ChannelTypePreview type={selectedChannelType} />
                     </div>
                   </div>
+                  <div className="mt-3 w-full">
+                    <p className="text-sm font-medium leading-none text-[#f3f4f7]">{selectedTypeMeta.label}</p>
+                    <p className="mt-2 w-full text-xs leading-5 text-[#c4c8d0]">{selectedTypeMeta.description}</p>
+                  </div>
                 </RadioGroup>
-                <div className="rounded-xl border border-border/50 bg-secondary/20 p-3">
-                  <p className="text-sm font-medium">{selectedTypeMeta.label}</p>
-                  <p className="mt-1 text-xs text-muted-foreground leading-5">{selectedTypeMeta.description}</p>
-                </div>
               </div>
-
-              {!presetCategoryId && currentServer && categories.length > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Category
-                  </Label>
-                  <Select value={categoryId} onValueChange={setCategoryId}>
-                    <SelectTrigger className="h-10 rounded-xl border-border/50 bg-secondary/30">
-                      <SelectValue placeholder="No category" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border-border/50">
-                      <SelectItem value="none" className="rounded-lg focus:bg-muted focus:text-foreground">
-                        No category
-                      </SelectItem>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id} className="rounded-lg focus:bg-muted focus:text-foreground">
-                          {cat.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
             </>
           )}
 
           {mode === "channel" && (
-            <div className="space-y-2">
-              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Privacy
-              </Label>
-              <div className="flex items-center justify-between rounded-xl border border-border/50 bg-secondary/20 px-3 py-3">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">Private Channel</p>
-                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    Only selected members can view this channel
+            <div className="px-6 pb-4 pt-3">
+              <div className="flex items-start justify-between gap-5">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium leading-none text-[#f3f4f7]">Make channel public</p>
+                  <p className="mt-2 text-xs leading-5 text-[#b8bec8]">
+                    People who aren't a part of the server will be able to see this channel. The channel's content can be shared with people outside of Guilded.
                   </p>
                 </div>
-                <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
+                <Switch checked={!isPrivate} onCheckedChange={(checked) => setIsPrivate(!checked)} />
               </div>
             </div>
           )}
 
           {error && (
-            <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3">
-              <p className="text-sm text-destructive">{error}</p>
+            <div className="mx-7 mb-5 rounded-[3px] border border-destructive/30 bg-destructive/15 p-3">
+              <p className="text-sm text-destructive-foreground">{error}</p>
             </div>
           )}
           </div>
 
-          <div className="flex items-center justify-end border-t border-border/50 bg-secondary/20 px-6 py-3">
-            <Button type="submit" disabled={isSubmitting || !name.trim()} className="h-11 rounded-xl px-6">
+          <div className="flex items-center justify-end gap-3 border-t border-[#2c3139] bg-[#30353f] px-5 py-3">
+            <Button type="button" variant="ghost" onClick={handleClose} className="h-9 rounded-[3px] px-4 text-[#b9bec8] hover:bg-transparent hover:text-white">
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting || !name.trim()} className="h-9 rounded-[3px] bg-[#d7dbe3] px-5 font-medium text-[#363b44] hover:bg-white">
               {isSubmitting ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Creating...
                 </>
               ) : (

@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { AlertCircle, ArrowLeft, ArrowRight, Frown, Link2, Loader2 } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertCircle, Frown, Loader2 } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -117,7 +117,7 @@ export const JoinServerModal = () => {
   };
 
   const modalContentClass =
-    "sm:max-w-[420px] max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-hidden border border-[#30333D] bg-[#202329] p-0 text-[#E2E4E9] shadow-[0_18px_48px_rgba(0,0,0,0.38)] sm:rounded-[8px]";
+    "max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-[#4a4f5a] bg-[#333842] p-0 text-[#f4f5f7] shadow-2xl sm:max-w-[448px]";
 
   return (
     <>
@@ -159,82 +159,65 @@ export const JoinServerModal = () => {
       {/* Join server modal */}
       <Dialog open={isOpen && !showBannedModal} onOpenChange={(open) => !open && handleClose()}>
         <DialogContent className={modalContentClass}>
-          <div className="border-b border-[#30333D] px-5 pb-4 pt-5 sm:px-6">
-            <DialogHeader className="text-left">
-              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-[6px] bg-[#2A2E37] text-[#D7D9DF]">
-                <Link2 className="h-5 w-5" />
+          <form onSubmit={handleSubmit(onSubmit)} className="flex max-h-[82vh] flex-col overflow-hidden">
+            <div className="border-b border-[#2b3039] bg-[#2f343d] px-5 py-3">
+              <div className="text-base font-medium leading-none tracking-tight">
+                Join by invite
               </div>
-              <DialogTitle className="text-[20px] font-medium leading-6 text-white">Join by invite</DialogTitle>
-              <DialogDescription className="mt-1 max-w-[340px] text-[13px] leading-5 text-[#B2B5BE]">
-                Paste an 8 character invite code to access an existing server.
-              </DialogDescription>
-            </DialogHeader>
-          </div>
+             
+            </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 px-5 py-5 sm:px-6">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-3">
-                <Label
-                  htmlFor="inviteCode"
-                  className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#8F949D]"
-                >
-                  Invite Code
-                </Label>
-                <span className="font-mono text-[11px] text-[#8F949D]">{inviteCode.length}/8</span>
-              </div>
-              <div className="relative">
-                <Input
-                  id="inviteCode"
-                  placeholder="ABC12XYZ"
-                  {...register("inviteCode")}
-                  onChange={handleInviteChange}
-                  className={`h-12 rounded-[4px] border-[#42464F] bg-[#30333D] pr-10 text-center font-mono text-[18px] font-medium uppercase tracking-[0.28em] text-white placeholder:text-[#767B85] focus-visible:border-white focus-visible:ring-0 ${
-                    inviteError ? "border-red-400/80 focus-visible:border-red-300" : ""
-                  }`}
-                  autoFocus
-                  maxLength={8}
-                  autoComplete="off"
-                  spellCheck={false}
-                />
-                {inviteError && (
-                  <AlertCircle className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-red-300" />
+            <div className="space-y-5 overflow-y-auto px-6 py-4">
+              <div>
+                <div className="flex items-center justify-between gap-3">
+                  <Label
+                    htmlFor="inviteCode"
+                    className="text-xs font-medium uppercase tracking-wide text-[#c4c8d0]"
+                  >
+                    Invite code
+                  </Label>
+                  <span className="font-mono text-xs text-[#9ea4af]">{inviteCode.length}/8</span>
+                </div>
+                <div className="relative mt-2">
+                  <Input
+                    id="inviteCode"
+                    placeholder="ABC12XYZ"
+                    {...register("inviteCode")}
+                    onChange={handleInviteChange}
+                    className={`h-12 rounded-none border-0 border-b border-white/80 bg-transparent px-0 pr-8 text-center font-mono text-lg font-medium uppercase tracking-[0.28em] text-[#f3f4f7] shadow-none outline-none placeholder:text-[#767B85] focus-visible:ring-0 focus-visible:ring-offset-0 ${
+                      inviteError ? "border-red-300 focus-visible:border-red-300" : ""
+                    }`}
+                    autoFocus
+                    maxLength={8}
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                  {inviteError && (
+                    <AlertCircle className="absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 text-red-300" />
+                  )}
+                </div>
+                {inviteError ? (
+                  <p className="mt-2 text-xs leading-5 text-red-300">{inviteError}</p>
+                ) : (
+                  <p className="mt-2 text-xs leading-5 text-[#b8bec8]">
+                    Invite codes use letters and numbers only.
+                  </p>
                 )}
               </div>
-              {inviteError ? (
-                <p className="text-[12px] leading-4 text-red-300">{inviteError}</p>
-              ) : (
-                <p className="text-[12px] leading-4 text-[#8F949D]">
-                  Invite codes use letters and numbers only.
-                </p>
-              )}
-            </div>
 
-            <div className="flex items-start gap-3 rounded-[4px] border border-[#3B3F49] bg-[#252932] p-3">
-              <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] bg-[#30333D] text-[#D7D9DF]">
-                <Link2 className="h-3.5 w-3.5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[13px] font-medium leading-5 text-[#E2E4E9]">Example invite</p>
-                <p className="mt-0.5 font-mono text-[12px] leading-4 tracking-[0.18em] text-[#B2B5BE]">ABC12XYZ</p>
+              <div className="border border-[#4a4f5a] bg-[#2f343d] p-3">
+                <p className="text-sm font-medium leading-none text-[#f3f4f7]">Example invite</p>
+                <p className="mt-2 font-mono text-xs leading-5 tracking-[0.18em] text-[#c4c8d0]">ABC12XYZ</p>
               </div>
             </div>
 
-            <div className="flex flex-col-reverse gap-2 border-t border-[#30333D] pt-4 sm:flex-row sm:justify-between">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={handleBack}
-                className="h-9 rounded-[4px] px-3 text-[13px] text-[#B2B5BE] hover:bg-[#30333D] hover:text-white"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back
-              </Button>
+            <div className="flex items-center justify-end gap-3 border-t border-[#2c3139] bg-[#30353f] px-5 py-3">
               <Button
                 type="submit"
                 disabled={isJoinDisabled}
-                className="h-9 rounded-[4px] bg-white px-4 text-[13px] font-medium text-[#191C21] hover:bg-[#E7E9EE] disabled:bg-[#D7D9DF] disabled:text-[#6F747D] disabled:opacity-100"
+                className="h-9 rounded-[3px] bg-[#d7dbe3] px-5 font-medium text-[#363b44] hover:bg-white disabled:bg-[#454b55] disabled:text-[#858b96] disabled:opacity-100"
               >
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Join Server
               </Button>
             </div>

@@ -1910,19 +1910,19 @@ export const ChannelSidebar = () => {
                       alt={`${currentServer.name} banner`}
                       className={cn(
                         "h-full w-full object-cover transition-[filter,transform] duration-200 ease-out",
-                        isServerHeaderCondensed ? "scale-150 [filter:blur(32px)]" : "group-hover:scale-[1.02]",
+                        isServerHeaderCondensed ? "scale-150 [filter:blur(20px)]" : "group-hover:scale-[1.02]",
                       )}
                     />
                   ) : (
                     <div
                       className={cn(
                         "h-full w-full bg-[linear-gradient(135deg,hsl(350_42%_23%),hsl(31_31%_25%)_68%,hsl(var(--sidebar)))] transition-[filter,transform] duration-200 ease-out",
-                        isServerHeaderCondensed && "scale-150 [filter:blur(32px)]",
+                        isServerHeaderCondensed && "scale-150 [filter:blur(20px)]",
                       )}
                     />
                   )}
                   {isServerHeaderCondensed ? (
-                    <div className="absolute inset-0 bg-[hsl(var(--sidebar)/0.38)] backdrop-blur-xl" />
+                    <div className="absolute inset-0 bg-[hsl(var(--sidebar)/0.38)] backdrop-blur-md" />
                   ) : !isDefaultServerBanner ? (
                     <>
                       <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-[hsl(var(--sidebar)/0.75)]" />
@@ -1934,19 +1934,21 @@ export const ChannelSidebar = () => {
 
                   <div
                     className={cn(
-                      "absolute inset-x-0 flex items-center gap-3 px-4 transition-[bottom,padding] duration-200 ease-out",
-                      isServerHeaderCondensed ? "bottom-0 py-3" : "bottom-0 pb-3",
+                      "absolute inset-x-0 flex items-center gap-3 px-4 transition-[bottom,height,padding,top] duration-200 ease-out",
+                      isServerHeaderCondensed || isDefaultServerBanner
+                        ? "top-0 h-full py-0"
+                        : "bottom-0 pb-3",
                     )}
                   >
                     <h2
                       className={cn(
-                        "min-w-0 flex-1 truncate font-semibold leading-tight text-foreground drop-shadow-[0_1px_8px_rgba(0,0,0,0.45)] transition-[font-size] duration-200 ease-out",
+                        "min-w-0 flex-1 truncate font-semibold leading-none text-foreground drop-shadow-[0_1px_8px_rgba(0,0,0,0.45)] transition-[font-size] duration-200 ease-out",
                         isServerHeaderCondensed ? "text-[16px]" : "text-[20px]",
                       )}
                     >
                       {currentServer.name}
                     </h2>
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-black/30 text-white/80 backdrop-blur-sm transition-colors group-hover:bg-black/40">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center self-center rounded-lg bg-black/30 text-white/80 backdrop-blur-sm transition-colors group-hover:bg-black/40">
                       <ChevronDownIcon className="h-4 w-4" />
                     </div>
                   </div>

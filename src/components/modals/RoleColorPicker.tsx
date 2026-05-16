@@ -296,7 +296,7 @@ export const RoleColorPicker = ({
     <div className="space-y-2">
       <Label className="block text-sm font-medium leading-5 text-foreground/90">Role color</Label>
 
-      <div className="inline-flex h-8 items-center rounded-[4px] border border-white/70 bg-[#242832] p-0.5 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.35)]">
+      <div className="inline-flex h-8 items-center rounded-[4px] border border-[#4b4f5c] bg-[#30333d] p-0.5 shadow-none">
         <div className="flex h-full overflow-hidden rounded-[3px]">
           <button
             type="button"
@@ -314,21 +314,13 @@ export const RoleColorPicker = ({
             type="button"
             onClick={() => onColorTypeChange('gradient')}
             className={cn(
-              'h-full min-w-[74px] px-2.5 text-[13px] font-semibold text-[#f5d94f] transition-colors',
-              colorType === 'gradient' ? 'bg-[#3b404a]' : 'hover:bg-white/5',
+              'h-full min-w-[74px] px-2.5 text-[13px] font-semibold transition-colors',
+              colorType === 'gradient'
+                ? 'bg-[#3b404a] text-white'
+                : 'text-[#d6d9df] hover:bg-white/5 hover:text-white',
             )}
           >
             Gradient
-          </button>
-          <button
-            type="button"
-            onClick={() => onColorTypeChange('gradient')}
-            className="flex h-full items-center px-1.5"
-            aria-label="Gradient colors are new"
-          >
-            <span className="rounded-[2px] bg-[#2f9df2] px-1.5 py-0.5 text-[9px] font-black leading-none text-white">
-              NEW!
-            </span>
           </button>
         </div>
       </div>

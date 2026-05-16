@@ -165,7 +165,6 @@ export const SupportUsButton = ({
 }: SupportUsButtonProps) => {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const [isMobile, setIsMobile] = useState(
     typeof window !== "undefined" ? window.innerWidth < 640 : false
   );
@@ -178,26 +177,8 @@ export const SupportUsButton = ({
 
   const close = useCallback(() => setOpen(false), []);
 
-  const handleMouseEnter = () => {
-    if (isMobile) return;
-    clearTimeout(timeoutRef.current);
-    setOpen(true);
-  };
-
-  const handleMouseLeave = () => {
-    if (isMobile) return;
-    timeoutRef.current = setTimeout(() => setOpen(false), 250);
-  };
-
   const handleTriggerClick = () => {
-    clearTimeout(timeoutRef.current);
-
-    if (isMobile) {
-      setOpen((previous) => !previous);
-      return;
-    }
-
-    setOpen(true);
+    setOpen((previous) => !previous);
   };
 
   // Outside click / touch
@@ -231,8 +212,6 @@ export const SupportUsButton = ({
   return (
     <div
       ref={containerRef}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
       className={cn("relative", variant === "overlay" && "w-full h-full")}
       title={tooltipsEnabled && variant === "default" ? "Support Kloak" : undefined}
     >

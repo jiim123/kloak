@@ -113,22 +113,6 @@ const iconVariants = {
   active: { scale: 1, borderRadius: 10 },
 };
 
-const serverItemVariants = {
-  hidden: { opacity: 0, x: -20 },
-  visible: (i: number) => ({
-    opacity: 1,
-    x: 0,
-    transition: {
-      delay: i * 0.05,
-      type: "spring" as const,
-      stiffness: 300,
-      damping: 24,
-    },
-  }),
-};
-
-const serverExitVariant = { opacity: 0, x: -20, transition: { duration: 0.15 } };
-
 const iconSpringTransition = { type: "spring" as const, stiffness: 400, damping: 25 };
 
 const badgeInitial = { scale: 0 };
@@ -342,7 +326,6 @@ const DraggableServerItem = memo(
     HTMLDivElement,
     {
       server: ServerWithMembership;
-      index: number;
       isActive: boolean;
       isHovered: boolean;
       hasUnread: boolean;
@@ -362,7 +345,6 @@ const DraggableServerItem = memo(
     (
       {
         server,
-        index,
         isActive,
         isHovered,
         hasUnread,
@@ -445,11 +427,6 @@ const DraggableServerItem = memo(
             <motion.div
               ref={mergedRef}
               style={style}
-              custom={index}
-              variants={serverItemVariants}
-              initial="hidden"
-              animate="visible"
-              exit={serverExitVariant}
               layout
             >
               <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
@@ -1278,7 +1255,7 @@ export const ServerSidebar = ({ isAddServerPanelOpen = false, onToggleAddServerP
 
   // ── Render helper for server items (used in both folder + root lists) ──
   const renderServerItem = useCallback(
-    (server: ServerWithMembership, index: number) => {
+    (server: ServerWithMembership) => {
       const isActive = currentServer?.id === server.id;
       const channelIds = serverChannels[server.id] || EMPTY_CHANNEL_IDS;
       const channelUnreadInfo = getServerUnreadInfo(channelIds);
@@ -1296,7 +1273,6 @@ export const ServerSidebar = ({ isAddServerPanelOpen = false, onToggleAddServerP
         <DraggableServerItem
           key={server.id}
           server={server}
-          index={index}
           isActive={isActive}
           isHovered={hoveredServer === server.id}
           hasUnread={hasUnread}
@@ -1396,13 +1372,13 @@ export const ServerSidebar = ({ isAddServerPanelOpen = false, onToggleAddServerP
                       className={cn("w-full overflow-hidden", folder.isCollapsed && "pointer-events-none")}
                     >
                       <div className="w-full flex flex-col items-center gap-2 pt-2">
-                        {folderServers.map((server, index) => renderServerItem(server, index))}
+                        {folderServers.map((server) => renderServerItem(server))}
                       </div>
                     </motion.div>
                   </div>
                 ))}
 
-                {rootServers.map((server, index) => renderServerItem(server, index))}
+                {rootServers.map((server) => renderServerItem(server))}
               </AnimatePresence>
             </div>
           </ContextMenuTrigger>

@@ -207,10 +207,10 @@ export const ServerOverviewView = () => {
               )}
               <div className="relative px-5 pb-6 pt-0 text-center">
                 <div className="-mt-16 sm:-mt-20 flex justify-center">
-                  <Avatar className="w-28 h-28 rounded-lg border border-white/30 bg-white/10 backdrop-blur-[56px] supports-[backdrop-filter]:bg-white/8 p-4">
-                    <AvatarImage src={currentServer.icon_url || undefined} className="rounded-md object-cover" />
+                  <Avatar className="w-28 h-28 rounded-xl bg-[#191c25] ring-[6px] ring-[#34363D]">
+                    <AvatarImage src={currentServer.icon_url || undefined} className="rounded-xl object-cover" />
                     <AvatarFallback
-                      className="rounded-md text-3xl font-semibold"
+                      className="rounded-xl text-3xl font-semibold"
                       style={{ backgroundColor: "#f3c418", color: "#111827" }}
                     >
                       {currentServer.name?.[0]?.toUpperCase() || "S"}

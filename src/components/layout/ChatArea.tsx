@@ -71,7 +71,7 @@ const NoChannelPlaceholder = () => (
 
     <div className="relative mb-6">
       <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 blur-xl" />
-      <div className="relative w-24 h-24 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/10 flex items-center justify-center shadow-lg">
+      <div className="relative flex items-center justify-center">
         <MessageSquare className="w-10 h-10 text-primary/70" />
       </div>
     </div>

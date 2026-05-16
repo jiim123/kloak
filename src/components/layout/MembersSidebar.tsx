@@ -13,7 +13,6 @@ import {
   ChevronDown,
   Loader2,
   ListChecks,
-  Plus,
   X,
   Check,
   Search,
@@ -685,7 +684,6 @@ export const MembersSidebar = () => {
   // Permissions
   const { hasPermission: checkPermission, isOwner: currentUserIsOwner } = useMemberPermissions();
   const currentUserMember = useMemo(() => members.find((m) => m.user_id === user?.id), [members, user?.id]);
-  const canCreateInvite = currentUserIsOwner || checkPermission("create_instant_invite") || checkPermission("manage_invites");
 
   const onlineCount = onlineMembers.length;
   const visibleOfflineMembers = useMemo(
@@ -1076,10 +1074,6 @@ export const MembersSidebar = () => {
     setMemberSearchQuery("");
   }, []);
 
-  const handleOpenInvite = useCallback(() => {
-    openModal("invite");
-  }, [openModal]);
-
   const handleCloseSidebar = useCallback(() => {
     setMemberSidebarOpen(false);
   }, [setMemberSidebarOpen]);
@@ -1404,18 +1398,6 @@ export const MembersSidebar = () => {
         <ViewportList viewportRef={listViewportRef} items={memberListRows} itemSize={44} overscan={14}>
           {renderRow}
         </ViewportList>
-        {!isMobile && canCreateInvite && (
-          <button
-            type="button"
-            onClick={handleOpenInvite}
-            className="mt-1 flex w-full items-center gap-3 rounded-md px-2 py-2 text-left text-muted-foreground transition-colors hover:bg-secondary/45 hover:text-foreground"
-          >
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-muted-foreground">
-              <Plus className="h-5 w-5" />
-            </span>
-            <span className="text-[13px] font-medium">Invite</span>
-          </button>
-        )}
       </div>
 
       {/* Mass ban floating action bar */}

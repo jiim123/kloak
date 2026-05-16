@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { forwardRef, useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -43,7 +43,7 @@ import {
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
+import { Button as BaseButton, type ButtonProps } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -79,6 +79,23 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 const MAX_ICON_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_ICON_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -89,6 +106,11 @@ const MAX_EMOJI_SIZE = 1 * 1024 * 1024; // 1MB
 const ALLOWED_EMOJI_TYPES = ["image/png", "image/gif", "image/webp", "image/jpeg"];
 const EMOJI_NAME_REGEX = /^[a-z0-9_]{2,12}$/;
 const MAX_SERVER_EMOJIS = 50;
+
+const Button = forwardRef<HTMLButtonElement, ButtonProps>(({ className, ...props }, ref) => (
+  <BaseButton ref={ref} className={cn("rounded-[3px]", className)} {...props} />
+));
+Button.displayName = "ServerSettingsButton";
 
 const serverSettingsSchema = z.object({
   name: z.string().trim().min(1, "Server name is required").max(50, "Server name must be less than 50 characters"),
@@ -612,42 +634,51 @@ const RolePermissionsEditorInline = ({
                       isDisabled && "pointer-events-none",
                     )}
                   >
-                    <button
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
                       onClick={() => handlePermissionChange(permission, false)}
                       disabled={isDisabled}
                       className={cn(
-                        "px-2.5 py-1 text-[10px] font-medium rounded-md transition-all",
+                        "h-6 px-2.5 py-1 text-[10px] font-medium",
                         state === false
                           ? "bg-destructive text-destructive-foreground shadow-sm"
                           : "text-muted-foreground hover:text-foreground",
                       )}
                     >
                       ✕
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
                       onClick={() => handlePermissionChange(permission, null)}
                       disabled={isDisabled}
                       className={cn(
-                        "px-2.5 py-1 text-[10px] font-medium rounded-md transition-all",
+                        "h-6 px-2.5 py-1 text-[10px] font-medium",
                         state === null
                           ? "bg-background text-foreground shadow-sm border border-border"
                           : "text-muted-foreground hover:text-foreground",
                       )}
                     >
                       /
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
                       onClick={() => handlePermissionChange(permission, true)}
                       disabled={isDisabled}
                       className={cn(
-                        "px-2.5 py-1 text-[10px] font-medium rounded-md transition-all",
+                        "h-6 px-2.5 py-1 text-[10px] font-medium",
                         state === true
                           ? "bg-emerald-600 text-white shadow-sm"
                           : "text-muted-foreground hover:text-foreground",
                       )}
                     >
                       ✓
-                    </button>
+                    </Button>
                   </div>
                 </div>
               );
@@ -672,7 +703,7 @@ const RolePermissionsEditorInline = ({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-[3px]">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (confirmAction) {
@@ -680,7 +711,10 @@ const RolePermissionsEditorInline = ({
                 }
                 setConfirmAction(null);
               }}
-              className={confirmAction?.type === 'deny' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
+              className={cn(
+                "rounded-[3px]",
+                confirmAction?.type === 'deny' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : '',
+              )}
             >
               Confirm
             </AlertDialogAction>
@@ -868,6 +902,7 @@ export const ServerSettingsPage = () => {
   }, [members, pendingTabOps.members]);
 
   const visibleRoles = useMemo(() => stagedRoles, [stagedRoles]);
+  const roleIds = useMemo(() => visibleRoles.map((role) => role.id), [visibleRoles]);
   const selectedRole = useMemo(
     () => (selectedRoleId ? stagedRoles.find((role) => role.id === selectedRoleId) || null : null),
     [selectedRoleId, stagedRoles],
@@ -901,7 +936,42 @@ export const ServerSettingsPage = () => {
     setTimeout(() => roleEditContainerRef.current?.scrollTo({ top: 0 }), 0);
   };
 
+  const resetRoleEditor = () => {
+    setSelectedRoleId(null);
+    setEditingRole(null);
+    setRoleName("");
+    setRoleColor("#5865F2");
+    setRoleIcon("");
+    setRoleIsSelfAssignable(false);
+    setColorType("solid");
+    setGradientColors(["#5865F2", "#7289DA"]);
+    setGradientAngle(135);
+    setMobileRoleCreateView(false);
+  };
+
+  const roleSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleRoleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = stagedRoles.findIndex((role) => role.id === active.id);
+    const newIndex = stagedRoles.findIndex((role) => role.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const nextRoles = arrayMove(stagedRoles, oldIndex, newIndex).map((role, index) => ({ ...role, position: index }));
+    setStagedRoles(nextRoles);
+    stageRolesSyncOp(nextRoles);
+  };
+
   const RoleRow = ({ role }: { role: CustomServerRole }) => {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+      id: role.id,
+      data: { type: "role", role },
+    });
     const isSelected = selectedRole?.id === role.id;
     const isGradient = role.color.startsWith("linear-gradient");
     const roleNameStyle = isGradient
@@ -912,15 +982,17 @@ export const ServerSettingsPage = () => {
           color: "transparent",
         } as React.CSSProperties)
       : ({ color: role.color } as React.CSSProperties);
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+    } as React.CSSProperties;
 
     return (
       <div
+        ref={setNodeRef}
+        style={style}
         role="button"
         tabIndex={0}
-        onPointerDown={(e) => {
-          e.preventDefault();
-          selectRoleForEditing(role);
-        }}
         onClick={() => selectRoleForEditing(role)}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
@@ -931,11 +1003,15 @@ export const ServerSettingsPage = () => {
         className={cn(
           "flex items-center gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer",
           isSelected && "bg-secondary/70 ring-1 ring-primary/50",
+          isDragging && "opacity-80 bg-secondary/60 ring-1 ring-primary/30 shadow-md relative z-50",
         )}
       >
         <div
-          className="text-muted-foreground flex-shrink-0"
-          aria-hidden="true"
+          {...attributes}
+          {...listeners}
+          className="text-muted-foreground flex-shrink-0 cursor-grab active:cursor-grabbing"
+          title="Drag to reorder"
+          onClick={(e) => e.stopPropagation()}
         >
           <GripVertical className="w-4 h-4" />
         </div>
@@ -1054,7 +1130,7 @@ export const ServerSettingsPage = () => {
       nextRoles.some((role, index) => {
         if (role.id.startsWith("pending-role-")) return true;
         const initial = initialById.get(role.id);
-        return !initial || roleFieldsChanged(role, initial) || role.position !== index;
+        return !initial || roleFieldsChanged(role, initial) || initialRoles[index]?.id !== role.id;
       });
 
     setPendingTabOps((prev) => {
@@ -1248,6 +1324,76 @@ export const ServerSettingsPage = () => {
     resolver: zodResolver(serverSettingsSchema),
     defaultValues: { name: server?.name || "", about: server?.about || "" },
   });
+
+  const resetActiveTabChanges = async () => {
+    if (!server) return;
+
+    clearTabOps(activeTab);
+
+    if (activeTab === "overview") {
+      reset({ name: server.name, about: server.about || "" });
+      setSystemChannelJoinId(server.system_channel_join_id || "");
+      setSystemChannelLeaveId(server.system_channel_leave_id || "");
+      setIsNsfwDraft(!!server.is_nsfw);
+      setMinAccountAgeDraft(Number(server.min_account_age_days || 0));
+      setIsPublishedDraft(!!server.is_published);
+      setIconFile(null);
+      if (iconPreview) URL.revokeObjectURL(iconPreview);
+      setIconPreview(null);
+      setBannerFile(null);
+      if (bannerPreview) URL.revokeObjectURL(bannerPreview);
+      setBannerPreview(null);
+      setIconRemoved(false);
+      setBannerRemoved(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      if (bannerInputRef.current) bannerInputRef.current.value = "";
+      return;
+    }
+
+    if (activeTab === "roles") {
+      const restoredRoles = baselineRolesRef.current;
+      setStagedRoles(restoredRoles);
+      setStagedRolePermissionStates({});
+      resetRoleEditor();
+      return;
+    }
+
+    if (activeTab === "members") {
+      setStagedMembers(members);
+      return;
+    }
+
+    if (activeTab === "invites") {
+      setPendingInviteDrafts([]);
+      setPendingRevokedInviteIds(new Set());
+      return;
+    }
+
+    if (activeTab === "emojis") {
+      clearEmoji();
+      setEditingEmojiId(null);
+      setEditingEmojiName("");
+      setSelectedEmojiIds(new Set());
+      setIsMultiSelectMode(false);
+      if (server.id) {
+        const { data } = await supabase
+          .from("server_emojis")
+          .select("id, name, file_path")
+          .eq("server_id", server.id)
+          .order("created_at", { ascending: true });
+        setServerEmojis((data ?? []) as ServerEmojiDraft[]);
+      }
+      return;
+    }
+
+    if (activeTab === "bans" && user?.id) {
+      const { data } = await supabase.rpc("get_banned_members", {
+        _server_id: server.id,
+        _user_id: user.id,
+      });
+      setBannedMembers((data ?? []) as any);
+    }
+  };
 
   // Real-time members updates
   useRealtimeMembers(server ? server.id : null, { full: activeTab === "members" });
@@ -2252,13 +2398,15 @@ export const ServerSettingsPage = () => {
                     >
                       Transfer Ownership
                     </TabsTrigger>
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="sm"
                       onClick={() => setShowDeleteConfirm(true)}
-                      className="w-full h-9 flex items-center px-[30px] py-0 text-sm font-medium leading-none text-[#f05d5d] hover:bg-[#202329] transition-colors"
+                      className="!flex !h-9 !w-full !justify-start !gap-0 !rounded-none !bg-transparent !px-[30px] !py-0 !text-left !text-sm !font-medium !leading-none !text-[#f05d5d] hover:!bg-[#202329] hover:!text-[#ff7373] sm:!text-sm"
                     >
                       Delete Server
-                    </button>
+                    </Button>
                   </>
                 )}
               </TabsList>
@@ -2277,13 +2425,15 @@ export const ServerSettingsPage = () => {
                   )}
                   Save changes
                 </Button>
-                <button
+                <Button
                   type="button"
-                  onClick={closeServerSettings}
-                  className="w-full h-7 text-xs text-[#9ea2ad] hover:text-white transition-colors"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => void resetActiveTabChanges()}
+                  className="w-full h-7 bg-transparent text-xs text-[#9ea2ad] hover:bg-[#202329] hover:text-white"
                 >
                   Cancel
-                </button>
+                </Button>
               </div>
             )}
           </div>
@@ -2291,14 +2441,16 @@ export const ServerSettingsPage = () => {
           {/* Main Content Area */}
           <div className="flex-1 overflow-y-auto relative bg-[#363944]">
             {/* Close Button (ESC) */}
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon"
               onClick={closeServerSettings}
-              className="absolute top-[48px] right-[46px] z-10 text-[#aeb1bb] hover:text-white transition-colors"
+              className="absolute top-[48px] right-[46px] z-10 h-10 w-10 bg-transparent text-[#aeb1bb] hover:bg-[#202329] hover:text-white"
               aria-label="Close server settings"
             >
               <X className="w-7 h-7" />
-            </button>
+            </Button>
 
             {/* Overview Tab */}
             <TabsContent value="overview" className="m-0 px-[40px] py-[32px] pr-[84px]">
@@ -2327,8 +2479,10 @@ export const ServerSettingsPage = () => {
                           )}
                         </div>
                         {canManageServer && displayIconUrl && (
-                          <button
+                          <Button
                             type="button"
+                            variant="destructive"
+                            size="icon-sm"
                             onClick={(e) => {
                               e.stopPropagation();
                               if (iconPreview) {
@@ -2338,10 +2492,10 @@ export const ServerSettingsPage = () => {
                               }
                             }}
                             disabled={isUploadingIcon}
-                            className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/90 disabled:opacity-50"
+                            className="absolute -top-1 -right-1 h-6 w-6 bg-destructive text-destructive-foreground hover:bg-destructive/90"
                           >
                             <X className="w-3 h-3" />
-                          </button>
+                          </Button>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground">Recommended 512×512</p>
@@ -2360,6 +2514,58 @@ export const ServerSettingsPage = () => {
                       />
                       {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
                     </div>
+                  </div>
+
+                  {/* Server Banner */}
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Server Banner</Label>
+                    <div className="relative">
+                      <div
+                        onClick={() => canManageServer && bannerInputRef.current?.click()}
+                        className={cn(
+                          "flex h-32 w-full items-center justify-center overflow-hidden rounded-md border-2 border-dashed border-muted-foreground/50 bg-secondary transition-colors sm:h-36",
+                          canManageServer && "cursor-pointer hover:border-primary",
+                        )}
+                      >
+                        {displayBannerUrl ? (
+                          <>
+                            <img src={displayBannerUrl} alt="Server banner" className="h-full w-full object-cover" />
+                            {isUploadingBanner && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-background/60">
+                                <Loader2 className="h-5 w-5 animate-spin text-foreground" />
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="flex flex-col items-center gap-1.5 text-muted-foreground">
+                            <Upload className="h-5 w-5" />
+                            <span className="text-xs">Click to upload banner</span>
+                          </div>
+                        )}
+                      </div>
+                      {canManageServer && displayBannerUrl && (
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon-sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (bannerPreview) {
+                              clearBanner();
+                            } else {
+                              handleRemoveBanner();
+                            }
+                          }}
+                          disabled={isUploadingBanner}
+                          className="absolute right-2 top-2 h-7 w-7 bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {canManageServer ? "Recommended 960x540 - shown in server list" : "Shown in server list"}
+                    </p>
                   </div>
 
                   {/* Server Description */}
@@ -2382,55 +2588,6 @@ export const ServerSettingsPage = () => {
                   </div>
                 </div>
 
-                {/* Server Banner */}
-                <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
-                  <Label className="text-sm font-medium">Server Banner</Label>
-                  <div className="relative">
-                    <div
-                      onClick={() => canManageServer && bannerInputRef.current?.click()}
-                      className={cn(
-                        "w-full aspect-video rounded-xl bg-secondary flex items-center justify-center border-2 border-dashed border-muted-foreground/50 transition-colors overflow-hidden",
-                        canManageServer && "cursor-pointer hover:border-primary",
-                      )}
-                    >
-                      {displayBannerUrl ? (
-                        <>
-                          <img src={displayBannerUrl} alt="Server banner" className="w-full h-full object-cover" />
-                          {isUploadingBanner && (
-                            <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
-                              <Loader2 className="w-5 h-5 animate-spin text-foreground" />
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                          <Upload className="w-6 h-6" />
-                          <span className="text-xs">Click to upload banner</span>
-                        </div>
-                      )}
-                    </div>
-                    {canManageServer && displayBannerUrl && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (bannerPreview) {
-                            clearBanner();
-                          } else {
-                            handleRemoveBanner();
-                          }
-                        }}
-                        disabled={isUploadingBanner}
-                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/90 disabled:opacity-50"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {canManageServer ? "Recommended 960×540 • Shown in server list" : "Shown in server list"}
-                  </p>
-                </div>
 
                 {/* Age-Restricted Server (owner-only) */}
                 {isOwner && (
@@ -2821,11 +2978,19 @@ export const ServerSettingsPage = () => {
                     <ScrollArea className="flex-1">
                       {visibleRoles.length > 0 ? (
                         <div className="p-2">
-                          <div className="space-y-1">
-                            {visibleRoles.map((role) => (
-                              <RoleRow key={role.id} role={role} />
-                            ))}
-                          </div>
+                          <DndContext
+                            sensors={roleSensors}
+                            collisionDetection={closestCenter}
+                            onDragEnd={handleRoleDragEnd}
+                          >
+                            <SortableContext items={roleIds} strategy={verticalListSortingStrategy}>
+                              <div className="space-y-1">
+                                {visibleRoles.map((role) => (
+                                  <RoleRow key={role.id} role={role} />
+                                ))}
+                              </div>
+                            </SortableContext>
+                          </DndContext>
                         </div>
                       ) : (
                         <div className="flex flex-col items-center justify-center py-8 text-center px-4">
@@ -2959,26 +3124,6 @@ export const ServerSettingsPage = () => {
                             </div>
                           )}
 
-                          <div className="flex items-center gap-2 pt-2">
-                            <Button
-                              variant="outline"
-                              onClick={() => {
-                                setSelectedRoleId(null);
-                                setEditingRole(null);
-                                setRoleName("");
-                                setRoleColor("#5865F2");
-                                setRoleIcon("");
-                                setRoleIsSelfAssignable(false);
-                                setColorType("solid");
-                                setGradientColors(["#5865F2", "#7289DA"]);
-                                setGradientAngle(135);
-                              }}
-                              size="sm"
-                              rounded="full"
-                            >
-                              Cancel
-                            </Button>
-                          </div>
                         </div>
 
                         {/* Permissions Section */}
@@ -3406,7 +3551,7 @@ export const ServerSettingsPage = () => {
                       type="button"
                       size="sm"
                       onClick={() => openModal("import-emoji-pack")}
-                      className="bg-white/20 hover:bg-white/30 text-white border-0"
+                      className="h-9 rounded-[3px] bg-[#d7dbe3] px-5 font-medium text-[#363b44] hover:bg-white"
                     >
                       <Link2 className="w-4 h-4 mr-2" />
                       Import Pack
@@ -3463,19 +3608,18 @@ export const ServerSettingsPage = () => {
                           type="button"
                           size="sm"
                           variant="outline"
-                          rounded="xl"
                           onClick={clearEmoji}
                           disabled={isUploadingEmoji && !!emojiFile}
+                          className="h-9 rounded-[3px] border-[#4a4f5a] bg-transparent px-4 text-[#d7dbe3] hover:bg-[#3e434d] hover:text-white"
                         >
                           Clear
                         </Button>
                         <Button
                           type="button"
                           size="sm"
-                          rounded="xl"
                           onClick={uploadServerEmoji}
                           disabled={isUploadingEmoji || !emojiFile || !emojiName.trim()}
-                          className="flex-1 sm:flex-none"
+                          className="h-9 flex-1 rounded-[3px] bg-[#d7dbe3] px-5 font-medium text-[#363b44] hover:bg-white disabled:bg-[#6f7480] disabled:text-[#2f333b] sm:flex-none"
                         >
                           {isUploadingEmoji && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                           Upload
@@ -3706,14 +3850,13 @@ export const ServerSettingsPage = () => {
                         </p>
                       </div>
                       <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openModal("import-discord-template")}
-                        className="flex-shrink-0"
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        Import
+                      type="button"
+                      size="sm"
+                      onClick={() => openModal("import-discord-template")}
+                      className="h-9 flex-shrink-0 rounded-[3px] bg-[#d7dbe3] px-5 font-medium text-[#363b44] hover:bg-white"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Import
                       </Button>
                     </div>
                   </div>
@@ -3797,10 +3940,17 @@ export const ServerSettingsPage = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowDeleteConfirm(false)}
+              className="h-9 !rounded-[3px] border-[#4a4f5a] bg-transparent px-4 text-[#d7dbe3] hover:bg-[#3e434d] hover:text-white"
+            >
+              Cancel
+            </Button>
             <AlertDialogAction
               onClick={handleDeleteServer}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="rounded-[3px] bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
               Delete Server
@@ -3840,7 +3990,7 @@ export const ServerSettingsPage = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isTransferring}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-[3px]" disabled={isTransferring}>Cancel</AlertDialogCancel>
             <Button
               variant="destructive"
               disabled={transferConfirmName !== server.name || isTransferring || !transferTargetId}
