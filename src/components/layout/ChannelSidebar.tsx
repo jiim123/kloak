@@ -442,6 +442,7 @@ const SortableChannel = memo(({
   hasLinkedChat,
   isLinkedChatActive,
   onPrefetch,
+  onPrefetchCancel,
 }: {
   channel: Channel;
   isActive: boolean;
@@ -463,6 +464,7 @@ const SortableChannel = memo(({
   hasLinkedChat?: boolean;
   isLinkedChatActive?: boolean;
   onPrefetch?: () => void;
+  onPrefetchCancel?: () => void;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: channel.id,
@@ -520,7 +522,9 @@ const SortableChannel = memo(({
       <button
         onClick={isSortingMode ? undefined : onSelect}
         onMouseEnter={onPrefetch}
+        onMouseLeave={onPrefetchCancel}
         onFocus={onPrefetch}
+        onBlur={onPrefetchCancel}
         aria-label={ariaLabel}
         className={cn(
           "group relative flex-1 min-w-0 flex items-center gap-2 px-2.5 py-2 md:py-1.5 text-[14px] leading-5 font-medium select-none rounded-[3px]",
@@ -751,6 +755,7 @@ const CategoryContent = memo(({
   categories,
   linkedTextChannelByVoiceId,
   onPrefetchChannel,
+  onCancelPrefetchChannel,
 }: {
   channels: Channel[];
   currentChannelId: string | undefined;
@@ -770,6 +775,7 @@ const CategoryContent = memo(({
   categories?: ChannelCategory[];
   linkedTextChannelByVoiceId: Map<string, Channel>;
   onPrefetchChannel?: (channel: Channel) => void;
+  onCancelPrefetchChannel?: (channelId: string) => void;
 }) => {
   const channelIds = useMemo(() => channels.map((c) => c.id), [channels]);
 
@@ -796,6 +802,7 @@ const CategoryContent = memo(({
               onCopyLink={() => onCopyChannelLink(channel.id)}
               onMarkAsRead={onMarkAsRead ? () => onMarkAsRead(channel.id) : undefined}
               onPrefetch={onPrefetchChannel ? () => onPrefetchChannel(channel) : undefined}
+              onPrefetchCancel={onCancelPrefetchChannel ? () => onCancelPrefetchChannel(channel.id) : undefined}
               isMobile={isMobile}
               isDraggingAny={isDraggingAny}
               isSortingMode={isSortingMode}
@@ -843,6 +850,7 @@ const SortableCategory = memo(({
   allCategories,
   linkedTextChannelByVoiceId,
   onPrefetchChannel,
+  onCancelPrefetchChannel,
 }: {
   category: ChannelCategory;
   channels: Channel[];
@@ -869,6 +877,7 @@ const SortableCategory = memo(({
   allCategories?: ChannelCategory[];
   linkedTextChannelByVoiceId: Map<string, Channel>;
   onPrefetchChannel?: (channel: Channel) => void;
+  onCancelPrefetchChannel?: (channelId: string) => void;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: category.id,
@@ -1069,6 +1078,7 @@ const SortableCategory = memo(({
           categories={allCategories}
           linkedTextChannelByVoiceId={linkedTextChannelByVoiceId}
           onPrefetchChannel={onPrefetchChannel}
+          onCancelPrefetchChannel={onCancelPrefetchChannel}
         />
       )}
     </div>
@@ -1323,14 +1333,26 @@ export const ChannelSidebar = () => {
 
   const prefetchTimersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
 
+  const cancelPrefetchChannel = useCallback((channelId: string) => {
+    const timers = prefetchTimersRef.current;
+    const timer = timers.get(channelId);
+    if (!timer) return;
+    clearTimeout(timer);
+    timers.delete(channelId);
+  }, []);
+
   const handlePrefetchChannel = useCallback((channel: Channel) => {
     if (channel.type !== "text" && channel.type !== "announcement") return;
+    if (channel.server_id !== currentServer?.id) return;
+    if (channel.id === currentChannel?.id) return;
 
     const timers = prefetchTimersRef.current;
     if (timers.has(channel.id)) return;
 
     const timer = setTimeout(() => {
       timers.delete(channel.id);
+      if (useServerStore.getState().currentServer?.id !== channel.server_id) return;
+      if (useServerStore.getState().currentChannel?.id === channel.id) return;
       const cacheEntry = useMessageStore.getState().messagesByChannel[channel.id];
       const hasFreshCache =
         !!cacheEntry &&
@@ -1342,7 +1364,15 @@ export const ChannelSidebar = () => {
     }, 120);
 
     timers.set(channel.id, timer);
-  }, []);
+  }, [currentChannel?.id, currentServer?.id]);
+
+  useEffect(() => {
+    const timers = prefetchTimersRef.current;
+    for (const timer of timers.values()) {
+      clearTimeout(timer);
+    }
+    timers.clear();
+  }, [currentServer?.id]);
 
   useEffect(() => {
     return () => {
@@ -1734,6 +1764,7 @@ export const ChannelSidebar = () => {
                     onDelete={() => handleDeleteChannel(channel.id)}
                     onCopyLink={() => handleCopyChannelLink(channel.id)}
                     onPrefetch={() => handlePrefetchChannel(channel)}
+                    onPrefetchCancel={() => cancelPrefetchChannel(channel.id)}
                     isMobile={isMobile}
                     isDraggingAny={isDraggingAny}
                     isSortingMode={isSortingMode}
@@ -1768,6 +1799,7 @@ export const ChannelSidebar = () => {
             onCopyChannelLink={handleCopyChannelLink}
             onMarkAsRead={(channelId) => markAsRead(channelId)}
             onPrefetchChannel={handlePrefetchChannel}
+            onCancelPrefetchChannel={cancelPrefetchChannel}
             isDragOver={overCategoryId === category.id && activeType === "channel"}
             voicePresenceByChannel={voicePresenceByChannel}
             resolveUser={resolveUser}
@@ -1813,6 +1845,7 @@ export const ChannelSidebar = () => {
                     onCopyLink={() => handleCopyChannelLink(channel.id)}
                     onMarkAsRead={() => markAsRead(channel.id)}
                     onPrefetch={() => handlePrefetchChannel(channel)}
+                    onPrefetchCancel={() => cancelPrefetchChannel(channel.id)}
                     isMobile={isMobile}
                     isDraggingAny={isDraggingAny}
                     isSortingMode={isSortingMode}

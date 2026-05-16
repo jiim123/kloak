@@ -679,7 +679,7 @@ export const ServerSidebar = () => {
   const closeServerSettings = useUIStore((s) => s.closeServerSettings);
   const openServerSettings = useUIStore((s) => s.openServerSettings);
 
-  const { serverChannels, getServerUnreadInfo, markServerAsRead } = useUnreadChannelsContext();
+  const { serverChannels, serverUnreadSummary, getServerUnreadInfo, markServerAsRead } = useUnreadChannelsContext();
   const {
     totalUnread: totalDMUnread,
     hasUnread: hasDMUnread,
@@ -1269,7 +1269,10 @@ export const ServerSidebar = () => {
     (server: ServerWithMembership, index: number) => {
       const isActive = currentServer?.id === server.id;
       const channelIds = serverChannels[server.id] || EMPTY_CHANNEL_IDS;
-      const { hasUnread, totalMentions } = getServerUnreadInfo(channelIds);
+      const channelUnreadInfo = getServerUnreadInfo(channelIds);
+      const summaryUnreadInfo = serverUnreadSummary[server.id];
+      const hasUnread = summaryUnreadInfo?.hasUnread ?? channelUnreadInfo.hasUnread;
+      const totalMentions = summaryUnreadInfo?.totalMentions ?? channelUnreadInfo.totalMentions;
       const isOwner = server.owner_id === user?.id;
 
       return (
@@ -1297,6 +1300,7 @@ export const ServerSidebar = () => {
     [
       currentServer?.id,
       serverChannels,
+      serverUnreadSummary,
       getServerUnreadInfo,
       user?.id,
       hoveredServer,

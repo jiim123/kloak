@@ -70,6 +70,7 @@ import {
 import { UnreadDMsContext } from "@/hooks/useUnreadDMsContext";
 import { UnreadChannelsContext } from "@/hooks/useUnreadChannelsContext";
 import { useUnread } from "@/hooks/useUnread";
+import { useServerUnreadSummary } from "@/hooks/useServerUnreadSummary";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useBackgroundSync } from "@/hooks/useBackgroundSync";
@@ -463,11 +464,18 @@ const AppLayout = () => {
     if (!servers || servers.length === 0) return "";
     return [...servers.map((s) => s.id)].sort().join(",");
   }, [servers]);
+  const serverIds = useMemo(() => {
+    if (!serverIdsKey) return [];
+    return serverIdsKey.split(",").filter(Boolean);
+  }, [serverIdsKey]);
+  const serverUnreadSummary = useServerUnreadSummary(user?.id ?? null, serverIds);
   const serverChannels = useMemo(() => {
     if (!serverIdsKey) return {};
 
-    const serverIds = serverIdsKey.split(",").filter(Boolean);
-    const channelsByServer = getCachedServerChannelMap(serverIds, user?.id ?? null);
+    const channelsByServer = {
+      ...serverUnreadSummary.serverChannelsFromSummary,
+      ...getCachedServerChannelMap(serverIds, user?.id ?? null),
+    };
 
     if (currentServer?.id) {
       const currentServerChannels = channels
@@ -480,7 +488,7 @@ const AppLayout = () => {
     }
 
     return channelsByServer;
-  }, [serverIdsKey, user?.id, currentServer?.id, channels]);
+  }, [serverIds, serverIdsKey, serverUnreadSummary.serverChannelsFromSummary, user?.id, currentServer?.id, channels]);
 
   const allChannelIds = useMemo(() => {
     const ids = Object.values(serverChannels).flat();
@@ -492,6 +500,27 @@ const AppLayout = () => {
 
   // Centralized unread state for all channels (avoid multiple `get_all_channel_unread_counts` calls).
   const unreadChannels = useUnread(allChannelIds);
+
+  const markChannelAsRead = useCallback(
+    async (channelId: string, lastMessageId?: string) => {
+      await unreadChannels.markAsRead(channelId, lastMessageId);
+      void serverUnreadSummary.refetch({ force: true });
+    },
+    [serverUnreadSummary, unreadChannels],
+  );
+
+  const markServerAsRead = useCallback(
+    async (channelIds: string[]) => {
+      const serverIdsToClear = Object.entries(serverChannels)
+        .filter(([, ids]) => ids.length > 0 && ids.every((id) => channelIds.includes(id)))
+        .map(([serverId]) => serverId);
+
+      serverUnreadSummary.clearServers(serverIdsToClear);
+      await unreadChannels.markServerAsRead(channelIds);
+      void serverUnreadSummary.refetch({ force: true });
+    },
+    [serverChannels, serverUnreadSummary, unreadChannels],
+  );
 
   const unreadDMsContextValue = useMemo(
     () => ({
@@ -515,8 +544,22 @@ const AppLayout = () => {
   );
 
   const unreadChannelsContextValue = useMemo(
-    () => ({ ...unreadChannels, serverChannels, allChannelIds }),
-    [unreadChannels, serverChannels, allChannelIds],
+    () => ({
+      ...unreadChannels,
+      markAsRead: markChannelAsRead,
+      markServerAsRead,
+      serverChannels,
+      serverUnreadSummary: serverUnreadSummary.summaryByServerId,
+      allChannelIds,
+    }),
+    [
+      unreadChannels,
+      markChannelAsRead,
+      markServerAsRead,
+      serverChannels,
+      serverUnreadSummary.summaryByServerId,
+      allChannelIds,
+    ],
   );
 
   // Show loading state - AFTER all hooks

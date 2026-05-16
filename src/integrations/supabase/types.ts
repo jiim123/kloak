@@ -3650,6 +3650,15 @@ export type Database = {
           unread_count: number
         }[]
       }
+      get_user_server_unread_summary: {
+        Args: { _blocked_user_ids?: string[]; _user_id: string }
+        Returns: {
+          channel_ids: string[]
+          mention_count: number
+          server_id: string
+          unread_count: number
+        }[]
+      }
       get_banned_members: {
         Args: { _server_id: string; _user_id: string }
         Returns: Json

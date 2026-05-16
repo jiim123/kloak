@@ -171,6 +171,15 @@ const ExploreServersOriginal = () => {
     navigate(`/app/servers/${joined.id}`);
   };
 
+  const handleOpenServer = async (serverId: string) => {
+    const server = myServers.find((s) => s.id === serverId);
+    if (!server) return;
+
+    setCurrentServer(server);
+    await fetchChannels(server.id, { force: true });
+    navigate(`/app/servers/${server.id}`);
+  };
+
   useEffect(() => {
     setCurrentPage(1);
   }, [query, items.length]);
@@ -360,11 +369,16 @@ const ExploreServersOriginal = () => {
                               <Button
                                 size="sm"
                                 variant={joined ? 'secondary' : 'default'}
-                                disabled={joined}
-                                onClick={() => handleJoin(s)}
+                                onClick={() => {
+                                  if (joined) {
+                                    void handleOpenServer(s.id);
+                                    return;
+                                  }
+                                  void handleJoin(s);
+                                }}
                                 className="h-7 px-3 text-xs"
                               >
-                                {joined ? 'Joined' : 'Join'}
+                                {joined ? 'Open Server' : 'Join'}
                               </Button>
                             </div>
                           </div>
@@ -448,11 +462,16 @@ const ExploreServersOriginal = () => {
                             <Button
                               size="sm"
                               variant={joined ? 'secondary' : 'default'}
-                              disabled={joined}
-                              onClick={() => handleJoin(s)}
+                              onClick={() => {
+                                if (joined) {
+                                  void handleOpenServer(s.id);
+                                  return;
+                                }
+                                void handleJoin(s);
+                              }}
                               className="h-7 px-3 text-xs"
                             >
-                              {joined ? 'Joined' : 'Join'}
+                              {joined ? 'Open Server' : 'Join'}
                             </Button>
                           </div>
                         </div>

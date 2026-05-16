@@ -28,6 +28,7 @@ import { useServerStore } from "@/stores/serverStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useUnreadDMsContext } from "@/hooks/useUnreadDMsContext";
 import { useUnreadChannelsContext } from "@/hooks/useUnreadChannelsContext";
+import type { ServerUnreadSummary } from "@/hooks/useServerUnreadSummary";
 import { useDMStore } from "@/stores/dmStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { supabase } from "@/integrations/supabase/client";
@@ -202,6 +203,7 @@ const HorizontalFolderItem = ({
   currentServer,
   hoveredServer,
   serverChannels,
+  serverUnreadSummary,
   getServerUnreadInfo,
   getPillState,
   getServerColor,
@@ -223,6 +225,7 @@ const HorizontalFolderItem = ({
   currentServer: Server | null;
   hoveredServer: string | null;
   serverChannels: ServerChannels;
+  serverUnreadSummary: Record<string, ServerUnreadSummary>;
   getServerUnreadInfo: (channelIds: string[]) => { hasUnread: boolean; totalMentions: number };
   getPillState: (serverId: string | null, hasUnread: boolean) => string;
   getServerColor: (name: string) => string;
@@ -244,14 +247,14 @@ const HorizontalFolderItem = ({
   // Check if any server in folder has unread
   const folderHasUnread = folderServers.some((server) => {
     const channelIds = serverChannels[server.id] || [];
-    const { hasUnread } = getServerUnreadInfo(channelIds);
-    return hasUnread;
+    const channelUnreadInfo = getServerUnreadInfo(channelIds);
+    return serverUnreadSummary[server.id]?.hasUnread ?? channelUnreadInfo.hasUnread;
   });
 
   const folderTotalMentions = folderServers.reduce((acc, server) => {
     const channelIds = serverChannels[server.id] || [];
-    const { totalMentions } = getServerUnreadInfo(channelIds);
-    return acc + totalMentions;
+    const channelUnreadInfo = getServerUnreadInfo(channelIds);
+    return acc + (serverUnreadSummary[server.id]?.totalMentions ?? channelUnreadInfo.totalMentions);
   }, 0);
 
   return (
@@ -315,7 +318,10 @@ const HorizontalFolderItem = ({
             <div className="text-xs font-semibold text-muted-foreground px-2 mb-2">{folder.name}</div>
             {folderServers.map((server) => {
               const channelIds = serverChannels[server.id] || [];
-              const { hasUnread, totalMentions } = getServerUnreadInfo(channelIds);
+              const channelUnreadInfo = getServerUnreadInfo(channelIds);
+              const summaryUnreadInfo = serverUnreadSummary[server.id];
+              const hasUnread = summaryUnreadInfo?.hasUnread ?? channelUnreadInfo.hasUnread;
+              const totalMentions = summaryUnreadInfo?.totalMentions ?? channelUnreadInfo.totalMentions;
               const isActive = currentServer?.id === server.id;
               const isOwner = server.owner_id === useAuthStore.getState().user?.id;
               const canManageServer = isOwner;
@@ -635,7 +641,7 @@ export const HorizontalServerSidebar = () => {
     useServerStore();
   const { setCurrentConversation } = useDMStore();
   const { openModal, activeModal, closeModal, closeServerSettings, openServerSettings } = useUIStore();
-  const { serverChannels, getServerUnreadInfo, markServerAsRead } = useUnreadChannelsContext();
+  const { serverChannels, serverUnreadSummary, getServerUnreadInfo, markServerAsRead } = useUnreadChannelsContext();
   const [hoveredServer, setHoveredServer] = useState<string | null>(null);
   const [tooltipsEnabled, setTooltipsEnabled] = useState(false);
   const [folderState, setFolderState] = useState<ServerFolderState>(() => loadServerFoldersState());
@@ -1208,6 +1214,7 @@ export const HorizontalServerSidebar = () => {
                   currentServer={currentServer}
                   hoveredServer={hoveredServer}
                   serverChannels={serverChannels}
+                  serverUnreadSummary={serverUnreadSummary}
                   getServerUnreadInfo={getServerUnreadInfo}
                   getPillState={getPillState}
                   getServerColor={getServerColor}
@@ -1259,7 +1266,10 @@ export const HorizontalServerSidebar = () => {
                   {rootServers.map((server, index) => {
                     const isActive = currentServer?.id === server.id;
                     const channelIds = serverChannels[server.id] || [];
-                    const { hasUnread, totalMentions } = getServerUnreadInfo(channelIds);
+                    const channelUnreadInfo = getServerUnreadInfo(channelIds);
+                    const summaryUnreadInfo = serverUnreadSummary[server.id];
+                    const hasUnread = summaryUnreadInfo?.hasUnread ?? channelUnreadInfo.hasUnread;
+                    const totalMentions = summaryUnreadInfo?.totalMentions ?? channelUnreadInfo.totalMentions;
 
                     return (
                       <HorizontalSortableServerItem

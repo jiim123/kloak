@@ -35,6 +35,13 @@ interface PrefetchedBootstrapPage {
   prefetchedAt: number;
 }
 
+type LoadedChannelMessagePage = {
+  messages: Message[];
+  hasMore: boolean;
+  oldestLoadedAt: string | null;
+  deferredReplyIds: string[];
+};
+
 interface MessageState {
   // Cache messages by channel ID
   messagesByChannel: Record<string, ChannelMessages>;
@@ -191,6 +198,7 @@ const MESSAGE_CACHE_STORAGE_KEY = "kloak:message-cache:v1";
 // In-flight request coalescing (prevents duplicate message fetches during rapid switching)
 const inflightFetches = new Map<string, Promise<void>>();
 const inflightPrefetches = new Map<string, Promise<void>>();
+const inflightBootstrapPageLoads = new Map<string, Promise<LoadedChannelMessagePage>>();
 const replyCache = new Map<string, { data: MessageReply; cachedAt: number }>();
 const bootstrapPrefetchCache = new Map<string, PrefetchedBootstrapPage>();
 
@@ -423,7 +431,7 @@ const pruneMessagesByChannel = (
   return pruned;
 };
 
-const loadChannelMessagePage = async ({
+const loadChannelMessagePageUncached = async ({
   channelId,
   limit,
   before,
@@ -435,12 +443,7 @@ const loadChannelMessagePage = async ({
   before?: string;
   skipBootstrap?: boolean;
   perfId?: string | null;
-}): Promise<{
-  messages: Message[];
-  hasMore: boolean;
-  oldestLoadedAt: string | null;
-  deferredReplyIds: string[];
-}> => {
+}): Promise<LoadedChannelMessagePage> => {
   const normalizedBefore = typeof before === "string" && before.trim().length > 0 ? before : undefined;
   const blockedUserIds = useFriendStore.getState().visibilityBlockedUserIds;
   const requestUserId = useAuthStore.getState().user?.id;
@@ -651,6 +654,38 @@ const loadChannelMessagePage = async ({
   });
 
   return { messages, hasMore, oldestLoadedAt, deferredReplyIds };
+};
+
+const loadChannelMessagePage = async (args: {
+  channelId: string;
+  limit: number;
+  before?: string;
+  skipBootstrap?: boolean;
+  perfId?: string | null;
+}): Promise<LoadedChannelMessagePage> => {
+  const normalizedBefore = typeof args.before === "string" && args.before.trim().length > 0 ? args.before : undefined;
+  if (normalizedBefore || args.skipBootstrap) {
+    return loadChannelMessagePageUncached(args);
+  }
+
+  const requestUserId = useAuthStore.getState().user?.id;
+  if (!requestUserId) {
+    return loadChannelMessagePageUncached(args);
+  }
+
+  const blockedUserIds = useFriendStore.getState().visibilityBlockedUserIds;
+  const blockedKey = blockedUserIds.slice().sort().join(",");
+  const inflightKey = `${args.channelId}:${requestUserId}:${args.limit}:${blockedKey}`;
+  const existingInflight = inflightBootstrapPageLoads.get(inflightKey);
+  if (existingInflight) return existingInflight;
+
+  const p = loadChannelMessagePageUncached(args).finally(() => {
+    const cur = inflightBootstrapPageLoads.get(inflightKey);
+    if (cur === p) inflightBootstrapPageLoads.delete(inflightKey);
+  });
+
+  inflightBootstrapPageLoads.set(inflightKey, p);
+  return p;
 };
 
 export const useMessageStore = create<MessageState>((set, get) => ({
