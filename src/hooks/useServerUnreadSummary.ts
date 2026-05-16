@@ -16,6 +16,12 @@ type ChannelReadBroadcastRow = {
   channel_id?: string;
 };
 
+type ChannelReadEventDetail = {
+  channelId?: string;
+  unreadCount?: number;
+  mentionCount?: number;
+};
+
 type BroadcastMutationPayload<T> = {
   op?: "INSERT" | "UPDATE" | "DELETE";
   new?: T;
@@ -36,6 +42,68 @@ export const useServerUnreadSummary = (userId: string | null, serverIds: string[
   const fetchSummaryRef = useRef<(opts?: { force?: boolean }) => Promise<void>>(async () => undefined);
 
   const serverIdsKey = useMemo(() => [...serverIds].sort().join(","), [serverIds]);
+
+  const clearReadChannels = useCallback(
+    (
+      channelIdsToClear: string[],
+      opts?: {
+        serverChannels?: Record<string, string[]>;
+        unreadByChannel?: Record<string, { unreadCount?: number; mentionCount?: number } | undefined>;
+      },
+    ) => {
+      if (channelIdsToClear.length === 0) return;
+      const clearSet = new Set(channelIdsToClear);
+
+      setSummaryByServerId((prev) => {
+        let changed = false;
+        const next: SummaryState = { ...prev };
+
+        for (const [serverId, summary] of Object.entries(prev)) {
+          const knownServerChannels = Array.from(
+            new Set([...(opts?.serverChannels?.[serverId] ?? []), ...summary.channelIds]),
+          );
+          const relevantChannels = knownServerChannels.filter((channelId) => clearSet.has(channelId));
+          if (relevantChannels.length === 0) continue;
+
+          const hasExactUnreadForAllClearedChannels = relevantChannels.every(
+            (channelId) => typeof opts?.unreadByChannel?.[channelId]?.unreadCount === "number",
+          );
+          const hasExactMentionsForAllClearedChannels = relevantChannels.every(
+            (channelId) => typeof opts?.unreadByChannel?.[channelId]?.mentionCount === "number",
+          );
+          const remainingChannelIds = summary.channelIds.filter((channelId) => !clearSet.has(channelId));
+          const unreadDelta = relevantChannels.reduce((sum, channelId) => {
+            const exact = opts?.unreadByChannel?.[channelId]?.unreadCount;
+            return sum + (typeof exact === "number" ? exact : summary.channelIds.includes(channelId) ? 1 : 0);
+          }, 0);
+          const mentionDelta = relevantChannels.reduce((sum, channelId) => {
+            const exact = opts?.unreadByChannel?.[channelId]?.mentionCount;
+            return sum + (typeof exact === "number" ? exact : 0);
+          }, 0);
+          const unreadCount =
+            remainingChannelIds.length === 0 && !hasExactUnreadForAllClearedChannels
+              ? 0
+              : Math.max(0, summary.unreadCount - unreadDelta);
+          const totalMentions =
+            remainingChannelIds.length === 0 && !hasExactMentionsForAllClearedChannels
+              ? 0
+              : Math.max(0, summary.totalMentions - mentionDelta);
+
+          next[serverId] = {
+            ...summary,
+            channelIds: remainingChannelIds,
+            unreadCount,
+            totalMentions,
+            hasUnread: remainingChannelIds.length > 0,
+          };
+          changed = true;
+        }
+
+        return changed ? next : prev;
+      });
+    },
+    [],
+  );
 
   const fetchSummary = useCallback(
     async (opts?: { force?: boolean }) => {
@@ -133,23 +201,36 @@ export const useServerUnreadSummary = (userId: string | null, serverIds: string[
     channel.on("broadcast", { event: "channel_reads" }, ({ payload }) => {
       const eventPayload = payload as BroadcastMutationPayload<ChannelReadBroadcastRow>;
       if (!eventPayload?.op) return;
-      void fetchSummaryRef.current({ force: true });
+      const row = eventPayload.op === "DELETE" ? eventPayload.old : eventPayload.new;
+      if (!row?.channel_id || eventPayload.op === "DELETE") {
+        return;
+      }
+      clearReadChannels([row.channel_id]);
     });
     subscribeChannel(topic);
 
     return () => {
       releaseChannel(topic);
     };
-  }, [userId]);
+  }, [clearReadChannels, userId]);
 
   useEffect(() => {
-    const handler = () => {
-      void fetchSummaryRef.current({ force: true });
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<ChannelReadEventDetail>).detail;
+      if (!detail?.channelId) return;
+      clearReadChannels([detail.channelId], {
+        unreadByChannel: {
+          [detail.channelId]: {
+            unreadCount: detail.unreadCount,
+            mentionCount: detail.mentionCount,
+          },
+        },
+      });
     };
 
     window.addEventListener(CHANNEL_READ_EVENT, handler);
     return () => window.removeEventListener(CHANNEL_READ_EVENT, handler);
-  }, []);
+  }, [clearReadChannels]);
 
   useEffect(() => {
     let hiddenAt: number | null = null;
@@ -207,5 +288,6 @@ export const useServerUnreadSummary = (userId: string | null, serverIds: string[
     isLoading,
     refetch: fetchSummary,
     clearServers,
+    clearReadChannels,
   };
 };

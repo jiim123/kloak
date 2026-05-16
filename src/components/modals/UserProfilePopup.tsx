@@ -59,7 +59,7 @@ const statusLabels: Record<UserStatus, string> = {
 };
 
 const COOLDOWN_MINUTES = 5;
-const DESKTOP_CARD_WIDTH = 320;
+const DESKTOP_CARD_WIDTH = 292;
 const VIEWPORT_MARGIN = 12;
 
 const withAlpha = (hex: string, alphaHex: string) => {
@@ -606,38 +606,44 @@ export const UserProfilePopup = () => {
     }
   };
 
-  const renderActionRow = (divider: string) => {
+  const renderActionRow = (divider: string, muted: string) => {
     if (isSelf || !profileUser) return null;
 
-    const iconButtonClass =
-      "h-9 flex-1 rounded-lg border border-border bg-secondary px-2 text-foreground hover:bg-secondary-hover hover:text-foreground disabled:border-border/50 disabled:bg-muted disabled:text-muted-foreground/35";
-    const dmButtonClass =
-      "h-9 flex-1 rounded-lg border border-border bg-secondary px-2 text-foreground shadow-none hover:bg-secondary-hover hover:text-foreground hover:shadow-none";
+    const actionClass =
+      "group flex min-w-0 flex-1 flex-col items-center gap-1.5 rounded-md bg-transparent px-1 py-1 text-[11px] font-semibold disabled:opacity-40";
+    const iconWrapClass =
+      "flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-black/25 text-current shadow-sm transition-colors group-hover:bg-white/30";
 
     return (
-      <div className="relative z-10 border-t px-3 py-2.5" style={{ borderColor: divider }}>
+      <div className="mt-4">
         {!isBlocked ? (
-          <div className="flex items-center gap-1.5">
-            <Button onClick={handleMessage} className={dmButtonClass}>
-              <MessageCircle className="mr-1.5 h-3.5 w-3.5" />
-              Message
-            </Button>
+          <div className={cn("grid gap-2 text-center", hasPendingRequest ? "grid-cols-4" : "grid-cols-3")} style={{ color: muted }}>
+            <button type="button" onClick={handleMessage} className={actionClass}>
+              <span className={iconWrapClass}>
+                <MessageCircle className="h-5 w-5" />
+              </span>
+              <span className="max-w-full truncate">Message</span>
+            </button>
 
             {hasPendingRequest ? (
               <>
-                <Button variant="secondary" className={iconButtonClass} onClick={handleAcceptRequest}>
-                  <Check className="h-3.5 w-3.5" />
-                  Accept
-                </Button>
-                <Button variant="secondary" className={iconButtonClass} onClick={handleDeclineRequest}>
-                  <X className="h-3.5 w-3.5" />
-                  Decline
-                </Button>
+                <button type="button" className={actionClass} onClick={handleAcceptRequest}>
+                  <span className={iconWrapClass}>
+                    <Check className="h-5 w-5" />
+                  </span>
+                  <span className="max-w-full truncate">Accept</span>
+                </button>
+                <button type="button" className={actionClass} onClick={handleDeclineRequest}>
+                  <span className={iconWrapClass}>
+                    <X className="h-5 w-5" />
+                  </span>
+                  <span className="max-w-full truncate">Decline</span>
+                </button>
               </>
             ) : (
-              <Button
-                variant="secondary"
-                className={iconButtonClass}
+              <button
+                type="button"
+                className={actionClass}
                 onClick={handleFriendAction}
                 disabled={hasSentRequest || isInCooldown || isSendingRequest}
                 title={
@@ -650,38 +656,35 @@ export const UserProfilePopup = () => {
                         : "Add friend"
                 }
               >
+                <span className={iconWrapClass}>
                 {isSendingRequest ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Sending
-                  </>
+                  <Loader2 className="h-5 w-5 animate-spin" />
                 ) : isFriend ? (
-                  <>
-                    <UserMinus className="h-3.5 w-3.5" />
-                    Remove
-                  </>
+                  <UserMinus className="h-5 w-5" />
                 ) : isInCooldown ? (
-                  <>
-                    <Clock className="h-3.5 w-3.5" />
-                    Wait
-                  </>
+                  <Clock className="h-5 w-5" />
                 ) : (
-                  <>
-                    <UserPlus className="h-3.5 w-3.5" />
-                    Add
-                  </>
+                  <UserPlus className="h-5 w-5" />
                 )}
-              </Button>
+                </span>
+                <span className="max-w-full truncate">
+                  {isSendingRequest ? "Sending" : isFriend ? "Remove" : isInCooldown ? "Wait" : hasSentRequest ? "Sent" : "Add"}
+                </span>
+              </button>
             )}
 
-            <Button variant="secondary" size="icon" className="h-9 w-9 rounded-lg border border-border bg-secondary text-foreground hover:bg-secondary-hover hover:text-foreground" onClick={handleBlockUser} title="Block user">
-              <Ban className="h-3.5 w-3.5" />
-            </Button>
+            <button type="button" className={actionClass} onClick={handleBlockUser} title="Block user">
+              <span className={iconWrapClass}>
+                <Ban className="h-5 w-5" />
+              </span>
+              <span className="max-w-full truncate">Block</span>
+            </button>
           </div>
         ) : (
           <Button
             variant="secondary"
-            className="h-9 w-full rounded-lg border border-border bg-secondary text-foreground hover:bg-secondary-hover"
+            className="h-9 w-full rounded-lg border text-foreground hover:bg-secondary-hover"
+            style={{ borderColor: divider, backgroundColor: "rgba(0,0,0,0.18)" }}
             onClick={handleUnblockUser}
           >
             <Ban className="mr-1.5 h-3.5 w-3.5" />
@@ -715,8 +718,9 @@ export const UserProfilePopup = () => {
     const fg = light ? "#0b0b0f" : "#f8fafc";
     const muted = light ? "rgba(11, 11, 15, 0.64)" : "rgba(248, 250, 252, 0.7)";
     const divider = light ? "rgba(11, 11, 15, 0.12)" : "rgba(248, 250, 252, 0.12)";
-    const surface = light ? "rgba(255,255,255,0.32)" : "rgba(17,18,21,0.72)";
-    const overlay = light ? "rgba(255,255,255,0.42)" : "rgba(0,0,0,0.28)";
+    const surface = light ? "rgba(255,255,255,0.44)" : "rgba(31,32,36,0.92)";
+    const overlay = light ? "rgba(255,255,255,0.38)" : "rgba(0,0,0,0.22)";
+    const accent = profileUser.profile_theme_accent || profileUser.profile_theme_primary || profileUser.banner_color || "#23a55a";
     const bannerUrl = profileUser.banner_url;
     const hasProfileDecoration = Boolean(profileUser.avatar_decoration);
     const presence = getEffectivePresence(profileUser.status || "offline", profileUser.last_seen, profileUser.id);
@@ -724,11 +728,12 @@ export const UserProfilePopup = () => {
     const displayEffectSrc =
       profileEffectAnimationEndedRef.current && profileEffectStillFrame ? profileEffectStillFrame : effectSrc;
     const joinedAt = profileUser.created_at ? format(new Date(profileUser.created_at), "MMM d, yyyy") : "Unknown";
-    const rolePreview = userRoles.slice(0, 3);
+    const rolePreview = userRoles.slice(0, 8);
     const bioText = profileUser.bio?.trim();
-    const shouldCollapseBio = Boolean(bioText && bioText.length > 50);
+    const shouldCollapseBio = Boolean(bioText && bioText.length > 180);
     const statusText = profileUser.custom_status?.trim();
     const selfStatusLabel = statusText || "Set a status";
+    const identityLabel = profileUser.is_bot ? "Bot" : !currentServer ? statusLabels[presence.status] : null;
     const themeStyle: CSSProperties = {
       color: fg,
       background:
@@ -739,16 +744,21 @@ export const UserProfilePopup = () => {
     };
 
     return (
-      <div className="relative overflow-hidden rounded-[11px]" style={themeStyle}>
+      <div className="relative overflow-hidden rounded-[8px]" style={themeStyle}>
         <div className="pointer-events-none absolute inset-0" style={{ backgroundColor: overlay }} />
 
         {bannerUrl ? (
-          <div className="relative h-16 overflow-hidden">
+          <div className="relative h-[96px] overflow-hidden">
             <img src={bannerUrl} alt="Profile banner" className="h-full w-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-black/10 to-black/50" />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-black/5 to-black/45" />
           </div>
         ) : (
-          <div className="h-14" />
+          <div
+            className="relative h-[88px]"
+            style={{
+              background: `linear-gradient(135deg, ${withAlpha(profileUser.banner_color, "e6")} 0%, ${withAlpha(accent, "99")} 100%)`,
+            }}
+          />
         )}
 
         {displayEffectSrc && (
@@ -763,252 +773,256 @@ export const UserProfilePopup = () => {
           </div>
         )}
 
-        <div className="relative z-10 px-3 pb-0">
-          <div className="-mt-3 flex items-end gap-3">
-            <div className="relative shrink-0">
+        <div className="relative z-10 px-3.5 pb-3.5">
+          <div className="-mt-10">
+            <div className="relative w-fit shrink-0">
               <AvatarWithDecoration
                 user={profileUser}
-                className={hasProfileDecoration ? "h-[52px] w-[52px]" : "h-[58px] w-[58px]"}
+                className={hasProfileDecoration ? "h-[74px] w-[74px]" : "h-[78px] w-[78px]"}
                 active
               />
               <div
                 className={cn(
-                  "absolute bottom-1 right-1 rounded-full border-[3px] border-background shadow-lg",
-                  hasProfileDecoration ? "h-3.5 w-3.5" : "h-4 w-4",
+                  "absolute bottom-1.5 right-1 rounded-full border-[3px] shadow-lg",
+                  "h-4.5 w-4.5",
                   statusColors[presence.status],
                 )}
+                style={{ borderColor: surface }}
                 title={statusLabels[presence.status]}
               />
             </div>
-            <div className="min-w-0 flex-1 pt-5 pb-0.5">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <h2 className="truncate text-[19px] font-semibold leading-none">
-                      {profileUser.display_name || profileUser.username}
-                    </h2>
-                    {profileUser.is_bot && <BotTag className="rounded-md px-1.5 py-0.5 text-[10px]" />}
-                  </div>
-                  <p className="mt-1 truncate text-[13px] font-medium text-[color:var(--profile-muted)]">
-                    @{profileUser.username}
-                  </p>
-                  {isSelf && (
-                    <button
-                      type="button"
-                      onClick={() => openModal("set-status")}
-                      className={cn(
-                        "mt-1 truncate text-left text-[13px] font-medium text-[color:var(--profile-muted)] transition-opacity hover:opacity-80",
-                        !statusText && "font-semibold",
-                      )}
-                      title={selfStatusLabel}
-                    >
-                      {selfStatusLabel}
-                    </button>
-                  )}
-                </div>
-                {userBadges.length > 0 && (
-                  <div className="shrink-0 self-start pt-0.5">
-                    <UserBadges badges={userBadges} />
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
 
-          <div className="mt-4 pb-3">
-            <div className="rounded-[11px] p-3" style={{ backgroundColor: surface, backdropFilter: "blur(14px)" }}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
+          <div className="mt-3 min-w-0">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                {identityLabel && (
+                  <div className="mb-2 truncate text-[12px] font-bold leading-none" style={{ color: accent }}>
+                    {identityLabel}
+                  </div>
+                )}
+                <div className="flex min-w-0 items-center gap-2">
+                  <h2 className="truncate text-[19px] font-extrabold leading-none tracking-normal">
+                    {profileUser.display_name || profileUser.username}
+                  </h2>
+                  {profileUser.is_bot && <BotTag className="rounded-md px-1.5 py-0.5 text-[10px]" />}
+                </div>
+                <p className="mt-1 truncate text-[13px] font-medium text-[color:var(--profile-muted)]">
+                  @{profileUser.username}
+                </p>
+                {(isSelf || statusText) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isSelf) openModal("set-status");
+                    }}
+                    disabled={!isSelf}
+                    className={cn(
+                      "mt-2 max-w-full truncate text-left text-[12px] font-semibold transition-opacity",
+                      isSelf ? "hover:opacity-85" : "cursor-default",
+                    )}
+                    style={{ color: fg }}
+                    title={selfStatusLabel}
+                  >
+                    {selfStatusLabel}
+                  </button>
+                )}
+              </div>
+              {userBadges.length > 0 && (
+                <div className="shrink-0 pt-0.5">
+                  <UserBadges badges={userBadges} />
+                </div>
+              )}
+            </div>
+
+            {renderActionRow(divider, muted)}
+
+            <div className="mt-4 space-y-3.5">
+              {(profileUser.pronouns || joinedAt) && (
+                <section>
+                  <div className="mb-2 text-[12px] font-bold uppercase tracking-normal text-[color:var(--profile-muted)]">
+                    About
+                  </div>
                   <div className="flex flex-wrap gap-1.5">
-                    <span
-                      className="inline-flex items-center rounded-full px-2 py-1 text-[11px] font-medium"
-                      style={{ backgroundColor: divider }}
-                    >
-                      {statusLabels[presence.status]}
-                    </span>
                     {profileUser.pronouns && (
                       <span
-                        className="inline-flex items-center rounded-full px-2 py-1 text-[11px] font-medium"
+                        className="inline-flex items-center rounded-full px-2 py-1 text-[11px] font-semibold"
                         style={{ backgroundColor: divider }}
                       >
                         {profileUser.pronouns}
                       </span>
                     )}
                     <span
-                      className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium"
+                      className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold"
                       style={{ backgroundColor: divider }}
                     >
                       <Calendar className="h-3 w-3" />
                       {joinedAt}
                     </span>
                   </div>
-                  {!isSelf && statusText && (
-                    <p className="mt-2 truncate text-[13px] font-medium text-[color:var(--profile-muted)]">{statusText}</p>
-                  )}
-                </div>
-              </div>
+                </section>
+              )}
 
               {bioText && (
-                <div className="mt-2">
+                <section>
+                  <div className="mb-2 text-[12px] font-bold uppercase tracking-normal text-[color:var(--profile-muted)]">
+                    Bio
+                  </div>
                   <div className="relative">
                     <p
                       className="whitespace-pre-wrap break-words text-[13px] leading-5"
-                      style={!isBioExpanded && shouldCollapseBio ? { maxHeight: "3.75rem", overflow: "hidden" } : undefined}
+                      style={!isBioExpanded && shouldCollapseBio ? { maxHeight: "5rem", overflow: "hidden" } : undefined}
                     >
                       {bioText}
                     </p>
-                    {!isBioExpanded && shouldCollapseBio && (
-                      <div
-                        className="pointer-events-none absolute inset-x-0 bottom-0 h-8"
-                        style={{ background: `linear-gradient(180deg, rgba(255,255,255,0) 0%, ${surface} 100%)` }}
-                      />
-                    )}
                   </div>
                   {shouldCollapseBio && (
                     <button
                       type="button"
-                      className="mt-1 text-[12px] font-medium transition-opacity hover:opacity-80"
+                      className="mt-1 text-[12px] font-semibold transition-opacity hover:opacity-80"
                       style={{ color: fg }}
                       onClick={() => setIsBioExpanded((prev) => !prev)}
                     >
                       {isBioExpanded ? "See less" : "See more"}
                     </button>
                   )}
-                </div>
+                </section>
               )}
 
-              {(rolePreview.length > 0 || (isSelf && selfAssignableRoles.length > 0) || (!isSelf && sharedServers.length > 0)) && (
-                <>
-                  <div className="mt-3 h-px" style={{ backgroundColor: divider }} />
-                  <div className="mt-3 space-y-2">
-                    {(rolePreview.length > 0 || (isSelf && selfAssignableRoles.length > 0)) && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {rolePreview.map((role) => {
-                          const isGradient = role.color.startsWith("linear-gradient");
-                          const background = withRoleBackgroundOpacity(role.color, 0.34);
-                          return (
-                            <span
-                              key={role.id}
-                              className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium"
-                              style={
-                                isGradient
-                                  ? { background: background, color: fg }
-                                  : { backgroundColor: background, color: fg }
-                              }
-                            >
-                              <span
-                                className="h-2 w-2 rounded-full"
-                                style={isGradient ? { background: role.color } : { backgroundColor: role.color }}
-                              />
-                              {role.name}
-                            </span>
-                          );
-                        })}
-                        {userRoles.length > rolePreview.length && (
+              {(rolePreview.length > 0 || (isSelf && selfAssignableRoles.length > 0)) && (
+                <section>
+                  <div className="mb-2 text-[12px] font-bold uppercase tracking-normal text-[color:var(--profile-muted)]">
+                    Roles
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {rolePreview.map((role) => {
+                      const isGradient = role.color.startsWith("linear-gradient");
+                      const background = withRoleBackgroundOpacity(role.color, 0.16);
+                      const roleTextColor = getReadableRoleTextColor(role.color);
+                      return (
+                        <span
+                          key={role.id}
+                          className="inline-flex max-w-full items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-semibold"
+                          style={
+                            isGradient
+                              ? { background: background, borderColor: divider, color: roleTextColor }
+                              : { backgroundColor: background, borderColor: role.color, color: fg }
+                          }
+                        >
                           <span
-                            className="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium"
-                            style={{ borderColor: divider, color: muted }}
-                          >
-                            +{userRoles.length - rolePreview.length}
-                          </span>
-                        )}
-                        {isSelf && selfAssignableRoles.length > 0 && (
-                          <Popover open={selfRolePickerOpen} onOpenChange={(next) => {
-                            setSelfRolePickerOpen(next);
-                            if (!next) setSelfRoleQuery("");
-                          }}>
-                            <PopoverTrigger asChild>
-                              <button
-                                type="button"
-                                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-opacity hover:opacity-80"
-                                style={{ backgroundColor: divider }}
-                                title="Manage self-assignable roles"
-                              >
-                                <Plus className="h-3 w-3" />
-                              </button>
-                            </PopoverTrigger>
-                            <PopoverContent
-                              align="start"
-                              className="w-[260px] border-border bg-popover p-2 text-popover-foreground shadow-xl"
-                            >
-                              <Input
-                                autoFocus
-                                value={selfRoleQuery}
-                                onChange={(e) => setSelfRoleQuery(e.target.value)}
-                                placeholder="Search roles"
-                                className="h-8 border-border bg-background text-xs text-foreground placeholder:text-muted-foreground"
-                              />
-                              <ScrollArea className="mt-2 max-h-44">
-                                <div className="space-y-0.5">
-                                  {filteredSelfAssignableRoles.map((role) => {
-                                    const checked = selfAssignedRoleIds.has(role.id);
-                                    const busy = updatingRoleId === role.id;
-                                    const isGradient = role.color.startsWith("linear-gradient");
-                                    return (
-                                      <button
-                                        key={role.id}
-                                        type="button"
-                                        disabled={busy}
-                                        onClick={() => void handleSelfRoleToggle(role.id)}
-                                        className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-secondary hover:text-foreground disabled:opacity-60"
-                                      >
-                                        <span
-                                          className={cn("flex-1 truncate font-medium", isGradient && "text-transparent")}
-                                          style={
-                                            isGradient
-                                              ? ({ background: role.color, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" } as CSSProperties)
-                                              : ({ color: role.color } as CSSProperties)
-                                          }
-                                        >
-                                          @{role.name}
-                                        </span>
-                                        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" /> : checked ? <Check className="h-3.5 w-3.5 text-primary" /> : null}
-                                      </button>
-                                    );
-                                  })}
-                                  {filteredSelfAssignableRoles.length === 0 && (
-                                    <div className="px-2 py-2 text-xs text-muted-foreground">No roles found</div>
-                                  )}
-                                </div>
-                              </ScrollArea>
-                            </PopoverContent>
-                          </Popover>
-                        )}
-                      </div>
+                            className="h-2.5 w-2.5 shrink-0 rounded-full"
+                            style={isGradient ? { background: role.color } : { backgroundColor: role.color }}
+                          />
+                          <span className="truncate">{role.name}</span>
+                        </span>
+                      );
+                    })}
+                    {userRoles.length > rolePreview.length && (
+                      <span
+                        className="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold"
+                        style={{ borderColor: divider, color: muted }}
+                      >
+                        +{userRoles.length - rolePreview.length}
+                      </span>
                     )}
-
-                    {!isSelf && sharedServers.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {sharedServers.map((server) => (
+                    {isSelf && selfAssignableRoles.length > 0 && (
+                      <Popover open={selfRolePickerOpen} onOpenChange={(next) => {
+                        setSelfRolePickerOpen(next);
+                        if (!next) setSelfRoleQuery("");
+                      }}>
+                        <PopoverTrigger asChild>
                           <button
-                            key={server.id}
                             type="button"
-                            className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg text-[10px] font-semibold transition-transform hover:scale-105"
-                            style={{ backgroundColor: divider }}
-                            title={server.name}
-                            onClick={() => {
-                              setCurrentServer(server);
-                              handleClose();
-                            }}
+                            className="inline-flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-medium transition-opacity hover:opacity-80"
+                            style={{ backgroundColor: divider, borderColor: divider }}
+                            title="Manage self-assignable roles"
                           >
-                            {server.icon_url ? (
-                              <img src={server.icon_url} alt={server.name} className="h-full w-full object-cover" />
-                            ) : (
-                              server.name.slice(0, 2).toUpperCase()
-                            )}
+                            <Plus className="h-3.5 w-3.5" />
                           </button>
-                        ))}
-                      </div>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          align="start"
+                          className="w-[260px] border-border bg-popover p-2 text-popover-foreground shadow-xl"
+                        >
+                          <Input
+                            autoFocus
+                            value={selfRoleQuery}
+                            onChange={(e) => setSelfRoleQuery(e.target.value)}
+                            placeholder="Search roles"
+                            className="h-8 border-border bg-background text-xs text-foreground placeholder:text-muted-foreground"
+                          />
+                          <ScrollArea className="mt-2 max-h-44">
+                            <div className="space-y-0.5">
+                              {filteredSelfAssignableRoles.map((role) => {
+                                const checked = selfAssignedRoleIds.has(role.id);
+                                const busy = updatingRoleId === role.id;
+                                const isGradient = role.color.startsWith("linear-gradient");
+                                return (
+                                  <button
+                                    key={role.id}
+                                    type="button"
+                                    disabled={busy}
+                                    onClick={() => void handleSelfRoleToggle(role.id)}
+                                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-secondary hover:text-foreground disabled:opacity-60"
+                                  >
+                                    <span
+                                      className={cn("flex-1 truncate font-medium", isGradient && "text-transparent")}
+                                      style={
+                                        isGradient
+                                          ? ({ background: role.color, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" } as CSSProperties)
+                                          : ({ color: role.color } as CSSProperties)
+                                      }
+                                    >
+                                      @{role.name}
+                                    </span>
+                                    {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" /> : checked ? <Check className="h-3.5 w-3.5 text-primary" /> : null}
+                                  </button>
+                                );
+                              })}
+                              {filteredSelfAssignableRoles.length === 0 && (
+                                <div className="px-2 py-2 text-xs text-muted-foreground">No roles found</div>
+                              )}
+                            </div>
+                          </ScrollArea>
+                        </PopoverContent>
+                      </Popover>
                     )}
                   </div>
-                </>
+                </section>
               )}
+
+              {!isSelf && sharedServers.length > 0 && (
+                <section>
+                  <div className="mb-2 text-[12px] font-bold uppercase tracking-normal text-[color:var(--profile-muted)]">
+                    Mutual Servers
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {sharedServers.map((server) => (
+                      <button
+                        key={server.id}
+                        type="button"
+                        className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg text-[10px] font-semibold transition-transform hover:scale-105"
+                        style={{ backgroundColor: divider }}
+                        title={server.name}
+                        onClick={() => {
+                          setCurrentServer(server);
+                          handleClose();
+                        }}
+                      >
+                        {server.icon_url ? (
+                          <img src={server.icon_url} alt={server.name} className="h-full w-full object-cover" />
+                        ) : (
+                          server.name.slice(0, 2).toUpperCase()
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              )}
+              </div>
             </div>
           </div>
         </div>
-
-        {renderActionRow(divider)}
-      </div>
     );
   };
 
@@ -1021,7 +1035,7 @@ export const UserProfilePopup = () => {
           className="max-h-[85vh] w-[calc(100vw-2rem)] max-w-[360px] overflow-hidden border-none bg-transparent p-0 shadow-none"
           onOpenAutoFocus={(event) => event.preventDefault()}
         >
-          <div className="max-h-[75vh] overflow-y-auto rounded-[11px] border border-border bg-popover shadow-2xl">
+          <div className="max-h-[75vh] overflow-y-auto rounded-[8px] border border-border bg-popover">
             {renderCard()}
           </div>
         </DialogContent>
@@ -1033,7 +1047,7 @@ export const UserProfilePopup = () => {
     <div className="fixed inset-0 z-50" onMouseDown={handleClose}>
       <div
         ref={cardRef}
-        className="absolute max-h-[70vh] w-[320px] overflow-y-auto rounded-[11px] border border-border bg-popover shadow-[0_22px_80px_rgba(0,0,0,0.45)]"
+        className="absolute max-h-[70vh] w-[292px] overflow-y-auto rounded-[8px] border border-border bg-popover"
         style={{
           left: position?.left ?? -9999,
           top: position?.top ?? -9999,

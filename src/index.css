@@ -1048,8 +1048,13 @@ body {
 }
 
 .discord-inspired .mention,
-.discord-inspired .mention-role,
 .discord-inspired .mention-self {
+  background: hsl(142 42% 42% / 0.34);
+  color: hsl(139 48% 60%);
+  font-weight: 400;
+}
+
+.discord-inspired .mention-role {
   background: hsl(142 42% 42% / 0.34);
   color: hsl(139 48% 60%);
   font-weight: 700;

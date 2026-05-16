@@ -92,7 +92,7 @@ function GifPickerContent({
       return (
         <div className={cn("grid gap-1.5", isMobile ? "grid-cols-3" : "grid-cols-3")}>
           {GIF_GRID_SKELETON.map((_, i) => (
-            <Skeleton key={i} className="aspect-square rounded-lg" />
+            <Skeleton key={i} className="aspect-square rounded-[4px]" />
           ))}
         </div>
       );
@@ -104,7 +104,7 @@ function GifPickerContent({
             <button
               key={gif.id}
               type="button"
-              className="aspect-square rounded-lg overflow-hidden hover:ring-2 ring-primary/60 transition-all focus:outline-none focus:ring-2 focus:ring-primary/60"
+              className="aspect-square overflow-hidden rounded-[4px] transition-all hover:ring-2 hover:ring-[#8e9297]/60 focus:outline-none focus:ring-2 focus:ring-[#8e9297]/60"
               onClick={() => handleGifClick(gif)}
               onMouseDown={(e) => e.preventDefault()}
             >
@@ -130,9 +130,9 @@ function GifPickerContent({
 
   return (
     <>
-
       {/* Tab bar */}
-      <div className="flex border-b border-border/30">
+      <div className="border-b border-[#202225] bg-[#24272c] px-1.5 py-1">
+        <div className="flex h-[29px] items-center gap-[3px]">
         {([
           { key: "trending" as Tab, icon: TrendingUp, label: "Trending" },
           { key: "categories" as Tab, icon: LayoutGrid, label: "Categories" },
@@ -142,41 +142,42 @@ function GifPickerContent({
             key={key}
             type="button"
             className={cn(
-              "flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-colors border-b-2",
+              "flex h-[23px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[3px] px-2 text-[11px] font-medium transition-colors",
               tab === key
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground",
+                ? "bg-[#36393f] text-[#f2f3f5]"
+                : "text-[#8e9297] hover:bg-[#303339] hover:text-[#dcddde]",
             )}
             onClick={() => {
               setTab(key);
               if (key === "categories") setSelectedCategory(null);
             }}
           >
-            <Icon className="w-3.5 h-3.5" />
+            <Icon className="h-[14px] w-[14px]" />
             {label}
           </button>
         ))}
+        </div>
       </div>
 
       {/* Search bar (trending tab only) */}
       {tab === "trending" && (
-        <div className="p-3 border-b border-border/30">
+        <div className="px-2 pb-1.5 pt-1.5">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50 pointer-events-none" />
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-[14px] w-[14px] -translate-y-1/2 text-[#7b8088]" />
             <input
               type="text"
               value={query}
               onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Search GIFs..."
-              className="w-full h-10 pl-10 pr-10 rounded-xl bg-muted/30 border border-border/30 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/30 focus:bg-muted/40 transition-all"
+              className="h-[28px] w-full rounded-full border border-[#22252a] bg-[#25282d] pl-8 pr-8 text-[11px] leading-none text-[#dcddde] outline-none placeholder:text-[#8e9297] focus:border-[#343940] focus:bg-[#24272c]"
             />
             {query && (
               <button
                 type="button"
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                className="absolute right-1.5 top-1/2 flex h-[18px] w-[18px] -translate-y-1/2 items-center justify-center rounded-full text-[#8e9297] hover:text-[#dcddde]"
                 onClick={() => handleSearchChange("")}
               >
-                <X className="w-4 h-4" />
+                <X className="h-[14px] w-[14px]" />
               </button>
             )}
           </div>
@@ -184,8 +185,8 @@ function GifPickerContent({
       )}
 
       {/* Content */}
-      <ScrollArea className={isMobile ? "flex-1 min-h-0 overflow-y-auto" : "h-[320px]"}>
-        <div className="p-2 sm:p-3">
+      <ScrollArea className={isMobile ? "min-h-0 flex-1 overflow-y-auto" : "h-[320px]"}>
+        <div className="px-2 pb-1 pt-0.5">
           {tab === "trending" && renderGifGrid(
             gifs, loading,
             <Search className="w-8 h-8 text-muted-foreground/30 mb-3" />,
@@ -195,18 +196,18 @@ function GifPickerContent({
 
           {tab === "categories" && !selectedCategory && (
             categoriesLoading ? (
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-1.5">
                 {Array.from({ length: 8 }).map((_, i) => (
-                  <Skeleton key={i} className="h-20 rounded-lg" />
+                  <Skeleton key={i} className="h-20 rounded-[4px]" />
                 ))}
               </div>
             ) : categories.length > 0 ? (
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-1.5">
                 {categories.map((cat) => (
                   <button
                     key={cat.query}
                     type="button"
-                    className="relative h-20 rounded-lg overflow-hidden group focus:outline-none focus:ring-2 focus:ring-primary/60"
+                    className="group relative h-20 overflow-hidden rounded-[4px] focus:outline-none focus:ring-2 focus:ring-[#8e9297]/60"
                     onClick={() => handleCategoryClick(cat.query)}
                     onMouseDown={(e) => e.preventDefault()}
                   >
@@ -216,8 +217,8 @@ function GifPickerContent({
                       className="w-full h-full object-cover"
                       loading="lazy"
                     />
-                    <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors flex items-center justify-center">
-                      <span className="text-white text-sm font-semibold capitalize drop-shadow-md">
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 transition-colors group-hover:bg-black/50">
+                      <span className="text-sm font-semibold capitalize text-white drop-shadow-md">
                         {cat.category}
                       </span>
                     </div>
@@ -236,10 +237,10 @@ function GifPickerContent({
             <div>
               <button
                 type="button"
-                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mb-2 transition-colors"
+                className="mb-2 flex items-center gap-1.5 text-[11px] text-[#8e9297] transition-colors hover:text-[#dcddde]"
                 onClick={handleBackToCategories}
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="h-[14px] w-[14px]" />
                 <span className="capitalize">{selectedCategory}</span>
               </button>
               {renderGifGrid(
@@ -261,14 +262,14 @@ function GifPickerContent({
       </ScrollArea>
 
       {/* Klipy Attribution */}
-      <div className="px-3 py-2 border-t border-border/30 flex items-center justify-center">
+      <div className="flex h-[36px] items-center justify-center border-t border-[#202225] bg-[#333743] px-2">
         <a
           href="https://klipy.com"
           target="_blank"
           rel="noopener noreferrer"
-          className="opacity-60 hover:opacity-80 transition-opacity"
+          className="opacity-60 transition-opacity hover:opacity-80"
         >
-          <img src={poweredByKlipy} alt="Powered by KLIPY" className="h-5" />
+          <img src={poweredByKlipy} alt="Powered by KLIPY" className="h-4" />
         </a>
       </div>
     </>
@@ -417,7 +418,7 @@ export const GifPicker = ({ children, anchor, onSelect, open, onOpenChange }: Gi
     return (
       <Drawer open={open} onOpenChange={safeOpenChange}>
         {children && <DrawerTrigger asChild>{children}</DrawerTrigger>}
-        <DrawerContent className="h-[70vh] max-h-[90vh] p-0 bg-card border-border/50 rounded-t-2xl overflow-hidden flex flex-col">
+        <DrawerContent className="flex h-[70vh] max-h-[90vh] flex-col overflow-hidden rounded-t-[4px] border-0 bg-[#282b30] p-0">
           <GifPickerContent {...contentProps} />
         </DrawerContent>
       </Drawer>
@@ -428,10 +429,10 @@ export const GifPicker = ({ children, anchor, onSelect, open, onOpenChange }: Gi
     <Popover open={open} onOpenChange={safeOpenChange}>
       {anchor ? <PopoverAnchor asChild>{anchor}</PopoverAnchor> : children && <PopoverTrigger asChild>{children}</PopoverTrigger>}
       <PopoverContent
-        className="w-[380px] p-0 bg-card border-border/50 rounded-2xl shadow-2xl overflow-hidden"
+        className="w-[304px] overflow-hidden rounded-[4px] border-0 bg-[#282b30] p-0 shadow-[0_8px_22px_rgba(0,0,0,0.35)]"
         side="top"
         align="end"
-        sideOffset={12}
+        sideOffset={8}
         onOpenAutoFocus={(e) => e.preventDefault()}
         onInteractOutside={(e) => {
           if (ignoreOutsideCloseRef.current) {

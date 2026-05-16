@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useCallback, useRef, Suspense, lazy } from "react";
 import { useNavigate, useSearchParams, useLocation, useParams, Outlet } from "react-router-dom";
-import { MotionConfig } from "framer-motion";
+import { AnimatePresence, motion, MotionConfig } from "framer-motion";
+import { Link2, Plus, X } from "lucide-react";
 import { useAuthStore, initializeAuth } from "@/stores/authStore";
 import { useUIStore } from "@/stores/uiStore";
 import { getCachedServerChannelMap, useServerStore } from "@/stores/serverStore";
@@ -83,6 +84,13 @@ import { MAINTENANCE_MODE } from "@/lib/maintenance";
 import { AlphaNoticeBanner } from "@/components/layout/AlphaNoticeBanner";
 import { ChannelHeader } from "@/components/chat/ChannelHeader";
 
+const addServerPanelTransition = {
+  type: "spring" as const,
+  stiffness: 360,
+  damping: 34,
+  mass: 0.9,
+};
+
 const AppLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -102,6 +110,7 @@ const AppLayout = () => {
   const isServerSettingsOpen = useUIStore((s) => s.isServerSettingsOpen);
   const closeMobileSidebars = useUIStore((s) => s.closeMobileSidebars);
   const activeModal = useUIStore((s) => s.activeModal);
+  const openModal = useUIStore((s) => s.openModal);
   const currentServer = useServerStore((s) => s.currentServer);
   const currentChannel = useServerStore((s) => s.currentChannel);
   const setCurrentChannel = useServerStore((s) => s.setCurrentChannel);
@@ -118,6 +127,7 @@ const AppLayout = () => {
   const joinedVoiceChannelId = useVoiceStore((s) => s.joinedChannelId);
   const authEntryPath = getAuthEntryPath();
   const [lockedLayoutIsMobile, setLockedLayoutIsMobile] = useState<boolean | null>(null);
+  const [isAddServerPanelOpen, setIsAddServerPanelOpen] = useState(false);
   const activeVoiceTextChannelId = useMemo(() => {
     if (currentChannel?.type !== "voice") return null;
     return channels.find((channel) => channel.linked_voice_channel_id === currentChannel.id)?.id ?? null;
@@ -503,10 +513,13 @@ const AppLayout = () => {
 
   const markChannelAsRead = useCallback(
     async (channelId: string, lastMessageId?: string) => {
+      serverUnreadSummary.clearReadChannels([channelId], {
+        serverChannels,
+        unreadByChannel: unreadChannels.unreadState,
+      });
       await unreadChannels.markAsRead(channelId, lastMessageId);
-      void serverUnreadSummary.refetch({ force: true });
     },
-    [serverUnreadSummary, unreadChannels],
+    [serverChannels, serverUnreadSummary, unreadChannels],
   );
 
   const markServerAsRead = useCallback(
@@ -516,8 +529,11 @@ const AppLayout = () => {
         .map(([serverId]) => serverId);
 
       serverUnreadSummary.clearServers(serverIdsToClear);
+      serverUnreadSummary.clearReadChannels(channelIds, {
+        serverChannels,
+        unreadByChannel: unreadChannels.unreadState,
+      });
       await unreadChannels.markServerAsRead(channelIds);
-      void serverUnreadSummary.refetch({ force: true });
     },
     [serverChannels, serverUnreadSummary, unreadChannels],
   );
@@ -561,6 +577,16 @@ const AppLayout = () => {
       allChannelIds,
     ],
   );
+
+  const openCreateServer = useCallback(() => {
+    setIsAddServerPanelOpen(false);
+    openModal("create-server", { defaultView: "create", fromAddServerPanel: true });
+  }, [openModal]);
+
+  const openJoinServer = useCallback(() => {
+    setIsAddServerPanelOpen(false);
+    openModal("join-server", { fromAddServerPanel: true });
+  }, [openModal]);
 
   // Show loading state - AFTER all hooks
   // Only full-screen block when we truly don't have a user yet.
@@ -664,7 +690,64 @@ const AppLayout = () => {
 
                 <div className="flex flex-1 overflow-hidden relative">
                   {/* Server list on left - hidden during full-screen settings */}
-                  {!isFullscreenSettingsOverlayOpen && <ServerSidebar />}
+                  <AnimatePresence initial={false}>
+                    {!isFullscreenSettingsOverlayOpen && isAddServerPanelOpen && (
+                      <motion.aside
+                        key="add-server-panel"
+                        initial={{ width: 0, opacity: 0, x: -18 }}
+                        animate={{ width: 228, opacity: 1, x: 0 }}
+                        exit={{ width: 0, opacity: 0, x: -18 }}
+                        transition={addServerPanelTransition}
+                        className="h-full shrink-0 overflow-hidden border-r border-white/8 bg-[#191C21]"
+                      >
+                        <div className="flex h-full w-[228px] flex-col">
+                          <div className="flex h-14 shrink-0 items-center justify-between px-4">
+                            <div className="text-[11px] font-bold uppercase tracking-wide text-[#8F949D]">
+                              Add server
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setIsAddServerPanelOpen(false)}
+                              className="flex h-8 w-8 items-center justify-center rounded-[6px] text-[#9EA3AD] transition-colors hover:bg-white/8 hover:text-white"
+                              aria-label="Close add server panel"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+
+                          <nav className="flex flex-col gap-1 px-2">
+                            <button
+                              type="button"
+                              onClick={openCreateServer}
+                              className="flex h-11 w-full items-center gap-3 rounded-[6px] px-3 text-left text-sm font-normal text-[#D7D9DF] transition-colors hover:bg-white/8 hover:text-white"
+                            >
+                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] bg-[#252932] text-[#D7D9DF]">
+                                <Plus className="h-4 w-4" />
+                              </span>
+                              <span className="truncate">Create server</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={openJoinServer}
+                              className="flex h-11 w-full items-center gap-3 rounded-[6px] px-3 text-left text-sm font-normal text-[#D7D9DF] transition-colors hover:bg-white/8 hover:text-white"
+                            >
+                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] bg-[#252932] text-[#D7D9DF]">
+                                <Link2 className="h-4 w-4" />
+                              </span>
+                              <span className="truncate">Join by invite</span>
+                            </button>
+                          </nav>
+                        </div>
+                      </motion.aside>
+                    )}
+                  </AnimatePresence>
+
+                  {!isFullscreenSettingsOverlayOpen && (
+                    <ServerSidebar
+                      isAddServerPanelOpen={isAddServerPanelOpen}
+                      onToggleAddServerPanel={() => setIsAddServerPanelOpen((open) => !open)}
+                    />
+                  )}
 
                   {/* Full-screen settings overlays - rendered on top, main layout stays mounted */}
                   {isServerSettingsOpen && (

@@ -204,6 +204,7 @@ const HorizontalFolderItem = ({
   hoveredServer,
   serverChannels,
   serverUnreadSummary,
+  unreadState,
   getServerUnreadInfo,
   getPillState,
   getServerColor,
@@ -226,6 +227,7 @@ const HorizontalFolderItem = ({
   hoveredServer: string | null;
   serverChannels: ServerChannels;
   serverUnreadSummary: Record<string, ServerUnreadSummary>;
+  unreadState: Record<string, { unreadCount: number; mentionCount: number } | undefined>;
   getServerUnreadInfo: (channelIds: string[]) => { hasUnread: boolean; totalMentions: number };
   getPillState: (serverId: string | null, hasUnread: boolean) => string;
   getServerColor: (name: string) => string;
@@ -248,13 +250,22 @@ const HorizontalFolderItem = ({
   const folderHasUnread = folderServers.some((server) => {
     const channelIds = serverChannels[server.id] || [];
     const channelUnreadInfo = getServerUnreadInfo(channelIds);
-    return serverUnreadSummary[server.id]?.hasUnread ?? channelUnreadInfo.hasUnread;
+    const hasLocalUnreadState = channelIds.some((channelId) => unreadState[channelId]);
+    return hasLocalUnreadState
+      ? channelUnreadInfo.hasUnread
+      : (serverUnreadSummary[server.id]?.hasUnread ?? channelUnreadInfo.hasUnread);
   });
 
   const folderTotalMentions = folderServers.reduce((acc, server) => {
     const channelIds = serverChannels[server.id] || [];
     const channelUnreadInfo = getServerUnreadInfo(channelIds);
-    return acc + (serverUnreadSummary[server.id]?.totalMentions ?? channelUnreadInfo.totalMentions);
+    const hasLocalUnreadState = channelIds.some((channelId) => unreadState[channelId]);
+    return (
+      acc +
+      (hasLocalUnreadState
+        ? channelUnreadInfo.totalMentions
+        : (serverUnreadSummary[server.id]?.totalMentions ?? channelUnreadInfo.totalMentions))
+    );
   }, 0);
 
   return (
@@ -320,8 +331,13 @@ const HorizontalFolderItem = ({
               const channelIds = serverChannels[server.id] || [];
               const channelUnreadInfo = getServerUnreadInfo(channelIds);
               const summaryUnreadInfo = serverUnreadSummary[server.id];
-              const hasUnread = summaryUnreadInfo?.hasUnread ?? channelUnreadInfo.hasUnread;
-              const totalMentions = summaryUnreadInfo?.totalMentions ?? channelUnreadInfo.totalMentions;
+              const hasLocalUnreadState = channelIds.some((channelId) => unreadState[channelId]);
+              const hasUnread = hasLocalUnreadState
+                ? channelUnreadInfo.hasUnread
+                : (summaryUnreadInfo?.hasUnread ?? channelUnreadInfo.hasUnread);
+              const totalMentions = hasLocalUnreadState
+                ? channelUnreadInfo.totalMentions
+                : (summaryUnreadInfo?.totalMentions ?? channelUnreadInfo.totalMentions);
               const isActive = currentServer?.id === server.id;
               const isOwner = server.owner_id === useAuthStore.getState().user?.id;
               const canManageServer = isOwner;
@@ -641,7 +657,8 @@ export const HorizontalServerSidebar = () => {
     useServerStore();
   const { setCurrentConversation } = useDMStore();
   const { openModal, activeModal, closeModal, closeServerSettings, openServerSettings } = useUIStore();
-  const { serverChannels, serverUnreadSummary, getServerUnreadInfo, markServerAsRead } = useUnreadChannelsContext();
+  const { serverChannels, serverUnreadSummary, unreadState, getServerUnreadInfo, markServerAsRead } =
+    useUnreadChannelsContext();
   const [hoveredServer, setHoveredServer] = useState<string | null>(null);
   const [tooltipsEnabled, setTooltipsEnabled] = useState(false);
   const [folderState, setFolderState] = useState<ServerFolderState>(() => loadServerFoldersState());
@@ -1215,6 +1232,7 @@ export const HorizontalServerSidebar = () => {
                   hoveredServer={hoveredServer}
                   serverChannels={serverChannels}
                   serverUnreadSummary={serverUnreadSummary}
+                  unreadState={unreadState}
                   getServerUnreadInfo={getServerUnreadInfo}
                   getPillState={getPillState}
                   getServerColor={getServerColor}
@@ -1268,8 +1286,13 @@ export const HorizontalServerSidebar = () => {
                     const channelIds = serverChannels[server.id] || [];
                     const channelUnreadInfo = getServerUnreadInfo(channelIds);
                     const summaryUnreadInfo = serverUnreadSummary[server.id];
-                    const hasUnread = summaryUnreadInfo?.hasUnread ?? channelUnreadInfo.hasUnread;
-                    const totalMentions = summaryUnreadInfo?.totalMentions ?? channelUnreadInfo.totalMentions;
+                    const hasLocalUnreadState = channelIds.some((channelId) => unreadState[channelId]);
+                    const hasUnread = hasLocalUnreadState
+                      ? channelUnreadInfo.hasUnread
+                      : (summaryUnreadInfo?.hasUnread ?? channelUnreadInfo.hasUnread);
+                    const totalMentions = hasLocalUnreadState
+                      ? channelUnreadInfo.totalMentions
+                      : (summaryUnreadInfo?.totalMentions ?? channelUnreadInfo.totalMentions);
 
                     return (
                       <HorizontalSortableServerItem

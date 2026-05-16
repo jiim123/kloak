@@ -655,7 +655,12 @@ LoadingSkeleton.displayName = "LoadingSkeleton";
 // MAIN COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const ServerSidebar = () => {
+interface ServerSidebarProps {
+  isAddServerPanelOpen?: boolean;
+  onToggleAddServerPanel?: () => void;
+}
+
+export const ServerSidebar = ({ isAddServerPanelOpen = false, onToggleAddServerPanel }: ServerSidebarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuthStore();
@@ -679,11 +684,12 @@ export const ServerSidebar = () => {
   const closeServerSettings = useUIStore((s) => s.closeServerSettings);
   const openServerSettings = useUIStore((s) => s.openServerSettings);
 
-  const { serverChannels, serverUnreadSummary, getServerUnreadInfo, markServerAsRead } = useUnreadChannelsContext();
+  const { serverChannels, serverUnreadSummary, unreadState, getServerUnreadInfo, markServerAsRead } =
+    useUnreadChannelsContext();
   const {
     totalUnread: totalDMUnread,
     hasUnread: hasDMUnread,
-    unreadState,
+    unreadState: dmUnreadState,
     markAsRead,
     getUnreadCount,
   } = useUnreadDMsContext();
@@ -825,7 +831,7 @@ export const ServerSidebar = () => {
       .filter((conv) => getUnreadCount(conv.id) > 0)
       .sort((a, b) => getUnreadCount(b.id) - getUnreadCount(a.id))
       .slice(0, 5);
-  }, [conversations, unreadState, getUnreadCount]);
+  }, [conversations, dmUnreadState, getUnreadCount]);
 
   // FIX #15: getPillState was recreated every render because it closes over
   // `hoveredServer` and `currentServer`. Memoize it with useMemo so child
@@ -1124,7 +1130,13 @@ export const ServerSidebar = () => {
     navigate("/app");
   }, [setCurrentServer, setCurrentConversation, closeServerSettings, closeModal, navigate]);
 
-  const handleAddServer = useCallback(() => openModal("create-server"), [openModal]);
+  const handleAddServer = useCallback(() => {
+    if (onToggleAddServerPanel) {
+      onToggleAddServerPanel();
+      return;
+    }
+    openModal("create-server");
+  }, [onToggleAddServerPanel, openModal]);
 
   const handleCreateFolderCtx = useCallback((e: Event) => {
     e.preventDefault();
@@ -1271,8 +1283,13 @@ export const ServerSidebar = () => {
       const channelIds = serverChannels[server.id] || EMPTY_CHANNEL_IDS;
       const channelUnreadInfo = getServerUnreadInfo(channelIds);
       const summaryUnreadInfo = serverUnreadSummary[server.id];
-      const hasUnread = summaryUnreadInfo?.hasUnread ?? channelUnreadInfo.hasUnread;
-      const totalMentions = summaryUnreadInfo?.totalMentions ?? channelUnreadInfo.totalMentions;
+      const hasLocalUnreadState = channelIds.some((channelId) => unreadState[channelId]);
+      const hasUnread = hasLocalUnreadState
+        ? channelUnreadInfo.hasUnread
+        : (summaryUnreadInfo?.hasUnread ?? channelUnreadInfo.hasUnread);
+      const totalMentions = hasLocalUnreadState
+        ? channelUnreadInfo.totalMentions
+        : (summaryUnreadInfo?.totalMentions ?? channelUnreadInfo.totalMentions);
       const isOwner = server.owner_id === user?.id;
 
       return (
@@ -1301,6 +1318,7 @@ export const ServerSidebar = () => {
       currentServer?.id,
       serverChannels,
       serverUnreadSummary,
+      unreadState,
       getServerUnreadInfo,
       user?.id,
       hoveredServer,
@@ -1543,7 +1561,11 @@ export const ServerSidebar = () => {
                 whileHover="hover"
                 initial="default"
                 onClick={handleAddServer}
-                className="relative w-11 h-11 flex items-center justify-center"
+                className={cn(
+                  "relative w-11 h-11 flex items-center justify-center",
+                  isAddServerPanelOpen && "bg-white/10",
+                )}
+                aria-pressed={isAddServerPanelOpen}
               >
                 <svg
                   viewBox="0 0 24 24"
@@ -1554,7 +1576,7 @@ export const ServerSidebar = () => {
                 >
                   <path
                     d="M6 12H18M12 6V18"
-                    stroke="#9E9EA7"
+                    stroke={isAddServerPanelOpen ? "#FFFFFF" : "#9E9EA7"}
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"

@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,6 +27,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
 import { secureUpload } from "@/lib/storageUpload";
+import { getServerInitials } from "@/lib/serverUtils";
 import { toast } from "sonner";
 
 const MAX_ICON_SIZE = 1 * 1024 * 1024; // 1MB
@@ -67,10 +68,11 @@ const CreateServerBackdrop = () => {
 
 export const CreateServerModal = () => {
   const navigate = useNavigate();
-  const { activeModal, closeModal, openModal } = useUIStore();
+  const { activeModal, modalData, closeModal, openModal } = useUIStore();
   const { createServer, updateServer, setCurrentServer, fetchChannels } = useServerStore();
   const { user } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
+  const [createdServer, setCreatedServer] = useState<{ id: string; name: string; icon_url?: string | null } | null>(null);
   const [view, setView] = useState<ModalView>("choose");
 
   // Icon upload state
@@ -84,8 +86,15 @@ export const CreateServerModal = () => {
   });
 
   const isOpen = activeModal === "create-server";
+  const defaultView = modalData?.defaultView === "create" ? "create" : "choose";
   const serverName = createForm.watch("name");
   const canContinue = serverName.trim().length > 0 && !isLoading;
+
+  // Allow callers (e.g. left add-server panel) to skip chooser.
+  useEffect(() => {
+    if (!isOpen) return;
+    setView(defaultView);
+  }, [defaultView, isOpen]);
 
   const handleIconSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -138,23 +147,32 @@ export const CreateServerModal = () => {
     try {
       const server = await createServer(data.name, user.id);
       if (server) {
+        let finalIconUrl = server.icon_url;
         if (iconFile) {
           const iconUrl = await uploadIcon(server.id, iconFile);
           if (iconUrl) {
             await updateServer(server.id, user.id, { icon_url: iconUrl });
+            finalIconUrl = iconUrl;
           }
         }
 
         await updateServer(server.id, user.id, { banner_url: "/default_server_banner.png" });
 
-        const serverWithBanner = { ...server, banner_url: "/default_server_banner.png" };
+        const serverWithBanner = {
+          ...server,
+          icon_url: finalIconUrl,
+          banner_url: "/default_server_banner.png",
+        };
 
         toast.success(`Server "${server.name}" created!`);
         setCurrentServer(serverWithBanner);
         await fetchChannels(server.id);
         await new Promise((resolve) => setTimeout(resolve, 1000));
-        navigate(`/app/servers/${server.id}`);
-        handleClose();
+        setCreatedServer({
+          id: server.id,
+          name: server.name,
+          icon_url: serverWithBanner.icon_url,
+        });
       }
     } catch (error) {
       toast.error("Failed to create server");
@@ -166,8 +184,15 @@ export const CreateServerModal = () => {
   const handleClose = () => {
     createForm.reset();
     setView("choose");
+    setCreatedServer(null);
     clearIcon();
     closeModal();
+  };
+
+  const handleEnterCreatedServer = () => {
+    if (!createdServer) return;
+    navigate(`/app/servers/${createdServer.id}`);
+    handleClose();
   };
 
   const handleJoinClick = () => {
@@ -187,7 +212,7 @@ export const CreateServerModal = () => {
         className={
           view === "create"
             ? "!left-0 !top-0 !h-screen !w-screen !max-w-none !translate-x-0 !translate-y-0 overflow-hidden border-0 bg-transparent p-0 shadow-none sm:rounded-none [&>button]:right-5 [&>button]:top-5 [&>button]:text-[#a7adb9] [&>button:hover]:text-white"
-            : "sm:max-w-xl max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-hidden bg-background/95 backdrop-blur-xl border-border/50 rounded-2xl p-0"
+            : "!left-0 !right-0 !top-auto !bottom-0 !w-full !max-w-none !translate-x-0 !translate-y-0 max-h-[85vh] overflow-hidden rounded-t-2xl rounded-b-none border-border/50 bg-background/95 p-0 backdrop-blur-xl data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-left-0 data-[state=open]:slide-in-from-top-0 data-[state=closed]:slide-out-to-left-0 data-[state=closed]:slide-out-to-top-0 data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100 sm:!left-[50%] sm:!right-auto sm:!top-[50%] sm:!bottom-auto sm:!w-full sm:!max-w-xl sm:!translate-x-[-50%] sm:!translate-y-[-50%] sm:max-h-[90vh] sm:rounded-2xl"
         }
       >
         {/* Hidden file input */}
@@ -264,6 +289,31 @@ export const CreateServerModal = () => {
                 <div className="flex min-h-[320px] w-full flex-col items-center justify-center gap-4">
                   <CheckmarkAnimation size={72} />
                   <p className="text-sm font-medium text-white">Creating server...</p>
+                </div>
+              ) : createdServer ? (
+                <div className="flex min-h-[320px] w-full flex-col items-center justify-center">
+                  <div className="mb-6 text-center">
+                    <p className="text-[28px] font-semibold leading-none text-white">Nice work!</p>
+                  </div>
+
+                  <div className="mb-4 flex h-[72px] w-[72px] items-center justify-center overflow-hidden rounded-[12px] bg-[#202329] text-[30px] font-semibold text-white">
+                    {createdServer.icon_url ? (
+                      <img src={createdServer.icon_url} alt={createdServer.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <span>{getServerInitials(createdServer.name)}</span>
+                    )}
+                  </div>
+
+                  <p className="mb-2 max-w-[280px] truncate text-center text-[32px] font-semibold leading-none text-white">{createdServer.name}</p>
+                  <p className="mb-8 text-center text-[14px] text-[#d0d4db]">Your server is personalized and ready for you.</p>
+
+                  <Button
+                    type="button"
+                    onClick={handleEnterCreatedServer}
+                    className="h-[34px] w-full max-w-[235px] rounded-[3px] bg-[#f0b800] text-[13px] font-medium text-[#1e1f22] hover:bg-[#ffca1a]"
+                  >
+                    Let&apos;s go
+                  </Button>
                 </div>
               ) : (
                 <>

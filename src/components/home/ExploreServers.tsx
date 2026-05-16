@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Users } from 'lucide-react';
+import { CheckCircle2, ChevronRight, Loader2, Search, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
@@ -27,6 +27,8 @@ type ExploreServer = {
   member_count: number;
 };
 
+type ExploreServerRow = Partial<Record<keyof ExploreServer, unknown>>;
+
 export const ExploreServers = () => {
   return <ExploreServersOriginal />;
 };
@@ -52,12 +54,8 @@ const LazyCardMount = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <div ref={cardRef}>
-      {isVisible ? (
-        children
-      ) : (
-        <div className="h-[260px] rounded-2xl border border-border/40 bg-card/30" />
-      )}
+    <div ref={cardRef} className="h-full">
+      {isVisible ? children : <div className="h-[226px] rounded-lg bg-[#262936]/70" />}
     </div>
   );
 };
@@ -79,40 +77,39 @@ const ExploreServersOriginal = () => {
     let isInitialLoad = true;
 
     const fetchServers = async () => {
-      // Only show loading spinner on initial load
       if (isInitialLoad) {
         setIsLoading(true);
       }
-      
+
       try {
-        // Use RPC for one efficient query (avoids PostgREST LATERAL server_members(count) per row)
         const { data, error } = await (supabase.rpc as (name: string, args?: object) => ReturnType<typeof supabase.rpc>)('get_explore_servers');
 
         if (error) throw error;
         if (cancelled) return;
 
         const raw = Array.isArray(data) ? data : (data ? [data] : []);
-        const mapped: ExploreServer[] = raw.map((row: any) => ({
-          id: row.id,
-          name: row.name,
-          icon_url: row.icon_url,
-          banner_url: row.banner_url,
-          invite_code: row.invite_code,
-          owner_id: row.owner_id,
-          created_at: row.created_at,
-          is_published: !!row.is_published,
-          is_verified: !!row.is_verified,
-          about: row.about ?? null,
-          member_count: Number(row.member_count) ?? 0,
-        }));
+        const mapped: ExploreServer[] = raw.map((row: ExploreServerRow) => {
+          const memberCount = Number(row.member_count);
+
+          return {
+            id: String(row.id ?? ''),
+            name: String(row.name ?? 'Untitled server'),
+            icon_url: typeof row.icon_url === 'string' ? row.icon_url : null,
+            banner_url: typeof row.banner_url === 'string' ? row.banner_url : null,
+            invite_code: String(row.invite_code ?? ''),
+            owner_id: String(row.owner_id ?? ''),
+            created_at: typeof row.created_at === 'string' ? row.created_at : null,
+            is_published: !!row.is_published,
+            is_verified: !!row.is_verified,
+            about: typeof row.about === 'string' ? row.about : null,
+            member_count: Number.isFinite(memberCount) ? memberCount : 0,
+          };
+        });
         setItems(mapped);
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.error('Failed to load Explore servers:', e);
-        // Only show error toast on initial load
         if (isInitialLoad) {
-          toast.error(e?.message || 'Failed to load public servers');
-        }
-        if (isInitialLoad) {
+          toast.error(e instanceof Error ? e.message : 'Failed to load public servers');
           setItems([]);
         }
       } finally {
@@ -123,10 +120,7 @@ const ExploreServersOriginal = () => {
       }
     };
 
-    // Initial fetch
     fetchServers();
-
-    // Poll every 30 seconds for updates (icons, banners, member counts, etc.)
     const intervalId = setInterval(fetchServers, 30000);
 
     return () => {
@@ -140,15 +134,6 @@ const ExploreServersOriginal = () => {
     if (!q) return items;
     return items.filter((s) => s.name.toLowerCase().includes(q));
   }, [items, query]);
-
-  const getInitials = getServerInitials;
-
-  const extractTags = (about: string | null) => {
-    if (!about) return [];
-    const matches = about.match(/#[\w-]+/g) ?? [];
-    // unique + cap (keeps UI tidy)
-    return Array.from(new Set(matches)).slice(0, 5);
-  };
 
   const handleJoin = async (server: ExploreServer) => {
     if (!user?.id) return;
@@ -186,335 +171,218 @@ const ExploreServersOriginal = () => {
 
   const verifiedServers = filtered.filter((s) => s.is_verified);
   const regularServers = filtered.filter((s) => !s.is_verified);
-  const regularTotalPages = Math.max(1, Math.ceil(regularServers.length / PAGE_SIZE));
+  const featuredServers = (verifiedServers.length > 0 ? verifiedServers : filtered)
+    .slice()
+    .sort((a, b) => b.member_count - a.member_count)
+    .slice(0, 8);
+  const featuredIds = new Set(featuredServers.map((s) => s.id));
+  const regularServersWithoutFeatured = regularServers.filter((s) => !featuredIds.has(s.id));
+  const regularTotalPages = Math.max(1, Math.ceil(regularServersWithoutFeatured.length / PAGE_SIZE));
   const safeRegularPage = Math.min(currentPage, regularTotalPages);
   const regularPageStart = (safeRegularPage - 1) * PAGE_SIZE;
-  const paginated = regularServers.slice(regularPageStart, regularPageStart + PAGE_SIZE);
+  const paginated = regularServersWithoutFeatured.slice(regularPageStart, regularPageStart + PAGE_SIZE);
+  const formatMemberCount = (count: number) => {
+    if (count >= 1000) {
+      const rounded = Math.round((count / 1000) * 10) / 10;
+      return `${Number.isInteger(rounded) ? rounded.toFixed(0) : rounded}k`;
+    }
 
-  return (
-    <div className="h-full flex flex-col bg-layout-members overflow-hidden">
+    return String(count);
+  };
 
-      {/* Main content */}
-      <div className="flex-1 overflow-y-auto min-h-0">
-        {/* Hero Section */}
-        <div className="relative overflow-hidden border-b border-border/50">
-          {/* Solid Background */}
-          <div className="absolute inset-0 bg-secondary" />
+  const handleCardClick = (server: ExploreServer) => {
+    if (myServerIds.has(server.id)) {
+      void handleOpenServer(server.id);
+      return;
+    }
 
-          {/* Hero Content */}
-          <div className="relative px-4 py-6 md:py-8 min-h-[160px] md:min-h-[180px] flex items-center">
-            <div className="max-w-4xl mx-auto w-full">
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="text-center space-y-4"
-              >
-                {/* Title */}
-                <motion.h1
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
-                  className="text-2xl md:text-3xl font-medium tracking-tight text-foreground"
-                >
-                  Explore{' '}
-                  <span className="text-primary relative inline-block">
-                    Servers
-                    <motion.span
-                      className="absolute -bottom-0.5 left-0 right-0 h-0.5 bg-primary/50 rounded-full"
-                      initial={{ scaleX: 0 }}
-                      animate={{ scaleX: 1 }}
-                      transition={{ duration: 0.6, delay: 0.5 }}
-                    />
-                  </span>
-                </motion.h1>
+    void handleJoin(server);
+  };
 
-                {/* Description */}
-                <motion.p
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.3 }}
-                  className="text-sm md:text-base text-foreground/90 max-w-xl mx-auto drop-shadow-md"
-                >
-                  Explore public servers and join communities that match your interests
-                </motion.p>
+  const renderCommunityCard = (server: ExploreServer, compact = false) => {
+    const joined = myServerIds.has(server.id);
 
-                {/* Search Bar */}
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.4 }}
-                  className="relative max-w-xl mx-auto pt-2"
-                >
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
-                  <Input
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search servers"
-                    className="pl-9 h-10 bg-background/80 backdrop-blur-md border border-border/50 shadow-lg"
-                  />
-                </motion.div>
-              </motion.div>
+    return (
+      <LazyCardMount key={server.id}>
+        <button
+          type="button"
+          onClick={() => handleCardClick(server)}
+          className={cn(
+            "group relative block h-full w-full overflow-hidden rounded-lg bg-[#292B31] text-left",
+            "border border-white/[0.03] transition-colors hover:bg-[#2c2f3d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70",
+            compact ? "min-h-[206px]" : "min-h-[226px]",
+          )}
+        >
+          <div className="relative h-[76px] w-full overflow-hidden bg-[#313543]">
+            {server.banner_url ? (
+              <img src={server.banner_url} alt="" className="h-full w-full object-cover" loading="lazy" />
+            ) : (
+              <div className="h-full w-full bg-gradient-to-br from-[#3b4050] via-[#2f3442] to-[#232733]" />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-b from-black/5 to-black/45" />
+          </div>
+
+          <div className="absolute left-1/2 top-9 -translate-x-1/2">
+            <div className="flex h-[64px] w-[64px] items-center justify-center overflow-hidden rounded-xl bg-[#191c25] ring-4 ring-[#262936]">
+              {server.icon_url ? (
+                <img src={server.icon_url} alt={server.name} className="h-full w-full object-cover" loading="lazy" />
+              ) : (
+                <span className="text-sm font-semibold text-white">{getServerInitials(server.name)}</span>
+              )}
             </div>
           </div>
-        </div>
 
-        {/* Server Grid */}
-        <div className="px-4 pb-6 pt-5 space-y-5">
+          <div className="flex min-h-[128px] flex-col items-center px-4 pb-4 pt-9 text-center">
+            <div className="flex max-w-full items-center justify-center gap-1.5">
+              <span className="truncate text-[15px] font-semibold leading-5 text-white">{server.name}</span>
+              {server.is_verified && <CheckCircle2 className="h-4 w-4 shrink-0 fill-sky-400 text-[#262936]" />}
+            </div>
 
-        {isLoading ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-sm text-muted-foreground text-center py-8"
-          >
-            <div className="inline-flex items-center gap-2">
-              <motion.div
-                className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              />
-              <span>Loading public servers…</span>
+            <p className="mt-2 line-clamp-3 min-h-[48px] text-[11px] leading-4 text-white/48">
+              {server.about || "Public community"}
+            </p>
+
+            <div className="mt-auto flex w-full items-center justify-between pt-3 text-[11px] font-semibold text-white/78">
+              <span className="inline-flex items-center gap-1 rounded bg-black/18 px-2 py-1">
+                <Users className="h-3 w-3" />
+                {formatMemberCount(server.member_count)} members
+              </span>
+              <Button
+                size="sm"
+                variant={joined ? "secondary" : "default"}
+                className="h-7 px-3 text-[11px]"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleCardClick(server);
+                }}
+              >
+                {joined ? "Open Server" : "Join Server"}
+              </Button>
             </div>
-          </motion.div>
-        ) : filtered.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center py-12 space-y-3"
-          >
-            <div className="inline-flex items-center justify-center p-3 rounded-full bg-muted/50">
-              <Search className="w-6 h-6 text-muted-foreground" />
+          </div>
+        </button>
+      </LazyCardMount>
+    );
+  };
+
+  return (
+    <div className="flex h-full flex-col overflow-hidden bg-[#373941]">
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="relative min-h-full overflow-hidden">
+          <div className="pointer-events-none absolute inset-0">
+            <div className="absolute inset-0 bg-[#373941]" />
+          </div>
+
+          <div className="relative mx-auto flex w-full max-w-7xl flex-col px-4 pb-8 pt-10 sm:px-6 lg:px-8">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35 }}
+              className="mx-auto flex w-full max-w-xl flex-col items-center text-center"
+            >
+              <h1 className="text-[23px] font-bold tracking-tight text-white">Find communities</h1>
+              <p className="mt-2 max-w-md text-[13px] leading-4 text-white/68">
+              Jump into our public communities to find your people, start a conversation, and find a group to hang out with.
+              </p>
+
+              <div className="relative mt-5 w-full">
+                <Search className="absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-white/52" />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search communities"
+                  className="h-12 rounded-full border-0 bg-[#1d202b] pl-11 pr-4 text-[13px] font-medium text-white placeholder:text-white/45 focus-visible:ring-1 focus-visible:ring-white/20"
+                />
+              </div>
+            </motion.div>
+
+            <div className="mt-14 space-y-5">
+              <div className="flex items-center justify-between">
+                <h2 className="text-[17px] font-bold text-white">Featured communities</h2>
+                {featuredServers.length > 4 && <ChevronRight className="h-6 w-6 text-white/80" aria-hidden="true" />}
+              </div>
+
+              {isLoading ? (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex items-center justify-center gap-2 py-12 text-sm text-white/60"
+                >
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Loading public servers...</span>
+                </motion.div>
+              ) : filtered.length === 0 ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-lg bg-[#262936]/75 px-4 py-12 text-center"
+                >
+                  <Search className="mx-auto h-6 w-6 text-white/45" />
+                  <p className="mt-3 text-sm font-medium text-white/65">No public communities found.</p>
+                  {query && <p className="mt-1 text-xs text-white/45">Try a different search term</p>}
+                </motion.div>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.35, delay: 0.1 }}
+                  className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+                >
+                  {featuredServers.map((server) => renderCommunityCard(server, true))}
+                </motion.div>
+              )}
             </div>
-            <p className="text-sm text-muted-foreground">No public servers found.</p>
-            {query && (
-              <p className="text-xs text-muted-foreground/70">Try a different search term</p>
-            )}
-          </motion.div>
-        ) : (
-          <div className="space-y-6">
-            {verifiedServers.length > 0 && (
-              <div className="space-y-3">
+
+            {!isLoading && regularServersWithoutFeatured.length > 0 && (
+              <div className="mt-8 space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-medium text-foreground">Verified Servers</h3>
-                  <span className="text-xs text-muted-foreground">{verifiedServers.length}</span>
+                  <h2 className="text-[15px] font-bold text-white">All communities</h2>
+                  <span className="text-xs font-medium text-white/45">{regularServersWithoutFeatured.length}</span>
                 </div>
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ duration: 0.5, delay: 0.5 }}
-                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+                  transition={{ duration: 0.35, delay: 0.15 }}
+                  className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
                 >
-                  {verifiedServers.map((s, index) => {
-                    const joined = myServerIds.has(s.id);
-                    const tags = extractTags(s.about);
-                    return (
-                      <LazyCardMount key={s.id}>
-                        <div
-                          className={cn(
-                            "relative rounded-2xl border border-primary/40 bg-card/40 overflow-hidden",
-                            "bg-card/40 cursor-pointer group",
-                          )}
-                        >
-                          <div className="absolute right-2 top-2 z-10 px-2 py-0.5 rounded-full bg-primary/90 text-primary-foreground text-[10px] font-medium">
-                            VERIFIED
-                          </div>
-                          <div className="relative h-24 w-full overflow-hidden">
-                            {s.banner_url ? (
-                              <img src={s.banner_url} alt="" className="h-full w-full object-cover" loading="lazy" />
-                            ) : (
-                              <div className="h-full w-full bg-gradient-to-br from-secondary/60 via-secondary/40 to-secondary/20" />
-                            )}
-                            <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/20 to-black/40" />
-                          </div>
-                          <div className="absolute left-1/2 top-[76px] -translate-x-1/2">
-                            <div className="w-16 h-16 rounded-full bg-background/80 backdrop-blur border border-border shadow-lg overflow-hidden flex items-center justify-center">
-                              <div className="w-14 h-14 rounded-full bg-secondary overflow-hidden flex items-center justify-center">
-                                {s.icon_url ? (
-                                  <img src={s.icon_url} alt={s.name} className="w-full h-full object-cover" loading="lazy" />
-                                ) : (
-                                  <span className="text-sm font-medium text-foreground">{getInitials(s.name)}</span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="px-4 pb-4 pt-12">
-                            <div className="flex flex-col items-center text-center">
-                              <div className="text-base font-medium text-foreground truncate w-full">{s.name}</div>
-                              {s.about ? (
-                                <div className="text-xs text-muted-foreground mt-1 line-clamp-4 leading-5 min-h-[5rem]">
-                                  {s.about}
-                                </div>
-                              ) : (
-                                <div className="mt-1 min-h-[5rem]" aria-hidden="true" />
-                              )}
-                            </div>
-                            {tags.length > 0 && (
-                              <div className="mt-3 flex flex-wrap gap-2 justify-center">
-                                {tags.map((t) => (
-                                  <span
-                                    key={t}
-                                    className="px-2 py-0.5 rounded-full text-[11px] bg-secondary/60 text-muted-foreground border border-border/40"
-                                  >
-                                    {t}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                            <div className="mt-3 flex items-center justify-between text-xs">
-                              <div className="text-muted-foreground flex items-center gap-1.5">
-                                <Users className="w-3.5 h-3.5" />
-                                <span>{s.member_count} member{s.member_count === 1 ? '' : 's'}</span>
-                              </div>
-                              <Button
-                                size="sm"
-                                variant={joined ? 'secondary' : 'default'}
-                                onClick={() => {
-                                  if (joined) {
-                                    void handleOpenServer(s.id);
-                                    return;
-                                  }
-                                  void handleJoin(s);
-                                }}
-                                className="h-7 px-3 text-xs"
-                              >
-                                {joined ? 'Open Server' : 'Join'}
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </LazyCardMount>
-                    );
-                  })}
+                  {paginated.map((server) => renderCommunityCard(server))}
                 </motion.div>
               </div>
             )}
 
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-medium text-foreground">All Servers</h3>
-                <span className="text-xs text-muted-foreground">{regularServers.length}</span>
+            {!isLoading && regularServersWithoutFeatured.length > 0 && (
+              <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+                <div className="text-xs font-medium text-white/45">
+                  Showing {regularPageStart + 1}-{Math.min(regularPageStart + PAGE_SIZE, regularServersWithoutFeatured.length)} of {regularServersWithoutFeatured.length}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={safeRegularPage <= 1}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    className="h-8 border-white/10 bg-white/5 text-xs text-white hover:bg-white/10 hover:text-white"
+                  >
+                    Previous
+                  </Button>
+                  <div className="min-w-[88px] text-center text-xs font-medium text-white/45">
+                    Page {safeRegularPage} of {regularTotalPages}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={safeRegularPage >= regularTotalPages}
+                    onClick={() => setCurrentPage((p) => Math.min(regularTotalPages, p + 1))}
+                    className="h-8 border-white/10 bg-white/5 text-xs text-white hover:bg-white/10 hover:text-white"
+                  >
+                    Next
+                  </Button>
+                </div>
               </div>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.6 }}
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
-              >
-                {paginated.map((s, index) => {
-                  const joined = myServerIds.has(s.id);
-                  const tags = extractTags(s.about);
-                  return (
-                    <LazyCardMount key={s.id}>
-                      <div
-                        className={cn(
-                          "relative rounded-2xl border border-border/60 bg-card/40 overflow-hidden",
-                          "bg-card/40 cursor-pointer group",
-                        )}
-                      >
-                        <div className="relative h-24 w-full overflow-hidden">
-                          {s.banner_url ? (
-                            <img src={s.banner_url} alt="" className="h-full w-full object-cover" loading="lazy" />
-                          ) : (
-                            <div className="h-full w-full bg-gradient-to-br from-secondary/60 via-secondary/40 to-secondary/20" />
-                          )}
-                          <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/20 to-black/40" />
-                        </div>
-                        <div className="absolute left-1/2 top-[76px] -translate-x-1/2">
-                          <div className="w-16 h-16 rounded-full bg-background/80 backdrop-blur border border-border shadow-lg overflow-hidden flex items-center justify-center">
-                            <div className="w-14 h-14 rounded-full bg-secondary overflow-hidden flex items-center justify-center">
-                              {s.icon_url ? (
-                                <img src={s.icon_url} alt={s.name} className="w-full h-full object-cover" loading="lazy" />
-                              ) : (
-                                <span className="text-sm font-medium text-foreground">{getInitials(s.name)}</span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="px-4 pb-4 pt-12">
-                          <div className="flex flex-col items-center text-center">
-                            <div className="text-base font-medium text-foreground truncate w-full">{s.name}</div>
-                            {s.about ? (
-                              <div className="text-xs text-muted-foreground mt-1 line-clamp-4 leading-5 min-h-[5rem]">
-                                {s.about}
-                              </div>
-                            ) : (
-                              <div className="mt-1 min-h-[5rem]" aria-hidden="true" />
-                            )}
-                          </div>
-                          {tags.length > 0 && (
-                            <div className="mt-3 flex flex-wrap gap-2 justify-center">
-                              {tags.map((t) => (
-                                <span
-                                  key={t}
-                                  className="px-2 py-0.5 rounded-full text-[11px] bg-secondary/60 text-muted-foreground border border-border/40"
-                                >
-                                  {t}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                          <div className="mt-3 flex items-center justify-between text-xs">
-                            <div className="text-muted-foreground flex items-center gap-1.5">
-                              <Users className="w-3.5 h-3.5" />
-                              <span>{s.member_count} member{s.member_count === 1 ? '' : 's'}</span>
-                            </div>
-                            <Button
-                              size="sm"
-                              variant={joined ? 'secondary' : 'default'}
-                              onClick={() => {
-                                if (joined) {
-                                  void handleOpenServer(s.id);
-                                  return;
-                                }
-                                void handleJoin(s);
-                              }}
-                              className="h-7 px-3 text-xs"
-                            >
-                              {joined ? 'Open Server' : 'Join'}
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </LazyCardMount>
-                  );
-                })}
-              </motion.div>
-            </div>
+            )}
           </div>
-        )}
-
-        {!isLoading && regularServers.length > 0 && (
-          <div className="pt-2 flex items-center justify-between gap-3 flex-wrap">
-            <div className="text-xs text-muted-foreground">
-              Showing {regularPageStart + 1}-{Math.min(regularPageStart + PAGE_SIZE, regularServers.length)} of {regularServers.length}
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={safeRegularPage <= 1}
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              >
-                Previous
-              </Button>
-              <div className="text-xs text-muted-foreground min-w-[88px] text-center">
-                Page {safeRegularPage} of {regularTotalPages}
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={safeRegularPage >= regularTotalPages}
-                onClick={() => setCurrentPage((p) => Math.min(regularTotalPages, p + 1))}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
-        )}
         </div>
       </div>
     </div>
   );
 };
-

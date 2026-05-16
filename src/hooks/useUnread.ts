@@ -31,6 +31,13 @@ type ChannelReadBroadcastRow = {
   last_read_at?: string | null;
 };
 
+type ChannelReadEventDetail = {
+  channelId?: string;
+  at?: string;
+  unreadCount?: number;
+  mentionCount?: number;
+};
+
 type BroadcastMutationPayload<T> = {
   op?: BroadcastMutationOp;
   new?: T;
@@ -350,7 +357,17 @@ export const useUnread = (serverChannelIds: string[] = []) => {
 
           // Broadcast locally so other `useUnread()` instances (ServerSidebar, etc.)
           // update immediately without waiting for realtime/poll.
-          window.dispatchEvent(new CustomEvent(CHANNEL_READ_EVENT, { detail: { channelId, at: now } }));
+          const previousUnread = unreadStateRef.current[channelId];
+          window.dispatchEvent(
+            new CustomEvent<ChannelReadEventDetail>(CHANNEL_READ_EVENT, {
+              detail: {
+                channelId,
+                at: now,
+                unreadCount: previousUnread?.unreadCount ?? 0,
+                mentionCount: previousUnread?.mentionCount ?? 0,
+              },
+            }),
+          );
         } catch (error) {
           console.error('Error marking channel as read:', error);
         } finally {
@@ -477,7 +494,17 @@ export const useUnread = (serverChannelIds: string[] = []) => {
 
       // Broadcast locally for cross-component sync.
       for (const channelId of channelIds) {
-        window.dispatchEvent(new CustomEvent(CHANNEL_READ_EVENT, { detail: { channelId, at: now } }));
+        const previousUnread = unreadStateRef.current[channelId];
+        window.dispatchEvent(
+          new CustomEvent<ChannelReadEventDetail>(CHANNEL_READ_EVENT, {
+            detail: {
+              channelId,
+              at: now,
+              unreadCount: previousUnread?.unreadCount ?? 0,
+              mentionCount: previousUnread?.mentionCount ?? 0,
+            },
+          }),
+        );
       }
     },
     [user]
@@ -554,7 +581,7 @@ export const useUnread = (serverChannelIds: string[] = []) => {
   // immediately clear that channel locally if it's in our tracked set.
   useEffect(() => {
     const handler = (e: Event) => {
-      const ev = e as CustomEvent<{ channelId?: string; at?: string }>;
+      const ev = e as CustomEvent<ChannelReadEventDetail>;
       const channelId = ev.detail?.channelId;
       const at = ev.detail?.at;
       if (!channelId) return;

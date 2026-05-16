@@ -260,7 +260,7 @@ export const EmojiPicker = ({
         key={key}
         type="button"
         className={cn(
-          "flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-[4px] transition-colors duration-100",
+          "flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-[4px] transition-colors duration-100",
           "hover:bg-[#3b3f45] focus:bg-[#3b3f45] focus:outline-none active:bg-[#454950]",
           options?.disabled && "pointer-events-none opacity-40",
           options?.className,
@@ -279,11 +279,11 @@ export const EmojiPicker = ({
         title={label}
       >
         {options?.url ? (
-          <img src={options.url} alt={label} className="h-[20px] w-[20px] object-contain" loading="lazy" />
+          <img src={options.url} alt={label} className="h-[22px] w-[22px] object-contain" loading="lazy" />
         ) : options?.textFallback ? (
           <span className="block max-w-full truncate text-[9px] leading-none text-[#b9bbbe]">{options.textFallback}</span>
         ) : (
-          <FluentEmoji emoji={emoji} size={20} />
+          <FluentEmoji emoji={emoji} size={22} />
         )}
       </button>
     );
@@ -417,7 +417,7 @@ export const EmojiPicker = ({
     <div className="flex h-full min-h-0 flex-col bg-[#282b30] text-[#dcddde]">
       {!search.trim() && (
         <div className="border-b border-[#202225] bg-[#24272c] px-1.5 py-1">
-          <div ref={categoryScrollRef} className="flex h-[25px] items-center gap-[2px] overflow-x-auto scrollbar-hide">
+          <div ref={categoryScrollRef} className="flex h-[29px] items-center gap-[3px] overflow-x-auto scrollbar-hide">
             {categories.map((cat) => {
               const Icon = CATEGORY_ICON_MAP[cat.key as keyof typeof CATEGORY_ICON_MAP] || Smile;
               const isActive = activeCategory === cat.key;
@@ -437,13 +437,13 @@ export const EmojiPicker = ({
                   }}
                   title={cat.name}
                 >
-                  <Icon className="h-4 w-4" strokeWidth={2.2} />
+                  <Icon className="h-[18px] w-[18px]" strokeWidth={2.2} />
                 </button>
               );
             })}
           </div>
           {servers.length > 0 && (
-            <div className="mt-1 flex h-[26px] items-center gap-[3px] overflow-x-auto scrollbar-hide">
+            <div className="mt-1 flex h-[30px] items-center gap-[4px] overflow-x-auto scrollbar-hide">
               {servers.map((server) => {
                 const isExternal = server.id !== serverId;
                 const isDisabled = isExternal && !allowExternalEmojis;
@@ -454,7 +454,7 @@ export const EmojiPicker = ({
                     key={server.id}
                     type="button"
                     className={cn(
-                      "flex h-[24px] w-[24px] shrink-0 items-center justify-center overflow-hidden rounded-[5px] border border-transparent bg-[#36393f] text-[8px] font-semibold text-[#dcddde] transition-colors",
+                      "flex h-[28px] w-[28px] shrink-0 items-center justify-center overflow-hidden rounded-[5px] border border-transparent bg-[#36393f] text-[9px] font-semibold text-[#dcddde] transition-colors",
                       "hover:border-[#555b64] hover:bg-[#3b3f45]",
                       isActive && "border-[#8e9297] bg-[#42464d]",
                       isDisabled && "cursor-not-allowed opacity-35 hover:border-transparent",
@@ -482,31 +482,31 @@ export const EmojiPicker = ({
 
       <div className="px-2 pb-1.5 pt-1.5">
         <div className="relative">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-[#7b8088]" />
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-[14px] w-[14px] -translate-y-1/2 text-[#7b8088]" />
           <input
             ref={searchInputRef}
             type="text"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search"
-            className="h-[24px] w-full rounded-full border border-[#22252a] bg-[#25282d] pl-7 pr-7 text-[10px] leading-none text-[#dcddde] outline-none placeholder:text-[#8e9297] focus:border-[#343940] focus:bg-[#24272c]"
+            className="h-[28px] w-full rounded-full border border-[#22252a] bg-[#25282d] pl-8 pr-8 text-[11px] leading-none text-[#dcddde] outline-none placeholder:text-[#8e9297] focus:border-[#343940] focus:bg-[#24272c]"
           />
           {search && (
             <button
               type="button"
-              className="absolute right-1.5 top-1/2 flex h-4 w-4 -translate-y-1/2 items-center justify-center rounded-full text-[#8e9297] hover:text-[#dcddde]"
+              className="absolute right-1.5 top-1/2 flex h-[18px] w-[18px] -translate-y-1/2 items-center justify-center rounded-full text-[#8e9297] hover:text-[#dcddde]"
               onClick={() => {
                 setSearch("");
                 searchInputRef.current?.focus();
               }}
             >
-              <X className="h-3 w-3" />
+              <X className="h-[14px] w-[14px]" />
             </button>
           )}
         </div>
       </div>
 
-      <ScrollArea className={isMobile ? "min-h-0 flex-1 overflow-y-auto" : "h-[196px]"}>
+      <ScrollArea className={isMobile ? "min-h-0 flex-1 overflow-y-auto" : "h-[224px]"}>
         <div className="px-2 pb-1 pt-0.5">
           {search.trim() ? (
             filteredEmojis && filteredEmojis.length > 0 ? (
@@ -544,18 +544,18 @@ export const EmojiPicker = ({
         </div>
       </ScrollArea>
 
-      <div className="flex h-[32px] shrink-0 items-center justify-between border-t border-[#202225] bg-[#333743] px-2">
+      <div className="flex h-[36px] shrink-0 items-center justify-between border-t border-[#202225] bg-[#333743] px-2">
         <div className="flex min-w-0 items-center gap-2">
-          <div className="flex h-6 w-6 items-center justify-center rounded-[4px]">
+          <div className="flex h-7 w-7 items-center justify-center rounded-[4px]">
             {previewEmoji?.url ? (
-              <img src={previewEmoji.url} alt={previewEmoji.label} className="h-[24px] w-[24px] object-contain" />
+              <img src={previewEmoji.url} alt={previewEmoji.label} className="h-[26px] w-[26px] object-contain" />
             ) : previewEmoji?.native ? (
-              <FluentEmoji emoji={previewEmoji.native} size={22} />
+              <FluentEmoji emoji={previewEmoji.native} size={24} />
             ) : (
               <Smile className="h-4 w-4 text-[#b9bbbe]" />
             )}
           </div>
-          <span className="truncate text-[10px] font-medium text-[#b9bbbe]">
+          <span className="truncate text-[11px] font-medium text-[#b9bbbe]">
             {previewEmoji?.label?.replace(/^:/, "").replace(/:$/, "") || "Select an emoji"}
           </span>
         </div>
@@ -567,7 +567,7 @@ export const EmojiPicker = ({
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerTrigger asChild>{children}</DrawerTrigger>
-        <DrawerContent className="flex h-[70vh] max-h-[90vh] flex-col overflow-hidden rounded-t-[4px] border-[#202225] bg-[#282b30] p-0">
+        <DrawerContent className="flex h-[70vh] max-h-[90vh] flex-col overflow-hidden rounded-t-[4px] border-0 bg-[#282b30] p-0">
           {pickerContent}
         </DrawerContent>
       </Drawer>
@@ -578,7 +578,7 @@ export const EmojiPicker = ({
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
       <PopoverContent
-        className="w-[272px] overflow-hidden rounded-[4px] border-[#202225] bg-[#282b30] p-0 shadow-[0_8px_22px_rgba(0,0,0,0.35)]"
+        className="w-[304px] overflow-hidden rounded-[4px] border-0 bg-[#282b30] p-0 shadow-[0_8px_22px_rgba(0,0,0,0.35)]"
         side="top"
         align="end"
         sideOffset={8}

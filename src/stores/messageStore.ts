@@ -236,6 +236,77 @@ const resolveReplyPreview = (
   };
 };
 
+const updateMessageInCaches = (
+  messagesByChannel: Record<string, ChannelMessages>,
+  messageId: string,
+  updater: (message: Message) => Message | null,
+) => {
+  let changed = false;
+  const nextByChannel: Record<string, ChannelMessages> = {};
+
+  for (const [channelId, cache] of Object.entries(messagesByChannel)) {
+    const index = cache.messages.findIndex((message) => message.id === messageId);
+    if (index === -1) {
+      nextByChannel[channelId] = cache;
+      continue;
+    }
+
+    const updated = updater(cache.messages[index]);
+    changed = true;
+    nextByChannel[channelId] = {
+      ...cache,
+      messages:
+        updated === null
+          ? cache.messages.filter((message) => message.id !== messageId)
+          : cache.messages.map((message, messageIndex) => (messageIndex === index ? updated : message)),
+    };
+  }
+
+  return changed ? nextByChannel : messagesByChannel;
+};
+
+const addReactionToMessage = (message: Message, userId: string, emoji: string): Message => {
+  const reactions = (message.reactions || []).map((reaction) => ({
+    ...reaction,
+    users: [...reaction.users],
+  }));
+  const existingGroup = reactions.find((reaction) => reaction.emoji === emoji);
+
+  if (existingGroup) {
+    if (!existingGroup.users.includes(userId)) {
+      existingGroup.count += 1;
+      existingGroup.users.push(userId);
+    }
+    existingGroup.hasReacted = true;
+  } else {
+    reactions.push({
+      emoji,
+      count: 1,
+      users: [userId],
+      hasReacted: true,
+    });
+  }
+
+  return { ...message, reactions };
+};
+
+const removeReactionFromMessage = (message: Message, userId: string, emoji: string): Message => {
+  const reactions = (message.reactions || [])
+    .map((reaction) => {
+      if (reaction.emoji !== emoji) return reaction;
+      if (!reaction.users.includes(userId)) return reaction;
+      return {
+        ...reaction,
+        count: Math.max(0, reaction.count - 1),
+        users: reaction.users.filter((entry) => entry !== userId),
+        hasReacted: false,
+      };
+    })
+    .filter((reaction) => reaction.count > 0);
+
+  return { ...message, reactions };
+};
+
 const mergeMessageIntoChannelCache = (
   messagesByChannel: Record<string, ChannelMessages>,
   channelId: string,
@@ -1305,6 +1376,15 @@ export const useMessageStore = create<MessageState>((set, get) => ({
   },
 
   editMessage: async (messageId: string, content: string, userId: string) => {
+    const editedAt = new Date().toISOString();
+    let previousMessage: Message | null = null;
+    set((state) => ({
+      messagesByChannel: updateMessageInCaches(state.messagesByChannel, messageId, (message) => {
+        previousMessage = previousMessage ?? message;
+        return { ...message, content, edited_at: editedAt };
+      }),
+    }));
+
     try {
       const { error } = await supabase.rpc("edit_message", {
         _message_id: messageId,
@@ -1313,32 +1393,25 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       });
 
       if (error) throw error;
-
-      const { currentChannelId } = get();
-      if (!currentChannelId) return;
-
-      set((state) => {
-        const existingCache = state.messagesByChannel[currentChannelId];
-        if (!existingCache) return state;
-
-        return {
-          messagesByChannel: {
-            ...state.messagesByChannel,
-            [currentChannelId]: {
-              ...existingCache,
-              messages: existingCache.messages.map((m) =>
-                m.id === messageId ? { ...m, content, edited_at: new Date().toISOString() } : m,
-              ),
-            },
-          },
-        };
-      });
     } catch (error) {
+      if (previousMessage) {
+        set((state) => ({
+          messagesByChannel: updateMessageInCaches(state.messagesByChannel, messageId, () => previousMessage),
+        }));
+      }
       console.error("Failed to edit message:", error);
     }
   },
 
   deleteMessage: async (messageId: string, userId: string) => {
+    let previousMessage: Message | null = null;
+    set((state) => ({
+      messagesByChannel: updateMessageInCaches(state.messagesByChannel, messageId, (message) => {
+        previousMessage = previousMessage ?? message;
+        return null;
+      }),
+    }));
+
     try {
       const { error } = await supabase.rpc("delete_message", {
         _message_id: messageId,
@@ -1346,30 +1419,29 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       });
 
       if (error) throw error;
-
-      const { currentChannelId } = get();
-      if (!currentChannelId) return;
-
-      set((state) => {
-        const existingCache = state.messagesByChannel[currentChannelId];
-        if (!existingCache) return state;
-
-        return {
-          messagesByChannel: {
-            ...state.messagesByChannel,
-            [currentChannelId]: {
-              ...existingCache,
-              messages: existingCache.messages.filter((m) => m.id !== messageId),
-            },
-          },
-        };
-      });
     } catch (error) {
+      if (previousMessage) {
+        set((state) => ({
+          messagesByChannel: mergeMessageIntoChannelCache(
+            state.messagesByChannel,
+            previousMessage.channel_id,
+            previousMessage,
+          ),
+        }));
+      }
       console.error("Failed to delete message:", error);
     }
   },
 
   pinMessage: async (messageId: string, isPinned: boolean, userId: string) => {
+    let previousMessage: Message | null = null;
+    set((state) => ({
+      messagesByChannel: updateMessageInCaches(state.messagesByChannel, messageId, (message) => {
+        previousMessage = previousMessage ?? message;
+        return { ...message, is_pinned: isPinned };
+      }),
+    }));
+
     try {
       const { error } = await supabase.rpc("pin_message", {
         _message_id: messageId,
@@ -1378,25 +1450,12 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       });
 
       if (error) throw error;
-
-      const { currentChannelId } = get();
-      if (!currentChannelId) return;
-
-      set((state) => {
-        const existingCache = state.messagesByChannel[currentChannelId];
-        if (!existingCache) return state;
-
-        return {
-          messagesByChannel: {
-            ...state.messagesByChannel,
-            [currentChannelId]: {
-              ...existingCache,
-              messages: existingCache.messages.map((m) => (m.id === messageId ? { ...m, is_pinned: isPinned } : m)),
-            },
-          },
-        };
-      });
     } catch (error) {
+      if (previousMessage) {
+        set((state) => ({
+          messagesByChannel: updateMessageInCaches(state.messagesByChannel, messageId, () => previousMessage),
+        }));
+      }
       console.error("Failed to pin message:", error);
     }
   },
@@ -1440,6 +1499,14 @@ export const useMessageStore = create<MessageState>((set, get) => ({
   },
 
   addReaction: async (messageId: string, userId: string, emoji: string) => {
+    let previousMessage: Message | null = null;
+    set((state) => ({
+      messagesByChannel: updateMessageInCaches(state.messagesByChannel, messageId, (message) => {
+        previousMessage = previousMessage ?? message;
+        return addReactionToMessage(message, userId, emoji);
+      }),
+    }));
+
     try {
       const { error } = await supabase.rpc("add_reaction", {
         _message_id: messageId,
@@ -1448,54 +1515,25 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       });
 
       if (error) throw error;
-
-      const { currentChannelId } = get();
-      if (!currentChannelId) return;
-
-      set((state) => {
-        const existingCache = state.messagesByChannel[currentChannelId];
-        if (!existingCache) return state;
-
-        return {
-          messagesByChannel: {
-            ...state.messagesByChannel,
-            [currentChannelId]: {
-              ...existingCache,
-              messages: existingCache.messages.map((m) => {
-                if (m.id !== messageId) return m;
-
-                const reactions = [...(m.reactions || [])];
-                const existingGroup = reactions.find((r) => r.emoji === emoji);
-
-                if (existingGroup) {
-                  if (existingGroup.users.includes(userId)) {
-                    existingGroup.hasReacted = true;
-                    return { ...m, reactions };
-                  }
-                  existingGroup.count += 1;
-                  existingGroup.users.push(userId);
-                  existingGroup.hasReacted = true;
-                } else {
-                  reactions.push({
-                    emoji,
-                    count: 1,
-                    users: [userId],
-                    hasReacted: true,
-                  });
-                }
-
-                return { ...m, reactions };
-              }),
-            },
-          },
-        };
-      });
     } catch (error) {
+      if (previousMessage) {
+        set((state) => ({
+          messagesByChannel: updateMessageInCaches(state.messagesByChannel, messageId, () => previousMessage),
+        }));
+      }
       console.error("Failed to add reaction:", error);
     }
   },
 
   removeReaction: async (messageId: string, userId: string, emoji: string) => {
+    let previousMessage: Message | null = null;
+    set((state) => ({
+      messagesByChannel: updateMessageInCaches(state.messagesByChannel, messageId, (message) => {
+        previousMessage = previousMessage ?? message;
+        return removeReactionFromMessage(message, userId, emoji);
+      }),
+    }));
+
     try {
       const { error } = await supabase.rpc("remove_reaction", {
         _message_id: messageId,
@@ -1504,42 +1542,12 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       });
 
       if (error) throw error;
-
-      const { currentChannelId } = get();
-      if (!currentChannelId) return;
-
-      set((state) => {
-        const existingCache = state.messagesByChannel[currentChannelId];
-        if (!existingCache) return state;
-
-        return {
-          messagesByChannel: {
-            ...state.messagesByChannel,
-            [currentChannelId]: {
-              ...existingCache,
-              messages: existingCache.messages.map((m) => {
-                if (m.id !== messageId) return m;
-
-                const reactions = (m.reactions || [])
-                  .map((r) => {
-                    if (r.emoji !== emoji) return r;
-                    if (!r.users.includes(userId)) return r;
-                    return {
-                      ...r,
-                      count: r.count - 1,
-                      users: r.users.filter((u) => u !== userId),
-                      hasReacted: false,
-                    };
-                  })
-                  .filter((r) => r.count > 0);
-
-                return { ...m, reactions };
-              }),
-            },
-          },
-        };
-      });
     } catch (error) {
+      if (previousMessage) {
+        set((state) => ({
+          messagesByChannel: updateMessageInCaches(state.messagesByChannel, messageId, () => previousMessage),
+        }));
+      }
       console.error("Failed to remove reaction:", error);
     }
   },

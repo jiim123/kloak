@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Users } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -22,6 +22,9 @@ type InviteDetails = {
 const INVITE_DETAILS_CACHE_TTL_MS = 2 * 60_000;
 const inviteDetailsCache = new Map<string, { data: InviteDetails | null; cachedAt: number }>();
 const inviteDetailsInFlight = new Map<string, Promise<InviteDetails | null>>();
+
+const inviteCardClass =
+  "mt-2 w-full max-w-[360px] overflow-hidden rounded-[4px] border border-[#2F3137] bg-gradient-to-br from-[#353944] to-[#453a31] shadow-sm";
 
 const getInviteDetailsCached = async (code: string): Promise<InviteDetails | null> => {
   const now = Date.now();
@@ -127,26 +130,33 @@ export const InviteLinkPreview = ({ inviteCode }: { inviteCode: string }) => {
 
   if (isLoading) {
     return (
-      <div className="mt-2 w-full max-w-sm rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="h-12 w-12 rounded-xl bg-muted/50" />
-          <div className="flex-1">
-            <div className="h-3 w-40 rounded bg-muted/50" />
-            <div className="mt-2 h-3 w-24 rounded bg-muted/30" />
+      <div className={inviteCardClass}>
+        <div className="flex items-start gap-2.5 p-2.5 pb-2">
+          <div className="min-w-0 flex-1">
+            <div className="h-3 w-44 rounded bg-white/15" />
+            <div className="mt-2 h-2.5 w-36 rounded bg-white/10" />
+            <div className="mt-1.5 h-2.5 w-24 rounded bg-white/10" />
           </div>
-          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#cfa831]/60 bg-black/20">
+            <Loader2 className="h-4 w-4 animate-spin text-[#f5c400]" />
+          </div>
         </div>
+        <div className="mx-2.5 mb-2.5 h-5 rounded-[3px] bg-[#f5c400]/70" />
       </div>
     );
   }
 
   if (!invite) {
     return (
-      <div className="mt-2 w-full max-w-sm overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
-        <div className="p-4">
-          <div className="font-medium leading-tight">Invalid invite</div>
-          <div className="mt-1 text-xs text-muted-foreground">This invite may be invalid or revoked.</div>
-          <Button variant="outline" disabled className="mt-4 w-full">
+      <div className={inviteCardClass}>
+        <div className="p-2.5">
+          <div className="text-[12px] font-semibold leading-tight text-white">Invalid invite</div>
+          <div className="mt-1 text-[11px] leading-tight text-[#cfc6b8]">This invite may be invalid or revoked.</div>
+          <Button
+            variant="ghost"
+            disabled
+            className="mt-2 h-5 w-full rounded-[3px] bg-[#f5c400]/60 px-2 text-[10px] font-semibold text-[#312719] hover:bg-[#f5c400]/60"
+          >
             Invite Unavailable
           </Button>
         </div>
@@ -154,50 +164,41 @@ export const InviteLinkPreview = ({ inviteCode }: { inviteCode: string }) => {
     );
   }
 
-  return (
-    <div className="mt-2 w-full max-w-sm overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
-      <div className="h-16 w-full overflow-hidden bg-muted/40">
-        {invite.banner_url ? (
-          <img src={invite.banner_url} alt="" className="h-full w-full object-cover" />
-        ) : (
-          <div
-            className="h-full w-full opacity-80"
-            style={{
-              backgroundImage:
-                "radial-gradient(circle at 1px 1px, hsl(var(--foreground) / 0.16) 1px, transparent 0)",
-              backgroundSize: "14px 14px",
-            }}
-          />
-        )}
-      </div>
+  const memberCountText =
+    typeof invite.member_count === "number" && invite.member_count >= 0
+      ? `${invite.member_count.toLocaleString()} members`
+      : null;
+  const title = invite.name;
 
-      <div className="p-4 pt-0">
-        <Avatar className="-mt-6 h-12 w-12 rounded-xl border-[3px] border-card shadow-sm">
-          <AvatarImage src={invite.icon_url || undefined} />
-          <AvatarFallback className="rounded-xl bg-secondary text-foreground font-semibold">
+  return (
+    <div className={inviteCardClass}>
+      <div className="flex items-center gap-2.5 p-2.5 pb-1.5">
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[13px] font-semibold leading-[16px] text-white">{title}</div>
+          <p className="mt-1.5 line-clamp-2 text-[11px] font-medium leading-[13px] text-[#ddd4c6]">
+            {invite.about || "You've been invited to join this server."}
+          </p>
+          {memberCountText && (
+            <div className="mt-2 text-[10px] font-medium leading-none text-[#b7aa99]">{memberCountText}</div>
+          )}
+        </div>
+
+        <Avatar className="h-12 w-12 shrink-0 rounded-full border border-[#cfa831] bg-[#272119] shadow-[0_0_0_1px_rgba(0,0,0,0.35)]">
+          <AvatarImage src={invite.icon_url || undefined} className="rounded-full" />
+          <AvatarFallback className="rounded-full bg-[#231e18] text-[12px] font-bold text-[#f5c400]">
             {getServerInitials(invite.name)}
           </AvatarFallback>
         </Avatar>
+      </div>
 
-        <div className="mt-3 min-w-0">
-          <div className="truncate font-medium leading-tight">{invite.name}</div>
-          <div className="mt-1 truncate text-xs text-muted-foreground">
-            You've been invited{invite.inviter_username ? ` by ${invite.inviter_username}` : ""}
-          </div>
-        </div>
-
-        {typeof invite.member_count === "number" && invite.member_count >= 0 && (
-          <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Users className="h-3.5 w-3.5" />
-            <span>{invite.member_count.toLocaleString()} members</span>
-          </div>
-        )}
-
-        {!!invite.about && <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{invite.about}</p>}
-
-        <Button onClick={handleJoin} disabled={isJoining} className="mt-4 h-8 w-full rounded-full text-xs">
-          {isJoining && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {isAlreadyMember ? "Open Server" : "Join Community"}
+      <div className="px-2.5 pb-2.5">
+        <Button
+          onClick={handleJoin}
+          disabled={isJoining}
+          className="mt-1.5 h-4 w-full rounded-[3px] bg-white px-1.5 !text-[13px] sm:!text-[13px] font-bold leading-none text-[#2f2618] shadow-none hover:bg-[#f3f4f6] disabled:bg-white/70 disabled:text-[#2f2618]/70"
+        >
+          {isJoining && <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />}
+          {isAlreadyMember ? "Open Server" : "Accept Invite"}
         </Button>
       </div>
     </div>

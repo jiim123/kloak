@@ -42,6 +42,8 @@ interface MessageListProps {
 
 const CHANNEL_ENTRY_FORCE_REFETCH_MAX_AGE_MS = 5 * 60_000;
 const INITIAL_CHANNEL_LOAD_LIMIT = 35;
+const CHANNEL_RECONCILE_LIMIT = 10;
+const ENABLE_BACKGROUND_HISTORY_PREFETCH = false;
 const BACKGROUND_HISTORY_PREFETCH_DELAY_MS = 350;
 const BACKGROUND_HISTORY_PREFETCH_LIMIT = 50;
 const LOAD_OLDER_TOP_THRESHOLD_MIN_PX = 56;
@@ -545,7 +547,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
         cached: true,
         reconcile: true,
       });
-      void fetchMessages(channelId, 50, undefined, true, true);
+      void fetchMessages(channelId, CHANNEL_RECONCILE_LIMIT, undefined, true, true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelId, manageCurrentChannel]);
@@ -603,7 +605,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     if (isRealtimeConnected) return;
     const interval = setInterval(() => {
       if (document.visibilityState !== "visible") return;
-      fetchMessagesRef.current(channelIdRef.current, 50, undefined, true, true);
+      fetchMessagesRef.current(channelIdRef.current, CHANNEL_RECONCILE_LIMIT, undefined, true, true);
     }, 30000);
     return () => clearInterval(interval);
   }, [isRealtimeConnected]);
@@ -631,7 +633,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       }, 5000);
       const hasMessages = messagesRef.current.length > 0;
       fetchMessagesRef
-        .current(channelIdRef.current, 50, undefined, true, hasMessages)
+        .current(channelIdRef.current, CHANNEL_RECONCILE_LIMIT, undefined, true, hasMessages)
         .catch(() => {})
         .finally(() => {
           isRefetching = false;
@@ -649,7 +651,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
   }, []);
 
   useEffect(() => {
-    if (isLoading || isFetchingOlder || !hasMore || msgCount === 0) return;
+    if (!ENABLE_BACKGROUND_HISTORY_PREFETCH || isLoading || isFetchingOlder || !hasMore || msgCount === 0) return;
     if (document.visibilityState !== "visible") return;
 
     const timer = window.setTimeout(() => {
@@ -660,6 +662,25 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
       window.clearTimeout(timer);
     };
   }, [channelId, hasMore, isFetchingOlder, isLoading, msgCount, prefetchOlderMessages]);
+
+  const underfilledHistoryLoadRef = useRef(false);
+
+  useEffect(() => {
+    if (isLoading || isFetchingOlder || !hasMore || msgCount === 0 || underfilledHistoryLoadRef.current) return;
+
+    const node = containerRef.current;
+    if (!node) return;
+    if (node.scrollHeight > node.clientHeight + LOAD_OLDER_TOP_THRESHOLD_MIN_PX) return;
+
+    const msgs = deduplicatedMessagesRef.current;
+    const beforeCursor = channelData?.oldestLoadedAt || msgs[0]?.created_at;
+    if (!beforeCursor) return;
+
+    underfilledHistoryLoadRef.current = true;
+    fetchMessagesRef.current(channelIdRef.current, INITIAL_CHANNEL_LOAD_LIMIT, beforeCursor).finally(() => {
+      underfilledHistoryLoadRef.current = false;
+    });
+  }, [channelData?.oldestLoadedAt, hasMore, isFetchingOlder, isLoading, msgCount]);
 
   useEffect(() => {
     if (messages.length > 0 && isNearBottomRef.current) {

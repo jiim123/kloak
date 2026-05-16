@@ -66,7 +66,8 @@ import { openUserProfileModal } from "@/lib/userProfilePopover";
 import { beginChannelNavigationPerf } from "@/lib/chatPerf";
 import type { Channel, ChannelCategory, ServerRole } from "@/types";
 
-const INITIAL_CHANNEL_PREFETCH_LIMIT = 35;
+const ENABLE_CHANNEL_HOVER_PREFETCH = false;
+const INITIAL_CHANNEL_PREFETCH_LIMIT = 10;
 
 // ─── Inline SVG Icons (memo-wrapped, zero bundle cost) ───
 
@@ -1187,7 +1188,15 @@ export const ChannelSidebar = () => {
   const canManageChannels = hasPermission("manage_channels");
   const canManageServer = hasPermission("manage_server");
   const canManageRoles = hasPermission("manage_roles");
-  const canViewMembersShortcut = hasPermission("view_channels");
+  const canViewMembersShortcut =
+    canManageServer ||
+    canManageRoles ||
+    hasPermission("kick_members") ||
+    hasPermission("ban_members") ||
+    hasPermission("mute_members") ||
+    hasPermission("deafen_members") ||
+    hasPermission("move_members") ||
+    hasPermission("manage_nicknames");
   const isAdmin = canManageChannels;
   const canSeeServerSettings = canManageChannels || canManageServer || canManageRoles;
 
@@ -1342,6 +1351,7 @@ export const ChannelSidebar = () => {
   }, []);
 
   const handlePrefetchChannel = useCallback((channel: Channel) => {
+    if (!ENABLE_CHANNEL_HOVER_PREFETCH) return;
     if (channel.type !== "text" && channel.type !== "announcement") return;
     if (channel.server_id !== currentServer?.id) return;
     if (channel.id === currentChannel?.id) return;

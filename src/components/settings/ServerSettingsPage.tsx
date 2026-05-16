@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,7 +15,6 @@ import {
   X,
   Palette,
   Plus,
-  Edit2,
   KeyRound,
   Link2,
   Copy,
@@ -79,25 +78,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragStartEvent,
-  DragEndEvent,
-  DragCancelEvent,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-  sortableKeyboardCoordinates,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const MAX_ICON_SIZE = 5 * 1024 * 1024; // 5MB
@@ -139,6 +119,20 @@ type PendingTabOp = {
   id: string;
   label: string;
   run: () => Promise<void>;
+};
+
+type ServerEmojiDraft = { id: string; name: string; file_path: string; preview_url?: string; isPending?: boolean };
+type ServerInviteDraft = {
+  id: string;
+  code: string;
+  created_at: string;
+  created_by_username: string;
+  expires_at?: string | null;
+  max_uses?: number | null;
+  uses_count?: number;
+  revoked_at: string | null;
+  revoked_by_username: string | null;
+  isPending?: boolean;
 };
 
 const getRoleIcon = (role: ServerRole) => {
@@ -418,10 +412,14 @@ const RolePermissionsEditorInline = ({
   role,
   serverId,
   stageRolePermissionsOp,
+  initialPermissionStates,
+  onPermissionStatesChange,
 }: {
   role: CustomServerRole;
   serverId: string;
   stageRolePermissionsOp?: (roleId: string, op: PendingTabOp | null) => void;
+  initialPermissionStates?: Map<Permission, boolean | null>;
+  onPermissionStatesChange?: (roleId: string, states: Map<Permission, boolean | null>) => void;
 }) => {
   const { user } = useAuthStore();
   const { rolePermissions, fetchRolePermissions, setRolePermission, deleteRolePermission } = useServerStore();
@@ -448,6 +446,11 @@ const RolePermissionsEditorInline = ({
   }, [serverId, user, fetchRolePermissions]);
 
   useEffect(() => {
+    if (initialPermissionStates) {
+      setPermissionStates(new Map(initialPermissionStates));
+      return;
+    }
+
     const states = new Map<Permission, boolean | null>();
 
     const allPermissions: Permission[] = Object.keys(PERMISSION_META) as Permission[];
@@ -463,7 +466,7 @@ const RolePermissionsEditorInline = ({
     }
 
     setPermissionStates(states);
-  }, [rolePermissions, role]);
+  }, [rolePermissions, role, initialPermissionStates]);
 
   const [confirmAction, setConfirmAction] = useState<{ type: 'deny' | 'allow'; permissions: Permission[] } | null>(null);
 
@@ -497,6 +500,10 @@ const RolePermissionsEditorInline = ({
       handleBulkSet(allPermissions, null);
     }
   };
+
+  useEffect(() => {
+    onPermissionStatesChange?.(role.id, new Map(permissionStates));
+  }, [permissionStates, role.id, onPermissionStatesChange]);
 
   useEffect(() => {
     if (!user || isLoading || !stageRolePermissionsOp) return;
@@ -716,6 +723,8 @@ export const ServerSettingsPage = () => {
     reorderRoles,
     assignRoleToMember,
     removeRoleFromMember,
+    setRolePermission,
+    fetchRolePermissions,
     updateServer,
     deleteServer,
     kickMember,
@@ -741,19 +750,9 @@ export const ServerSettingsPage = () => {
   const [memberDisplayCount, setMemberDisplayCount] = useState(50);
   const [systemChannelJoinId, setSystemChannelJoinId] = useState<string>("");
   const [systemChannelLeaveId, setSystemChannelLeaveId] = useState<string>("");
-  const [invites, setInvites] = useState<
-    Array<{
-      id: string;
-      code: string;
-      created_at: string;
-      created_by_username: string;
-      expires_at?: string | null;
-      max_uses?: number | null;
-      uses_count?: number;
-      revoked_at: string | null;
-      revoked_by_username: string | null;
-    }>
-  >([]);
+  const [invites, setInvites] = useState<ServerInviteDraft[]>([]);
+  const [pendingInviteDrafts, setPendingInviteDrafts] = useState<ServerInviteDraft[]>([]);
+  const [pendingRevokedInviteIds, setPendingRevokedInviteIds] = useState<Set<string>>(new Set());
   const [isLoadingInvites, setIsLoadingInvites] = useState(false);
   const [isCreatingInvite, setIsCreatingInvite] = useState(false);
   const [copiedInviteId, setCopiedInviteId] = useState<string | null>(null);
@@ -769,10 +768,16 @@ export const ServerSettingsPage = () => {
   const [roleColor, setRoleColor] = useState("#5865F2");
   const [roleIcon, setRoleIcon] = useState<string>("");
   const [roleIsSelfAssignable, setRoleIsSelfAssignable] = useState(false);
-  const [activeRoleId, setActiveRoleId] = useState<string | null>(null);
-  const [selectedRole, setSelectedRole] = useState<CustomServerRole | null>(null);
-  const [pendingDeletedRoleIds, setPendingDeletedRoleIds] = useState<Set<string>>(new Set());
+  const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
+  const [stagedRoles, setStagedRoles] = useState<CustomServerRole[]>([]);
+  const [baselineRoles, setBaselineRoles] = useState<CustomServerRole[]>([]);
+  const [stagedRolePermissionStates, setStagedRolePermissionStates] = useState<
+    Record<string, Map<Permission, boolean | null>>
+  >({});
   const [mobileRoleCreateView, setMobileRoleCreateView] = useState(false);
+  const stagedRolesRef = useRef<CustomServerRole[]>([]);
+  const baselineRolesRef = useRef<CustomServerRole[]>([]);
+  const stagedRolePermissionStatesRef = useRef<Record<string, Map<Permission, boolean | null>>>({});
 
   const [colorType, setColorType] = useState<"solid" | "gradient">("solid");
   const [gradientColors, setGradientColors] = useState<string[]>(["#5865F2", "#7289DA"]);
@@ -804,7 +809,7 @@ export const ServerSettingsPage = () => {
   const [emojiPreview, setEmojiPreview] = useState<string | null>(null);
   const [emojiName, setEmojiName] = useState("");
   const [isUploadingEmoji, setIsUploadingEmoji] = useState(false);
-  const [serverEmojis, setServerEmojis] = useState<Array<{ id: string; name: string; file_path: string }>>([]);
+  const [serverEmojis, setServerEmojis] = useState<ServerEmojiDraft[]>([]);
   const emojiInputRef = useRef<HTMLInputElement>(null);
   const [editingEmojiId, setEditingEmojiId] = useState<string | null>(null);
   const [editingEmojiName, setEditingEmojiName] = useState("");
@@ -815,7 +820,7 @@ export const ServerSettingsPage = () => {
   // Memoize emoji URLs to prevent regenerating on every render
   const serverEmojisWithUrls = useMemo(() => {
     return serverEmojis.map((emoji) => {
-      return { ...emoji, url: getCdnUrl("server-emojis", emoji.file_path) };
+      return { ...emoji, url: emoji.preview_url || getCdnUrl("server-emojis", emoji.file_path) };
     });
   }, [serverEmojis]);
 
@@ -834,60 +839,69 @@ export const ServerSettingsPage = () => {
       };
     }>
   >([]);
+  const [stagedMembers, setStagedMembers] = useState<ServerMember[]>([]);
 
   const server = currentServer;
 
-  const roleSensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  useEffect(() => {
+    stagedRolesRef.current = stagedRoles;
+  }, [stagedRoles]);
+
+  useEffect(() => {
+    baselineRolesRef.current = baselineRoles;
+  }, [baselineRoles]);
+
+  useEffect(() => {
+    stagedRolePermissionStatesRef.current = stagedRolePermissionStates;
+  }, [stagedRolePermissionStates]);
+
+  useEffect(() => {
+    if ((pendingTabOps.roles || []).some((op) => op.id === "roles-sync")) return;
+    setBaselineRoles(roles);
+    setStagedRoles(roles);
+    setStagedRolePermissionStates({});
+  }, [roles, pendingTabOps.roles]);
+
+  useEffect(() => {
+    if ((pendingTabOps.members || []).length > 0) return;
+    setStagedMembers(members);
+  }, [members, pendingTabOps.members]);
+
+  const visibleRoles = useMemo(() => stagedRoles, [stagedRoles]);
+  const selectedRole = useMemo(
+    () => (selectedRoleId ? stagedRoles.find((role) => role.id === selectedRoleId) || null : null),
+    [selectedRoleId, stagedRoles],
   );
+  const displayedInvites = useMemo(() => {
+    const updated = invites.map((invite) =>
+      pendingRevokedInviteIds.has(invite.id)
+        ? { ...invite, revoked_at: invite.revoked_at || new Date().toISOString(), revoked_by_username: "Pending" }
+        : invite,
+    );
+    return [...pendingInviteDrafts, ...updated];
+  }, [invites, pendingInviteDrafts, pendingRevokedInviteIds]);
 
-  const visibleRoles = useMemo(
-    () => roles.filter((r) => !pendingDeletedRoleIds.has(r.id)),
-    [roles, pendingDeletedRoleIds],
-  );
-  const roleIds = useMemo(() => visibleRoles.map((r) => r.id), [visibleRoles]);
+  const selectRoleForEditing = (role: CustomServerRole) => {
+    setSelectedRoleId(role.id);
+    setEditingRole(role);
+    setRoleName(role.name);
 
-  const handleRoleDragStart = (event: DragStartEvent) => {
-    setActiveRoleId(event.active.id as string);
+    const parsed = parseColorValue(role.color);
+    if (parsed.type === "gradient") {
+      setColorType("gradient");
+      setGradientColors(parsed.colors || ["#5865F2", "#7289DA"]);
+      setGradientAngle(parsed.angle || 135);
+    } else {
+      setColorType("solid");
+      setRoleColor(parsed.color || "#5865F2");
+    }
+    setRoleIcon(role.icon || "");
+    setRoleIsSelfAssignable(Boolean(role.is_self_assignable));
+    setMobileRoleCreateView(false);
+    setTimeout(() => roleEditContainerRef.current?.scrollTo({ top: 0 }), 0);
   };
 
-  const handleRoleDragCancel = (_event: DragCancelEvent) => {
-    setActiveRoleId(null);
-  };
-
-  const handleRoleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveRoleId(null);
-    if (!over) return;
-    if (!server?.id || !user?.id) return;
-    if (active.id === over.id) return;
-
-    const oldIndex = visibleRoles.findIndex((r) => r.id === active.id);
-    const newIndex = visibleRoles.findIndex((r) => r.id === over.id);
-    if (oldIndex === -1 || newIndex === -1) return;
-
-    const newOrder = arrayMove(visibleRoles, oldIndex, newIndex);
-    queueTabOp("roles", "Reorder roles", async () => {
-      await reorderRoles(
-        server.id,
-        user.id,
-        newOrder.map((r) => r.id),
-      );
-    });
-  };
-
-  const SortableRoleRow = ({ role }: { role: CustomServerRole }) => {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-      id: role.id,
-      data: { type: "role", role },
-    });
-
-    const style = {
-      transform: CSS.Transform.toString(transform),
-      transition,
-    } as React.CSSProperties;
-
+  const RoleRow = ({ role }: { role: CustomServerRole }) => {
     const isSelected = selectedRole?.id === role.id;
     const isGradient = role.color.startsWith("linear-gradient");
     const roleNameStyle = isGradient
@@ -901,39 +915,27 @@ export const ServerSettingsPage = () => {
 
     return (
       <div
-        ref={setNodeRef}
-        style={style}
-        onClick={() => {
-          setSelectedRole(role);
-          setEditingRole(role);
-          setRoleName(role.name);
-
-          const parsed = parseColorValue(role.color);
-          if (parsed.type === "gradient") {
-            setColorType("gradient");
-            setGradientColors(parsed.colors || ["#5865F2", "#7289DA"]);
-            setGradientAngle(parsed.angle || 135);
-          } else {
-            setColorType("solid");
-            setRoleColor(parsed.color || "#5865F2");
+        role="button"
+        tabIndex={0}
+        onPointerDown={(e) => {
+          e.preventDefault();
+          selectRoleForEditing(role);
+        }}
+        onClick={() => selectRoleForEditing(role)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            selectRoleForEditing(role);
           }
-          setRoleIcon(role.icon || "");
-          setRoleIsSelfAssignable(Boolean(role.is_self_assignable));
-          setMobileRoleCreateView(false);
-          setTimeout(() => roleEditContainerRef.current?.scrollTo({ top: 0 }), 0);
         }}
         className={cn(
           "flex items-center gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer",
-          isDragging && "opacity-80 bg-secondary/60 ring-1 ring-primary/30 shadow-md relative z-50",
           isSelected && "bg-secondary/70 ring-1 ring-primary/50",
         )}
       >
         <div
-          {...attributes}
-          {...listeners}
-          className="text-muted-foreground cursor-grab active:cursor-grabbing flex-shrink-0"
-          title="Drag to reorder"
-          onClick={(e) => e.stopPropagation()}
+          className="text-muted-foreground flex-shrink-0"
+          aria-hidden="true"
         >
           <GripVertical className="w-4 h-4" />
         </div>
@@ -1025,6 +1027,161 @@ export const ServerSettingsPage = () => {
     });
   };
 
+  const roleFieldsChanged = (a: CustomServerRole, b: CustomServerRole) =>
+    a.name !== b.name ||
+    a.color !== b.color ||
+    (a.icon || null) !== (b.icon || null) ||
+    Boolean(a.is_self_assignable) !== Boolean(b.is_self_assignable);
+
+  const handleRolePermissionStatesChange = useCallback((roleId: string, states: Map<Permission, boolean | null>) => {
+    setStagedRolePermissionStates((prev) => {
+      const current = prev[roleId];
+      const unchanged =
+        current?.size === states.size &&
+        Array.from(states.entries()).every(([permission, state]) => current.get(permission) === state);
+      if (unchanged) return prev;
+      return { ...prev, [roleId]: new Map(states) };
+    });
+  }, []);
+
+  const stageRolesSyncOp = (nextRoles: CustomServerRole[]) => {
+    const opId = "roles-sync";
+    const initialRoles = baselineRolesRef.current;
+    const initialById = new Map(initialRoles.map((role) => [role.id, role]));
+    const nextById = new Map(nextRoles.map((role) => [role.id, role]));
+    const hasRoleChanges =
+      initialRoles.some((role) => !nextById.has(role.id)) ||
+      nextRoles.some((role, index) => {
+        if (role.id.startsWith("pending-role-")) return true;
+        const initial = initialById.get(role.id);
+        return !initial || roleFieldsChanged(role, initial) || role.position !== index;
+      });
+
+    setPendingTabOps((prev) => {
+      const rolesOps = (prev.roles || []).filter((item) => item.id !== opId);
+      if (!hasRoleChanges) {
+        return { ...prev, roles: rolesOps };
+      }
+
+      const op: PendingTabOp = {
+        id: opId,
+        label: "Update roles",
+        run: async () => {
+          if (!server?.id || !user?.id) return;
+          const currentDraft = stagedRolesRef.current;
+          const baseline = baselineRolesRef.current;
+          const baselineById = new Map(baseline.map((role) => [role.id, role]));
+          const savedIdByDraftId = new Map<string, string>();
+          const permissionDrafts = stagedRolePermissionStatesRef.current;
+
+          for (const oldRole of baseline) {
+            if (!currentDraft.some((role) => role.id === oldRole.id)) {
+              await deleteRole(oldRole.id, user.id);
+            }
+          }
+
+          for (const draftRole of currentDraft) {
+            if (draftRole.id.startsWith("pending-role-")) {
+              const created = await createRole(
+                server.id,
+                user.id,
+                draftRole.name,
+                draftRole.color,
+                draftRole.icon || null,
+                Boolean(draftRole.is_self_assignable),
+              );
+              if (created?.id) {
+                savedIdByDraftId.set(draftRole.id, created.id);
+                const pendingPermissionStates = permissionDrafts[draftRole.id];
+                if (pendingPermissionStates) {
+                  const savePromises: Promise<void>[] = [];
+                  for (const [permission, state] of pendingPermissionStates.entries()) {
+                    if (state !== null) {
+                      savePromises.push(setRolePermission(server.id, user.id, permission, created.id, undefined, state));
+                    }
+                  }
+                  await Promise.all(savePromises);
+                }
+              }
+              continue;
+            }
+
+            const initial = baselineById.get(draftRole.id);
+            if (initial && roleFieldsChanged(draftRole, initial)) {
+              const updates: { name?: string; color?: string; icon?: string | null; is_self_assignable?: boolean } = {
+                name: draftRole.name,
+                color: draftRole.color,
+                icon: draftRole.icon || null,
+              };
+              if (
+                draftRole.name !== "@everyone" &&
+                Boolean(draftRole.is_self_assignable) !== Boolean(initial.is_self_assignable)
+              ) {
+                updates.is_self_assignable = Boolean(draftRole.is_self_assignable);
+              }
+              await updateRole(draftRole.id, user.id, {
+                ...updates,
+              });
+            }
+          }
+
+          const orderedRoleIds = currentDraft
+            .map((role) => savedIdByDraftId.get(role.id) || role.id)
+            .filter((roleId) => !roleId.startsWith("pending-role-"));
+          if (orderedRoleIds.length > 0) {
+            await reorderRoles(server.id, user.id, orderedRoleIds);
+          }
+          await fetchRolePermissions(server.id);
+        },
+      };
+
+      return { ...prev, roles: [op, ...rolesOps] };
+    });
+  };
+
+  useEffect(() => {
+    if (!selectedRole || activeTab !== "roles" || !roleName.trim()) return;
+
+    const finalColor = colorType === "gradient" ? createGradientString(gradientColors, gradientAngle) : roleColor;
+    const nextIcon = roleIcon.trim() ? roleIcon.trim() : null;
+    const nextSelfAssignable = selectedRole.name === "@everyone" ? false : Boolean(roleIsSelfAssignable);
+    const current = stagedRoles.find((role) => role.id === selectedRole.id);
+    if (!current) return;
+
+    const hasChanges =
+      current.name !== roleName.trim() ||
+      current.color !== finalColor ||
+      (current.icon || null) !== nextIcon ||
+      Boolean(current.is_self_assignable) !== nextSelfAssignable;
+
+    if (!hasChanges) return;
+
+    const nextRoles = stagedRoles.map((role) =>
+      role.id === selectedRole.id
+        ? {
+            ...role,
+            name: roleName.trim(),
+            color: finalColor,
+            icon: nextIcon,
+            is_self_assignable: nextSelfAssignable,
+          }
+        : role,
+    );
+    setStagedRoles(nextRoles);
+    stageRolesSyncOp(nextRoles);
+  }, [
+    activeTab,
+    selectedRole,
+    roleName,
+    roleColor,
+    roleIcon,
+    roleIsSelfAssignable,
+    colorType,
+    gradientColors,
+    gradientAngle,
+    stagedRoles,
+  ]);
+
   const saveActiveTabChanges = async () => {
     if (!server || !user) return;
 
@@ -1045,17 +1202,33 @@ export const ServerSettingsPage = () => {
       await fetchServers(user.id);
       if (activeTab === "roles") {
         await fetchRoles(server.id);
-        setPendingDeletedRoleIds(new Set());
+        const refreshedRoles = useServerStore.getState().roles;
+        setBaselineRoles(refreshedRoles);
+        setStagedRoles(refreshedRoles);
       }
-      if (activeTab === "members") await fetchMembers(server.id, { force: true, full: true });
-      if (activeTab === "invites") await loadInvites();
+      if (activeTab === "members") {
+        await fetchMembers(server.id, { force: true, full: true });
+        setStagedMembers(useServerStore.getState().members);
+      }
+      if (activeTab === "invites") {
+        await loadInvites();
+        setPendingInviteDrafts([]);
+        setPendingRevokedInviteIds(new Set());
+      }
+      if (activeTab === "bans") {
+        const { data } = await supabase.rpc("get_banned_members", {
+          _server_id: server.id,
+          _user_id: user.id,
+        });
+        setBannedMembers((data ?? []) as any);
+      }
       if (activeTab === "emojis") {
         const { data } = await supabase
           .from("server_emojis")
           .select("id, name, file_path")
           .eq("server_id", server.id)
           .order("created_at", { ascending: true });
-        setServerEmojis((data ?? []) as Array<{ id: string; name: string; file_path: string }>);
+        setServerEmojis((data ?? []) as ServerEmojiDraft[]);
       }
       toast.success("Changes saved");
     } catch (error: any) {
@@ -1188,7 +1361,11 @@ export const ServerSettingsPage = () => {
       setMinAccountAgeDraft(Number(server.min_account_age_days || 0));
       setIsPublishedDraft(!!server.is_published);
       setPendingTabOps({});
-      setPendingDeletedRoleIds(new Set());
+      setBaselineRoles(roles);
+      setStagedRoles(roles);
+      setStagedMembers(members);
+      setPendingInviteDrafts([]);
+      setPendingRevokedInviteIds(new Set());
 
       // Reset icon state
       setIconFile(null);
@@ -1212,7 +1389,7 @@ export const ServerSettingsPage = () => {
       setRoleColor("#5865F2");
       setRoleIcon("");
       setRoleIsSelfAssignable(false);
-      setSelectedRole(null);
+      setSelectedRoleId(null);
       setColorType("solid");
       setGradientColors(["#5865F2", "#7289DA"]);
       setGradientAngle(135);
@@ -1238,7 +1415,7 @@ export const ServerSettingsPage = () => {
       });
 
       if (error) throw error;
-      setInvites((data ?? []) as any);
+      setInvites((data ?? []) as ServerInviteDraft[]);
     } catch {
       setInvites([]);
     } finally {
@@ -1263,7 +1440,7 @@ export const ServerSettingsPage = () => {
 
         if (error) throw error;
         if (cancelled) return;
-        setInvites((data ?? []) as any);
+        setInvites((data ?? []) as ServerInviteDraft[]);
       } catch {
         if (!cancelled) setInvites([]);
       } finally {
@@ -1294,7 +1471,7 @@ export const ServerSettingsPage = () => {
 
         if (error) throw error;
         if (cancelled) return;
-        setServerEmojis((data ?? []) as Array<{ id: string; name: string; file_path: string }>);
+        setServerEmojis((data ?? []) as ServerEmojiDraft[]);
       } catch {
         if (!cancelled) setServerEmojis([]);
       }
@@ -1309,7 +1486,7 @@ export const ServerSettingsPage = () => {
             .select("id, name, file_path")
             .eq("server_id", server!.id)
             .order("created_at", { ascending: true });
-          setServerEmojis((data ?? []) as Array<{ id: string; name: string; file_path: string }>);
+          setServerEmojis((data ?? []) as ServerEmojiDraft[]);
         })();
       }
     };
@@ -1351,6 +1528,21 @@ export const ServerSettingsPage = () => {
       });
       if (error) throw error;
     });
+    setPendingInviteDrafts((prev) => [
+      {
+        id: `pending-invite-${crypto.randomUUID()}`,
+        code: "Pending",
+        created_at: new Date().toISOString(),
+        created_by_username: "You",
+        expires_at: null,
+        max_uses: maxUsesValue,
+        uses_count: 0,
+        revoked_at: null,
+        revoked_by_username: null,
+        isPending: true,
+      },
+      ...prev,
+    ]);
   };
 
   const revokeInvite = async (inviteId: string) => {
@@ -1364,6 +1556,11 @@ export const ServerSettingsPage = () => {
         _user_id: user.id,
       });
       if (error) throw error;
+    });
+    setPendingRevokedInviteIds((prev) => {
+      const next = new Set(prev);
+      next.add(inviteId);
+      return next;
     });
   };
 
@@ -1432,7 +1629,7 @@ export const ServerSettingsPage = () => {
         .eq("server_id", server.id);
 
       if (error) throw error;
-      if ((count ?? 0) >= MAX_SERVER_EMOJIS) {
+      if ((count ?? 0) + serverEmojis.filter((emoji) => emoji.isPending).length >= MAX_SERVER_EMOJIS) {
         toast.error(`This server already has ${MAX_SERVER_EMOJIS} custom emojis`);
         return;
       }
@@ -1450,6 +1647,7 @@ export const ServerSettingsPage = () => {
     }
 
     const selectedFile = emojiFile;
+    const previewUrl = emojiPreview;
     queueTabOp("emojis", `Upload emoji :${normalized}:`, async () => {
       const ext = (selectedFile.name.split(".").pop() || "png").toLowerCase();
       const filePath = `${server.id}/${normalized}-${crypto.randomUUID()}.${ext}`;
@@ -1468,7 +1666,22 @@ export const ServerSettingsPage = () => {
       invalidateGlobalEmojiCache();
       window.dispatchEvent(new CustomEvent("server-emojis-changed", { detail: { serverId: server.id } }));
     });
-    clearEmoji();
+    setServerEmojis((prev) => [
+      ...prev,
+      {
+        id: `pending-emoji-${crypto.randomUUID()}`,
+        name: normalized,
+        file_path: "",
+        preview_url: previewUrl || undefined,
+        isPending: true,
+      },
+    ]);
+    setEmojiFile(null);
+    setEmojiName("");
+    setEmojiPreview(null);
+    if (emojiInputRef.current) {
+      emojiInputRef.current.value = "";
+    }
   };
 
   const renameServerEmoji = async (emojiId: string, newName: string) => {
@@ -1795,6 +2008,7 @@ export const ServerSettingsPage = () => {
     queueTabOp("members", `Kick ${member.user?.username || "user"}`, async () => {
       await kickMember(server.id, member.user_id);
     });
+    setStagedMembers((prev) => prev.filter((item) => item.id !== member.id));
   };
 
   const handleBanMember = async (member: ServerMember) => {
@@ -1803,31 +2017,29 @@ export const ServerSettingsPage = () => {
     queueTabOp("members", `Ban ${member.user?.username || "user"}`, async () => {
       await banMember(server.id, member.user_id);
     });
+    setStagedMembers((prev) => prev.filter((item) => item.id !== member.id));
   };
 
   const handleCreateRole = async () => {
     if (!server || !user || !roleName.trim()) return;
 
     const finalColor = colorType === "gradient" ? createGradientString(gradientColors, gradientAngle) : roleColor;
-
-    queueTabOp("roles", `Create role ${roleName.trim()}`, async () => {
-      await createRole(
-        server.id,
-        user.id,
-        roleName.trim(),
-        finalColor,
-        roleIcon.trim() ? roleIcon.trim() : null,
-        roleIsSelfAssignable,
-      );
-    });
-    setRoleName("");
-    setRoleColor("#5865F2");
-    setRoleIcon("");
-    setRoleIsSelfAssignable(false);
-    setColorType("solid");
-    setGradientColors(["#5865F2", "#7289DA"]);
-    setGradientAngle(135);
-    setSelectedRole(null);
+    const draftRole: CustomServerRole = {
+      id: `pending-role-${crypto.randomUUID()}`,
+      server_id: server.id,
+      name: roleName.trim(),
+      color: finalColor,
+      icon: roleIcon.trim() ? roleIcon.trim() : null,
+      is_self_assignable: roleIsSelfAssignable,
+      position: stagedRoles.length,
+      created_at: new Date().toISOString(),
+    };
+    const nextRoles = [...stagedRoles, draftRole];
+    setStagedRoles(nextRoles);
+    setSelectedRoleId(draftRole.id);
+    setEditingRole(draftRole);
+    stageRolesSyncOp(nextRoles);
+    if (isMobile) setMobileRoleCreateView(false);
   };
 
   const handleUpdateRole = async () => {
@@ -1847,9 +2059,21 @@ export const ServerSettingsPage = () => {
     if (selfAssignableChanged) {
       updates.is_self_assignable = nextSelfAssignable;
     }
-    queueTabOp("roles", `Update role ${selectedRole.name}`, async () => {
-      await updateRole(selectedRole.id, user.id, updates);
-    });
+    const nextRoles = stagedRoles.map((role) =>
+      role.id === selectedRole.id
+        ? {
+            ...role,
+            name: updates.name ?? role.name,
+            color: updates.color ?? role.color,
+            icon: updates.icon !== undefined ? updates.icon : role.icon,
+            is_self_assignable:
+              updates.is_self_assignable !== undefined ? updates.is_self_assignable : role.is_self_assignable,
+          }
+        : role,
+    );
+    setStagedRoles(nextRoles);
+    setEditingRole(nextRoles.find((role) => role.id === selectedRole.id) || null);
+    stageRolesSyncOp(nextRoles);
   };
 
   const handleDeleteRole = async (role: CustomServerRole) => {
@@ -1857,15 +2081,10 @@ export const ServerSettingsPage = () => {
 
     if (!confirm(`Are you sure you want to delete the role "${role.name}"?`)) return;
 
-    queueTabOp("roles", `Delete role ${role.name}`, async () => {
-      await deleteRole(role.id, user.id);
-    });
-    setPendingDeletedRoleIds((prev) => {
-      const next = new Set(prev);
-      next.add(role.id);
-      return next;
-    });
-    setSelectedRole(null);
+    const nextRoles = stagedRoles.filter((item) => item.id !== role.id).map((item, index) => ({ ...item, position: index }));
+    setStagedRoles(nextRoles);
+    stageRolesSyncOp(nextRoles);
+    setSelectedRoleId(null);
     setEditingRole(null);
     setRoleName("");
     setRoleColor("#5865F2");
@@ -1882,6 +2101,18 @@ export const ServerSettingsPage = () => {
     queueTabOp("members", `Assign ${role.name} to ${member.user?.username || "user"}`, async () => {
       await assignRoleToMember(member.id, role.id, user.id);
     });
+    setStagedMembers((prev) =>
+      prev.map((item) =>
+        item.id === member.id
+          ? {
+              ...item,
+              roles: (item.roles || []).some((existing) => existing.id === role.id)
+                ? item.roles || []
+                : [...(item.roles || []), role].sort((a, b) => a.position - b.position),
+            }
+          : item,
+      ),
+    );
   };
 
   const handleRemoveRole = async (member: ServerMember, role: CustomServerRole) => {
@@ -1890,6 +2121,11 @@ export const ServerSettingsPage = () => {
     queueTabOp("members", `Remove ${role.name} from ${member.user?.username || "user"}`, async () => {
       await removeRoleFromMember(member.id, role.id, user.id);
     });
+    setStagedMembers((prev) =>
+      prev.map((item) =>
+        item.id === member.id ? { ...item, roles: (item.roles || []).filter((existing) => existing.id !== role.id) } : item,
+      ),
+    );
   };
 
   if (!server) {
@@ -2369,7 +2605,7 @@ export const ServerSettingsPage = () => {
             <TabsContent value="members" className="m-0 px-[40px] py-[32px] pr-[84px]">
               <h2 className="text-xl font-medium mb-1">Members</h2>
               <p className="text-sm text-muted-foreground mb-4">
-                {members.length} member{members.length !== 1 ? "s" : ""}
+                {stagedMembers.length} member{stagedMembers.length !== 1 ? "s" : ""}
               </p>
 
               {/* Search */}
@@ -2387,13 +2623,13 @@ export const ServerSettingsPage = () => {
                 {(() => {
                   const searchLower = memberSearch.toLowerCase();
                   const filtered = memberSearch
-                    ? members.filter((m) => {
+                    ? stagedMembers.filter((m) => {
                         const username = m.user?.username?.toLowerCase() || "";
                         const display = m.user?.display_name?.toLowerCase() || "";
                         const nick = m.nickname?.toLowerCase() || "";
                         return username.includes(searchLower) || display.includes(searchLower) || nick.includes(searchLower);
                       })
-                    : members;
+                    : stagedMembers;
                   const visible = filtered.slice(0, memberDisplayCount);
                   const hasMore = filtered.length > memberDisplayCount;
 
@@ -2454,7 +2690,7 @@ export const ServerSettingsPage = () => {
                               (() => {
                                 const targetIsOwner = member.role === "owner";
                                 const actorCanModerate = canModerate(member.roles, member.role as any, targetIsOwner);
-                                const showRoles = canManageRoles && actorCanModerate && roles.length > 0;
+                                const showRoles = canManageRoles && actorCanModerate && visibleRoles.length > 0;
                                 const showKick = canKickMembers && actorCanModerate;
                                 const showBan = canBanMembers && actorCanModerate;
                                 if (!showRoles && !showKick && !showBan) return null;
@@ -2544,10 +2780,18 @@ export const ServerSettingsPage = () => {
             {/* Roles Tab */}
             <TabsContent value="roles" className="m-0 h-full pr-[84px]">
               {canManageRoles ? (
-                <div className="flex h-full">
-                  {/* Left Side - Roles List (hidden on mobile when editing) */}
-                  {(!isMobile || (!selectedRole && !mobileRoleCreateView)) && (
-                  <div className={cn("border-r border-border flex flex-col", isMobile ? "w-full" : "w-64")}>
+                <div className={cn("flex h-full", isMobile && "flex-col")}>
+                  {/* Roles List */}
+                  <div
+                    className={cn(
+                      "border-border flex flex-col flex-shrink-0",
+                      isMobile
+                        ? selectedRole || mobileRoleCreateView
+                          ? "w-full h-56 border-b"
+                          : "w-full h-full border-b"
+                        : "w-64 border-r",
+                    )}
+                  >
                     <div className="p-4 border-b border-border">
                       <div className="flex items-center justify-between mb-2">
                         <h4 className="text-sm font-medium">Roles</h4>
@@ -2555,7 +2799,7 @@ export const ServerSettingsPage = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => {
-                            setSelectedRole(null);
+                            setSelectedRoleId(null);
                             setEditingRole(null);
                             setRoleName("");
                             setRoleColor("#5865F2");
@@ -2575,23 +2819,13 @@ export const ServerSettingsPage = () => {
                       <p className="text-xs text-muted-foreground">Select a role to edit</p>
                     </div>
                     <ScrollArea className="flex-1">
-                      {roles.length > 0 ? (
+                      {visibleRoles.length > 0 ? (
                         <div className="p-2">
-                          <DndContext
-                            sensors={roleSensors}
-                            collisionDetection={closestCenter}
-                            onDragStart={handleRoleDragStart}
-                            onDragEnd={handleRoleDragEnd}
-                            onDragCancel={handleRoleDragCancel}
-                          >
-                            <SortableContext items={roleIds} strategy={verticalListSortingStrategy}>
-                              <div className="space-y-1">
-                                {visibleRoles.map((role) => (
-                                  <SortableRoleRow key={role.id} role={role} />
-                                ))}
-                              </div>
-                            </SortableContext>
-                          </DndContext>
+                          <div className="space-y-1">
+                            {visibleRoles.map((role) => (
+                              <RoleRow key={role.id} role={role} />
+                            ))}
+                          </div>
                         </div>
                       ) : (
                         <div className="flex flex-col items-center justify-center py-8 text-center px-4">
@@ -2601,7 +2835,6 @@ export const ServerSettingsPage = () => {
                       )}
                     </ScrollArea>
                   </div>
-                  )}
 
                   {/* Right Side - Role Settings (full screen on mobile) */}
                   {(!isMobile || selectedRole || mobileRoleCreateView) && (
@@ -2614,7 +2847,7 @@ export const ServerSettingsPage = () => {
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              setSelectedRole(null);
+                              setSelectedRoleId(null);
                               setEditingRole(null);
                               setRoleName("");
                               setRoleColor("#5865F2");
@@ -2727,14 +2960,10 @@ export const ServerSettingsPage = () => {
                           )}
 
                           <div className="flex items-center gap-2 pt-2">
-                            <Button onClick={handleUpdateRole} disabled={!roleName.trim()} size="sm">
-                              <Edit2 className="w-4 h-4 mr-2" />
-                              Save Details
-                            </Button>
                             <Button
                               variant="outline"
                               onClick={() => {
-                                setSelectedRole(null);
+                                setSelectedRoleId(null);
                                 setEditingRole(null);
                                 setRoleName("");
                                 setRoleColor("#5865F2");
@@ -2762,7 +2991,13 @@ export const ServerSettingsPage = () => {
                           <RolePermissionsEditorInline
                             role={selectedRole}
                             serverId={server.id}
-                            stageRolePermissionsOp={stageRolePermissionsOp}
+                            stageRolePermissionsOp={selectedRole.id.startsWith("pending-role-") ? undefined : stageRolePermissionsOp}
+                            initialPermissionStates={
+                              selectedRole.id.startsWith("pending-role-")
+                                ? stagedRolePermissionStates[selectedRole.id]
+                                : undefined
+                            }
+                            onPermissionStatesChange={handleRolePermissionStatesChange}
                           />
                         </div>
 
@@ -2979,10 +3214,10 @@ export const ServerSettingsPage = () => {
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                     </div>
-                  ) : invites.length > 0 ? (
+                  ) : displayedInvites.length > 0 ? (
                     <ScrollArea className="h-[calc(100vh-16rem)] pr-4">
                       <div className="space-y-2">
-                        {invites.map((invite) => {
+                        {displayedInvites.map((invite) => {
                           const isRevoked = !!invite.revoked_at;
                           const isExpired = !!invite.expires_at && new Date(invite.expires_at).getTime() <= Date.now();
                           const usesCount = invite.uses_count ?? 0;
@@ -3015,6 +3250,11 @@ export const ServerSettingsPage = () => {
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span className="font-mono text-sm tracking-widest">{invite.code}</span>
+                                  {invite.isPending && (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+                                      Pending save
+                                    </Badge>
+                                  )}
                                   {isRevoked && (
                                     <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
                                       Revoked
@@ -3055,6 +3295,7 @@ export const ServerSettingsPage = () => {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => copyInviteLink(invite.code, invite.id)}
+                                  disabled={invite.isPending}
                                   className="h-8 px-3"
                                 >
                                   {copiedInviteId === invite.id ? (
@@ -3063,7 +3304,7 @@ export const ServerSettingsPage = () => {
                                     <Copy className="w-4 h-4" />
                                   )}
                                 </Button>
-                                {!isRevoked && (
+                                {!isRevoked && !invite.isPending && (
                                   <Button
                                     type="button"
                                     size="sm"
@@ -3127,6 +3368,7 @@ export const ServerSettingsPage = () => {
                                 });
                                 if (error) throw error;
                               });
+                              setBannedMembers((prev) => prev.filter((item) => item.id !== member.id));
                             }}
                             className="text-xs h-8 px-3 flex-shrink-0"
                           >
@@ -3275,14 +3517,15 @@ export const ServerSettingsPage = () => {
                             size="sm"
                             className="text-xs h-7"
                             onClick={() => {
-                              if (selectedEmojiIds.size === serverEmojis.length) {
+                              const selectableEmojiIds = serverEmojis.filter((e) => !e.isPending).map((e) => e.id);
+                              if (selectedEmojiIds.size === selectableEmojiIds.length) {
                                 setSelectedEmojiIds(new Set());
                               } else {
-                                setSelectedEmojiIds(new Set(serverEmojis.map((e) => e.id)));
+                                setSelectedEmojiIds(new Set(selectableEmojiIds));
                               }
                             }}
                           >
-                            {selectedEmojiIds.size === serverEmojis.length ? "Deselect All" : "Select All"}
+                            {selectedEmojiIds.size === serverEmojis.filter((e) => !e.isPending).length ? "Deselect All" : "Select All"}
                           </Button>
                           {selectedEmojiIds.size > 0 && (
                             <Button
@@ -3328,6 +3571,7 @@ export const ServerSettingsPage = () => {
                                 onClick={
                                   isMultiSelectMode
                                     ? () => {
+                                        if (emoji.isPending) return;
                                         setSelectedEmojiIds((prev) => {
                                           const next = new Set(prev);
                                           if (next.has(emoji.id)) next.delete(emoji.id);
@@ -3342,7 +3586,9 @@ export const ServerSettingsPage = () => {
                                   <div className="w-6 flex items-center justify-center">
                                     <Checkbox
                                       checked={selectedEmojiIds.has(emoji.id)}
+                                      disabled={emoji.isPending}
                                       onCheckedChange={() => {
+                                        if (emoji.isPending) return;
                                         setSelectedEmojiIds((prev) => {
                                           const next = new Set(prev);
                                           if (next.has(emoji.id)) next.delete(emoji.id);
@@ -3383,7 +3629,9 @@ export const ServerSettingsPage = () => {
                                       />
                                     </form>
                                   ) : (
-                                    <span className="text-sm font-medium">:{emoji.name}:</span>
+                                    <span className="text-sm font-medium">
+                                      :{emoji.name}:{emoji.isPending ? " (pending save)" : ""}
+                                    </span>
                                   )}
                                 </div>
                                 {!isMultiSelectMode && (
@@ -3392,6 +3640,7 @@ export const ServerSettingsPage = () => {
                                       type="button"
                                       variant="ghost"
                                       size="sm"
+                                      disabled={emoji.isPending}
                                       onClick={() => {
                                         setEditingEmojiId(emoji.id);
                                         setEditingEmojiName(emoji.name);
@@ -3405,6 +3654,7 @@ export const ServerSettingsPage = () => {
                                       type="button"
                                       variant="ghost"
                                       size="sm"
+                                      disabled={emoji.isPending}
                                       onClick={() => deleteServerEmoji(emoji)}
                                       className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
                                       title="Delete emoji"
