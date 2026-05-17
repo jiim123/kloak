@@ -132,6 +132,7 @@ export interface Server {
   icon_url: string | null;
   banner_url: string | null;
   is_published: boolean;
+  is_verified?: boolean;
   is_nsfw?: boolean;
   about: string | null;
   owner_id: string;

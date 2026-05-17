@@ -1,16 +1,12 @@
 import { useState, useCallback, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Search, X, Loader2, Hash, MessageSquare } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Label } from '@/components/ui/label';
 import { useUIStore } from '@/stores/uiStore';
 import { useServerStore } from '@/stores/serverStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -39,7 +35,7 @@ export const SearchModal = () => {
   const { activeModal, closeModal } = useUIStore();
   const { currentServer, setCurrentChannel, channels } = useServerStore();
   const currentUserId = useAuthStore((s) => s.user?.id);
-  
+
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -47,7 +43,6 @@ export const SearchModal = () => {
 
   const isOpen = activeModal === 'search';
 
-  // Reset on close
   useEffect(() => {
     if (!isOpen) {
       setQuery('');
@@ -61,30 +56,26 @@ export const SearchModal = () => {
 
     setIsLoading(true);
     setHasSearched(true);
-    
+
     try {
-      // Parse search filters
       let searchQuery = query;
       let channelFilter: string | undefined;
       let userFilter: string | undefined;
 
-      // Parse from:username
       const fromMatch = query.match(/from:(\w+)/);
       if (fromMatch) {
         userFilter = fromMatch[1];
         searchQuery = searchQuery.replace(fromMatch[0], '').trim();
       }
 
-      // Parse in:channel
       const inMatch = query.match(/in:(\w+)/);
       if (inMatch) {
         const channelName = inMatch[1].toLowerCase();
-        const channel = channels.find(c => c.name.toLowerCase() === channelName);
+        const channel = channels.find((c) => c.name.toLowerCase() === channelName);
         if (channel) channelFilter = channel.id;
         searchQuery = searchQuery.replace(inMatch[0], '').trim();
       }
 
-      // Use the database search function
       const { data, error } = await supabase.rpc('search_messages', {
         search_query: searchQuery || query,
         server_filter: currentServer.id,
@@ -95,20 +86,16 @@ export const SearchModal = () => {
 
       if (error) throw error;
 
-      // OPTIMIZATION: Batch fetch users and channels instead of N+1 queries
-      // This reduces 50 queries to just 2 queries
       const rawResults = data || [];
-      
+
       if (rawResults.length === 0) {
         setResults([]);
         return;
       }
 
-      // Collect unique IDs
       const userIds = [...new Set(rawResults.map((r: SearchResult) => r.user_id))];
       const channelIds = [...new Set(rawResults.map((r: SearchResult) => r.channel_id))];
 
-      // Batch fetch users and channels in parallel
       const [usersRes, channelsRes] = await Promise.all([
         supabase.rpc('get_users_basic_secure', {
           _user_id: currentUserId,
@@ -120,15 +107,9 @@ export const SearchModal = () => {
           .in('id', channelIds),
       ]);
 
-      // Create lookup maps
-      const usersMap = new Map(
-        ((usersRes.data as any[]) || []).map((u) => [u.id, u])
-      );
-      const channelsMap = new Map(
-        (channelsRes.data || []).map((c) => [c.id, c])
-      );
+      const usersMap = new Map(((usersRes.data as any[]) || []).map((u) => [u.id, u]));
+      const channelsMap = new Map((channelsRes.data || []).map((c) => [c.id, c]));
 
-      // Enrich results using the maps
       const enrichedResults = rawResults.map((result: SearchResult) => ({
         ...result,
         user: usersMap.get(result.user_id) || undefined,
@@ -151,21 +132,19 @@ export const SearchModal = () => {
   };
 
   const handleJumpToMessage = (result: SearchResult) => {
-    const channel = channels.find(c => c.id === result.channel_id);
+    const channel = channels.find((c) => c.id === result.channel_id);
     if (channel) {
       setCurrentChannel(channel);
       closeModal();
-      // In a full implementation, you'd scroll to the message
     }
   };
 
-  // Highlight search terms in content
   const highlightContent = (content: string) => {
-    const searchTerms = query.split(' ').filter(t => !t.includes(':'));
+    const searchTerms = query.split(' ').filter((t) => !t.includes(':'));
     if (!searchTerms.length) return content;
 
     let highlighted = content;
-    searchTerms.forEach(term => {
+    searchTerms.forEach((term) => {
       const regex = new RegExp(`(${term})`, 'gi');
       highlighted = highlighted.replace(regex, '**$1**');
     });
@@ -175,116 +154,145 @@ export const SearchModal = () => {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && closeModal()}>
-      <DialogContent className="sm:max-w-2xl max-h-[80vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Search className="w-5 h-5" />
-            Search Messages
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-[#4a4f5a] bg-[#333842] p-0 text-[#f4f5f7] shadow-2xl sm:max-w-[640px]">
+        <div className="flex max-h-[82vh] flex-col overflow-hidden">
+          <div className="border-b border-[#2b3039] bg-[#2f343d] px-5 py-3">
+            <div className="text-base font-medium leading-none tracking-tight">Search messages</div>
+          </div>
 
-        <div className="space-y-4">
-          {/* Search Input */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Search messages... (from:user in:channel)"
-              className="pl-10 pr-20"
-              autoFocus
-            />
-            {query && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-12 top-1/2 -translate-y-1/2 h-7 w-7"
-                onClick={() => setQuery('')}
-              >
-                <X className="w-4 h-4" />
-              </Button>
+          <div className="space-y-5 overflow-y-auto px-6 py-4">
+            <div>
+              <div className="flex items-center justify-between gap-3">
+                <Label
+                  htmlFor="message-search"
+                  className="text-xs font-medium uppercase tracking-wide text-[#c4c8d0]"
+                >
+                  Search query
+                </Label>
+                <span className="text-xs text-[#9ea4af]">Use `from:` or `in:` filters</span>
+              </div>
+              <div className="relative mt-2">
+                <Search className="pointer-events-none absolute left-0 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9ea4af]" />
+                <Input
+                  id="message-search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Search messages... (from:user in:channel)"
+                  className="h-12 rounded-none border-0 border-b border-white/80 bg-transparent pl-7 pr-10 text-sm text-[#f3f4f7] shadow-none outline-none placeholder:text-[#767b85] focus-visible:ring-0 focus-visible:ring-offset-0"
+                  autoFocus
+                />
+                {query && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-1/2 h-8 w-8 -translate-y-1/2 rounded-[3px] text-[#b8bec8] hover:bg-[#3b4049] hover:text-white"
+                    onClick={() => setQuery('')}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="border border-[#4a4f5a] bg-[#2f343d] p-3">
+                <p className="text-sm font-medium leading-none text-[#f3f4f7]">Filter by author</p>
+                <p className="mt-2 font-mono text-xs leading-5 tracking-[0.08em] text-[#c4c8d0]">from:username</p>
+              </div>
+              <div className="border border-[#4a4f5a] bg-[#2f343d] p-3">
+                <p className="text-sm font-medium leading-none text-[#f3f4f7]">Filter by channel</p>
+                <p className="mt-2 font-mono text-xs leading-5 tracking-[0.08em] text-[#c4c8d0]">in:channel</p>
+              </div>
+            </div>
+
+            {(hasSearched || isLoading) && (
+              <div className="border border-[#4a4f5a] bg-[#2f343d]">
+                <div className="border-b border-[#3a404a] px-4 py-3">
+                  <p className="text-sm font-medium leading-none text-[#f3f4f7]">
+                    {isLoading
+                      ? 'Searching messages...'
+                      : results.length > 0
+                        ? `${results.length} result${results.length === 1 ? '' : 's'}`
+                        : 'No results'}
+                  </p>
+                </div>
+
+                <ScrollArea className="h-[360px]">
+                  {isLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin text-[#9ea4af]" />
+                    </div>
+                  ) : results.length > 0 ? (
+                    <div className="p-2">
+                      {results.map((result) => (
+                        <button
+                          key={result.message_id}
+                          onClick={() => handleJumpToMessage(result)}
+                          className={cn(
+                            "w-full border border-transparent px-3 py-3 text-left transition-colors",
+                            "hover:border-[#454b56] hover:bg-[#363b45]"
+                          )}
+                        >
+                          <div className="flex items-start gap-3">
+                            <Avatar className="h-8 w-8 flex-shrink-0">
+                              <AvatarImage src={result.user?.avatar_url || undefined} />
+                              <AvatarFallback style={{ backgroundColor: result.user?.banner_color || '#5865F2' }}>
+                                {result.user?.username?.[0]?.toUpperCase() || '?'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0 flex-1">
+                              <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                                <span className="text-sm font-medium text-[#f3f4f7]">
+                                  {result.user?.display_name || result.user?.username}
+                                </span>
+                                <span className="flex items-center gap-1 text-xs text-[#b8bec8]">
+                                  <Hash className="h-3 w-3" />
+                                  {result.channel?.name}
+                                </span>
+                                <span className="text-xs text-[#9ea4af]">
+                                  {format(new Date(result.created_at), 'MMM d, yyyy')}
+                                </span>
+                              </div>
+                              <p className="line-clamp-2 text-sm text-[#c4c8d0]">
+                                {highlightContent(result.content)}
+                              </p>
+                            </div>
+                            <MessageSquare className="h-4 w-4 flex-shrink-0 text-[#8d94a0]" />
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
+                      <Search className="mb-3 h-12 w-12 text-[#666d78]" />
+                      <p className="text-sm font-medium text-[#f3f4f7]">No results found</p>
+                      <p className="mt-1 text-xs text-[#9ea4af]">Try different keywords or filters.</p>
+                    </div>
+                  )}
+                </ScrollArea>
+              </div>
             )}
+          </div>
+
+          <div className="flex items-center justify-end gap-3 border-t border-[#2c3139] bg-[#30353f] px-5 py-3">
             <Button
-              size="sm"
-              className="absolute right-1 top-1/2 -translate-y-1/2"
+              type="button"
+              variant="ghost"
+              onClick={closeModal}
+              className="h-9 rounded-[3px] px-4 text-[#b9bec8] hover:bg-transparent hover:text-white"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
               onClick={handleSearch}
               disabled={!query.trim() || isLoading}
+              className="h-9 rounded-[3px] bg-[#d7dbe3] px-5 font-medium text-[#363b44] hover:bg-white disabled:bg-[#454b55] disabled:text-[#858b96] disabled:opacity-100"
             >
               Search
             </Button>
           </div>
-
-          {/* Search Filters Help */}
-          <div className="text-xs text-muted-foreground space-x-4">
-            <span><code className="bg-secondary px-1 rounded">from:username</code> Filter by author</span>
-            <span><code className="bg-secondary px-1 rounded">in:channel</code> Filter by channel</span>
-          </div>
-
-          {/* Results */}
-          <ScrollArea className="h-[400px]">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : results.length > 0 ? (
-              <div className="space-y-2">
-                {results.map((result) => (
-                  <button
-                    key={result.message_id}
-                    onClick={() => handleJumpToMessage(result)}
-                    className={cn(
-                      "w-full text-left p-3 rounded-lg hover:bg-secondary/50 transition-colors",
-                      "border border-transparent hover:border-border"
-                    )}
-                  >
-                    <div className="flex items-start gap-3">
-                      <Avatar className="w-8 h-8 flex-shrink-0">
-                        <AvatarImage src={result.user?.avatar_url || undefined} />
-                        <AvatarFallback style={{ backgroundColor: result.user?.banner_color || '#5865F2' }}>
-                          {result.user?.username?.[0]?.toUpperCase() || '?'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-sm">
-                            {result.user?.display_name || result.user?.username}
-                          </span>
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Hash className="w-3 h-3" />
-                            {result.channel?.name}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {format(new Date(result.created_at), 'MMM d, yyyy')}
-                          </span>
-                        </div>
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {highlightContent(result.content)}
-                        </p>
-                      </div>
-                      <MessageSquare className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            ) : hasSearched ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Search className="w-12 h-12 text-muted-foreground/50 mb-3" />
-                <p className="text-sm text-muted-foreground">No results found</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Try different keywords or filters
-                </p>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Search className="w-12 h-12 text-muted-foreground/50 mb-3" />
-                <p className="text-sm text-muted-foreground">Search for messages</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Enter a search term and press Enter
-                </p>
-              </div>
-            )}
-          </ScrollArea>
         </div>
       </DialogContent>
     </Dialog>

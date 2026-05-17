@@ -73,6 +73,9 @@ interface ServerChannels {
   [serverId: string]: string[];
 }
 
+const MODAL_CONTENT_CLASS =
+  "max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-[#4a4f5a] bg-[#333842] p-0 text-[#f4f5f7] shadow-2xl sm:max-w-[448px]";
+
 interface ServerFolder {
   id: string;
   name: string;
@@ -1442,41 +1445,60 @@ export const HorizontalServerSidebar = () => {
 
       {/* Dialogs */}
       <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create folder</DialogTitle>
-            <DialogDescription>Choose a name and color for your server folder.</DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
-            <div className="space-y-2">
-              <Label htmlFor="kloak-folder-name-h">Name</Label>
-              <Input
-                id="kloak-folder-name-h"
-                value={newFolderName}
-                onChange={(e) => setNewFolderName(e.target.value)}
-                placeholder="e.g. Work, Friends, Gaming"
-                autoFocus
-              />
+        <DialogContent className={MODAL_CONTENT_CLASS} hideCloseButton>
+          <div className="flex max-h-[82vh] flex-col overflow-hidden">
+            <div className="border-b border-[#2b3039] bg-[#2f343d] px-5 py-3">
+              <div className="text-base font-medium leading-none tracking-tight">Create Folder</div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="kloak-folder-color-h">Color</Label>
-              <Input
-                id="kloak-folder-color-h"
-                type="color"
-                value={newFolderColor}
-                onChange={(e) => setNewFolderColor(e.target.value)}
-                className="h-10 w-14 p-1"
-              />
+            <div className="space-y-5 overflow-y-auto px-6 py-4">
+              <p className="text-sm leading-6 text-[#b8bec8]">Choose a name and color for your server folder.</p>
+              <div className="grid grid-cols-[1fr_auto] items-end gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="kloak-folder-name-h" className="text-xs font-medium uppercase tracking-wide text-[#c4c8d0]">
+                    Name
+                  </Label>
+                  <Input
+                    id="kloak-folder-name-h"
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    placeholder="e.g. Work, Friends, Gaming"
+                    autoFocus
+                    className="h-9 rounded-[3px] border border-[#4a4f5a] bg-[#2f343d] text-sm text-[#f3f4f7] placeholder:text-[#9ea4af]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="kloak-folder-color-h" className="text-xs font-medium uppercase tracking-wide text-[#c4c8d0]">
+                    Color
+                  </Label>
+                  <Input
+                    id="kloak-folder-color-h"
+                    type="color"
+                    value={newFolderColor}
+                    onChange={(e) => setNewFolderColor(e.target.value)}
+                    className="h-9 w-14 rounded-[3px] border border-[#4a4f5a] bg-[#2f343d] p-1"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-3 border-t border-[#2c3139] bg-[#30353f] px-5 py-3">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setIsCreateFolderOpen(false)}
+                className="h-9 rounded-[3px] px-4 text-[#b9bec8] hover:bg-transparent hover:text-white"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleCreateFolder}
+                disabled={!newFolderName.trim()}
+                className="h-9 rounded-[3px] bg-[#d7dbe3] px-5 font-medium text-[#363b44] hover:bg-white"
+              >
+                Create
+              </Button>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" rounded="xl" onClick={() => setIsCreateFolderOpen(false)}>
-              Cancel
-            </Button>
-            <Button rounded="xl" onClick={handleCreateFolder} disabled={!newFolderName.trim()}>
-              Create
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 

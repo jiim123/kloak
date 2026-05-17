@@ -950,6 +950,7 @@
   text-overflow: ellipsis;
   display: block;
   max-width: 100%;
+  line-height: inherit;
 }
 
 /* Ensure emojis in textareas render at the same size as surrounding text */

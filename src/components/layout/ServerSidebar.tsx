@@ -5,7 +5,6 @@ import {
   Folder,
   FolderPlus,
   Settings,
-  Columns3,
   ChevronDown,
   ChevronRight,
   Trash2,
@@ -20,7 +19,7 @@ import {
 import { evaluatePermission } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { MotionButton, MotionDiv } from "@/components/ui/motion-elements";
+import { MotionButton } from "@/components/ui/motion-elements";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
@@ -86,6 +85,8 @@ interface ServerFolderState {
 const SERVER_FOLDERS_STORAGE_KEY = "kloak-server-folders-v1";
 const EMPTY_FOLDER_STATE: ServerFolderState = { folders: [], serverToFolder: {} };
 const EMPTY_CHANNEL_IDS: string[] = [];
+const MODAL_CONTENT_CLASS =
+  "max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-[#4a4f5a] bg-[#333842] p-0 text-[#f4f5f7] shadow-2xl sm:max-w-[448px]";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ANIMATION VARIANTS — static objects, never re-created
@@ -123,12 +124,6 @@ const folderCollapseTransition = {
   height: { duration: 0.22, ease: [0.22, 1, 0.36, 1] as const },
   opacity: { duration: 0.14, ease: "easeOut" as const },
   y: { duration: 0.2, ease: [0.22, 1, 0.36, 1] as const },
-};
-
-const dmItemTransition = {
-  opacity: { duration: 0.3, ease: "easeInOut" as const },
-  height: { duration: 0.35, ease: [0.25, 0.1, 0.25, 1] as const },
-  layout: { duration: 0.3, ease: [0.25, 0.1, 0.25, 1] as const },
 };
 
 const bottomActionIconTransition = { duration: 0.15 };
@@ -547,70 +542,6 @@ const DraggableServerItem = memo(
 DraggableServerItem.displayName = "DraggableServerItem";
 
 // FIX #11: Memoize the unread DM shortcut items — they were fully inline, re-created every render
-const UnreadDMShortcut = memo(
-  ({ conv, tooltipsEnabled, onSelect }: { conv: any; tooltipsEnabled: boolean; onSelect: (conv: any) => void }) => {
-    const { user } = useAuthStore();
-    const { getUnreadCount } = useUnreadDMsContext();
-    const unreadCount = getUnreadCount(conv.id);
-    const isGroup = conv.is_group;
-    const otherUser = conv.other_user;
-    const displayName = isGroup ? conv.name || "Group Chat" : otherUser?.display_name || otherUser?.username || "User";
-    const avatarUrl = isGroup ? null : otherUser?.avatar_url;
-    const initials = isGroup ? conv.name?.[0] || "G" : otherUser?.display_name?.[0] || otherUser?.username?.[0] || "?";
-
-    const handleClick = useCallback(() => onSelect(conv), [conv, onSelect]);
-
-    return (
-      <motion.div
-        key={conv.id}
-        layout
-        initial={{ opacity: 0, height: 0, marginTop: 0 }}
-        animate={{ opacity: 1, height: "auto", marginTop: 0 }}
-        exit={{ opacity: 0, height: 0, marginTop: 0 }}
-        transition={dmItemTransition}
-        style={{ overflow: "hidden" }}
-      >
-        <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
-          <TooltipTrigger asChild>
-            <button className="relative group" onClick={handleClick}>
-              <motion.div
-                className={cn(
-                  "w-10 h-10 rounded-[12px] flex items-center justify-center overflow-hidden transition-all duration-200 border border-white/8 shadow-[0_8px_20px_rgba(0,0,0,0.28)]",
-                  "w-11 h-11 rounded-[12px] flex items-center justify-center overflow-hidden transition-all duration-200 border border-white/8 shadow-[0_8px_20px_rgba(0,0,0,0.28)]",
-                  "bg-[#262933] hover:bg-[#2c2f39] hover:border-white/16",
-                )}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                {isGroup ? (
-                  <div className="flex items-center justify-center w-full h-full">
-                    <span className="text-sm font-semibold text-foreground/80">{initials}</span>
-                  </div>
-                ) : avatarUrl ? (
-                  <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-sm font-semibold text-foreground/80">{initials}</span>
-                )}
-              </motion.div>
-
-              <motion.span
-                initial={badgeInitial}
-                animate={badgeAnimate}
-                className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
-              >
-                {unreadCount > 99 ? "99+" : unreadCount}
-              </motion.span>
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="right" className="font-medium">
-            {displayName} ({unreadCount} unread)
-          </TooltipContent>
-        </Tooltip>
-      </motion.div>
-    );
-  },
-);
-UnreadDMShortcut.displayName = "UnreadDMShortcut";
 
 // FIX #12: Extract the loading skeleton into a static component — it was animating
 // with inline transition objects that got re-created. Also memo it since it never changes.
@@ -654,7 +585,6 @@ export const ServerSidebar = ({ isAddServerPanelOpen = false, onToggleAddServerP
   const toggleServerMute = useServerStore((s) => s.toggleServerMute);
 
   const setCurrentConversation = useDMStore((s) => s.setCurrentConversation);
-  const conversations = useDMStore((s) => s.conversations);
 
   const openModal = useUIStore((s) => s.openModal);
   const closeModal = useUIStore((s) => s.closeModal);
@@ -666,9 +596,6 @@ export const ServerSidebar = ({ isAddServerPanelOpen = false, onToggleAddServerP
   const {
     totalUnread: totalDMUnread,
     hasUnread: hasDMUnread,
-    unreadState: dmUnreadState,
-    markAsRead,
-    getUnreadCount,
   } = useUnreadDMsContext();
 
   const [hoveredServer, setHoveredServer] = useState<string | null>(null);
@@ -803,13 +730,6 @@ export const ServerSidebar = ({ isAddServerPanelOpen = false, onToggleAddServerP
   }, [servers]);
 
   // ── Unread DM conversations ──
-  const unreadConversations = useMemo(() => {
-    return conversations
-      .filter((conv) => getUnreadCount(conv.id) > 0)
-      .sort((a, b) => getUnreadCount(b.id) - getUnreadCount(a.id))
-      .slice(0, 5);
-  }, [conversations, dmUnreadState, getUnreadCount]);
-
   // FIX #15: getPillState was recreated every render because it closes over
   // `hoveredServer` and `currentServer`. Memoize it with useMemo so child
   // components receiving `pillState` as a string prop can properly skip re-renders.
@@ -1088,17 +1008,6 @@ export const ServerSidebar = ({ isAddServerPanelOpen = false, onToggleAddServerP
   const handleDMHover = useCallback(() => setHoveredServer("dm"), []);
   const handleHoverLeave = useCallback(() => setHoveredServer(null), []);
 
-  const handleDMSelect = useCallback(
-    (conv: any) => {
-      setCurrentServer(null);
-      setCurrentConversation(conv);
-      closeServerSettings();
-      closeModal();
-      navigate("/app");
-      markAsRead(conv.id);
-    },
-    [setCurrentServer, setCurrentConversation, closeServerSettings, closeModal, navigate, markAsRead],
-  );
   const handleDMClick = useCallback(() => {
     setCurrentServer(null);
     setCurrentConversation(null);
@@ -1330,25 +1239,6 @@ export const ServerSidebar = ({ isAddServerPanelOpen = false, onToggleAddServerP
               {/* Loading skeleton */}
               {isLoading && servers.length === 0 && <LoadingSkeleton />}
 
-              {unreadConversations.length > 0 && (
-                <>
-                  {/* Unread DM conversation shortcuts */}
-                  <AnimatePresence mode="popLayout">
-                    {unreadConversations.map((conv) => (
-                      <UnreadDMShortcut
-                        key={conv.id}
-                        conv={conv}
-                        tooltipsEnabled={tooltipsEnabled}
-                        onSelect={handleDMSelect}
-                      />
-                    ))}
-                  </AnimatePresence>
-
-                  {/* Separator */}
-                  <div className="w-5 h-px bg-white/14 my-1 shrink-0" />
-                </>
-              )}
-
               {/* Folder items + servers */}
               <AnimatePresence>
                 {foldersWithServers.map(({ folder, servers: folderServers }) => (
@@ -1569,41 +1459,60 @@ export const ServerSidebar = ({ isAddServerPanelOpen = false, onToggleAddServerP
 
       {/* ── DIALOGS (unchanged logic, just cleaner) ── */}
       <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create folder</DialogTitle>
-            <DialogDescription>Choose a name and color for your server folder.</DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
-            <div className="space-y-2">
-              <Label htmlFor="kloak-folder-name">Name</Label>
-              <Input
-                id="kloak-folder-name"
-                value={newFolderName}
-                onChange={(e) => setNewFolderName(e.target.value)}
-                placeholder="e.g. Work, Friends, Gaming"
-                autoFocus
-              />
+        <DialogContent className={MODAL_CONTENT_CLASS} hideCloseButton>
+          <div className="flex max-h-[82vh] flex-col overflow-hidden">
+            <div className="border-b border-[#2b3039] bg-[#2f343d] px-5 py-3">
+              <div className="text-base font-medium leading-none tracking-tight">Create Folder</div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="kloak-folder-color">Color</Label>
-              <Input
-                id="kloak-folder-color"
-                type="color"
-                value={newFolderColor}
-                onChange={(e) => setNewFolderColor(e.target.value)}
-                className="h-10 w-14 p-1"
-              />
+            <div className="space-y-5 overflow-y-auto px-6 py-4">
+              <p className="text-sm leading-6 text-[#b8bec8]">Choose a name and color for your server folder.</p>
+              <div className="grid grid-cols-[1fr_auto] items-end gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="kloak-folder-name" className="text-xs font-medium uppercase tracking-wide text-[#c4c8d0]">
+                    Name
+                  </Label>
+                  <Input
+                    id="kloak-folder-name"
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    placeholder="e.g. Work, Friends, Gaming"
+                    autoFocus
+                    className="h-9 rounded-[3px] border border-[#4a4f5a] bg-[#2f343d] text-sm text-[#f3f4f7] placeholder:text-[#9ea4af]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="kloak-folder-color" className="text-xs font-medium uppercase tracking-wide text-[#c4c8d0]">
+                    Color
+                  </Label>
+                  <Input
+                    id="kloak-folder-color"
+                    type="color"
+                    value={newFolderColor}
+                    onChange={(e) => setNewFolderColor(e.target.value)}
+                    className="h-9 w-14 rounded-[3px] border border-[#4a4f5a] bg-[#2f343d] p-1"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-3 border-t border-[#2c3139] bg-[#30353f] px-5 py-3">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setIsCreateFolderOpen(false)}
+                className="h-9 rounded-[3px] px-4 text-[#b9bec8] hover:bg-transparent hover:text-white"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleCreateFolder}
+                disabled={!newFolderName.trim()}
+                className="h-9 rounded-[3px] bg-[#d7dbe3] px-5 font-medium text-[#363b44] hover:bg-white"
+              >
+                Create
+              </Button>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" rounded="xl" onClick={() => setIsCreateFolderOpen(false)}>
-              Cancel
-            </Button>
-            <Button rounded="xl" onClick={handleCreateFolder} disabled={!newFolderName.trim()}>
-              Create
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 

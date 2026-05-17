@@ -23,7 +23,9 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/authStore";
 import { useMessageStore } from "@/stores/messageStore";
@@ -1144,6 +1146,7 @@ export const ChannelSidebar = () => {
   const [bgDrawerOpen, setBgDrawerOpen] = useState(false);
   const [isServerHeaderCondensed, setIsServerHeaderCondensed] = useState(false);
   const [channelSearchQuery, setChannelSearchQuery] = useState("");
+  const [resolvedServerVerified, setResolvedServerVerified] = useState(false);
   const deferredChannelSearchQuery = useDeferredValue(channelSearchQuery);
   const normalizedChannelSearchQuery = deferredChannelSearchQuery.trim().toLowerCase();
   const isSearchingChannels = normalizedChannelSearchQuery.length > 0;
@@ -1173,6 +1176,32 @@ export const ChannelSidebar = () => {
     if (!currentServer) return null;
     return servers.find((s) => s.id === currentServer.id);
   }, [servers, currentServer]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!currentServer?.id) {
+      setResolvedServerVerified(false);
+      return;
+    }
+
+    setResolvedServerVerified(!!(currentMembership?.is_verified ?? currentServer.is_verified));
+
+    void (async () => {
+      const { data, error } = await supabase
+        .from("servers")
+        .select("is_verified")
+        .eq("id", currentServer.id)
+        .maybeSingle();
+
+      if (cancelled || error || !data) return;
+      setResolvedServerVerified(!!data.is_verified);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentMembership?.is_verified, currentServer?.id, currentServer?.is_verified]);
 
   const memberUserById = useMemo(() => {
     void userCacheVersion;
@@ -1979,9 +2008,14 @@ export const ChannelSidebar = () => {
             </div>
             <DropdownMenuTrigger asChild>
               <button className="group flex h-12 w-full items-center gap-3 px-4 text-left transition-colors hover:bg-foreground/[0.03] active:scale-[0.995]">
-                <h2 className="min-w-0 flex-1 truncate text-[17px] font-semibold leading-none text-foreground">
-                  {currentServer.name}
-                </h2>
+                <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                  <h2 className="min-w-0 truncate text-[17px] font-semibold leading-none text-foreground">
+                    {currentServer.name}
+                  </h2>
+                  {resolvedServerVerified && (
+                    <CheckCircle2 className="h-4 w-4 shrink-0 fill-sky-400 text-[hsl(223_7%_20%)]" />
+                  )}
+                </div>
                 <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors group-hover:bg-foreground/[0.06] group-hover:text-foreground">
                   <ChevronDownIcon className="h-4 w-4" />
                 </div>

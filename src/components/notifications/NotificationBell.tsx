@@ -22,25 +22,18 @@ export interface NotificationBellProps {
   variant?: "default" | "sidebar";
 }
 
-// Theme types and classes
 type NotificationTheme = "amber" | "emerald" | "red" | "blue" | "violet" | "default";
 
 const themeClasses = {
-  amber: { bg: "bg-amber-500/10", text: "text-amber-500", indicator: "bg-amber-500", bgUnread: "bg-amber-500/5" },
-  emerald: {
-    bg: "bg-emerald-500/10",
-    text: "text-emerald-500",
-    indicator: "bg-emerald-500",
-    bgUnread: "bg-emerald-500/5",
-  },
-  red: { bg: "bg-red-500/10", text: "text-red-500", indicator: "bg-red-500", bgUnread: "bg-red-500/5" },
-  blue: { bg: "bg-blue-500/10", text: "text-blue-500", indicator: "bg-blue-500", bgUnread: "bg-blue-500/5" },
-  violet: { bg: "bg-violet-500/10", text: "text-violet-500", indicator: "bg-violet-500", bgUnread: "bg-violet-500/5" },
-  default: { bg: "bg-primary/10", text: "text-primary", indicator: "bg-primary", bgUnread: "bg-primary/5" },
+  amber: { bg: "bg-amber-500/10", text: "text-amber-500", bgUnread: "bg-amber-500/5" },
+  emerald: { bg: "bg-emerald-500/10", text: "text-emerald-500", bgUnread: "bg-emerald-500/5" },
+  red: { bg: "bg-red-500/10", text: "text-red-500", bgUnread: "bg-red-500/5" },
+  blue: { bg: "bg-blue-500/10", text: "text-blue-500", bgUnread: "bg-blue-500/5" },
+  violet: { bg: "bg-violet-500/10", text: "text-violet-500", bgUnread: "bg-violet-500/5" },
+  default: { bg: "bg-primary/10", text: "text-primary", bgUnread: "bg-primary/5" },
 };
 
 const getNotificationTheme = (notification: Notification): NotificationTheme => {
-  // Check for warning (kick/ban) based on title
   const title = notification.title?.toLowerCase() || "";
   if (title.includes("kicked") || title.includes("banned")) {
     return "red";
@@ -61,27 +54,25 @@ const getNotificationTheme = (notification: Notification): NotificationTheme => 
 };
 
 const getNotificationIcon = (notification: Notification) => {
-  // Check for warning first
   const title = notification.title?.toLowerCase() || "";
   if (title.includes("kicked") || title.includes("banned")) {
-    return <AlertTriangle className="w-4 h-4" />;
+    return <AlertTriangle className="h-4 w-4" />;
   }
 
   switch (notification.type) {
     case "mention":
-      return <AtSign className="w-4 h-4" />;
+      return <AtSign className="h-4 w-4" />;
     case "dm":
-      return <MessageCircle className="w-4 h-4" />;
+      return <MessageCircle className="h-4 w-4" />;
     case "friend_request":
-      return <UserPlus className="w-4 h-4" />;
+      return <UserPlus className="h-4 w-4" />;
     case "server_invite":
-      return <Mail className="w-4 h-4" />;
+      return <Mail className="h-4 w-4" />;
     default:
-      return <Bell className="w-4 h-4" />;
+      return <Bell className="h-4 w-4" />;
   }
 };
 
-// Extract username from notification body like "username sent you a friend request"
 const extractUsernameFromBody = (body: string | null): string | null => {
   if (!body) return null;
   const match = body.match(/^(\S+)\s+sent you a friend request/);
@@ -98,8 +89,7 @@ const sidebarIconVariants = {
 export const NotificationBell = ({ variant = "default" }: NotificationBellProps) => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { notifications, unreadCount, markAsRead, markAllAsRead, clearAllNotifications, deleteNotification } =
-    useNotificationStore();
+  const { notifications, markAsRead, markAllAsRead, clearAllNotifications, deleteNotification } = useNotificationStore();
   const {
     enableMentionNotifications,
     enableDMNotifications,
@@ -110,16 +100,13 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
   const [isOpen, setIsOpen] = useState(false);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
 
-  // When notifications contain friend requests but pendingRequests hasn't loaded yet,
-  // force-refresh to ensure Accept/Decline buttons appear
   useEffect(() => {
     if (!user) return;
-    const hasFriendRequestNotifications = notifications.some((n) => n.type === 'friend_request');
+    const hasFriendRequestNotifications = notifications.some((n) => n.type === "friend_request");
     if (!hasFriendRequestNotifications) return;
 
-    // Check if any friend_request notification is missing its matching pending request
     const hasMissingPending = notifications
-      .filter((n) => n.type === 'friend_request')
+      .filter((n) => n.type === "friend_request")
       .some((n) => {
         const username = extractUsernameFromBody(n.body);
         if (!username) return false;
@@ -131,7 +118,6 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
     }
   }, [notifications, pendingRequests, user, fetchFriends]);
 
-  // Filter notifications based on user preferences
   const filteredNotifications = notifications.filter((n) => {
     switch (n.type) {
       case "mention":
@@ -143,12 +129,11 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
       case "server_invite":
         return enableServerInviteNotifications;
       default:
-        return true; // Always show kick/ban and other system notifications
+        return true;
     }
   });
   const filteredUnreadCount = filteredNotifications.filter((n) => !n.is_read).length;
 
-  // Request permission on first interaction
   useEffect(() => {
     if (isOpen && filteredUnreadCount > 0) {
       requestNotificationPermission();
@@ -180,16 +165,14 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
     const messageId = url.searchParams.get("message");
     const conversationId = url.searchParams.get("conversation");
 
-    // Mention: navigate to channel with message param — useScrollToMessage reads ?message= from URL
     if (notificationType === "mention" && serverId && channelId) {
       setIsOpen(false);
       const path = `/app/servers/${serverId}/channels/${channelId}`;
-      const params = messageId ? `?message=${messageId}` : '';
+      const params = messageId ? `?message=${messageId}` : "";
       setTimeout(() => navigate(path + params), 50);
       return;
     }
 
-    // DM: clear server context and navigate to conversation
     if (conversationId) {
       setIsOpen(false);
       useServerStore.getState().setCurrentServer(null);
@@ -199,7 +182,6 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
       return;
     }
 
-    // Fallback
     navigate(link);
     setIsOpen(false);
   };
@@ -211,7 +193,6 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
     if (!username) return;
 
     const request = pendingRequests.find((r) => r.username?.toLowerCase() === username.toLowerCase());
-
     if (!request) return;
 
     setProcessingIds((prev) => new Set(prev).add(notification.id));
@@ -235,7 +216,6 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
     if (!username) return;
 
     const request = pendingRequests.find((r) => r.username?.toLowerCase() === username.toLowerCase());
-
     if (!request) return;
 
     setProcessingIds((prev) => new Set(prev).add(notification.id));
@@ -260,12 +240,12 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
   };
 
   const renderDefaultTrigger = () => (
-    <Button variant="ghost" size="icon" className="relative w-8 h-8">
-      <Bell className="w-4 h-4" />
+    <Button variant="ghost" size="icon" className="relative h-8 w-8">
+      <Bell className="h-4 w-4" />
       {filteredUnreadCount > 0 && (
         <Badge
           variant="destructive"
-          className="absolute -top-1 -right-1 w-5 h-5 p-0 flex items-center justify-center text-[10px]"
+          className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center p-0 text-[10px]"
         >
           {filteredUnreadCount > 99 ? "99+" : filteredUnreadCount}
         </Badge>
@@ -282,15 +262,15 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
         whileHover="hover"
         whileTap="tap"
         transition={{ type: "spring", stiffness: 400, damping: 25 }}
-        className="w-10 h-10 flex items-center justify-center bg-secondary hover:bg-primary/20 hover:text-neutral-200"
+        className="flex h-10 w-10 items-center justify-center bg-secondary hover:bg-primary/20 hover:text-neutral-200"
       >
-        <Bell className="w-4 h-4" />
+        <Bell className="h-4 w-4" />
       </motion.div>
       {filteredUnreadCount > 0 && (
         <motion.span
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
-          className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-medium shadow-lg"
+          className="absolute -bottom-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-[4px] bg-destructive px-1 text-xs font-medium text-destructive-foreground shadow-lg"
         >
           {filteredUnreadCount > 99 ? "99+" : filteredUnreadCount}
         </motion.span>
@@ -303,43 +283,41 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
       <PopoverTrigger asChild>{variant === "sidebar" ? renderSidebarTrigger() : renderDefaultTrigger()}</PopoverTrigger>
 
       <PopoverContent
-        className="w-96 p-0 rounded-xl border-border/50 bg-popover/95 backdrop-blur-xl shadow-xl overflow-hidden"
+        className="w-96 overflow-hidden rounded-[4px] border border-[#4a4f5a] bg-[#333842] p-0 text-[#f4f5f7] shadow-2xl"
         align="end"
         sideOffset={8}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
-          <h3 className="font-medium">Notifications</h3>
+        <div className="flex items-center justify-between border-b border-[#2b3039] bg-[#2f343d] px-4 py-3">
+          <h3 className="text-base font-medium leading-none tracking-tight">Notifications</h3>
           <div className="flex items-center gap-1">
             {filteredUnreadCount > 0 && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 rounded-lg hover:bg-secondary/60 transition-colors"
+                className="h-7 w-7 rounded-[3px] text-[#b8bec8] transition-colors hover:bg-[#3b4049] hover:text-white"
                 onClick={handleMarkAllAsRead}
                 title="Mark all as read"
               >
-                <CheckCheck className="w-3.5 h-3.5" />
+                <CheckCheck className="h-3.5 w-3.5" />
               </Button>
             )}
             {filteredNotifications.length > 0 && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 rounded-lg hover:bg-secondary/60 transition-colors"
+                className="h-7 w-7 rounded-[3px] text-[#b8bec8] transition-colors hover:bg-[#3b4049] hover:text-white"
                 onClick={handleClearAll}
                 title="Clear all"
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <Trash2 className="h-3.5 w-3.5" />
               </Button>
             )}
           </div>
         </div>
 
-        {/* Notifications List */}
-        <ScrollArea className="max-h-[420px] overflow-y-auto overflow-x-hidden">
+        <ScrollArea className="max-h-[420px] overflow-x-hidden overflow-y-auto">
           {filteredNotifications.length > 0 ? (
-            <div className="p-2 space-y-1">
+            <div className="p-2">
               {filteredNotifications.map((notification, index) => {
                 const isProcessing = processingIds.has(notification.id);
                 const showFriendActions = isFriendRequestPending(notification);
@@ -351,9 +329,9 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
                   <div
                     key={notification.id}
                     className={cn(
-                      "group relative flex flex-col gap-2 p-3 rounded-xl transition-colors animate-notification-enter",
-                      isUnread && colors.bgUnread,
-                      !showFriendActions && "cursor-pointer hover:bg-secondary/60",
+                      "group relative flex flex-col gap-2 border border-transparent px-3 py-3 transition-colors animate-notification-enter",
+                      isUnread && cn(colors.bgUnread, "border-white/5"),
+                      !showFriendActions && "cursor-pointer hover:border-[#454b56] hover:bg-[#363b45]"
                     )}
                     style={{
                       animationDelay: `${index * 50}ms`,
@@ -365,36 +343,37 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
                     }
                   >
                     <div className="flex items-start gap-3">
-                      {/* Icon container */}
                       <div
                         className={cn(
-                          "flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center",
-                          isUnread ? cn(colors.bg, colors.text) : "bg-secondary/80 text-muted-foreground",
+                          "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[4px]",
+                          isUnread ? cn(colors.bg, colors.text) : "bg-[#3a404a] text-[#9ea4af]"
                         )}
                       >
                         {getNotificationIcon(notification)}
                       </div>
 
-                      {/* Content */}
-                      <div className="flex-1 min-w-0 pt-0.5 overflow-hidden">
-                        <p className={cn("text-sm line-clamp-2 break-words", isUnread && "font-medium")}>
-                          {notification.type === 'mention' && (() => {
-                            if (!notification.link) return null;
-                            try {
-                              const u = new URL(notification.link, window.location.origin);
-                              const sid = u.searchParams.get('server');
-                              if (!sid) return null;
-                              const sName = useServerStore.getState().servers.find(s => s.id === sid)?.name;
-                              return sName ? (
-                                <span className="text-xs text-muted-foreground font-normal mr-1.5">{sName} ·</span>
-                              ) : null;
-                            } catch { return null; }
-                          })()}
+                      <div className="min-w-0 flex-1 overflow-hidden pt-0.5">
+                        <p className={cn("line-clamp-2 break-words text-sm text-[#f3f4f7]", isUnread && "font-medium")}>
+                          {notification.type === "mention" &&
+                            (() => {
+                              if (!notification.link) return null;
+                              try {
+                                const url = new URL(notification.link, window.location.origin);
+                                const serverId = url.searchParams.get("server");
+                                if (!serverId) return null;
+                                const serverName = useServerStore.getState().servers.find((s) => s.id === serverId)?.name;
+                                return serverName ? (
+                                  <span className="mr-1.5 text-xs font-normal text-[#9ea4af]">{serverName} /</span>
+                                ) : null;
+                              } catch {
+                                return null;
+                              }
+                            })()}
                           {notification.title}
                         </p>
                         {notification.body && (
-                          <p className="text-xs text-muted-foreground line-clamp-1 mt-1 break-all">
-                            {notification.type === 'friend_request' ? (
+                          <p className="mt-1 line-clamp-1 break-all text-xs text-[#b8bec8]">
+                            {notification.type === "friend_request" ? (
                               (() => {
                                 const username = extractUsernameFromBody(notification.body);
                                 if (username) {
@@ -404,21 +383,21 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
                                   return (
                                     <>
                                       <span
-                                        className="font-medium text-foreground hover:underline cursor-pointer"
+                                        className="cursor-pointer font-medium text-white hover:underline"
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           if (request?.id) {
                                             setIsOpen(false);
                                             setTimeout(() => {
-                                              const { openModal: open } = useUIStore.getState();
-                                              openUserProfileModal(open, request.id);
+                                              const { openModal } = useUIStore.getState();
+                                              openUserProfileModal(openModal, request.id);
                                             }, 150);
                                           }
                                         }}
                                       >
                                         {username}
                                       </span>
-                                      {' sent you a friend request'}
+                                      {" sent you a friend request"}
                                     </>
                                   );
                                 }
@@ -429,54 +408,52 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
                             )}
                           </p>
                         )}
-                        <p className="text-xs text-muted-foreground/70 mt-1.5">
+                        <p className="mt-1.5 text-xs text-[#8f96a2]">
                           {notification.created_at &&
                             formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
                         </p>
                       </div>
 
-                      {/* Delete button */}
                       {!showFriendActions && (
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="w-8 h-8 rounded-lg hover:bg-secondary transition-all flex-shrink-0"
+                          className="h-8 w-8 flex-shrink-0 rounded-[3px] text-[#9ea4af] transition-all hover:bg-[#3b4049] hover:text-white"
                           onClick={(e) => {
                             e.stopPropagation();
                             deleteNotification(notification.id);
                           }}
                         >
-                          <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       )}
                     </div>
 
-                    {/* Friend request actions */}
                     {showFriendActions && (
-                      <div className="flex gap-2 ml-[52px]">
+                      <div className="ml-[52px] flex gap-2">
                         <Button
                           size="sm"
-                          className="h-9 text-xs flex-1 rounded-lg"
+                          className="h-9 flex-1 rounded-[3px] bg-[#d7dbe3] text-xs font-medium text-[#363b44] hover:bg-white"
                           disabled={isProcessing}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleAcceptFriendRequest(notification);
                           }}
                         >
-                          <Check className="w-3.5 h-3.5 mr-1.5" />
+                          <Check className="mr-1.5 h-3.5 w-3.5" />
                           Accept
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-9 text-xs flex-1 rounded-lg"
+                          className="h-9 flex-1 rounded-[3px] border-[#4a4f5a] bg-transparent text-xs text-[#e2e4e9] hover:bg-[#30333d]"
                           disabled={isProcessing}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDeclineFriendRequest(notification);
                           }}
                         >
-                          <X className="w-3.5 h-3.5 mr-1.5" />
+                          <X className="mr-1.5 h-3.5 w-3.5" />
                           Decline
                         </Button>
                       </div>
@@ -486,13 +463,12 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
               })}
             </div>
           ) : (
-            /* Empty state */
-            <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-secondary/80 flex items-center justify-center mb-4">
-                <Bell className="w-7 h-7 text-muted-foreground/50" />
+            <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-[4px] bg-[#2f343d]">
+                <Bell className="h-7 w-7 text-[#666d78]" />
               </div>
-              <p className="text-sm font-medium text-muted-foreground">No notifications yet</p>
-              <p className="text-xs text-muted-foreground/70 mt-1">We'll let you know when something arrives</p>
+              <p className="text-sm font-medium text-[#f3f4f7]">No notifications yet</p>
+              <p className="mt-1 text-xs text-[#9ea4af]">We&apos;ll let you know when something arrives.</p>
             </div>
           )}
         </ScrollArea>

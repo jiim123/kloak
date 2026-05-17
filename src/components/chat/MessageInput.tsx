@@ -221,7 +221,7 @@ const ActionBar = memo(
       "min-h-[36px] cursor-pointer gap-2.5 px-3 py-2 text-[13px] font-semibold text-[#dbdee1] focus:bg-white/[0.07] hover:bg-white/[0.07]";
 
     return (
-      <div className="flex min-h-[44px] items-center gap-1">
+      <div className="flex min-h-[44px] items-stretch gap-1">
         <div className="relative h-11 w-11 shrink-0">
           <DropdownMenu open={isActionsMenuOpen} onOpenChange={setIsActionsMenuOpen}>
             <DropdownMenuTrigger asChild>
@@ -271,7 +271,7 @@ const ActionBar = memo(
 
         </div>
 
-        <div className="min-w-0 flex-1 px-1 py-1.5">
+        <div className="flex min-w-0 flex-1 items-center px-1">
           {textareaNode}
         </div>
 
@@ -1468,7 +1468,7 @@ const MobileOptimizedInput = memo(
               placeholder={forumPlaceholder || (dmPlaceholder ? (hasAttachments ? "Add a comment..." : `Message @${dmPlaceholder.length > (isMobile ? 12 : 17) ? dmPlaceholder.slice(0, isMobile ? 12 : 17) + "..." : dmPlaceholder}`) : (isLockedByNotice ? "Write a message..." : canSendMessage ? `Message ${channelName || "channel"}` : "Locked"))}
               disabled={!canSendMessage}
               rows={1}
-              className="message-input-textarea block w-full resize-none bg-transparent py-1.5 text-foreground outline-none min-h-[40px] max-h-[160px] overflow-y-auto placeholder:text-muted-foreground/60 font-[Inter,system-ui,sans-serif]"
+              className="message-input-textarea w-full resize-none bg-transparent py-2 text-foreground outline-none min-h-[40px] max-h-[160px] overflow-y-auto placeholder:text-muted-foreground/60 font-[Inter,system-ui,sans-serif]"
               style={{
                 fontSize: "15px",
                 lineHeight: "1.45",
