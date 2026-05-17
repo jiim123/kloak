@@ -7,7 +7,7 @@ import { MediaComments } from "./MediaComments";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
@@ -63,6 +63,12 @@ const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp
 const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime", "video/x-msvideo"];
 const MAX_IMAGE_SIZE = 3 * 1024 * 1024;
 const MAX_VIDEO_SIZE = 10 * 1024 * 1024;
+const MEDIA_MODAL_CONTENT_CLASS =
+  "max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-[#4a4f5a] bg-[#333842] p-0 text-[#f4f5f7] shadow-2xl sm:max-w-[520px]";
+const MEDIA_MODAL_GHOST_BUTTON_CLASS =
+  "h-9 rounded-[3px] px-4 text-[#b9bec8] hover:bg-transparent hover:text-white";
+const MEDIA_MODAL_PRIMARY_BUTTON_CLASS =
+  "h-9 rounded-[3px] bg-[#d7dbe3] px-5 font-medium text-[#363b44] hover:bg-white disabled:bg-[#454b55] disabled:text-[#858b96] disabled:opacity-100";
 
 // ─── Security: extension blocklists ──────────────────────────────────────────
 
@@ -606,26 +612,37 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
           if (!open) resetUploadForm();
         }}
       >
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Add Media</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
+        <DialogContent className={MEDIA_MODAL_CONTENT_CLASS}>
+          <div className="flex max-h-[82vh] flex-col overflow-hidden">
+            <div className="border-b border-[#2b3039] bg-[#2f343d] px-5 py-3">
+              <DialogTitle className="text-base font-medium leading-none tracking-tight text-[#f4f5f7]">
+                Add media
+              </DialogTitle>
+            </div>
+            <div className="space-y-4 overflow-y-auto px-6 py-4">
             <div className="flex gap-2">
               <Button
-                variant={uploadType === "file" ? "secondary" : "ghost"}
+                variant="ghost"
                 size="sm"
                 onClick={() => setUploadType("file")}
-                className="gap-2"
+                className={`h-9 rounded-[3px] gap-2 ${
+                  uploadType === "file"
+                    ? "bg-[#4a5046] text-[#f4f5f7] hover:bg-[#4a5046]"
+                    : "text-[#b9bec8] hover:bg-[#3e434d] hover:text-[#f4f5f7]"
+                }`}
               >
                 <Upload className="w-4 h-4" />
                 Upload File
               </Button>
               <Button
-                variant={uploadType === "url" ? "secondary" : "ghost"}
+                variant="ghost"
                 size="sm"
                 onClick={() => setUploadType("url")}
-                className="gap-2"
+                className={`h-9 rounded-[3px] gap-2 ${
+                  uploadType === "url"
+                    ? "bg-[#4a5046] text-[#f4f5f7] hover:bg-[#4a5046]"
+                    : "text-[#b9bec8] hover:bg-[#3e434d] hover:text-[#f4f5f7]"
+                }`}
               >
                 <Link2 className="w-4 h-4" />
                 Paste URL
@@ -635,14 +652,14 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
             {uploadType === "file" ? (
               <div className="space-y-4">
                 {filePreview ? (
-                  <div className="relative rounded-xl overflow-hidden bg-muted">
+                  <div className="relative overflow-hidden rounded-[4px] border border-[#4a4f5a] bg-[#2f343d]">
                     <AspectRatio ratio={16 / 9}>
                       <img src={filePreview} alt="Preview" className="object-contain w-full h-full" />
                     </AspectRatio>
                     <Button
                       size="icon"
-                      variant="secondary"
-                      className="absolute top-2 right-2 w-8 h-8"
+                      variant="ghost"
+                      className="absolute top-2 right-2 h-8 w-8 rounded-[3px] bg-[#252932]/90 text-[#d7dbe3] hover:bg-[#30353f] hover:text-white"
                       onClick={() => {
                         setSelectedFile(null);
                         setFilePreview(null);
@@ -653,13 +670,13 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
                   </div>
                 ) : (
                   <div
-                    className="border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                    className="cursor-pointer rounded-[4px] border border-dashed border-[#5a606b] bg-[#2f343d] p-8 text-center transition-colors hover:border-[#d7dbe3]/70"
                     onClick={() => fileInputRef.current?.click()}
                   >
-                    <ImageIcon className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
-                    <p className="text-sm text-muted-foreground">Click to select or drag and drop</p>
-                    <p className="text-xs text-muted-foreground/70 mt-1">Images up to 3MB · Videos up to 10MB</p>
-                    <p className="text-xs text-muted-foreground/50 mt-1">
+                    <ImageIcon className="mx-auto mb-3 h-10 w-10 text-[#9ea4af]" />
+                    <p className="text-sm text-[#f3f4f7]">Click to select or drag and drop</p>
+                    <p className="mt-1 text-xs text-[#b8bec8]">Images up to 3MB - Videos up to 10MB</p>
+                    <p className="mt-1 text-xs text-[#858b96]">
                       Allowed: jpg, jpeg, png, gif, webp, mp4, webm, mov, avi
                     </p>
                   </div>
@@ -674,15 +691,18 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
               </div>
             ) : (
               <div className="space-y-2">
-                <Label>YouTube URL or Image Link</Label>
+                <Label className="text-xs font-medium uppercase tracking-wide text-[#c4c8d0]">
+                  YouTube URL or image link
+                </Label>
                 <Input
                   placeholder="https://youtube.com/watch?v=... or https://example.com/image.jpg"
                   value={urlInput}
                   onChange={(e) => handleUrlChange(e.target.value)}
+                  className="h-10 rounded-none border-0 border-b border-white/80 bg-transparent px-0 text-sm text-[#f3f4f7] shadow-none outline-none placeholder:text-[#767B85] focus-visible:ring-0 focus-visible:ring-offset-0"
                 />
-                <p className="text-xs text-muted-foreground/60">Accepted image types: jpg, jpeg, png, gif, webp</p>
+                <p className="text-xs text-[#b8bec8]">Accepted image types: jpg, jpeg, png, gif, webp</p>
                 {extractYouTubeId(urlInput) && (
-                  <div className="rounded-xl overflow-hidden bg-muted">
+                  <div className="overflow-hidden rounded-[4px] border border-[#4a4f5a] bg-[#2f343d]">
                     <AspectRatio ratio={16 / 9}>
                       <img
                         src={`https://img.youtube.com/vi/${extractYouTubeId(urlInput)}/maxresdefault.jpg`}
@@ -701,33 +721,48 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
             )}
 
             <div className="space-y-2">
-              <Label>Title (optional)</Label>
+              <Label className="text-xs font-medium uppercase tracking-wide text-[#c4c8d0]">Title (optional)</Label>
               <Input
                 placeholder="Give your media a title..."
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 maxLength={100}
+                className="h-10 rounded-none border-0 border-b border-white/80 bg-transparent px-0 text-sm text-[#f3f4f7] shadow-none outline-none placeholder:text-[#767B85] focus-visible:ring-0 focus-visible:ring-offset-0"
               />
             </div>
             <div className="space-y-2">
-              <Label>Description (optional)</Label>
+              <Label className="text-xs font-medium uppercase tracking-wide text-[#c4c8d0]">Description (optional)</Label>
               <Textarea
                 placeholder="Add a description..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 maxLength={500}
                 rows={3}
+                className="min-h-[84px] rounded-[3px] border border-[#4a4f5a] bg-[#2f343d] text-sm text-[#f3f4f7] shadow-none placeholder:text-[#767B85] focus-visible:ring-1 focus-visible:ring-[#d7dbe3]/60 focus-visible:ring-offset-0"
               />
             </div>
 
-            <Button
-              onClick={handleUpload}
-              disabled={isUploading || (!selectedFile && !urlInput)}
-              className="w-full gap-2"
-            >
-              {isUploading && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isUploading ? "Uploading..." : "Add Media"}
-            </Button>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 border-t border-[#2c3139] bg-[#30353f] px-5 py-3">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setIsUploadModalOpen(false)}
+                className={MEDIA_MODAL_GHOST_BUTTON_CLASS}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleUpload}
+                disabled={isUploading || (!selectedFile && !urlInput)}
+                className={`${MEDIA_MODAL_PRIMARY_BUTTON_CLASS} gap-2`}
+              >
+                {isUploading && <Loader2 className="h-4 w-4 animate-spin" />}
+                {isUploading ? "Uploading..." : "Add Media"}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

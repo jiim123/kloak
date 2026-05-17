@@ -1129,8 +1129,12 @@ body {
   font-family: inherit;
 }
 
-.server-settings-reference button:not([role="tab"]):not([aria-label="Close server settings"]) {
+.server-settings-reference button:not([role="tab"]):not([aria-label="Close server settings"]):not([aria-label="Close user settings"]) {
   border-radius: 4px;
+}
+
+.server-settings-reference .user-settings-nav-row {
+  border-radius: 0;
 }
 
 .server-settings-reference .border-b,

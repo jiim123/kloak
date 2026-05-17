@@ -59,9 +59,45 @@ const SLOWMODE_OPTIONS = [
   { value: "3600", label: "1 hour" },
 ];
 
-// Toggle card component for switches
-const ToggleCard = ({
+const normalizeDomain = (domain: string) =>
+  domain
+    .toLowerCase()
+    .replace(/^(https?:\/\/)?(www\.)?/, "")
+    .replace(/\/.*$/, "");
+
+const sameStringArray = (a: string[], b: string[]) =>
+  a.length === b.length && a.every((item, index) => item === b[index]);
+
+const SettingsRow = ({
   icon: Icon,
+  label,
+  description,
+  children,
+  disabled,
+  className,
+}: {
+  icon: React.ElementType;
+  label: string;
+  description: string;
+  children: React.ReactNode;
+  disabled?: boolean;
+  className?: string;
+}) => (
+  <div className={cn("flex min-h-[72px] items-center gap-4 py-4", disabled && "opacity-60", className)}>
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[6px] bg-[#3d414c]">
+      <Icon className="h-[18px] w-[18px] text-[#b9bfca]" />
+    </div>
+    <div className="min-w-0 flex-1">
+      <p className="text-sm font-semibold leading-5 text-[#f2f3f5]">{label}</p>
+      <p className="mt-0.5 text-xs leading-5 text-[#c5cad4]">{description}</p>
+    </div>
+    <div className="shrink-0">{children}</div>
+  </div>
+);
+
+// Toggle row component for switches
+const ToggleCard = ({
+  icon,
   label,
   description,
   checked,
@@ -75,30 +111,32 @@ const ToggleCard = ({
   onCheckedChange: (checked: boolean) => void;
   disabled?: boolean;
 }) => (
-  <div
-    className={cn(
-      "flex items-center gap-4 p-4 rounded-xl bg-secondary/30 border border-border/50",
-      disabled && "opacity-60",
-    )}
-  >
-    <div className="w-10 h-10 rounded-xl bg-secondary/80 flex items-center justify-center flex-shrink-0">
-      <Icon className="w-5 h-5 text-muted-foreground" />
-    </div>
-    <div className="flex-1 min-w-0">
-      <p className="text-sm font-medium">{label}</p>
-      <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
-    </div>
+  <SettingsRow icon={icon} label={label} description={description} disabled={disabled}>
     <Switch checked={checked} onCheckedChange={onCheckedChange} disabled={disabled} />
-  </div>
+  </SettingsRow>
 );
 
 // Settings group box wrapper — matches ServerSettingsPage pattern
-const SettingsGroup = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
-    <Label className="text-sm font-medium">{title}</Label>
-    {children}
-  </div>
+const SettingsSection = ({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) => (
+  <section className="space-y-2">
+    <div className="space-y-1">
+      <h3 className="text-[13px] font-semibold uppercase tracking-wide text-[#c7ccd6]">{title}</h3>
+      {description && <p className="text-xs leading-5 text-[#aeb4bf]">{description}</p>}
+    </div>
+    <div className="divide-y divide-[#4a4f5a]">{children}</div>
+  </section>
 );
+
+const NAV_ITEM_CLASS =
+  "w-full h-9 flex items-center gap-2.5 justify-start px-[30px] py-0 text-left text-sm font-medium leading-none transition-colors";
 
 export const ChannelSettingsPage = () => {
   const { activeModal, modalData, closeModal } = useUIStore();
@@ -145,15 +183,16 @@ export const ChannelSettingsPage = () => {
   const hasValidTarget = isCategory ? !!category : !!channel;
   const targetName = isCategory ? category?.name : channel?.name;
 
-  // Navigation items - categories don't have a separate settings tab
+  // Navigation items - categories use the same full-screen settings shell as channels
   const navItems = isCategory
     ? [
         { id: "overview", label: "Overview", icon: FolderOpen },
+        { id: "settings", label: "Settings", icon: Settings },
         { id: "permissions", label: "Permissions", icon: Shield },
       ]
     : [
         { id: "overview", label: "Overview", icon: Hash },
-        ...(channel?.type !== "voice" ? [{ id: "settings", label: "Settings", icon: Settings }] : []),
+        { id: "settings", label: "Settings", icon: Settings },
         ...(channel?.is_private ? [{ id: "members", label: "Members", icon: Users }] : []),
         { id: "permissions", label: "Permissions", icon: Shield },
       ];
@@ -221,7 +260,7 @@ export const ChannelSettingsPage = () => {
   const handleSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
     e?.preventDefault();
 
-    if (!name.trim()) {
+    if ((activeTab === "overview" || isCategory) && !name.trim()) {
       setError(isCategory ? "Category name is required" : "Channel name is required");
       return;
     }
@@ -234,47 +273,107 @@ export const ChannelSettingsPage = () => {
 
       if (isCategory && categoryId) {
         await updateCategory(categoryId, { name: name.trim() }, user.id);
-        toast.success("Category updated");
       } else if (channelId) {
-        const updates: Partial<Channel> = {
-          name: formatChannelName(name.trim()),
-          is_nsfw: isNsfw,
-          slowmode_seconds: parseInt(slowmodeSeconds, 10) || 0,
-          is_read_only: isReadOnly,
-          block_links: blockLinks,
-          allowed_link_domains: allowedLinkDomains,
-          ghost_mode: ghostMode,
-          block_attachments: blockAttachments,
-          disable_reactions: disableReactions,
-          disable_polls: disablePolls,
-          auto_delete_seconds: autoDeleteSeconds === "null" ? null : parseInt(autoDeleteSeconds, 10),
-        };
+        const updates: Partial<Channel> = {};
 
-        const trimmedTopic = topic.trim();
-        updates.topic = trimmedTopic || null;
-        if (channel?.type !== "voice") {
-          const trimmedChatNotice = chatNotice.trim();
-          if (trimmedChatNotice.length > 300) {
-            throw new Error("Before you chat notice must be 300 characters or fewer");
+        if (activeTab === "overview") {
+          updates.name = formatChannelName(name.trim());
+
+          const trimmedTopic = topic.trim();
+          updates.topic = trimmedTopic || null;
+          if (channel?.type !== "voice") {
+            const trimmedChatNotice = chatNotice.trim();
+            if (trimmedChatNotice.length > 300) {
+              throw new Error("Before you chat notice must be 300 characters or fewer");
+            }
+            updates.chat_notice = trimmedChatNotice || null;
           }
-          updates.chat_notice = trimmedChatNotice || null;
+
+          if (channel?.type === "voice") {
+            const parsedLimit = Math.max(0, Number.parseInt(voiceUserLimit, 10) || 0);
+            updates.voice_user_limit = parsedLimit;
+          }
         }
 
-        if (channel?.type === "voice") {
-          const parsedLimit = Math.max(0, Number.parseInt(voiceUserLimit, 10) || 0);
-          updates.voice_user_limit = parsedLimit;
+        if (activeTab === "settings") {
+          updates.is_nsfw = isNsfw;
+          updates.slowmode_seconds = parseInt(slowmodeSeconds, 10) || 0;
+          updates.is_read_only = isReadOnly;
+          updates.block_links = blockLinks;
+          updates.allowed_link_domains = allowedLinkDomains;
+          updates.ghost_mode = ghostMode;
+          updates.block_attachments = blockAttachments;
+          updates.disable_reactions = disableReactions;
+          updates.disable_polls = disablePolls;
+          updates.auto_delete_seconds = autoDeleteSeconds === "null" ? null : parseInt(autoDeleteSeconds, 10);
         }
 
         await updateChannel(channelId, updates, user.id);
-        toast.success("Channel updated");
       }
-      handleClose();
+      toast.success(`${isCategory ? "Category" : "Channel"} updated`);
     } catch (err) {
       setError(err instanceof Error ? err.message : `Failed to update ${isCategory ? "category" : "channel"}`);
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const resetActiveTabChanges = () => {
+    setError("");
+    setNewDomain("");
+
+    if (isCategory && category) {
+      if (activeTab === "overview") {
+        setName(category.name);
+      }
+      return;
+    }
+
+    if (!channel) return;
+
+    if (activeTab === "overview") {
+      setName(channel.name);
+      setTopic(channel.topic || "");
+      setChatNotice(channel.chat_notice || "");
+      setVoiceUserLimit(String(channel.voice_user_limit ?? 0));
+      return;
+    }
+
+    if (activeTab === "settings") {
+      setIsNsfw(channel.is_nsfw);
+      setSlowmodeSeconds(String(channel.slowmode_seconds));
+      setIsReadOnly(channel.is_read_only || false);
+      setBlockLinks(channel.block_links || false);
+      setAllowedLinkDomains(channel.allowed_link_domains || []);
+      setGhostMode(channel.ghost_mode || false);
+      setBlockAttachments(channel.block_attachments || false);
+      setDisableReactions(channel.disable_reactions || false);
+      setDisablePolls(channel.disable_polls || false);
+      setAutoDeleteSeconds(channel.auto_delete_seconds != null ? String(channel.auto_delete_seconds) : "null");
+    }
+  };
+
+  const channelOverviewDirty = !!channel && (
+    formatChannelName(name.trim()) !== channel.name ||
+    topic.trim() !== (channel.topic || "") ||
+    (channel.type !== "voice" && chatNotice.trim() !== (channel.chat_notice || "")) ||
+    (channel.type === "voice" && Math.max(0, Number.parseInt(voiceUserLimit, 10) || 0) !== (channel.voice_user_limit ?? 0))
+  );
+
+  const channelSettingsDirty = !!channel && (
+    isNsfw !== channel.is_nsfw ||
+    Number.parseInt(slowmodeSeconds, 10) !== channel.slowmode_seconds ||
+    isReadOnly !== (channel.is_read_only || false) ||
+    blockLinks !== (channel.block_links || false) ||
+    !sameStringArray(allowedLinkDomains, channel.allowed_link_domains || []) ||
+    ghostMode !== (channel.ghost_mode || false) ||
+    blockAttachments !== (channel.block_attachments || false) ||
+    disableReactions !== (channel.disable_reactions || false) ||
+    disablePolls !== (channel.disable_polls || false) ||
+    autoDeleteSeconds !== (channel.auto_delete_seconds != null ? String(channel.auto_delete_seconds) : "null")
+  );
+
+  const categoryOverviewDirty = !!category && name.trim() !== category.name;
 
   const handleDelete = async () => {
     try {
@@ -300,19 +399,14 @@ export const ChannelSettingsPage = () => {
     <div className="space-y-6">
       <div className="space-y-3">
         <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Channel Name</Label>
-        <div className="relative">
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-secondary/80 flex items-center justify-center">
-            <Hash className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <Input
-            id="channel-name"
-            value={name}
-            onChange={(e) => setName(formatChannelName(e.target.value))}
-            placeholder="channel-name"
-            className="h-11 pl-14 rounded-xl border-border/50 bg-secondary/30"
-            maxLength={50}
-          />
-        </div>
+        <Input
+          id="channel-name"
+          value={name}
+          onChange={(e) => setName(formatChannelName(e.target.value))}
+          placeholder="channel-name"
+          className="h-10 rounded-xl border-border/50 bg-secondary/30 text-sm"
+          maxLength={50}
+        />
       </div>
 
       <div className="space-y-3">
@@ -398,32 +492,29 @@ export const ChannelSettingsPage = () => {
 
   // Channel Settings Tab Content
   const channelSettingsContent = (
-    <div className="space-y-5">
-      {/* Channel Behavior */}
-      <SettingsGroup title="Channel Behavior">
-        {/* Slowmode */}
-        <div className="space-y-2">
+    <div className="space-y-8">
+      <SettingsSection
+        title="Channel Behavior"
+        description="Control how members can post and how this channel appears."
+      >
+        <SettingsRow
+          icon={Clock}
+          label="Slowmode"
+          description="Members can only send one message within the selected interval."
+        >
           <Select value={slowmodeSeconds} onValueChange={setSlowmodeSeconds}>
-            <SelectTrigger className="h-11 rounded-xl border-border/50 bg-secondary/30">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
-                  <Clock className="w-4 h-4 text-muted-foreground" />
-                </div>
-                <SelectValue />
-              </div>
+            <SelectTrigger className="h-9 w-[220px] rounded-[4px] border-[#555b68] bg-[#323641] text-sm">
+              <SelectValue />
             </SelectTrigger>
-            <SelectContent className="rounded-xl border-border/50">
+            <SelectContent className="rounded-[4px] border-border/50">
               {SLOWMODE_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value} className="rounded-lg">
+                <SelectItem key={option.value} value={option.value}>
                   {option.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <p className="text-xs text-muted-foreground">
-            Members will only be able to send one message per this time period
-          </p>
-        </div>
+        </SettingsRow>
 
         <ToggleCard
           icon={Lock}
@@ -453,10 +544,12 @@ export const ChannelSettingsPage = () => {
           onCheckedChange={setGhostMode}
           disabled={channel?.ghost_mode}
         />
-      </SettingsGroup>
+      </SettingsSection>
 
-      {/* Content & Media Restrictions */}
-      <SettingsGroup title="Content & Media Restrictions">
+      <SettingsSection
+        title="Content & Media Restrictions"
+        description="Limit media, links, reactions, and polls for regular members."
+      >
         <ToggleCard
           icon={Link2}
           label="Block Links"
@@ -471,11 +564,11 @@ export const ChannelSettingsPage = () => {
         />
 
         {blockLinks && (
-          <div className="ml-14 space-y-3 p-4 rounded-xl bg-secondary/20 border border-border/50">
+          <div className="ml-[52px] space-y-3 py-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium">Whitelisted Domains</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Allow links from these domains for all users</p>
+                <p className="text-sm font-semibold text-[#f2f3f5]">Whitelisted Domains</p>
+                <p className="text-xs text-[#c5cad4] mt-0.5">Allow links from these domains for all users</p>
               </div>
             </div>
 
@@ -484,14 +577,11 @@ export const ChannelSettingsPage = () => {
                 value={newDomain}
                 onChange={(e) => setNewDomain(e.target.value.toLowerCase())}
                 placeholder="e.g. github.com"
-                className="h-9 rounded-lg border-border/50 bg-secondary/30 text-sm"
+                className="h-9 rounded-[4px] border-[#555b68] bg-[#323641] text-sm"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
-                    const domain = newDomain
-                      .toLowerCase()
-                      .replace(/^(https?:\/\/)?(www\.)?/, "")
-                      .replace(/\/.*$/, "");
+                    const domain = normalizeDomain(newDomain);
                     if (domain && !allowedLinkDomains.includes(domain)) {
                       setAllowedLinkDomains([...allowedLinkDomains, domain]);
                       setNewDomain("");
@@ -503,12 +593,9 @@ export const ChannelSettingsPage = () => {
                 type="button"
                 variant="secondary"
                 size="sm"
-                className="h-9 px-3 rounded-lg"
+                className="h-9 rounded-[4px] px-3"
                 onClick={() => {
-                  const domain = newDomain
-                    .toLowerCase()
-                    .replace(/^(https?:\/\/)?(www\.)?/, "")
-                    .replace(/\/.*$/, "");
+                  const domain = normalizeDomain(newDomain);
                   if (domain && !allowedLinkDomains.includes(domain)) {
                     setAllowedLinkDomains([...allowedLinkDomains, domain]);
                     setNewDomain("");
@@ -524,7 +611,7 @@ export const ChannelSettingsPage = () => {
                 {allowedLinkDomains.map((domain) => (
                   <span
                     key={domain}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary text-xs font-medium"
+                    className="inline-flex items-center gap-1 rounded-[4px] bg-[#414650] px-2 py-1 text-xs font-medium text-[#e3e5e8]"
                   >
                     {domain}
                     <button
@@ -564,33 +651,31 @@ export const ChannelSettingsPage = () => {
           checked={disablePolls}
           onCheckedChange={setDisablePolls}
         />
-      </SettingsGroup>
+      </SettingsSection>
 
-      {/* Message Retention */}
-      <SettingsGroup title="Message Retention">
-        <div className="space-y-2">
+      <SettingsSection
+        title="Message Retention"
+        description="Choose whether messages should be removed automatically."
+      >
+        <SettingsRow
+          icon={Timer}
+          label="Auto-delete messages"
+          description="Pinned and system messages are preserved."
+        >
           <Select value={autoDeleteSeconds} onValueChange={setAutoDeleteSeconds}>
-            <SelectTrigger className="h-11 rounded-xl border-border/50 bg-secondary/30">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
-                  <Timer className="w-4 h-4 text-muted-foreground" />
-                </div>
-                <SelectValue />
-              </div>
+            <SelectTrigger className="h-9 w-[220px] rounded-[4px] border-[#555b68] bg-[#323641] text-sm">
+              <SelectValue />
             </SelectTrigger>
-            <SelectContent className="rounded-xl border-border/50">
-              <SelectItem value="null" className="rounded-lg">Disabled</SelectItem>
-              <SelectItem value="3600" className="rounded-lg">After 1 hour</SelectItem>
-              <SelectItem value="86400" className="rounded-lg">After 24 hours</SelectItem>
-              <SelectItem value="604800" className="rounded-lg">After 7 days</SelectItem>
-              <SelectItem value="2592000" className="rounded-lg">After 30 days</SelectItem>
+            <SelectContent className="rounded-[4px] border-border/50">
+              <SelectItem value="null">Disabled</SelectItem>
+              <SelectItem value="3600">After 1 hour</SelectItem>
+              <SelectItem value="86400">After 24 hours</SelectItem>
+              <SelectItem value="604800">After 7 days</SelectItem>
+              <SelectItem value="2592000">After 30 days</SelectItem>
             </SelectContent>
           </Select>
-          <p className="text-xs text-muted-foreground">
-            Automatically delete messages after a set time period. Pinned and system messages are preserved.
-          </p>
-        </div>
-      </SettingsGroup>
+        </SettingsRow>
+      </SettingsSection>
     </div>
   );
 
@@ -647,19 +732,14 @@ export const ChannelSettingsPage = () => {
     <div className="space-y-6">
       <div className="space-y-3">
         <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Category Name</Label>
-        <div className="relative">
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-secondary/80 flex items-center justify-center">
-            <FolderOpen className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <Input
-            id="category-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Category name"
-            className="h-11 pl-14 rounded-xl border-border/50 bg-secondary/30"
-            maxLength={50}
-          />
-        </div>
+        <Input
+          id="category-name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Category name"
+          className="h-10 rounded-xl border-border/50 bg-secondary/30 text-sm"
+          maxLength={50}
+        />
       </div>
 
       {error && (
@@ -686,11 +766,56 @@ export const ChannelSettingsPage = () => {
     </div>
   );
 
+  // Category Settings Content
+  const categorySettingsContent = (
+    <div className="space-y-8">
+      <SettingsSection title="Category Behavior">
+        <SettingsRow
+          icon={Settings}
+          label="Category-level settings"
+          description="Permissions configured here apply to channels in this category unless a channel has its own override."
+        >
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="h-9 rounded-[4px] px-4"
+            onClick={() => setActiveTab("permissions")}
+          >
+            Open Permissions
+          </Button>
+        </SettingsRow>
+      </SettingsSection>
+
+      <SettingsSection title="Danger Zone">
+        <SettingsRow
+          icon={Trash2}
+          label="Delete Category"
+          description="Deleting a category moves all channels in it to uncategorized."
+          className="text-destructive"
+        >
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            className="h-9 rounded-[3px] px-4"
+            onClick={() => setShowDeleteConfirm(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete
+          </Button>
+        </SettingsRow>
+      </SettingsSection>
+    </div>
+  );
+
   // Render category content based on active tab
   const renderCategoryContent = () => {
     switch (activeTab) {
       case "overview":
         return categoryOverviewContent;
+      case "settings":
+        return categorySettingsContent;
       case "permissions":
         return categoryPermissionsContent;
       default:
@@ -698,8 +823,9 @@ export const ChannelSettingsPage = () => {
     }
   };
 
-  // Check if we need to show save button
-  const showSaveButton = activeTab === "overview" || (activeTab === "settings" && !isCategory);
+  const showSaveButton = isCategory
+    ? activeTab === "overview" && categoryOverviewDirty
+    : (activeTab === "overview" && channelOverviewDirty) || (activeTab === "settings" && channelSettingsDirty);
 
   // ESC key to close
   useEffect(() => {
@@ -724,22 +850,22 @@ export const ChannelSettingsPage = () => {
 
   return (
     <>
-      <div className="h-full flex bg-background">
+      <div className="server-settings-reference h-full flex bg-[#363944] text-[#dbdee1]">
         {/* Sidebar Navigation */}
-        <div className="w-56 flex-shrink-0 border-r border-border bg-secondary/20 flex flex-col overflow-hidden">
+        <div className="w-[250px] flex-shrink-0 bg-[#171a1f] flex flex-col overflow-hidden">
           {/* Channel/Category Name Header */}
-          <div className="px-4 pt-5 pb-3">
-            <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground truncate">
-              {isCategory ? category?.name : `# ${channel?.name}`}
+          <div className="px-[30px] pt-[32px] pb-[12px]">
+            <h2 className="text-xs font-medium uppercase tracking-widest text-[#a9adb7] truncate">
+              {isCategory ? "Category settings" : "Channel settings"}
             </h2>
-            <p className="text-[10px] text-muted-foreground/60 mt-0.5">
-              {isCategory ? "Category Settings" : "Channel Settings"}
+            <p className="text-[11px] text-[#7f8490] mt-1 truncate">
+              {isCategory ? category?.name : `#${channel?.name}`}
             </p>
           </div>
 
           {/* Nav Items */}
-          <ScrollArea className="flex-1 px-2 pb-4">
-            <nav className="flex flex-col gap-0.5">
+          <ScrollArea className="flex-1 pb-6">
+            <nav className="flex flex-col items-start w-full bg-transparent p-0 gap-0">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
@@ -749,10 +875,10 @@ export const ChannelSettingsPage = () => {
                     key={item.id}
                     onClick={() => setActiveTab(item.id)}
                     className={cn(
-                      "w-full flex items-center gap-2.5 text-sm font-medium px-3 py-2 rounded-md transition-colors",
+                      NAV_ITEM_CLASS,
                       isActive
-                        ? "bg-secondary/60 text-foreground"
-                        : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
+                        ? "bg-[#2b2e34] text-white"
+                        : "text-[#d7d9df] hover:bg-[#202329] hover:text-white",
                     )}
                   >
                     <Icon className="w-4 h-4" />
@@ -762,30 +888,55 @@ export const ChannelSettingsPage = () => {
               })}
 
               {/* Delete - at bottom, separated */}
-              <Separator className="my-3" />
+              <Separator className="my-5 bg-[#2b2e34]" />
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirm(true)}
-                className="w-full flex items-center gap-2.5 text-sm font-medium px-3 py-2 rounded-md text-destructive hover:bg-destructive/10 transition-colors"
+                className={cn(NAV_ITEM_CLASS, "text-[#f05d5d] hover:bg-[#202329] hover:text-[#ff7373]")}
               >
                 <Trash2 className="w-4 h-4" />
                 Delete {isCategory ? "Category" : "Channel"}
               </button>
             </nav>
           </ScrollArea>
+
+          {showSaveButton && (
+            <div className="px-4 pb-4 pt-2 border-t border-[#2b2e34] space-y-2">
+              <Button
+                type="button"
+                onClick={handleSubmit}
+                disabled={isSubmitting || ((activeTab === "overview" || isCategory) && !name.trim())}
+                className="w-full h-9 bg-[#f1c40f] hover:bg-[#ddb40d] text-[#1a1c21] font-semibold"
+              >
+                {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Save changes
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={resetActiveTabChanges}
+                className="w-full h-7 bg-transparent text-xs text-[#9ea2ad] hover:bg-[#202329] hover:text-white"
+              >
+                Cancel
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 overflow-hidden relative flex flex-col">
+        <div className="flex-1 overflow-hidden relative flex flex-col bg-[#363944]">
           {/* Close Button (ESC) */}
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             onClick={handleClose}
-            className="absolute top-[48px] right-[46px] z-10 text-[#aeb1bb] hover:text-white transition-colors"
+            className="absolute top-[48px] right-[46px] z-10 h-10 w-10 bg-transparent text-[#aeb1bb] hover:bg-[#202329] hover:text-white"
             aria-label="Close channel settings"
           >
             <X className="w-7 h-7" />
-          </button>
+          </Button>
 
           {activeTab === "permissions" ? (
             /* Permissions tab renders full-bleed with its own master/detail layout */
@@ -795,8 +946,10 @@ export const ChannelSettingsPage = () => {
           ) : (
             /* Other tabs: titled scrollable content */
             <div className="flex-1 overflow-y-auto">
-              <div className="p-6 pr-16">
-                <h2 className="text-xl font-medium mb-1">{navItems.find((n) => n.id === activeTab)?.label}</h2>
+              <div className="px-[40px] py-[32px] pr-[84px]">
+                <h2 className="text-[20px] leading-7 font-bold mb-1 text-white">
+                  {navItems.find((n) => n.id === activeTab)?.label}
+                </h2>
                 <p className="text-sm text-muted-foreground mb-6">
                   {activeTab === "overview" && (isCategory ? "Basic category information" : "Basic channel information")}
                   {activeTab === "settings" &&
@@ -808,28 +961,6 @@ export const ChannelSettingsPage = () => {
                   {/* Tab Content */}
                   {isCategory ? renderCategoryContent() : renderChannelContent()}
 
-                  {/* Save Button for overview and settings (channel) */}
-                  {showSaveButton && (
-                    <div className="flex gap-3 pt-6 mt-6 border-t border-border/50">
-                      <Button type="button" variant="outline" onClick={handleClose} className="h-11 rounded-xl px-8">
-                        Cancel
-                      </Button>
-                      <Button
-                        onClick={handleSubmit}
-                        disabled={isSubmitting || !name.trim()}
-                        className="h-11 rounded-xl px-8"
-                      >
-                        {isSubmitting ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Saving...
-                          </>
-                        ) : (
-                          "Save Changes"
-                        )}
-                      </Button>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>

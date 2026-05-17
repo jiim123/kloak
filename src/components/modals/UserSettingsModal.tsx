@@ -257,6 +257,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   ];
 
   const isOpen = activeModal === "user-settings";
+  const activeNavItem = navItems.find((item) => item.id === activeTab);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -1395,21 +1396,20 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
       {/* Desktop: In-layout page (rendered from AppLayout) */}
       {variant === "page" && !isMobile && (
-        <div className="h-full flex bg-background">
+        <div className="server-settings-reference h-full flex bg-[#363944] text-[#dbdee1]">
           {/* Sidebar Navigation */}
-          <div className="w-56 flex-shrink-0 border-r border-border bg-secondary/20 flex flex-col overflow-hidden">
+          <div className="w-[250px] flex-shrink-0 bg-[#171a1f] flex flex-col overflow-hidden">
             {/* Settings Title Header */}
-            <div className="px-4 pt-5 pb-3">
-              <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground truncate">
-                User Settings
+            <div className="px-[30px] pt-[32px] pb-[12px]">
+              <h2 className="text-xs font-medium uppercase tracking-widest text-[#a9adb7] truncate">
+                User settings
               </h2>
             </div>
 
             {/* Nav Items */}
-            <ScrollArea className="flex-1 px-2 pb-4">
-              <nav className="flex flex-col gap-0.5">
+            <ScrollArea className="flex-1 pb-6">
+              <nav className="flex flex-col gap-0">
                 {navItems.map((item) => {
-                  const Icon = item.icon;
                   const isActive = activeTab === item.id;
 
                   return (
@@ -1417,26 +1417,24 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                       key={item.id}
                       onClick={() => setActiveTab(item.id)}
                       className={cn(
-                        "w-full flex items-center gap-2.5 text-sm font-medium px-3 py-2 rounded-md transition-colors",
+                        "user-settings-nav-row w-full h-9 justify-start px-[30px] py-0 text-left text-sm font-medium leading-none transition-colors",
                         isActive
-                          ? "bg-secondary/60 text-foreground"
-                          : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
+                          ? "bg-[#2b2e34] text-white"
+                          : "text-[#d7d9df] hover:bg-[#202329] hover:text-white",
                       )}
                     >
-                      <Icon className="w-4 h-4" />
                       {item.label}
                     </button>
                   );
                 })}
 
                 {/* Logout - at bottom, separated */}
-                <Separator className="my-3" />
+                <Separator className="my-5 bg-[#2b2e34]" />
                 <button
                   type="button"
                   onClick={handleLogoutClick}
-                  className="w-full flex items-center gap-2.5 text-sm font-medium px-3 py-2 rounded-md text-destructive hover:bg-destructive/10 transition-colors"
+                  className="user-settings-nav-row w-full h-9 px-[30px] py-0 text-left text-sm font-medium leading-none text-[#f05d5d] transition-colors hover:bg-[#202329] hover:text-[#ff7373]"
                 >
-                  <LogOut className="w-4 h-4" />
                   Log Out
                 </button>
               </nav>
@@ -1444,23 +1442,23 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           </div>
 
           {/* Main Content Area */}
-          <div className="flex-1 overflow-y-auto relative">
+          <div className="flex-1 overflow-y-auto relative bg-[#363944]">
             {/* Close Button (ESC) */}
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon"
               onClick={handleClose}
-              className="absolute top-4 right-4 z-10 flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors group"
+              className="absolute top-[48px] right-[46px] z-10 h-10 w-10 bg-transparent text-[#aeb1bb] hover:bg-[#202329] hover:text-white"
+              aria-label="Close user settings"
             >
-              <div className="w-9 h-9 rounded-full border border-border bg-secondary/50 flex items-center justify-center group-hover:bg-secondary group-hover:border-muted-foreground/50 transition-colors">
-                <X className="w-4 h-4" />
-              </div>
-              <span className="text-[10px] font-medium uppercase tracking-wider">ESC</span>
-            </button>
+              <X className="w-7 h-7" />
+            </Button>
 
             {/* Content */}
-            <div className="p-6 pr-16">
-
-              <div className={cn(activeTab !== "profile" && "max-w-xl")}>{renderContent()}</div>
+            <div className="px-[40px] py-[32px] pr-[84px]">
+              <h2 className="text-[20px] leading-7 font-bold mb-[26px] text-white">{activeNavItem?.label}</h2>
+              <div className="max-w-3xl">{renderContent()}</div>
             </div>
           </div>
         </div>

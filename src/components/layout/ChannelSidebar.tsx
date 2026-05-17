@@ -564,12 +564,26 @@ const SortableChannel = memo(({
         {/* Channel name */}
         <span className="truncate flex-1 text-left leading-5">{channel.name}</span>
 
-        {/* Private indicator (only if no custom icon already showing lock) */}
-        {channel.is_private && !channel.icon && <LockIcon className="w-3 h-3 text-muted-foreground flex-shrink-0" />}
+        {/* Private indicator (right-aligned; hidden on hover when row actions are shown) */}
+        {channel.is_private && !channel.icon && !isUnread && mentionCount === 0 && !(channel.type === "voice" && voiceCount > 0) && !isSortingMode && (
+          <span
+            className={cn(
+              "absolute right-3 top-1/2 -translate-y-1/2 transition-opacity duration-150",
+              showDesktopActions && "group-hover:opacity-0",
+            )}
+          >
+            <LockIcon className="w-3 h-3 text-muted-foreground" />
+          </span>
+        )}
 
-        {/* NSFW badge */}
-        {channel.is_nsfw && (
-          <span className="px-1.5 py-0.5 text-[11px] font-sans font-medium rounded-full bg-kloak-dnd text-white border border-kloak-dnd/60 uppercase leading-none flex-shrink-0">
+        {/* NSFW badge (right-aligned; hidden on hover when row actions are shown) */}
+        {channel.is_nsfw && !isUnread && mentionCount === 0 && !(channel.type === "voice" && voiceCount > 0) && !isSortingMode && (
+          <span
+            className={cn(
+              "absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[11px] font-sans font-medium rounded-full bg-kloak-dnd text-white border border-kloak-dnd/60 uppercase leading-none transition-opacity duration-150",
+              showDesktopActions && "group-hover:opacity-0",
+            )}
+          >
             NSFW
           </span>
         )}
