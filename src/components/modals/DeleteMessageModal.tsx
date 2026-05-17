@@ -1,20 +1,17 @@
 import { useState, useEffect } from "react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import { useMessageStore } from "@/stores/messageStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useMessageUser } from "@/stores/userCacheStore";
 import { getMessagePreview } from "@/lib/message";
 import { getSignedAttachmentUrl } from "@/lib/signedUrl";
 import type { Message } from "@/types";
+
+const MODAL_CONTENT_CLASS =
+  "max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-[#4a4f5a] bg-[#333842] p-0 text-[#f4f5f7] shadow-2xl sm:max-w-[448px]";
+
 interface DeleteMessageModalProps {
   message?: Message | null;
   open?: boolean;
@@ -91,92 +88,121 @@ export const DeleteMessageModal = ({
 }: DeleteMessageModalProps) => {
   const { deleteMessage } = useMessageStore();
   const { user } = useAuthStore();
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const message = messageProp || null;
   const isOpen = openProp !== undefined ? openProp : !!message;
 
+  const handleClose = () => {
+    if (onOpenChange) onOpenChange(false);
+    if (onClose) onClose();
+  };
+
   const handleDelete = async () => {
-    if (onConfirm) {
-      onConfirm();
-      if (onOpenChange) onOpenChange(false);
-      if (onClose) onClose();
-    } else if (message && user) {
-      const deleteFn = customDeleteHandler || deleteMessage;
-      await deleteFn(message.id, user.id);
-      if (onOpenChange) onOpenChange(false);
-      if (onClose) onClose();
+    setIsDeleting(true);
+    try {
+      if (onConfirm) {
+        await Promise.resolve(onConfirm());
+        handleClose();
+      } else if (message && user) {
+        const deleteFn = customDeleteHandler || deleteMessage;
+        await deleteFn(message.id, user.id);
+        handleClose();
+      }
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   const handleOpenChange = (open: boolean) => {
-    if (onOpenChange) {
-      onOpenChange(open);
-    } else if (!open && onClose) {
-      onClose();
-    }
+    if (open) return;
+    handleClose();
   };
 
   const displayContent = messageContent || (message ? message.content : "");
   const displayUser = useMessageUser(message?.user_id);
   const { images, caption } = parseContentImages(displayContent);
   const hasImages = images.length > 0;
+  const displayName = displayUser?.display_name || displayUser?.username || "Unknown";
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={handleOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Delete Message</AlertDialogTitle>
-          <AlertDialogDescription>
-            Are you sure you want to delete this message? This action cannot be undone.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-
-        {(message || messageContent) && (
-          <div className="my-4 p-3 bg-secondary rounded-lg border border-border">
-            {displayUser && (
-              <div className="flex items-center gap-2 mb-2">
-                <span className="font-medium text-sm">
-                  {displayUser.display_name || displayUser.username || "Unknown"}
-                </span>
-              </div>
-            )}
-
-            {caption && (
-              <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{getMessagePreview(caption, 150)}</p>
-            )}
-
-            {hasImages ? (
-              <div className="flex flex-wrap gap-1.5">
-                {images.slice(0, 4).map((url, i) => (
-                  <div key={i} className="relative">
-                    <ResolvedImage
-                      url={url}
-                      className="w-20 h-20 rounded-md object-cover"
-                    />
-                  </div>
-                ))}
-                {images.length > 4 && (
-                  <div className="w-20 h-20 rounded-md bg-muted flex items-center justify-center text-xs text-muted-foreground">
-                    +{images.length - 4} more
-                  </div>
-                )}
-              </div>
-            ) : !caption ? (
-              <p className="text-sm text-muted-foreground line-clamp-3">{getMessagePreview(displayContent, 200)}</p>
-            ) : null}
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogContent className={MODAL_CONTENT_CLASS} hideCloseButton>
+        <div className="flex max-h-[82vh] flex-col overflow-hidden">
+          <div className="border-b border-[#2b3039] bg-[#2f343d] px-5 py-3">
+            <div className="text-base font-medium leading-none tracking-tight">Delete Message</div>
           </div>
-        )}
 
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={handleDelete}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-          >
-            Delete
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+          <div className="space-y-5 overflow-y-auto px-6 py-4">
+            <div className="space-y-2">
+              <p className="text-sm leading-6 text-[#f3f4f7]">
+                Are you sure you want to delete this message? This action cannot be undone.
+              </p>
+            </div>
+
+            {(message || messageContent) && (
+              <div className="border border-[#4a4f5a] bg-[#2f343d] p-3">
+                <p className="text-sm font-medium leading-none text-[#f3f4f7]">Selected message</p>
+
+                <div className="mt-2">
+                  <p className="text-sm text-[#d7dbe3]">{displayName}</p>
+                  {displayUser?.username && (
+                    <p className="mt-1 text-xs text-[#9ea4af]">@{displayUser.username}</p>
+                  )}
+                </div>
+
+                {(caption || !hasImages) && (
+                  <p className="mt-3 line-clamp-3 text-sm text-[#cfd4de]">
+                    {getMessagePreview(caption || displayContent, 200)}
+                  </p>
+                )}
+
+                {hasImages ? (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {images.slice(0, 4).map((url, i) => (
+                      <div key={i} className="relative">
+                        <ResolvedImage url={url} className="h-20 w-20 rounded-md object-cover" />
+                      </div>
+                    ))}
+                    {images.length > 4 && (
+                      <div className="flex h-20 w-20 items-center justify-center rounded-md bg-[#3a404b] text-xs text-[#b8bec8]">
+                        +{images.length - 4} more
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-end gap-3 border-t border-[#2c3139] bg-[#30353f] px-5 py-3">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={handleClose}
+              disabled={isDeleting}
+              className="h-9 rounded-[3px] px-4 text-[#b9bec8] hover:bg-transparent hover:text-white"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="h-9 rounded-[3px] bg-[#d32f2f] px-5 font-medium text-white hover:bg-[#b71c1c]"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete Message"
+              )}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };

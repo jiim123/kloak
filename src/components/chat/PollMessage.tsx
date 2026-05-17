@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useAuthStore } from "@/stores/authStore";
 import { usePollStore } from "@/stores/pollStore";
 import { formatDistanceStrict } from "date-fns";
@@ -19,9 +18,10 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
   const [isVoting, setIsVoting] = useState(false);
   const [fetchError, setFetchError] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
+  const [showResultsOverride, setShowResultsOverride] = useState(false);
+  const [isEditingResponse, setIsEditingResponse] = useState(false);
   const isClosingRef = useRef(false);
 
-  // Fetch poll with user votes on mount
   useEffect(() => {
     if (!hasFetched && !fetchError) {
       setHasFetched(true);
@@ -29,19 +29,16 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
     }
   }, [pollId, user?.id, fetchPoll, fetchError, hasFetched]);
 
-  // Initialize selected state from user's previous votes
   useEffect(() => {
     if (poll?.userVotes && poll.userVotes.length > 0 && selected.length === 0) {
       setSelected(poll.userVotes);
     }
   }, [poll?.userVotes, selected.length]);
 
-  // Check if user has already voted (from stored userVotes)
   const hasVoted = useMemo(() => {
-    return poll?.userVotes && poll.userVotes.length > 0;
+    return !!poll?.userVotes && poll.userVotes.length > 0;
   }, [poll?.userVotes]);
 
-  // Auto-close exactly at end time (best effort)
   useEffect(() => {
     if (!poll || poll.is_closed) return;
     const endsAtMs = new Date(poll.ends_at).getTime();
@@ -52,13 +49,16 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
       isClosingRef.current = true;
       closePoll(pollId)
         .catch(() => undefined)
-        .finally(() => { isClosingRef.current = false; });
+        .finally(() => {
+          isClosingRef.current = false;
+        });
     };
 
     if (msUntilEnd <= 0) {
       doClose();
       return;
     }
+
     const t = setTimeout(doClose, msUntilEnd + 250);
     return () => clearTimeout(t);
   }, [pollId, poll?.ends_at, poll?.is_closed, closePoll]);
@@ -80,22 +80,23 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
     }
   }, [poll, isClosed]);
 
-  // Show results if poll is closed OR if user has already voted
-  const showResults = isClosed || hasVoted;
+  const showResults = isClosed || (!isEditingResponse && (hasVoted || showResultsOverride));
+  const totalVotes = poll?.total_votes ?? 0;
+  const userResponseCount = poll?.userVotes?.length ?? 0;
 
   const canVote = useMemo(() => {
-    return !!poll && !!user && !isClosed && !hasVoted && poll.options.length > 0 && selected.length > 0 && !isVoting;
-  }, [poll, user, isClosed, hasVoted, selected.length, isVoting]);
-
-  const totalVotes = poll?.total_votes ?? 0;
+    return !!poll && !!user && !isClosed && poll.options.length > 0 && selected.length > 0 && !isVoting;
+  }, [poll, user, isClosed, selected.length, isVoting]);
 
   const toggle = (idx: number) => {
-    if (!poll || isClosed || hasVoted) return;
+    if (!poll || isClosed || (hasVoted && !isEditingResponse) || (showResults && !isEditingResponse)) return;
     if (poll.allow_multiple) {
-      setSelected((prev) => (prev.includes(idx) ? prev.filter((x) => x !== idx) : [...prev, idx].sort((a, b) => a - b)));
-    } else {
-      setSelected([idx]);
+      setSelected((prev) =>
+        prev.includes(idx) ? prev.filter((x) => x !== idx) : [...prev, idx].sort((a, b) => a - b),
+      );
+      return;
     }
+    setSelected([idx]);
   };
 
   const submitVote = async () => {
@@ -103,14 +104,28 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
     setIsVoting(true);
     try {
       await votePoll(pollId, user.id, selected);
+      setIsEditingResponse(false);
+      setShowResultsOverride(false);
     } finally {
       setIsVoting(false);
     }
   };
 
+  const handleEditResponse = () => {
+    if (isClosed || !poll?.userVotes?.length) return;
+    setSelected(poll.userVotes);
+    setIsEditingResponse(true);
+    setShowResultsOverride(false);
+  };
+
+  const handleViewResultsToggle = () => {
+    setIsEditingResponse(false);
+    setShowResultsOverride((prev) => !prev);
+  };
+
   if (fetchError) {
     return (
-      <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 max-w-[520px]">
+      <div className="max-w-[520px] rounded-[2px] border border-destructive/30 bg-destructive/10 p-4">
         <div className="text-sm text-destructive">Failed to load poll</div>
       </div>
     );
@@ -118,106 +133,101 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
 
   if (!poll) {
     return (
-      <div className="rounded-xl border border-border p-4 max-w-[520px]" style={{ backgroundColor: '#131416' }}>
-        <div className="text-sm text-muted-foreground">Loading poll…</div>
+      <div className="max-w-[520px] rounded-[2px] border border-[#3a3d45] bg-[#24262d] p-4">
+        <div className="text-sm text-[#9ea4af]">Loading poll...</div>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-border p-5 max-w-[520px] w-full" style={{ backgroundColor: '#131416' }}>
-      <div className="flex items-center justify-between gap-2 mb-1">
-        <div className="flex items-center gap-1.5 text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
-          <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg">
-            <path d="M11.7518706,1.99956021 C13.2716867,1.99956021 14.5037411,3.23161462 14.5037411,4.75143076 L14.5037411,19.2499651 C14.5037411,20.7697812 13.2716867,22.0018356 11.7518706,22.0018356 C10.2320544,22.0018356 9,20.7697812 9,19.2499651 L9,4.75143076 C9,3.23161462 10.2320544,1.99956021 11.7518706,1.99956021 Z M18.7518706,6.99956021 C20.2716867,6.99956021 21.5037411,8.23161462 21.5037411,9.75143076 L21.5037411,19.2499651 C21.5037411,20.7697812 20.2716867,22.0018356 18.7518706,22.0018356 C17.2320544,22.0018356 16,20.7697812 16,19.2499651 L16,9.75143076 C16,8.23161462 17.2320544,6.99956021 18.7518706,6.99956021 Z M4.75187055,11.9995602 C6.27168669,11.9995602 7.5037411,13.2316146 7.5037411,14.7514308 L7.5037411,19.2499651 C7.5037411,20.7697812 6.27168669,22.0018356 4.75187055,22.0018356 C3.23205441,22.0018356 2,20.7697812 2,19.2499651 L2,14.7514308 C2,13.2316146 3.23205441,11.9995602 4.75187055,11.9995602 Z" />
-          </svg>
-          Poll
+    <div className="w-full max-w-[520px] rounded-[2px] border border-[#3a3d45] bg-[rgb(43_45_49)] px-4 py-3 text-[#f2f3f5]">
+      <div className="text-[15px] font-semibold leading-5 text-[#f2f3f5]">{poll.question}</div>
+      {showResults && (
+        <div className="mt-1 text-[12px] text-[#a7adb8]">
+          {totalVotes} response{totalVotes === 1 ? "" : "s"}
         </div>
-        {timeLabel && <div className="text-[11px] text-muted-foreground">{timeLabel}</div>}
-      </div>
+      )}
 
-      <div className="text-sm font-medium mb-3">{poll.question}</div>
+      <div className="mt-3 space-y-2.5">
+        {poll.options.map((opt, idx) => {
+          const count = poll.results?.[idx] ?? 0;
+          const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+          const isSelected = selected.includes(idx);
+          const isUserVote = poll.userVotes?.includes(idx);
 
-      <div className="space-y-2">
-        {showResults ? (
-          poll.options.map((opt, idx) => {
-            const count = poll.results?.[idx] ?? 0;
-            const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
-            const isUserVote = poll.userVotes?.includes(idx);
+          if (showResults) {
             return (
-              <div 
-                key={idx} 
-                className={`relative rounded-lg border overflow-hidden p-3 ${
-                  isUserVote ? "border-primary" : "border-border"
+              <div
+                key={idx}
+                className={`flex items-center justify-between gap-3 rounded-[2px] px-3 py-1.5 text-[12px] font-semibold leading-5 ${
+                  isUserVote ? "bg-[#5865f2] text-white" : "bg-[#1f2126] text-[#f2f3f5]"
                 }`}
-                style={{
-                  background: pct > 0 
-                    ? `linear-gradient(90deg, hsl(var(--primary) / 0.25) ${pct}%, hsl(var(--background) / 0.4) ${pct}%)`
-                    : 'hsl(var(--background) / 0.4)'
-                }}
               >
-                <div className="flex items-center justify-between gap-2 relative z-10">
-                  <div className="flex items-center gap-2">
-                    {isUserVote && (
-                      <span className="text-primary text-xs font-medium">✓</span>
-                    )}
-                    <div className="text-sm font-medium">{opt}</div>
-                  </div>
-                  <div className="text-xs text-muted-foreground font-medium">
-                    {count} ({pct}%)
-                  </div>
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="truncate">{opt}</span>
+                  {isUserVote && <Check className="h-3.5 w-3.5 shrink-0 text-white" strokeWidth={3} />}
                 </div>
+                <span className={isUserVote ? "text-white" : "text-[#f2f3f5]"}>{pct}%</span>
               </div>
             );
-          })
-        ) : poll.allow_multiple ? (
-          poll.options.map((opt, idx) => (
+          }
+
+          return (
             <button
               key={idx}
               type="button"
               onClick={() => toggle(idx)}
-              className={`w-full text-left rounded-lg border px-3 py-2 flex items-center gap-3 transition-colors ${
-                selected.includes(idx) 
-                  ? "border-primary bg-primary/10" 
-                  : "border-border bg-muted/30 hover:bg-muted/60 hover:border-muted-foreground/30"
-              }`}
+              className="flex w-full items-center gap-2.5 text-left text-sm text-[#f2f3f5]"
             >
-              <Checkbox
-                checked={selected.includes(idx)}
-                onCheckedChange={() => undefined}
-                onClick={(e) => e.stopPropagation()}
-              />
-              <span className="text-sm">{opt}</span>
-            </button>
-          ))
-        ) : (
-          <RadioGroup value={selected[0] != null ? String(selected[0]) : ""} onValueChange={(v) => toggle(Number(v))}>
-            {poll.options.map((opt, idx) => (
-              <label
-                key={idx}
-                className={`w-full text-left rounded-lg border px-3 py-2 flex items-center gap-3 cursor-pointer transition-colors ${
-                  selected[0] === idx 
-                    ? "border-primary bg-primary/10" 
-                    : "border-border bg-muted/30 hover:bg-muted/60 hover:border-muted-foreground/30"
+              <span
+                className={`h-3.5 w-3.5 shrink-0 rounded-full border transition-colors ${
+                  isSelected ? "border-[#d7dbe3] bg-[#d7dbe3]" : "border-[#c3c7d1] bg-transparent"
                 }`}
-              >
-                <RadioGroupItem value={String(idx)} />
-                <span className="text-sm">{opt}</span>
-              </label>
-            ))}
-          </RadioGroup>
-        )}
+              />
+              <span>{opt}</span>
+            </button>
+          );
+        })}
       </div>
 
-      <div className="mt-3 flex items-center justify-between gap-2">
-        <div className="text-xs text-muted-foreground">{totalVotes} vote{totalVotes === 1 ? "" : "s"}</div>
-        {!showResults && (
-          <Button size="sm" onClick={submitVote} disabled={!canVote}>
-            Vote
-          </Button>
-        )}
-      </div>
+      {showResults ? (
+        <div className="mt-5">
+          {!isClosed && userResponseCount > 0 && (
+            <button
+              type="button"
+              onClick={handleEditResponse}
+              className="text-[13px] font-semibold text-[#a7adb8] transition-colors hover:text-white"
+            >
+              Edit response
+            </button>
+          )}
+          {timeLabel && <div className="mt-3 text-[11px] text-[#8f97a3]">{timeLabel}</div>}
+        </div>
+      ) : (
+        <>
+          <div className="mt-5 flex items-center justify-between gap-3">
+            <Button
+              size="sm"
+              onClick={submitVote}
+              disabled={!canVote}
+              className="h-8 rounded-[3px] bg-[#d7dbe3] px-4 text-xs font-medium text-[#363b44] hover:bg-white disabled:bg-[#b5b8c0] disabled:text-[#626873] disabled:opacity-100"
+            >
+              {isVoting ? "Submitting..." : hasVoted || isEditingResponse ? "Update" : "Submit"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleViewResultsToggle}
+              disabled={isClosed}
+              className="h-8 rounded-[3px] border-[#5a606c] bg-transparent px-4 text-xs font-medium text-[#d5d9e2] hover:bg-[#2d3038] hover:text-white disabled:border-[#4b505b] disabled:bg-transparent disabled:text-[#7f8692] disabled:opacity-100"
+            >
+              {showResultsOverride ? "Back to poll" : "View results"}
+            </Button>
+          </div>
+          {timeLabel && <div className="mt-3 text-[11px] text-[#8f97a3]">{timeLabel}</div>}
+        </>
+      )}
     </div>
   );
 };
-
