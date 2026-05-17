@@ -993,6 +993,7 @@ export const ServerSettingsPage = () => {
         style={style}
         role="button"
         tabIndex={0}
+        onPointerDown={() => selectRoleForEditing(role)}
         onClick={() => selectRoleForEditing(role)}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
@@ -1011,6 +1012,7 @@ export const ServerSettingsPage = () => {
           {...listeners}
           className="text-muted-foreground flex-shrink-0 cursor-grab active:cursor-grabbing"
           title="Drag to reorder"
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
         >
           <GripVertical className="w-4 h-4" />
