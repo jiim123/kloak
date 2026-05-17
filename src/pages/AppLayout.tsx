@@ -22,6 +22,7 @@ import KloakDrawLoader from "@/components/ui/KloakDrawLoader";
 import { DMSidebar, DMChatArea } from "@/components/dm";
 import { ServerSettingsPage, ChannelSettingsPage } from "@/components/settings";
 import { ExploreServers } from "@/components/home/ExploreServers";
+import { ServerMembersPage } from "@/components/members/ServerMembersPage";
 
 import { UserSettingsPage } from "@/components/modals/UserSettingsModal";
 
@@ -149,6 +150,7 @@ const AppLayout = () => {
   // Determine current view based on route
   const currentPath = location.pathname.replace("/app", "") || "/";
   const isServerOverviewView = !!params.serverId && currentPath === `/servers/${params.serverId}/overview`;
+  const isServerMembersView = !!params.serverId && currentPath === `/servers/${params.serverId}/members`;
   
   useEffect(() => {
     if (currentServer === null && currentPath === "/friends") {
@@ -156,7 +158,7 @@ const AppLayout = () => {
     }
   }, [currentPath, currentServer, navigate]);
 
-  const isServerSpecialView = isServerOverviewView;
+  const isServerSpecialView = isServerOverviewView || isServerMembersView;
   const currentChannelType = currentChannel?.type;
   const canUseUnifiedHeader =
     currentChannelType !== "voice";
@@ -170,6 +172,30 @@ const AppLayout = () => {
       category_id: null,
       linked_voice_channel_id: null,
       name: "Overview",
+      topic: null,
+      chat_notice: null,
+      type: "text",
+      position: -1,
+      is_nsfw: false,
+      slowmode_seconds: 0,
+      is_read_only: false,
+      is_private: false,
+      icon: null,
+      created_at: currentServer.created_at || new Date().toISOString(),
+      block_links: false,
+      allowed_link_domains: [],
+      ghost_mode: false,
+      block_attachments: false,
+    };
+  }, [currentServer]);
+  const membersHeaderChannel: Channel | null = useMemo(() => {
+    if (!currentServer) return null;
+    return {
+      id: `members-${currentServer.id}`,
+      server_id: currentServer.id,
+      category_id: null,
+      linked_voice_channel_id: null,
+      name: "Members",
       topic: null,
       chat_notice: null,
       type: "text",
@@ -614,7 +640,9 @@ const AppLayout = () => {
       : "Direct Messages"
     : isServerOverviewView
       ? `${currentServer?.name || "Server"} • Overview`
-      : currentChannel
+      : isServerMembersView
+        ? `${currentServer?.name || "Server"} - Members`
+        : currentChannel
           ? `# ${currentChannel.name}`
           : currentServer
           ? currentServer.name
@@ -671,9 +699,10 @@ const AppLayout = () => {
                   {currentServer && (
                     <>
                       {isServerOverviewView && <ServerOverviewView />}
+                      {isServerMembersView && <ServerMembersPage />}
                       <div
                         className={
-                          !isServerOverviewView && !isDMView ? "block h-full" : "hidden"
+                          !isServerSpecialView && !isDMView ? "block h-full" : "hidden"
                         }
                       >
                         <ChatArea />
@@ -780,11 +809,21 @@ const AppLayout = () => {
                       )}
 
                       <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
-                        {(showDesktopUnifiedChannelHeader && currentChannel) || (isServerOverviewView && overviewHeaderChannel) ? (
+                        {(showDesktopUnifiedChannelHeader && currentChannel) ||
+                        (isServerOverviewView && overviewHeaderChannel) ||
+                        (isServerMembersView && membersHeaderChannel) ? (
                           <div className="flex-shrink-0 overflow-visible">
                             <ChannelHeader
-                              channel={isServerOverviewView ? overviewHeaderChannel! : currentChannel!}
-                              showMessageActions={isServerOverviewView ? false : currentChannel?.type !== "tasks"}
+                              channel={
+                                isServerOverviewView
+                                  ? overviewHeaderChannel!
+                                  : isServerMembersView
+                                    ? membersHeaderChannel!
+                                    : currentChannel!
+                              }
+                              showMessageActions={
+                                isServerOverviewView || isServerMembersView ? false : currentChannel?.type !== "tasks"
+                              }
                             />
                           </div>
                         ) : null}
@@ -812,7 +851,8 @@ const AppLayout = () => {
                             {currentServer && (
                               <>
                                 {isServerOverviewView && <ServerOverviewView />}
-                                <div className={!isServerOverviewView && !isDMView ? "block h-full" : "hidden"}>
+                                {isServerMembersView && <ServerMembersPage />}
+                                <div className={!isServerSpecialView && !isDMView ? "block h-full" : "hidden"}>
                                   <ChatArea showHeader={!showDesktopUnifiedChannelHeader} />
                                 </div>
                               </>

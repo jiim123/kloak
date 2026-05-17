@@ -36,10 +36,13 @@ export const ChannelHeader = ({
   const setMemberSidebarOpen = useUIStore((s) => s.setMemberSidebarOpen);
   const currentServer = useServerStore((s) => s.currentServer);
   const isOverviewHeader = channel.id.startsWith("overview-");
+  const isMembersHeader = channel.id.startsWith("members-");
 
   const ChannelIcon =
     isOverviewHeader
       ? OverviewIcon
+      : isMembersHeader
+        ? Users
       : channel.type === "voice"
       ? Volume2
       : channel.type === "forum"

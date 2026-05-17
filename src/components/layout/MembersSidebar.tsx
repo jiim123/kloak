@@ -419,7 +419,10 @@ export const MembersSidebar = () => {
   // Mass ban
   const [massBanMode, setMassBanMode] = useState(false);
   const [massBanSelected, setMassBanSelected] = useState<Set<string>>(new Set());
-  const isOverviewView = !!currentServer?.id && location.pathname === `/app/servers/${currentServer.id}/overview`;
+  const isServerInfoView =
+    !!currentServer?.id &&
+    (location.pathname === `/app/servers/${currentServer.id}/overview` ||
+      location.pathname === `/app/servers/${currentServer.id}/members`);
   const sidebarOwner = useMemo(
     () => members.find((m) => m.user_id === currentServer?.owner_id) || members.find((m) => m.role === "owner") || null,
     [members, currentServer?.owner_id],
@@ -1256,7 +1259,7 @@ export const MembersSidebar = () => {
               <X className="w-4 h-4 text-muted-foreground" />
             </button>
           </div>
-        ) : isOverviewView ? (
+        ) : isServerInfoView ? (
           <div className="rounded-xl border border-border/30 bg-muted/20 px-3 py-2.5">
             <div className="text-sm font-semibold text-muted-foreground">About</div>
             <div className="text-sm font-normal text-foreground/95 truncate">
@@ -1322,7 +1325,7 @@ export const MembersSidebar = () => {
         )}
       </div>
 
-      {!isMobile && !massBanMode && isOverviewView && (
+      {!isMobile && !massBanMode && isServerInfoView && (
         <div className="mx-2 mt-2 shrink-0 rounded-xl border border-border/30 bg-muted/20 px-3 py-2.5">
           <div className="text-sm font-semibold text-muted-foreground">About</div>
           <div className="mt-2 text-sm font-normal text-foreground/95">
@@ -1362,7 +1365,7 @@ export const MembersSidebar = () => {
         </div>
       )}
 
-      {!isMobile && !massBanMode && !isOverviewView && (
+      {!isMobile && !massBanMode && !isServerInfoView && (
         <div className="mx-2 mt-2 shrink-0">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />

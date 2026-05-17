@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, useRef, memo, type ReactNode, type SyntheticEvent } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef, useDeferredValue, memo, type ReactNode, type SyntheticEvent } from "react";
 import { FluentEmoji } from "@/components/ui/FluentEmoji";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -280,6 +280,14 @@ const CopyIcon = memo(({ className }: { className?: string }) => (
   </svg>
 ));
 CopyIcon.displayName = "CopyIcon";
+
+const SearchIcon = memo(({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <circle cx="11" cy="11" r="8" />
+    <path d="m21 21-4.35-4.35" />
+  </svg>
+));
+SearchIcon.displayName = "SearchIcon";
 
 // Ghost Icon Component
 const GhostIcon = memo(({ className }: { className?: string }) => (
@@ -1121,6 +1129,10 @@ export const ChannelSidebar = () => {
   const [isSortingMode, setIsSortingMode] = useState(false);
   const [bgDrawerOpen, setBgDrawerOpen] = useState(false);
   const [isServerHeaderCondensed, setIsServerHeaderCondensed] = useState(false);
+  const [channelSearchQuery, setChannelSearchQuery] = useState("");
+  const deferredChannelSearchQuery = useDeferredValue(channelSearchQuery);
+  const normalizedChannelSearchQuery = deferredChannelSearchQuery.trim().toLowerCase();
+  const isSearchingChannels = normalizedChannelSearchQuery.length > 0;
 
   const channelIds = useMemo(() => (channels || []).map((c) => c.id), [channels]);
   const { getChannelUnread, markAsRead } = useUnreadChannelsContext();
@@ -1235,6 +1247,28 @@ export const ChannelSidebar = () => {
     [channels],
   );
 
+  const channelMatchesSearch = useCallback(
+    (channel: Channel) => channel.name.toLowerCase().includes(normalizedChannelSearchQuery),
+    [normalizedChannelSearchQuery],
+  );
+
+  const filteredUncategorizedChannels = useMemo(
+    () => isSearchingChannels ? uncategorizedChannels.filter(channelMatchesSearch) : uncategorizedChannels,
+    [uncategorizedChannels, channelMatchesSearch, isSearchingChannels],
+  );
+
+  const filteredHiddenChannels = useMemo(
+    () => isSearchingChannels ? hiddenChannels.filter(channelMatchesSearch) : hiddenChannels,
+    [hiddenChannels, channelMatchesSearch, isSearchingChannels],
+  );
+
+  const filteredCategoriesWithChannels = useMemo(
+    () => sortedCategories
+      .map((category) => ({ category, channels: getChannelsForCategory(category.id).filter(channelMatchesSearch) }))
+      .filter(({ channels }) => !isSearchingChannels || channels.length > 0),
+    [sortedCategories, getChannelsForCategory, channelMatchesSearch, isSearchingChannels],
+  );
+
   const channelById = useMemo(() => {
     const map = new Map<string, Channel>();
     for (const channel of channels || []) {
@@ -1305,7 +1339,12 @@ export const ChannelSidebar = () => {
 
   useEffect(() => {
     setIsServerHeaderCondensed(false);
+    setChannelSearchQuery("");
   }, [currentServer?.id]);
+
+  const handleChannelSearchChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setChannelSearchQuery(event.target.value);
+  }, []);
 
   const handleChannelListScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
     const shouldCondense = event.currentTarget.scrollTop > 20;
@@ -1410,6 +1449,7 @@ export const ChannelSidebar = () => {
   );
 
   const isOverviewActive = !!currentServer && location.pathname === `/app/servers/${currentServer.id}/overview`;
+  const isMembersActive = !!currentServer && location.pathname === `/app/servers/${currentServer.id}/members`;
 
   const handleSelectOverview = useCallback(() => {
     if (!currentServer) return;
@@ -1418,14 +1458,11 @@ export const ChannelSidebar = () => {
   }, [currentServer, setCurrentChannel, navigate]);
 
   const handleSelectMembersShortcut = useCallback(() => {
-    localStorage.setItem("kloak:server-settings-tab", "members");
-    if (isMobile) {
-      openServerSettings();
-      closeMobileSidebars();
-      return;
-    }
-    openServerSettingsPage();
-  }, [isMobile, openServerSettings, openServerSettingsPage, closeMobileSidebars]);
+    if (!currentServer) return;
+    setCurrentChannel(null);
+    closeMobileSidebars();
+    navigate(`/app/servers/${currentServer.id}/members`);
+  }, [currentServer, setCurrentChannel, closeMobileSidebars, navigate]);
 
   const handleLeaveServer = useCallback(async () => {
     if (!currentServer || !user || isOwner) return;
@@ -1692,7 +1729,6 @@ export const ChannelSidebar = () => {
       ? currentServer.banner_url
       : `${currentServer.banner_url}${currentServer.banner_url.includes("?") ? "&" : "?"}cb=${encodeURIComponent(currentServer.banner_url.split("/").pop()?.split("?")[0] ?? "")}`
     : null;
-  const isDefaultServerBanner = !serverBannerUrl || serverBannerUrl.includes("/default_server_banner.png");
 
   // Shared channel list rendering (used by both mobile and desktop)
   const renderChannelList = (
@@ -1737,9 +1773,16 @@ export const ChannelSidebar = () => {
               "transition-colors duration-150",
               "hover:bg-foreground/[0.04]",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-1 rounded-sm",
-              "text-muted-foreground hover:text-foreground",
+              isMembersActive && "bg-foreground/[0.06] text-foreground",
+              !isMembersActive && "text-muted-foreground hover:text-foreground",
             )}
           >
+            <div
+              className={cn(
+                "absolute left-1 top-1.5 bottom-1.5 w-0.5 bg-foreground rounded-full transition-opacity duration-150",
+                isMembersActive ? "opacity-100" : "opacity-0",
+              )}
+            />
             <div className={SIDEBAR_ITEM_ICON_SLOT}>
               <MembersIcon className={SIDEBAR_ITEM_ICON} />
             </div>
@@ -1751,12 +1794,12 @@ export const ChannelSidebar = () => {
 
       <UncategorizedDropZone
         isDragOver={overCategoryId === null && activeType === "channel"}
-        hasChannels={uncategorizedChannels.length > 0}
+        hasChannels={filteredUncategorizedChannels.length > 0}
       >
-        {uncategorizedChannels.length > 0 && (
+        {filteredUncategorizedChannels.length > 0 && (
           <div className="mb-3 space-y-0.5">
-            <SortableContext items={uncategorizedChannels.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-              {uncategorizedChannels.map((channel) => {
+            <SortableContext items={filteredUncategorizedChannels.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+              {filteredUncategorizedChannels.map((channel) => {
                 const { unreadCount, mentionCount } = getSidebarChannelUnread(channel.id);
                 return (
                   <SortableChannel
@@ -1788,12 +1831,12 @@ export const ChannelSidebar = () => {
         )}
       </UncategorizedDropZone>
 
-      <SortableContext items={sortedCategories.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-        {sortedCategories.map((category) => (
+      <SortableContext items={filteredCategoriesWithChannels.map(({ category }) => category.id)} strategy={verticalListSortingStrategy}>
+        {filteredCategoriesWithChannels.map(({ category, channels: categoryChannels }) => (
           <SortableCategory
             key={category.id}
             category={category}
-            channels={getChannelsForCategory(category.id)}
+            channels={categoryChannels}
             isCollapsed={collapsedCategories.has(category.id)}
             isAdmin={isAdmin}
             currentChannelId={currentChannel?.id}
@@ -1822,21 +1865,21 @@ export const ChannelSidebar = () => {
         ))}
       </SortableContext>
 
-      {hiddenChannels.length > 0 && (
+      {filteredHiddenChannels.length > 0 && (
         <div className="mt-4 border-t border-border/30 pt-2">
           <button
             onClick={handleToggleHidden}
             aria-expanded={showHidden}
-            aria-label={`Hidden channels, ${hiddenChannels.length} channels${showHidden ? ', expanded' : ', collapsed'}`}
+            aria-label={`Hidden channels, ${filteredHiddenChannels.length} channels${showHidden ? ', expanded' : ', collapsed'}`}
             className="w-full flex items-center gap-1.5 px-2 py-1 text-xs font-normal uppercase text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 rounded-sm"
           >
             {showHidden ? <ChevronDownIcon className="w-3 h-3" /> : <ChevronRightIcon className="w-3 h-3" />}
             <EyeOffIcon className="w-3 h-3" />
-            <span>Hidden Channels ({hiddenChannels.length})</span>
+            <span>Hidden Channels ({filteredHiddenChannels.length})</span>
           </button>
           {showHidden && (
             <div className="mt-1 space-y-0.5 opacity-60">
-              {hiddenChannels.map((channel) => {
+              {filteredHiddenChannels.map((channel) => {
                 const { unreadCount, mentionCount } = getSidebarChannelUnread(channel.id);
                 return (
                   <SortableChannel
@@ -1870,6 +1913,13 @@ export const ChannelSidebar = () => {
         </div>
       )}
 
+      {isSearchingChannels && filteredUncategorizedChannels.length === 0 && filteredCategoriesWithChannels.length === 0 && filteredHiddenChannels.length === 0 && (
+        <div className="flex flex-col items-center justify-center px-4 py-10 text-center">
+          <SearchIcon className="mb-3 h-6 w-6 text-muted-foreground/40" />
+          <p className="text-sm text-muted-foreground">No channels found</p>
+        </div>
+      )}
+
       {(channels || []).length === 0 && (categories || []).length === 0 && (
         <div className="flex flex-col items-center justify-center py-12 text-center animate-fade-in">
           <div className="w-12 h-12 rounded-xl bg-secondary/50 flex items-center justify-center mb-3">
@@ -1896,62 +1946,30 @@ export const ChannelSidebar = () => {
         {/* Server header with banner */}
         <div className="relative">
           <DropdownMenu>
+            <div
+              className={cn(
+                "relative overflow-hidden transition-[height] duration-200 ease-out",
+                isServerHeaderCondensed ? "h-0" : "h-24",
+              )}
+            >
+              {serverBannerUrl ? (
+                <img
+                  src={serverBannerUrl}
+                  alt={`${currentServer.name} banner`}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="h-full w-full bg-[linear-gradient(135deg,hsl(350_42%_23%),hsl(31_31%_25%)_68%,hsl(var(--sidebar)))]" />
+              )}
+              <div className="absolute inset-0 bg-black/10" />
+            </div>
             <DropdownMenuTrigger asChild>
-              <button className="group w-full overflow-hidden text-left transition-colors active:scale-[0.995]">
-                <div
-                  className={cn(
-                    "relative overflow-hidden transition-[height] duration-200 ease-out",
-                    isServerHeaderCondensed ? "h-16" : "h-[124px]",
-                  )}
-                >
-                  {serverBannerUrl ? (
-                    <img
-                      src={serverBannerUrl}
-                      alt={`${currentServer.name} banner`}
-                      className={cn(
-                        "h-full w-full object-cover transition-[filter,transform] duration-200 ease-out",
-                        isServerHeaderCondensed ? "scale-150 [filter:blur(20px)]" : "group-hover:scale-[1.02]",
-                      )}
-                    />
-                  ) : (
-                    <div
-                      className={cn(
-                        "h-full w-full bg-[linear-gradient(135deg,hsl(350_42%_23%),hsl(31_31%_25%)_68%,hsl(var(--sidebar)))] transition-[filter,transform] duration-200 ease-out",
-                        isServerHeaderCondensed && "scale-150 [filter:blur(20px)]",
-                      )}
-                    />
-                  )}
-                  {isServerHeaderCondensed ? (
-                    <div className="absolute inset-0 bg-[hsl(var(--sidebar)/0.38)] backdrop-blur-md" />
-                  ) : !isDefaultServerBanner ? (
-                    <>
-                      <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-[hsl(var(--sidebar)/0.75)]" />
-                      <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[hsl(var(--sidebar))] via-[hsl(var(--sidebar)/0.76)] to-transparent" />
-                    </>
-                  ) : (
-                    <div className="absolute inset-0 bg-black/10" />
-                  )}
-
-                  <div
-                    className={cn(
-                      "absolute inset-x-0 flex items-center gap-3 px-4 transition-[bottom,height,padding,top] duration-200 ease-out",
-                      isServerHeaderCondensed || isDefaultServerBanner
-                        ? "top-0 h-full py-0"
-                        : "bottom-0 pb-3",
-                    )}
-                  >
-                    <h2
-                      className={cn(
-                        "min-w-0 flex-1 truncate font-semibold leading-none text-foreground drop-shadow-[0_1px_8px_rgba(0,0,0,0.45)] transition-[font-size] duration-200 ease-out",
-                        isServerHeaderCondensed ? "text-[16px]" : "text-[20px]",
-                      )}
-                    >
-                      {currentServer.name}
-                    </h2>
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center self-center rounded-lg bg-black/30 text-white/80 backdrop-blur-sm transition-colors group-hover:bg-black/40">
-                      <ChevronDownIcon className="h-4 w-4" />
-                    </div>
-                  </div>
+              <button className="group flex h-12 w-full items-center gap-3 px-4 text-left transition-colors hover:bg-foreground/[0.03] active:scale-[0.995]">
+                <h2 className="min-w-0 flex-1 truncate text-[17px] font-semibold leading-none text-foreground">
+                  {currentServer.name}
+                </h2>
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors group-hover:bg-foreground/[0.06] group-hover:text-foreground">
+                  <ChevronDownIcon className="h-4 w-4" />
                 </div>
               </button>
             </DropdownMenuTrigger>
@@ -2034,6 +2052,28 @@ export const ChannelSidebar = () => {
           </DropdownMenu>
         </div>
 
+        <div
+          className={cn(
+            "overflow-hidden px-3 transition-[height,padding] duration-200 ease-out",
+            isServerHeaderCondensed ? "h-0 py-0" : "h-[46px] pt-2 pb-1.5",
+          )}
+        >
+          <label className="relative block">
+            <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/70" />
+            <input
+              type="search"
+              value={channelSearchQuery}
+              onChange={handleChannelSearchChange}
+              placeholder={`Search ${currentServer.name}`}
+              aria-label="Search server channels"
+              className={cn(
+                "h-8 w-full rounded-full border-0 bg-black/20 pl-8 pr-3 text-[13px] font-medium text-foreground placeholder:text-muted-foreground/70",
+                "outline-none transition-colors focus:bg-black/28 focus:ring-2 focus:ring-primary/35",
+              )}
+            />
+          </label>
+        </div>
+
         {/* Sorting Mode Header */}
         {isSortingMode && (
           <div className="flex items-center justify-between px-2.5 py-1.5 bg-transparent border-b border-border/50">
@@ -2059,7 +2099,7 @@ export const ChannelSidebar = () => {
             <>
               <div
                 className={cn(
-                  "flex-1 overflow-y-auto px-2.5 py-5 channel-sidebar-scroll",
+                  "flex-1 overflow-y-auto px-2.5 pt-2 pb-5 channel-sidebar-scroll",
                   isSortingMode && "bg-foreground/[0.03] border-2 border-dashed border-border/50 rounded-xl mx-1 my-1",
                 )}
                 style={{ touchAction: "pan-y" }}
@@ -2109,7 +2149,7 @@ export const ChannelSidebar = () => {
             <ContextMenuTrigger asChild disabled={isSortingMode}>
               <div
                 className={cn(
-                  "flex-1 overflow-y-auto px-2.5 py-5 channel-sidebar-scroll",
+                  "flex-1 overflow-y-auto px-2.5 pt-2 pb-5 channel-sidebar-scroll",
                   isSortingMode && "bg-foreground/[0.03] border-2 border-dashed border-border/50 rounded-xl mx-1 my-1",
                 )}
                 style={{ touchAction: "pan-y" }}

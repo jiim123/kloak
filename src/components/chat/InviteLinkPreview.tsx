@@ -24,7 +24,7 @@ const inviteDetailsCache = new Map<string, { data: InviteDetails | null; cachedA
 const inviteDetailsInFlight = new Map<string, Promise<InviteDetails | null>>();
 
 const inviteCardClass =
-  "mt-2 w-full max-w-[360px] overflow-hidden rounded-[4px] border border-[#2F3137] bg-gradient-to-br from-[#353944] to-[#453a31] shadow-sm";
+  "mt-2 w-full max-w-[360px] overflow-hidden rounded-[4px] border border-[#2F3137] bg-gradient-to-br from-[#353944] to-[#1f212763]";
 
 const getInviteDetailsCached = async (code: string): Promise<InviteDetails | null> => {
   const now = Date.now();
@@ -137,7 +137,7 @@ export const InviteLinkPreview = ({ inviteCode }: { inviteCode: string }) => {
             <div className="mt-2 h-2.5 w-36 rounded bg-white/10" />
             <div className="mt-1.5 h-2.5 w-24 rounded bg-white/10" />
           </div>
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#cfa831]/60 bg-black/20">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black/20">
             <Loader2 className="h-4 w-4 animate-spin text-[#f5c400]" />
           </div>
         </div>
@@ -183,7 +183,7 @@ export const InviteLinkPreview = ({ inviteCode }: { inviteCode: string }) => {
           )}
         </div>
 
-        <Avatar className="h-12 w-12 shrink-0 rounded-full border border-[#cfa831] bg-[#272119] shadow-[0_0_0_1px_rgba(0,0,0,0.35)]">
+        <Avatar className="h-12 w-12 shrink-0 rounded-full bg-[#272119]">
           <AvatarImage src={invite.icon_url || undefined} className="rounded-full" />
           <AvatarFallback className="rounded-full bg-[#231e18] text-[12px] font-bold text-[#f5c400]">
             {getServerInitials(invite.name)}
