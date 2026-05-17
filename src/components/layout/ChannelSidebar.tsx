@@ -1113,7 +1113,11 @@ SortableCategory.displayName = "SortableCategory";
 
 // ─── Main Sidebar ───
 
-export const ChannelSidebar = () => {
+interface ChannelSidebarProps {
+  onNavigate?: () => void;
+}
+
+export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuthStore();
@@ -1408,6 +1412,7 @@ export const ChannelSidebar = () => {
 
   const handleSelectChannel = useCallback(
     (channel: Channel) => {
+      onNavigate?.();
       beginChannelNavigationPerf(channel.id, {
         source: "sidebar",
         serverId: currentServer?.id ?? null,
@@ -1419,7 +1424,7 @@ export const ChannelSidebar = () => {
         navigate(`/app/servers/${currentServer.id}/channels/${channel.id}`);
       }
     },
-    [setCurrentChannel, currentServer, navigate, closeMobileSidebars],
+    [onNavigate, setCurrentChannel, currentServer, navigate, closeMobileSidebars],
   );
 
   const prefetchTimersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
@@ -1484,11 +1489,12 @@ export const ChannelSidebar = () => {
         toast.error("No attached text chat yet");
         return;
       }
+      onNavigate?.();
       setCurrentChannel(voiceChannel);
       closeMobileSidebars();
       navigate(`/app/servers/${currentServer.id}/channels/${voiceChannel.id}?voiceChat=1`);
     },
-    [closeMobileSidebars, currentServer, linkedTextChannelByVoiceId, navigate, setCurrentChannel],
+    [onNavigate, closeMobileSidebars, currentServer, linkedTextChannelByVoiceId, navigate, setCurrentChannel],
   );
 
   const isOverviewActive = !!currentServer && location.pathname === `/app/servers/${currentServer.id}/overview`;
@@ -1496,16 +1502,18 @@ export const ChannelSidebar = () => {
 
   const handleSelectOverview = useCallback(() => {
     if (!currentServer) return;
+    onNavigate?.();
     setCurrentChannel(null);
     navigate(`/app/servers/${currentServer.id}/overview`);
-  }, [currentServer, setCurrentChannel, navigate]);
+  }, [onNavigate, currentServer, setCurrentChannel, navigate]);
 
   const handleSelectMembersShortcut = useCallback(() => {
     if (!currentServer) return;
+    onNavigate?.();
     setCurrentChannel(null);
     closeMobileSidebars();
     navigate(`/app/servers/${currentServer.id}/members`);
-  }, [currentServer, setCurrentChannel, closeMobileSidebars, navigate]);
+  }, [onNavigate, currentServer, setCurrentChannel, closeMobileSidebars, navigate]);
 
   const handleLeaveServer = useCallback(async () => {
     if (!currentServer || !user || isOwner) return;

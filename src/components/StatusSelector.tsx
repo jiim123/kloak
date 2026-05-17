@@ -1,27 +1,13 @@
 import { useState } from "react";
-import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
 import type { UserStatus } from "@/types";
 
-const StatusDot = ({ status, className }: { status: UserStatus; className?: string }) => (
-  <span
-    className={cn(
-      "inline-block h-3 w-3 shrink-0 rounded-full",
-      status === "online" && "bg-kloak-online",
-      status === "idle" && "bg-kloak-idle",
-      status === "dnd" && "bg-kloak-dnd",
-      status === "offline" && "border-2 border-muted-foreground bg-transparent",
-      className,
-    )}
-  />
-);
-
 interface StatusOption {
   value: UserStatus;
   label: string;
-  color: string;
+  dotClassName: string;
   description: string;
 }
 
@@ -29,26 +15,26 @@ const statusOptions: StatusOption[] = [
   {
     value: "online",
     label: "Online",
-    color: "text-kloak-online",
-    description: "You are available",
+    dotClassName: "bg-[#57F287]",
+    description: "",
   },
   {
     value: "idle",
     label: "Idle",
-    color: "text-kloak-idle",
-    description: "You may be away",
+    dotClassName: "bg-[#F0B232]",
+    description: "",
   },
   {
     value: "dnd",
-    label: "Do Not Disturb",
-    color: "text-kloak-dnd",
-    description: "You will not receive notifications",
+    label: "Do not disturb",
+    dotClassName: "bg-[#ED4245]",
+    description: "You will not receive any desktop notifications",
   },
   {
     value: "offline",
     label: "Invisible",
-    color: "text-muted-foreground",
-    description: "You will appear offline",
+    dotClassName: "bg-[#B5BAC1]",
+    description: "You will not appear online to others",
   },
 ];
 
@@ -66,38 +52,46 @@ export const StatusSelector = ({ children, side = "right", align = "start" }: St
     await updateStatus(status, { source: "manual" });
   };
 
-  const currentStatus = statusOptions.find((s) => s.value === user?.status) || statusOptions[0];
-
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
-      <DropdownMenuContent side={side} align={align} className="w-72">
-        <div className="border-b border-border px-3 py-2">
-          <div className="flex items-center gap-2">
-            <AvatarWithDecoration user={user} className="h-10 w-10" active={false} />
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-medium text-foreground">{user?.display_name || user?.username}</p>
-              <span className={cn("inline-flex items-center gap-1.5 text-xs", currentStatus.color)}>
-                <StatusDot status={currentStatus.value} className="h-2.5 w-2.5" />
-                {currentStatus.label}
-              </span>
+      <DropdownMenuContent
+        side={side}
+        align={align}
+        sideOffset={10}
+        className="w-[19.5rem] rounded-[14px] border border-[#666B79] bg-[#585B68] p-0 text-[#F2F3F5] shadow-[0_18px_40px_rgba(0,0,0,0.35)]"
+      >
+        <div>
+          {statusOptions.map((option, index) => (
+            <div key={option.value}>
+              {index > 0 && <DropdownMenuSeparator className="mx-4 bg-[#686D79]" />}
+              <DropdownMenuItem
+                onClick={() => void handleStatusChange(option.value)}
+                className={cn(
+                  "min-h-[42px] cursor-pointer gap-0 px-4 py-2 hover:bg-white/[0.03] focus:bg-white/[0.05]",
+                  option.description ? "items-start" : "items-center",
+                  user?.status === option.value && "bg-white/[0.04]",
+                )}
+              >
+                <span
+                  className={cn(
+                    "mr-3 h-3 w-3 shrink-0 rounded-full",
+                    option.dotClassName,
+                    option.description && "mt-1.5",
+                  )}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[12px] font-semibold leading-tight text-[#F2F3F5]">
+                    {option.label}
+                  </p>
+                  {option.description ? (
+                    <p className="mt-0.5 max-w-[228px] text-[11px] leading-[1.25] text-[#C6C9D2]">
+                      {option.description}
+                    </p>
+                  ) : null}
+                </div>
+              </DropdownMenuItem>
             </div>
-          </div>
-        </div>
-
-        <div className="py-1">
-          {statusOptions.map((option) => (
-            <DropdownMenuItem
-              key={option.value}
-              onClick={() => void handleStatusChange(option.value)}
-              className={cn("cursor-pointer px-3 py-2", user?.status === option.value && "bg-secondary")}
-            >
-              <StatusDot status={option.value} className="mr-3" />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium">{option.label}</p>
-                <p className="text-xs text-muted-foreground">{option.description}</p>
-              </div>
-            </DropdownMenuItem>
           ))}
         </div>
       </DropdownMenuContent>

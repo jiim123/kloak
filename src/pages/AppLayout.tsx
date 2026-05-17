@@ -616,6 +616,10 @@ const AppLayout = () => {
     navigate("/app/friends");
   }, [navigate, setCurrentConversation, setCurrentServer]);
 
+  const closeQuickAccessPanel = useCallback(() => {
+    setIsAddServerPanelOpen(false);
+  }, []);
+
   // Show loading state - AFTER all hooks
   // Only full-screen block when we truly don't have a user yet.
   if (isLoading && !user) {
@@ -777,7 +781,7 @@ const AppLayout = () => {
                               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] bg-[#252932] text-[#D7D9DF]">
                                 <Users className="h-4 w-4" />
                               </span>
-                              <span className="truncate">Open friends</span>
+                              <span className="truncate">Friends</span>
                             </button>
                           </nav>
                         </div>
@@ -788,6 +792,7 @@ const AppLayout = () => {
                   {!isFullscreenSettingsOverlayOpen && (
                     <ServerSidebar
                       isAddServerPanelOpen={isAddServerPanelOpen}
+                      onNavigate={closeQuickAccessPanel}
                       onToggleAddServerPanel={() => setIsAddServerPanelOpen((open) => !open)}
                     />
                   )}
@@ -817,7 +822,7 @@ const AppLayout = () => {
                           {isDMView ? (
                             <DMSidebar />
                           ) : (
-                            <ChannelSidebar />
+                            <ChannelSidebar onNavigate={closeQuickAccessPanel} />
                           )}
                         </div>
                       )}

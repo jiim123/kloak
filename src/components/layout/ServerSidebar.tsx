@@ -566,9 +566,14 @@ LoadingSkeleton.displayName = "LoadingSkeleton";
 interface ServerSidebarProps {
   isAddServerPanelOpen?: boolean;
   onToggleAddServerPanel?: () => void;
+  onNavigate?: () => void;
 }
 
-export const ServerSidebar = ({ isAddServerPanelOpen = false, onToggleAddServerPanel }: ServerSidebarProps) => {
+export const ServerSidebar = ({
+  isAddServerPanelOpen = false,
+  onToggleAddServerPanel,
+  onNavigate,
+}: ServerSidebarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuthStore();
@@ -998,12 +1003,13 @@ export const ServerSidebar = ({ isAddServerPanelOpen = false, onToggleAddServerP
   // FIX #16: Stabilize callbacks passed into server item maps — these were inline
   // arrow functions creating new references every render, defeating memo() on children.
   const handleExploreClick = useCallback(() => {
+    onNavigate?.();
     setCurrentServer(null);
     setCurrentConversation(null);
     closeServerSettings();
     closeModal();
     navigate("/app/explore");
-  }, [setCurrentServer, setCurrentConversation, closeServerSettings, closeModal, navigate]);
+  }, [onNavigate, setCurrentServer, setCurrentConversation, closeServerSettings, closeModal, navigate]);
 
   const handleExploreHover = useCallback(() => setHoveredServer("explore"), []);
   const handleDMHover = useCallback(() => setHoveredServer("dm"), []);
@@ -1011,12 +1017,13 @@ export const ServerSidebar = ({ isAddServerPanelOpen = false, onToggleAddServerP
   const handleHoverLeave = useCallback(() => setHoveredServer(null), []);
 
   const handleDMClick = useCallback(() => {
+    onNavigate?.();
     setCurrentServer(null);
     setCurrentConversation(null);
     closeServerSettings();
     closeModal();
     navigate("/app");
-  }, [setCurrentServer, setCurrentConversation, closeServerSettings, closeModal, navigate]);
+  }, [onNavigate, setCurrentServer, setCurrentConversation, closeServerSettings, closeModal, navigate]);
 
   const handleAddServer = useCallback(() => {
     if (onToggleAddServerPanel) {
@@ -1095,6 +1102,7 @@ export const ServerSidebar = ({ isAddServerPanelOpen = false, onToggleAddServerP
       let handler = serverClickHandlers.current.get(server.id);
       if (!handler) {
         handler = () => {
+          onNavigate?.();
           setCurrentServer(server);
           setCurrentConversation(null);
           closeServerSettings();
@@ -1105,7 +1113,7 @@ export const ServerSidebar = ({ isAddServerPanelOpen = false, onToggleAddServerP
       }
       return handler;
     },
-    [setCurrentServer, setCurrentConversation, closeServerSettings, closeModal, navigate],
+    [onNavigate, setCurrentServer, setCurrentConversation, closeServerSettings, closeModal, navigate],
   );
 
   const getServerHoverHandler = useCallback((serverId: string) => {
