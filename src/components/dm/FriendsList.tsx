@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { Check, X, MessageSquare, MoreHorizontal, UserPlus, Ban, UserX, Users, Inbox } from "lucide-react";
+import { Check, X, MessageSquare, MoreHorizontal, UserPlus, Ban, UserX, Users, Inbox, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -308,42 +308,41 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
   );
 
   return (
-    <div className="h-full flex flex-col bg-layout-chat">
-      {/* Header - hidden on mobile since we have MobileHeader */}
-      <div className="h-12 px-4 hidden md:flex items-center justify-end border-b border-border shadow-sm">
+    <div className="h-full flex flex-col bg-[#373941] overflow-hidden">
+      <div className="px-4 pt-3 pb-2 flex items-center justify-between border-b border-white/10">
+        <h3 className="text-xs font-semibold text-foreground/85 uppercase tracking-[0.12em]">Friends</h3>
         <Button
+          variant="ghost"
           size="sm"
-          variant={showAddFriend ? "secondary" : "default"}
+          className={cn(
+            "h-8 gap-2 rounded-md px-3 text-foreground/90 hover:bg-white/10 hover:text-foreground",
+            showAddFriend && "bg-white/10 text-foreground",
+          )}
           onClick={() => setShowAddFriend(!showAddFriend)}
-          className="gap-2"
         >
           <UserPlus className="w-4 h-4" />
           Add Friend
         </Button>
       </div>
 
-      {/* Main content */}
-      <div className="flex-1 overflow-y-auto">
-        {/* Content Section */}
-        <div className="flex flex-col">
-          {/* Mobile add friend button */}
-          <div className="md:hidden p-2 border-b border-border">
-            <Button
-              size="sm"
-              variant={showAddFriend ? "secondary" : "default"}
-              onClick={() => setShowAddFriend(!showAddFriend)}
-              className="w-full gap-2"
-            >
-              <UserPlus className="w-4 h-4" />
-              Add Friend
-            </Button>
-          </div>
+      <div className="px-4 pt-3 pb-3 border-b border-white/10">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search friends"
+            className="pl-9"
+          />
+        </div>
+      </div>
 
-          {/* Add Friend Form */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="flex flex-col">
           {showAddFriend && (
-            <div className="p-4 border-b border-border bg-secondary/20">
-              <h3 className="font-medium text-foreground mb-2">Add Friend</h3>
-              <p className="text-sm text-muted-foreground mb-3">You can add a friend with their username.</p>
+            <div className="mx-4 mt-4 rounded-lg border border-white/10 bg-[#313338] p-4">
+              <h3 className="mb-2 text-sm font-medium text-foreground">Add Friend</h3>
+              <p className="mb-3 text-sm text-muted-foreground">You can add a friend with their username.</p>
               <div className="flex gap-2">
                 <Input
                   placeholder="Enter a username"
@@ -352,7 +351,10 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
                   onKeyDown={(e) => e.key === "Enter" && handleSendRequest()}
                   className="flex-1"
                 />
-                <Button onClick={handleSendRequest} disabled={!addFriendInput.trim() || isAddingFriend}>
+                <Button
+                  onClick={handleSendRequest}
+                  disabled={!addFriendInput.trim() || isAddingFriend}
+                >
                   {isAddingFriend ? "Sending..." : "Send Request"}
                 </Button>
               </div>

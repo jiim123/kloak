@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useCallback, useRef, Suspense, lazy } from "react";
 import { useNavigate, useSearchParams, useLocation, useParams, Outlet } from "react-router-dom";
 import { AnimatePresence, motion, MotionConfig } from "framer-motion";
-import { Link2, Plus, X } from "lucide-react";
+import { Link2, Plus, Users, X } from "lucide-react";
 import { useAuthStore, initializeAuth } from "@/stores/authStore";
 import { useUIStore } from "@/stores/uiStore";
 import { getCachedServerChannelMap, useServerStore } from "@/stores/serverStore";
@@ -19,7 +19,7 @@ import { MobileHeader } from "@/components/layout/MobileHeader";
 import { MobileSidebar } from "@/components/layout/MobileSidebar";
 import { ConnectionStatus } from "@/components/ui/ConnectionStatus";
 import KloakDrawLoader from "@/components/ui/KloakDrawLoader";
-import { DMSidebar, DMChatArea } from "@/components/dm";
+import { DMSidebar, DMChatArea, FriendsList } from "@/components/dm";
 import { ServerSettingsPage, ChannelSettingsPage } from "@/components/settings";
 import { ExploreServers } from "@/components/home/ExploreServers";
 import { ServerMembersPage } from "@/components/members/ServerMembersPage";
@@ -152,12 +152,6 @@ const AppLayout = () => {
   const isServerOverviewView = !!params.serverId && currentPath === `/servers/${params.serverId}/overview`;
   const isServerMembersView = !!params.serverId && currentPath === `/servers/${params.serverId}/members`;
   
-  useEffect(() => {
-    if (currentServer === null && currentPath === "/friends") {
-      navigate("/app", { replace: true });
-    }
-  }, [currentPath, currentServer, navigate]);
-
   const isServerSpecialView = isServerOverviewView || isServerMembersView;
   const currentChannelType = currentChannel?.type;
   const canUseUnifiedHeader =
@@ -495,6 +489,7 @@ const AppLayout = () => {
   // DM View (no server selected)
   const isDMView = currentServer === null;
   const isExploreView = isDMView && currentPath === "/explore";
+  const isFriendsView = isDMView && currentPath === "/friends";
 
   const serverIdsKey = useMemo(() => {
     if (!servers || servers.length === 0) return "";
@@ -614,6 +609,13 @@ const AppLayout = () => {
     openModal("join-server", { fromAddServerPanel: true });
   }, [openModal]);
 
+  const openFriendsPage = useCallback(() => {
+    setIsAddServerPanelOpen(false);
+    setCurrentServer(null);
+    setCurrentConversation(null);
+    navigate("/app/friends");
+  }, [navigate, setCurrentConversation, setCurrentServer]);
+
   // Show loading state - AFTER all hooks
   // Only full-screen block when we truly don't have a user yet.
   if (isLoading && !user) {
@@ -690,6 +692,8 @@ const AppLayout = () => {
                       <div className="h-full overflow-y-auto">
                         <ExploreServers />
                       </div>
+                    ) : isFriendsView ? (
+                      <FriendsList onOpenDM={() => navigate("/app")} />
                     ) : (
                       <div className="flex h-full items-center justify-center bg-layout-members px-4 text-center text-muted-foreground">
                         <p>Select a direct message or start one from the sidebar.</p>
@@ -732,7 +736,7 @@ const AppLayout = () => {
                         <div className="flex h-full w-[228px] flex-col">
                           <div className="flex h-14 shrink-0 items-center justify-between px-4">
                             <div className="text-[11px] font-bold uppercase tracking-wide text-[#8F949D]">
-                              Add server
+                              Quick access
                             </div>
                             <button
                               type="button"
@@ -753,7 +757,7 @@ const AppLayout = () => {
                               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] bg-[#252932] text-[#D7D9DF]">
                                 <Plus className="h-4 w-4" />
                               </span>
-                              <span className="truncate">Create server</span>
+                              <span className="truncate">Create a server</span>
                             </button>
                             <button
                               type="button"
@@ -763,7 +767,17 @@ const AppLayout = () => {
                               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] bg-[#252932] text-[#D7D9DF]">
                                 <Link2 className="h-4 w-4" />
                               </span>
-                              <span className="truncate">Join by invite</span>
+                              <span className="truncate">Join a server</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={openFriendsPage}
+                              className="flex h-11 w-full items-center gap-3 rounded-[6px] px-3 text-left text-sm font-normal text-[#D7D9DF] transition-colors hover:bg-white/8 hover:text-white"
+                            >
+                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] bg-[#252932] text-[#D7D9DF]">
+                                <Users className="h-4 w-4" />
+                              </span>
+                              <span className="truncate">Open friends</span>
                             </button>
                           </nav>
                         </div>
@@ -798,7 +812,7 @@ const AppLayout = () => {
                   {/* Main layout - ALWAYS mounted so VoicePersistentHost never unmounts */}
                   <div className={cn("flex-1 overflow-hidden", isFullscreenSettingsOverlayOpen && "invisible")}>
                     <div className="flex h-full">
-                      {!isExploreView && (
+                      {!isExploreView && !isFriendsView && (
                         <div className="w-[288px] shrink-0 overflow-hidden bg-layout-sidebar">
                           {isDMView ? (
                             <DMSidebar />
@@ -841,6 +855,10 @@ const AppLayout = () => {
                               isExploreView ? (
                                 <div className="h-full overflow-y-auto">
                                   <ExploreServers />
+                                </div>
+                              ) : isFriendsView ? (
+                                <div className="h-full overflow-y-auto">
+                                  <FriendsList onOpenDM={() => navigate("/app")} />
                                 </div>
                               ) : (
                                 <div className="flex h-full items-center justify-center bg-layout-members px-4 text-center text-muted-foreground">
