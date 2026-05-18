@@ -521,10 +521,10 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
   );
 
   return (
-    <div className="h-full flex flex-col min-w-0 bg-black text-white relative overflow-hidden md:gap-2">
+    <div className="h-full flex flex-col min-w-0 bg-[rgb(28_30_33)] text-white relative overflow-hidden md:gap-2">
       <ChannelHeader channel={channel} extraActions={textPanelToggle} showMessageActions={false} />
 
-      <div className="flex h-11 items-center justify-between border-b border-white/10 bg-black/95 px-3 sm:px-4 md:hidden">
+      <div className="flex h-11 items-center justify-between border-b border-white/10 bg-[rgb(28_30_33)] px-3 sm:px-4 md:hidden">
         <div className="flex min-w-0 items-center gap-2">
           <Volume2 className="h-4 w-4 flex-shrink-0 text-white/70" />
           <div className="min-w-0">
@@ -574,10 +574,10 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
           )}
 
           {!effectivelyJoined ? (
-            <div className="relative w-full h-full min-h-[460px] flex items-center justify-center">
+            <div className="relative w-full h-full min-h-[460px] flex items-center justify-center overflow-hidden rounded-2xl bg-[radial-gradient(110%_85%_at_50%_22%,rgb(36_40_46)_0%,rgb(31_34_38)_46%,rgb(28_30_33)_100%)]">
               <div className="pointer-events-none absolute inset-0">
-                <div className="absolute -inset-24 sm:-inset-28 bg-[radial-gradient(ellipse_at_center,rgba(56,189,248,0.18)_0%,rgba(59,130,246,0.14)_34%,rgba(99,102,241,0.1)_54%,rgba(0,0,0,0)_82%)]" />
-                <div className="absolute -inset-16 sm:-inset-20 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.09)_0%,rgba(255,255,255,0.03)_28%,rgba(0,0,0,0)_72%)]" />
+                <div className="absolute inset-0 bg-[radial-gradient(70%_55%_at_50%_38%,rgba(120,144,170,0.12)_0%,rgba(0,0,0,0)_100%)]" />
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.04)_0%,rgba(255,255,255,0)_26%,rgba(0,0,0,0.14)_100%)]" />
               </div>
 
               <div className="relative z-10 flex max-w-[560px] flex-col items-center text-center px-5">
@@ -606,14 +606,14 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
                 <div
                   ref={stageContainerRef}
                   className={cn(
-                    "mb-3 overflow-hidden border border-white/15 bg-black flex flex-col rounded-xl",
+                    "mb-3 overflow-hidden border border-white/15 bg-[rgb(28_30_33)] flex flex-col rounded-xl",
                     isStageFullscreen && "h-full w-full rounded-none border-0 mb-0"
                   )}
                 >
                   <div
                     className={cn(
-                      "px-3 py-2 border-b border-white/15 bg-black/70 flex items-center justify-between gap-2",
-                      isStageFullscreen && "absolute inset-x-0 top-0 z-10 border-white/20 bg-black/45 backdrop-blur"
+                      "px-3 py-2 border-b border-white/15 bg-[rgb(28_30_33)] flex items-center justify-between gap-2",
+                      isStageFullscreen && "absolute inset-x-0 top-0 z-10 border-white/20 bg-[rgb(28_30_33)]/85 backdrop-blur"
                     )}
                   >
                     <div className="text-sm font-medium truncate text-white">
@@ -651,7 +651,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
                   </div>
                   <div
                     className={cn(
-                      "flex items-center justify-center bg-black",
+                      "flex items-center justify-center bg-[rgb(28_30_33)]",
                       isStageFullscreen ? "h-full w-full" : "aspect-video max-h-[68vh]"
                     )}
                   >
@@ -764,7 +764,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
       {effectivelyJoined && (
         <div
           className={cn(
-            "h-20 border-t border-white/10 bg-black flex items-center justify-center px-3 relative transition-[padding] duration-200",
+            "h-20 border-t border-white/10 bg-[rgb(28_30_33)] flex items-center justify-center px-3 relative transition-[padding] duration-200",
             showTextPanel && "lg:pr-[420px]"
           )}
         >

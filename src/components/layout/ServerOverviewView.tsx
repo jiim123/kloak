@@ -211,7 +211,7 @@ export const ServerOverviewView = () => {
                     <AvatarImage src={currentServer.icon_url || undefined} className="rounded-xl object-cover" />
                     <AvatarFallback
                       className="rounded-xl text-3xl font-semibold"
-                      style={{ backgroundColor: "#f3c418", color: "#111827" }}
+                      style={{ backgroundColor: "#15171C", color: "#FFFFFF" }}
                     >
                       {currentServer.name?.[0]?.toUpperCase() || "S"}
                     </AvatarFallback>
@@ -295,6 +295,33 @@ export const ServerOverviewView = () => {
                 ))}
               </div>
             </>
+          )}
+
+          {!hasAnnouncements && recentForumActivity.length === 0 && (
+            <div className="mt-6 flex min-h-[220px] flex-col items-center justify-center rounded-[8px] px-6 py-10 text-center">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className="mb-4 h-16 w-16 text-muted-foreground/50"
+                aria-hidden="true"
+              >
+                <path
+                  d="M14.5 7.5H16.1C16.9401 7.5 17.3601 7.5 17.681 7.66349C17.9632 7.8073 18.1927 8.03677 18.3365 8.31901C18.5 8.63988 18.5 9.05992 18.5 9.9V17.5C18.5 18.6046 17.6046 19.5 16.5 19.5V19.5C15.3954 19.5 14.5 18.6046 14.5 17.5V7.7C14.5 6.57989 14.5 6.01984 14.282 5.59202C14.0903 5.21569 13.7843 4.90973 13.408 4.71799C12.9802 4.5 12.4201 4.5 11.3 4.5H7.7C6.57989 4.5 6.01984 4.5 5.59202 4.71799C5.21569 4.90973 4.90973 5.21569 4.71799 5.59202C4.5 6.01984 4.5 6.5799 4.5 7.7V16.3C4.5 17.4201 4.5 17.9802 4.71799 18.408C4.90973 18.7843 5.21569 19.0903 5.59202 19.282C6.01984 19.5 6.5799 19.5 7.7 19.5H16.5"
+                  stroke="currentColor"
+                />
+                <path
+                  d="M11 6.5H8C7.53406 6.5 7.30109 6.5 7.11732 6.57612C6.87229 6.67761 6.67761 6.87229 6.57612 7.11732C6.5 7.30109 6.5 7.53406 6.5 8C6.5 8.46594 6.5 8.69891 6.57612 8.88268C6.67761 9.12771 6.87229 9.32239 7.11732 9.42388C7.30109 9.5 7.53406 9.5 8 9.5H11C11.4659 9.5 11.6989 9.5 11.8827 9.42388C12.1277 9.32239 12.3224 9.12771 12.4239 8.88268C12.5 8.69891 12.5 8.46594 12.5 8C12.5 7.53406 12.5 7.30109 12.4239 7.11732C12.3224 6.87229 12.1277 6.67761 11.8827 6.57612C11.6989 6.5 11.4659 6.5 11 6.5Z"
+                  stroke="currentColor"
+                />
+                <path d="M6.5 11.5H12.5" stroke="currentColor" strokeLinecap="round" />
+                <path d="M6.5 13.5H12.5" stroke="currentColor" strokeLinecap="round" />
+                <path d="M6.5 15.5H12.5" stroke="currentColor" strokeLinecap="round" />
+                <path d="M6.5 17.5H10.5" stroke="currentColor" strokeLinecap="round" />
+              </svg>
+              <p className="text-sm font-medium text-foreground">Nothing to show yet</p>
+              <p className="mt-1 text-xs text-muted-foreground">Announcements and forum activity will appear here.</p>
+            </div>
           )}
         </div>
       </div>

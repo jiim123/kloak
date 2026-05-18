@@ -427,8 +427,8 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
                             </div>
                           ) : filteredOnlineFriends.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-16 text-center">
-                              <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
-                                <Users className="w-8 h-8 text-muted-foreground" />
+                              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-secondary/50">
+                                <Users className="h-8 w-8 text-muted-foreground" />
                               </div>
                               <h3 className="font-medium text-foreground mb-1">
                                 {searchQuery ? "No matches found" : "No one's around..."}
@@ -461,8 +461,8 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
                             </div>
                           ) : filteredAllFriends.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-16 text-center">
-                              <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
-                                <UserPlus className="w-8 h-8 text-muted-foreground" />
+                              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-secondary/50">
+                                <UserPlus className="h-8 w-8 text-muted-foreground" />
                               </div>
                               <h3 className="font-medium text-foreground mb-1">
                                 {searchQuery ? "No matches found" : "No friends yet"}
