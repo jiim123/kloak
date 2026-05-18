@@ -197,15 +197,17 @@ export const SelectionFormatToolbar = ({ textareaRef, onFormat }: SelectionForma
 // Legacy FormatToolbar for TiptapEditor-based components (Announcements, Forums)
 interface FormatToolbarProps {
   onFormat: (format: string) => void;
-  onClose: () => void;
+  onClose?: () => void;
   onImageClick?: () => void;
+  className?: string;
+  contentClassName?: string;
 }
 
-export const FormatToolbar = ({ onFormat, onClose, onImageClick }: FormatToolbarProps) => {
+export const FormatToolbar = ({ onFormat, onClose, onImageClick, className, contentClassName }: FormatToolbarProps) => {
   return (
     <TooltipProvider>
-      <div className="flex items-center gap-1 px-3 sm:px-4 py-2 bg-muted/40 rounded-t-2xl border-b border-border/50 font-[Inter,system-ui,sans-serif] overflow-x-auto scrollbar-hide">
-        <div className="flex items-center gap-0.5 min-w-max">
+      <div className={`flex items-center gap-1 px-3 sm:px-4 py-2 bg-muted/40 rounded-t-2xl border-b border-border/50 font-[Inter,system-ui,sans-serif] overflow-x-auto scrollbar-hide ${className ?? ""}`}>
+        <div className={`flex items-center gap-0.5 min-w-max ${contentClassName ?? ""}`}>
           {FORMAT_OPTIONS.map((option) => (
             <Tooltip key={option.id}>
               <TooltipTrigger asChild>
@@ -222,21 +224,25 @@ export const FormatToolbar = ({ onFormat, onClose, onImageClick }: FormatToolbar
               </TooltipContent>
             </Tooltip>
           ))}
-          <div className="w-px h-5 bg-border mx-1 flex-shrink-0" />
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={onClose}
-                onMouseDown={(e) => e.preventDefault()}
-                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-150 flex-shrink-0"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Close</p>
-            </TooltipContent>
-          </Tooltip>
+          {onClose && (
+            <>
+              <div className="w-px h-5 bg-border mx-1 flex-shrink-0" />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={onClose}
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors duration-150 flex-shrink-0"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Close</p>
+                </TooltipContent>
+              </Tooltip>
+            </>
+          )}
         </div>
       </div>
     </TooltipProvider>

@@ -1,30 +1,17 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { format, formatDistanceToNow } from "date-fns";
 import {
-  Bold,
   Check,
-  CheckSquare,
   ChevronLeft,
-  Code,
-  Heading1,
-  Heading2,
-  Image,
-  Italic,
-  Link,
-  List,
-  ListOrdered,
   Loader2,
   MessageCircle,
   MessageSquare,
   MoreHorizontal,
   MoreVertical,
   Pencil,
-  Quote,
   Server,
   Share2,
-  Strikethrough,
   Trash2,
-  Underline,
   UserCircle,
   X,
 } from "lucide-react";
@@ -42,6 +29,7 @@ import {
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { UserBadges } from "@/components/ui/user-badges";
 import { BotTag } from "@/components/ui/bot-tag";
+import { FormatToolbar } from "@/components/chat/FormatToolbar";
 import { supabase } from "@/integrations/supabase/client";
 import { openUserProfileModal, SIDE_ALIGNED_USER_PROFILE_POPOVER } from "@/lib/userProfilePopover";
 import { useAuthStore } from "@/stores/authStore";
@@ -53,46 +41,10 @@ import type { User, UserStatus } from "@/types";
 import type { Badge } from "@/types/badge";
 
 const POST_MAX_LENGTH = 1000;
-const POST_TITLE_MAX_LENGTH = 120;
-const COMMENT_MAX_LENGTH = 500;
+const POST_TITLE_MAX_LENGTH = 100;
+const COMMENT_MAX_LENGTH = 300;
 const TAGLINE_MAX_LENGTH = 80;
 const quickReactionEmojis = ["👍", "❤️", "😂", "🎉", "😮"];
-
-type ComposerAction =
-  | "bold"
-  | "underline"
-  | "italic"
-  | "strikethrough"
-  | "image"
-  | "inlineCode"
-  | "link"
-  | "check"
-  | "bullet"
-  | "numbered"
-  | "h1"
-  | "h2"
-  | "quote"
-  | "codeBlock"
-  | "divider";
-
-const composerTools: Array<{ action: ComposerAction; label: string; icon: typeof Bold }> = [
-  { action: "bold", label: "Bold", icon: Bold },
-  { action: "underline", label: "Underline", icon: Underline },
-  { action: "italic", label: "Italic", icon: Italic },
-  { action: "strikethrough", label: "Strikethrough", icon: Strikethrough },
-  { action: "image", label: "Image", icon: Image },
-  { action: "inlineCode", label: "Inline code", icon: Code },
-  { action: "link", label: "Link", icon: Link },
-  { action: "image", label: "Image", icon: Image },
-  { action: "check", label: "Checklist", icon: CheckSquare },
-  { action: "bullet", label: "Bulleted list", icon: List },
-  { action: "numbered", label: "Numbered list", icon: ListOrdered },
-  { action: "h1", label: "Heading 1", icon: Heading1 },
-  { action: "h2", label: "Heading 2", icon: Heading2 },
-  { action: "quote", label: "Quote", icon: Quote },
-  { action: "codeBlock", label: "Code block", icon: Code },
-  { action: "divider", label: "Divider", icon: MoreVertical },
-];
 
 const JoinedSectionIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
@@ -223,6 +175,11 @@ const nodeTextToMarkdown = (node: Node): string => {
       return `\`${children}\``;
     case "pre":
       return `\`\`\`\n${element.textContent || ""}\n\`\`\`\n`;
+    case "span":
+      if (element.dataset.profileSpoiler === "true") {
+        return `||${children}||`;
+      }
+      return children;
     case "h1":
       return `# ${block}\n`;
     case "h2":
@@ -260,9 +217,19 @@ const htmlToMarkdown = (html: string): string => {
   return Array.from(container.childNodes).map(nodeTextToMarkdown).join("").replace(/\n{3,}/g, "\n\n").trim();
 };
 
+const moveCaretToEnd = (element: HTMLElement) => {
+  const selection = window.getSelection();
+  if (!selection) return;
+  const range = document.createRange();
+  range.selectNodeContents(element);
+  range.collapse(false);
+  selection.removeAllRanges();
+  selection.addRange(range);
+};
+
 const formatInlineMarkdown = (text: string): React.ReactNode[] => {
   const nodes: React.ReactNode[] = [];
-  const pattern = /(!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)|\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)|\*\*([^*]+)\*\*|__([^_]+)__|\*([^*]+)\*|~~([^~]+)~~|`([^`]+)`)/g;
+  const pattern = /(!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)|\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)|\*\*([^*]+)\*\*|__([^_]+)__|\*([^*]+)\*|~~([^~]+)~~|`([^`]+)`|\|\|([^|]+)\|\|)/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
@@ -291,6 +258,12 @@ const formatInlineMarkdown = (text: string): React.ReactNode[] => {
         <code key={key} className="rounded bg-black/30 px-1 py-0.5 text-[0.9em]">
           {match[10]}
         </code>,
+      );
+    } else if (match[11] !== undefined) {
+      nodes.push(
+        <span key={key} className="rounded bg-black/70 px-1 text-transparent select-none">
+          {match[11]}
+        </span>,
       );
     }
     lastIndex = pattern.lastIndex;
@@ -420,7 +393,7 @@ const ProfileMarkdown = ({ content }: { content: string }) => {
     );
   }
 
-  return <div className="space-y-2 text-sm leading-6">{blocks}</div>;
+  return <div className="space-y-2 text-[15px] leading-6">{blocks}</div>;
 };
 
 const UserProfile = () => {
@@ -433,6 +406,8 @@ const UserProfile = () => {
   const setCurrentServer = useServerStore((s) => s.setCurrentServer);
   const openModal = useUIStore((s) => s.openModal);
   const richBodyRef = useRef<HTMLDivElement | null>(null);
+  const lastValidComposerHtmlRef = useRef("");
+  const isRestoringComposerRef = useRef(false);
 
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [badges, setBadges] = useState<Badge[]>([]);
@@ -553,6 +528,7 @@ const UserProfile = () => {
       setPosts((prev) => [mapPost(data), ...prev]);
       setTitleDraft("");
       setDraft("");
+      lastValidComposerHtmlRef.current = "";
       setIsComposerOpen(false);
       if (richBodyRef.current) richBodyRef.current.innerHTML = "";
     } catch (error: any) {
@@ -563,86 +539,61 @@ const UserProfile = () => {
   }, [currentUser?.id, draft, isSelf, titleDraft]);
 
   const syncRichDraft = useCallback(() => {
-    const nextDraft = htmlToMarkdown(richBodyRef.current?.innerHTML || "").slice(0, POST_MAX_LENGTH);
+    const editor = richBodyRef.current;
+    if (!editor || isRestoringComposerRef.current) return;
+
+    const nextHtml = editor.innerHTML;
+    const nextDraft = htmlToMarkdown(nextHtml);
+
+    if (nextDraft.length > POST_MAX_LENGTH) {
+      isRestoringComposerRef.current = true;
+      editor.innerHTML = lastValidComposerHtmlRef.current;
+      moveCaretToEnd(editor);
+      isRestoringComposerRef.current = false;
+      return;
+    }
+
+    lastValidComposerHtmlRef.current = nextHtml;
     setDraft(nextDraft);
   }, []);
 
-  const runEditorCommand = useCallback(
-    (command: string, value?: string) => {
-      richBodyRef.current?.focus();
-      document.execCommand(command, false, value);
-      syncRichDraft();
-    },
-    [syncRichDraft],
-  );
-
-  const insertHtml = useCallback(
-    (html: string) => {
-      richBodyRef.current?.focus();
-      document.execCommand("insertHTML", false, html);
-      syncRichDraft();
-    },
-    [syncRichDraft],
-  );
-
   const handleComposerAction = useCallback(
-    (action: ComposerAction) => {
-      switch (action) {
+    (formatType: string) => {
+      const editor = richBodyRef.current;
+      if (!editor) return;
+
+      editor.focus();
+
+      switch (formatType) {
         case "bold":
-          runEditorCommand("bold");
-          break;
-        case "underline":
-          runEditorCommand("underline");
+          document.execCommand("bold");
           break;
         case "italic":
-          runEditorCommand("italic");
+          document.execCommand("italic");
           break;
         case "strikethrough":
-          runEditorCommand("strikeThrough");
+          document.execCommand("strikeThrough");
           break;
-        case "inlineCode":
-          insertHtml("<code>code</code>");
+        case "code":
+          document.execCommand("insertHTML", false, "<code>text</code>");
           break;
-        case "link": {
-          const url = window.prompt("Enter link URL");
-          if (!url) return;
-          runEditorCommand("createLink", url);
+        case "codeblock":
+          document.execCommand("insertHTML", false, "<pre><code>text</code></pre>");
           break;
-        }
-        case "image": {
-          const url = window.prompt("Enter image URL");
-          if (!url) return;
-          insertHtml(`<img src="${url.replace(/"/g, "&quot;")}" alt="Image" />`);
+        case "spoiler":
+          document.execCommand(
+            "insertHTML",
+            false,
+            '<span data-profile-spoiler="true" class="rounded bg-black/70 px-1 text-transparent select-none">text</span>',
+          );
           break;
-        }
-        case "check":
-          insertHtml('<ul><li><span data-check-placeholder="true">[ ] </span>Task</li></ul>');
-          break;
-        case "bullet":
-          runEditorCommand("insertUnorderedList");
-          break;
-        case "numbered":
-          runEditorCommand("insertOrderedList");
-          break;
-        case "h1":
-          runEditorCommand("formatBlock", "h1");
-          break;
-        case "h2":
-          runEditorCommand("formatBlock", "h2");
-          break;
-        case "quote":
-          runEditorCommand("formatBlock", "blockquote");
-          break;
-        case "codeBlock":
-          insertHtml("<pre><code>code</code></pre>");
-          break;
-        case "divider": {
-          insertHtml("<div>---</div>");
-          break;
-        }
+        default:
+          return;
       }
+
+      syncRichDraft();
     },
-    [insertHtml, runEditorCommand],
+    [syncRichDraft],
   );
 
   const handleSaveTagline = useCallback(async () => {
@@ -919,7 +870,7 @@ const UserProfile = () => {
 
   return (
     <div className="h-full overflow-y-auto bg-layout-chat text-foreground">
-      <header className="sticky top-0 z-20 flex h-12 items-center gap-2.5 border-b border-[#23262f] bg-[#343844] px-3 text-white shadow-sm">
+      <header className="sticky top-0 z-20 flex h-12 items-center gap-2.5 border-b border-[#23262f] bg-[#1C1E23] px-3 text-white shadow-sm">
         <button
           type="button"
           onClick={() => navigate(-1)}
@@ -1063,7 +1014,7 @@ const UserProfile = () => {
                   >
                     <AvatarWithDecoration user={profileUser} className="h-9 w-9 shrink-0" />
                     <span className="mx-4 h-9 w-px bg-[#686d79]" />
-                    <span className="text-[18px] font-semibold text-[#c3c7d0]">Write a Post</span>
+                    <span className="text-[18px] font-normal text-[#c3c7d0]">Write a Post</span>
                   </button>
                 ) : (
                   <>
@@ -1074,36 +1025,38 @@ const UserProfile = () => {
                           value={titleDraft}
                           onChange={(event) => setTitleDraft(event.target.value.slice(0, POST_TITLE_MAX_LENGTH))}
                           placeholder="Post title"
-                          className="min-w-0 flex-1 bg-transparent text-[18px] font-extrabold leading-none text-white outline-none placeholder:text-[#c0c5ce]"
+                          className="min-w-0 flex-1 bg-transparent text-[18px] font-normal leading-none text-white outline-none placeholder:text-[#c0c5ce]"
                           maxLength={POST_TITLE_MAX_LENGTH}
                           autoFocus
                         />
+                        <span className="shrink-0 text-[11px] tabular-nums text-[#c0c5ce]">
+                          {titleDraft.length}/{POST_TITLE_MAX_LENGTH}
+                        </span>
                       </div>
 
-                      <div className="mt-3 flex h-8 items-center gap-1 overflow-hidden border-y border-[#454955] px-3 text-[#c0c5ce]">
-                        {composerTools.map(({ action, label, icon: Icon }, index) => (
-                          <button
-                            key={`${action}-${index}`}
-                            type="button"
-                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[3px] text-[#c0c5ce] transition-colors hover:bg-white/10 hover:text-white"
-                            onClick={() => handleComposerAction(action)}
-                            aria-label={label}
-                            title={label}
-                          >
-                            <Icon className="h-4 w-4" />
-                          </button>
-                        ))}
+                      <div className="mt-3 border-y border-[#454955] px-0 py-0 text-[#c0c5ce] format-toolbar" onMouseDown={(event) => event.preventDefault()}>
+                        <FormatToolbar
+                          onFormat={handleComposerAction}
+                          className="bg-transparent border-0 rounded-none px-0 py-1"
+                          contentClassName="px-0"
+                        />
                       </div>
 
-                      <div className="relative min-h-[96px]">
+                      <div className="relative min-h-[160px]">
                         {!draft && <div className="pointer-events-none absolute left-4 top-3 text-[13px] text-[#a2a7b0]">What do you want to post?</div>}
                         <div
                           ref={richBodyRef}
                           contentEditable
                           suppressContentEditableWarning
+                          onBeforeInput={(event) => {
+                            const nativeEvent = event.nativeEvent as InputEvent;
+                            if (!nativeEvent.data || draft.length < POST_MAX_LENGTH) return;
+                            if ((window.getSelection()?.toString() || "").length > 0) return;
+                            event.preventDefault();
+                          }}
                           onInput={syncRichDraft}
                           onBlur={syncRichDraft}
-                          className="profile-rich-editor min-h-[96px] w-full px-4 py-3 text-[13px] leading-6 text-[#f2f3f5] outline-none [&_blockquote]:border-l-4 [&_blockquote]:border-[#727782] [&_blockquote]:pl-3 [&_code]:rounded [&_code]:bg-black/30 [&_code]:px-1 [&_h1]:text-xl [&_h1]:font-bold [&_h2]:text-lg [&_h2]:font-bold [&_img]:my-2 [&_img]:max-h-80 [&_img]:max-w-full [&_img]:rounded-[6px] [&_li]:ml-5 [&_ol]:list-decimal [&_pre]:rounded [&_pre]:bg-black/30 [&_pre]:p-3 [&_ul]:list-disc"
+                          className="profile-rich-editor min-h-[160px] w-full px-4 py-3 text-[14px] leading-6 text-[#f2f3f5] outline-none [&_code]:rounded [&_code]:bg-black/30 [&_code]:px-1 [&_pre]:rounded [&_pre]:bg-black/30 [&_pre]:p-3"
                           role="textbox"
                           aria-multiline="true"
                           aria-label="Post body"
@@ -1111,28 +1064,32 @@ const UserProfile = () => {
                       </div>
                     </div>
 
-                    <div className="mt-3 flex items-center justify-end gap-3">
-                      <button
-                        type="button"
-                        className="h-8 rounded-[4px] px-3 text-[13px] font-medium text-[#b9bec8] transition-colors hover:text-white disabled:opacity-50"
-                        onClick={() => {
-                          setTitleDraft("");
-                          setDraft("");
-                          setIsComposerOpen(false);
-                          if (richBodyRef.current) richBodyRef.current.innerHTML = "";
-                        }}
-                        disabled={isPosting}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        className="h-8 min-w-[72px] rounded-[4px] bg-[#d7d9df] px-4 text-[13px] font-semibold text-[#2f3136] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-                        onClick={() => void handleCreatePost()}
-                        disabled={!titleDraft.trim() || !draft.trim() || isPosting}
-                      >
-                        {isPosting ? "Posting" : "Post"}
-                      </button>
+                    <div className="mt-3 flex items-center justify-between gap-3">
+                      <span className="text-[11px] tabular-nums text-[#c0c5ce]">
+                        {draft.length}/{POST_MAX_LENGTH} characters
+                      </span>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          className="h-8 rounded-[4px] px-3 text-[13px] font-medium text-[#b9bec8] transition-colors hover:text-white disabled:opacity-50"
+                          onClick={() => {
+                            setTitleDraft("");
+                            setDraft("");
+                            setIsComposerOpen(false);
+                          }}
+                          disabled={isPosting}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          className="h-8 min-w-[72px] rounded-[4px] bg-[#d7d9df] px-4 text-[13px] font-semibold text-[#2f3136] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                          onClick={() => void handleCreatePost()}
+                          disabled={!titleDraft.trim() || !draft.trim() || isPosting}
+                        >
+                          {isPosting ? "Posting" : "Post"}
+                        </button>
+                      </div>
                     </div>
                   </>
                 )}
@@ -1202,14 +1159,16 @@ const UserProfile = () => {
                                 type="button"
                                 onClick={() => void handleToggleReaction(post.id, reaction.emoji)}
                                 disabled={pendingReactionKey === `${post.id}:${reaction.emoji}`}
-                                className={`flex h-8 items-center gap-1.5 rounded-[4px] border px-2 text-sm transition-colors ${
+                                className={`inline-flex h-7 items-center gap-1 rounded-full border px-2 py-0 transition-colors duration-150 ${
                                   reaction.hasReacted
-                                    ? "border-primary/60 bg-primary/20 text-foreground"
-                                    : "border-border bg-background/40 text-muted-foreground hover:bg-background/70 hover:text-foreground"
+                                    ? "border-[#73716c] bg-[#5F5E5B] text-white hover:bg-[#6a6965]"
+                                    : "border-[#5f626d] bg-[#50504f4a] text-[#d8dbe2] hover:bg-[#5a5a585e]"
                                 }`}
                               >
                                 <span>{reaction.emoji}</span>
-                                <span className="text-xs font-semibold">{reaction.count}</span>
+                                <span className={`text-[11px] leading-none text-[#d7dae2] ${reaction.hasReacted ? "font-semibold" : "font-normal"}`}>
+                                  {reaction.count}
+                                </span>
                               </button>
                             </span>
                           </HoverCardTrigger>
@@ -1246,7 +1205,7 @@ const UserProfile = () => {
                             type="button"
                             onClick={() => void handleToggleReaction(post.id, emoji)}
                             disabled={pendingReactionKey === `${post.id}:${emoji}`}
-                            className="flex h-8 w-8 items-center justify-center rounded-[4px] border border-border bg-background/30 text-sm transition-colors hover:bg-background/70"
+                            className="inline-flex h-7 items-center gap-1 rounded-full border border-[#5f626d] bg-[#50504f4a] px-2 py-0 text-[#d8dbe2] opacity-70 transition-colors duration-150 hover:bg-[#5a5a585e] hover:opacity-100"
                             aria-label={`React with ${emoji}`}
                           >
                             {emoji}
@@ -1329,46 +1288,51 @@ const UserProfile = () => {
                                       )}
                                     </div>
                                     {isEditingComment ? (
-                                      <div className="mt-2 flex items-center gap-2">
-                                        <input
-                                          value={commentEditDrafts[comment.id] || ""}
-                                          onChange={(event) =>
-                                            setCommentEditDrafts((prev) => ({
-                                              ...prev,
-                                              [comment.id]: event.target.value.slice(0, COMMENT_MAX_LENGTH),
-                                            }))
-                                          }
-                                          onKeyDown={(event) => {
-                                            if (event.key === "Enter" && !event.shiftKey) {
-                                              event.preventDefault();
-                                              void handleSaveCommentEdit(comment.id);
+                                      <div className="mt-2">
+                                        <div className="flex items-center gap-2">
+                                          <input
+                                            value={commentEditDrafts[comment.id] || ""}
+                                            onChange={(event) =>
+                                              setCommentEditDrafts((prev) => ({
+                                                ...prev,
+                                                [comment.id]: event.target.value.slice(0, COMMENT_MAX_LENGTH),
+                                              }))
                                             }
-                                            if (event.key === "Escape") handleCancelEditComment(comment.id);
-                                          }}
-                                          className="h-8 min-w-0 flex-1 rounded-[6px] border border-border bg-background/40 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                          maxLength={COMMENT_MAX_LENGTH}
-                                          autoFocus
-                                        />
-                                        <Button
-                                          type="button"
-                                          size="sm"
-                                          variant="ghost"
-                                          onClick={() => void handleSaveCommentEdit(comment.id)}
-                                          disabled={!commentEditDrafts[comment.id]?.trim() || pendingCommentActionId === comment.id}
-                                          className="h-8 min-w-[64px] rounded-[4px] bg-[#d7d9df] px-3 text-[13px] font-semibold text-[#2f3136] hover:bg-white hover:text-[#2f3136] disabled:cursor-not-allowed disabled:opacity-60"
-                                        >
-                                          Save
-                                        </Button>
-                                        <Button
-                                          type="button"
-                                          size="sm"
-                                          variant="ghost"
-                                          onClick={() => handleCancelEditComment(comment.id)}
-                                          disabled={pendingCommentActionId === comment.id}
-                                          className="h-8 px-2 text-[13px]"
-                                        >
-                                          Cancel
-                                        </Button>
+                                            onKeyDown={(event) => {
+                                              if (event.key === "Enter" && !event.shiftKey) {
+                                                event.preventDefault();
+                                                void handleSaveCommentEdit(comment.id);
+                                              }
+                                              if (event.key === "Escape") handleCancelEditComment(comment.id);
+                                            }}
+                                            className="h-8 min-w-0 flex-1 rounded-[6px] border border-border bg-background/40 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                            maxLength={COMMENT_MAX_LENGTH}
+                                            autoFocus
+                                          />
+                                          <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => void handleSaveCommentEdit(comment.id)}
+                                            disabled={!commentEditDrafts[comment.id]?.trim() || pendingCommentActionId === comment.id}
+                                            className="h-8 min-w-[64px] rounded-[4px] bg-[#d7d9df] px-3 text-[13px] font-semibold text-[#2f3136] hover:bg-white hover:text-[#2f3136] disabled:cursor-not-allowed disabled:opacity-60"
+                                          >
+                                            Save
+                                          </Button>
+                                          <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => handleCancelEditComment(comment.id)}
+                                            disabled={pendingCommentActionId === comment.id}
+                                            className="h-8 px-2 text-[13px]"
+                                          >
+                                            Cancel
+                                          </Button>
+                                        </div>
+                                        <div className="mt-1 text-right text-[11px] tabular-nums text-muted-foreground">
+                                          {(commentEditDrafts[comment.id] || "").length}/{COMMENT_MAX_LENGTH}
+                                        </div>
                                       </div>
                                     ) : (
                                       <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-5">{comment.content}</p>
@@ -1379,36 +1343,43 @@ const UserProfile = () => {
                             })}
                           </div>
                         )}
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-start gap-2">
                           <AvatarWithDecoration user={currentUser || profileUser} className="h-7 w-7 shrink-0" />
-                          <input
-                            value={commentDrafts[post.id] || ""}
-                            onChange={(event) =>
-                              setCommentDrafts((prev) => ({
-                                ...prev,
-                                [post.id]: event.target.value.slice(0, COMMENT_MAX_LENGTH),
-                              }))
-                            }
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter" && !event.shiftKey) {
-                                event.preventDefault();
-                                void handleCreateComment(post.id);
-                              }
-                            }}
-                            placeholder="Write a comment"
-                            className="h-9 min-w-0 flex-1 rounded-[6px] border border-border bg-background/40 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            maxLength={COMMENT_MAX_LENGTH}
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => void handleCreateComment(post.id)}
-                            disabled={!commentDrafts[post.id]?.trim() || pendingCommentPostId === post.id}
-                            className="h-9 min-w-[82px] rounded-[4px] bg-[#d7d9df] px-4 text-[13px] font-semibold text-[#2f3136] transition-colors hover:bg-white hover:text-[#2f3136] disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            Comment
-                          </Button>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <input
+                                value={commentDrafts[post.id] || ""}
+                                onChange={(event) =>
+                                  setCommentDrafts((prev) => ({
+                                    ...prev,
+                                    [post.id]: event.target.value.slice(0, COMMENT_MAX_LENGTH),
+                                  }))
+                                }
+                                onKeyDown={(event) => {
+                                  if (event.key === "Enter" && !event.shiftKey) {
+                                    event.preventDefault();
+                                    void handleCreateComment(post.id);
+                                  }
+                                }}
+                                placeholder="Write a comment"
+                                className="h-9 min-w-0 flex-1 rounded-[6px] border border-border bg-background/40 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                maxLength={COMMENT_MAX_LENGTH}
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => void handleCreateComment(post.id)}
+                                disabled={!commentDrafts[post.id]?.trim() || pendingCommentPostId === post.id}
+                                className="h-9 min-w-[82px] rounded-[4px] bg-[#d7d9df] px-4 text-[13px] font-semibold text-[#2f3136] transition-colors hover:bg-white hover:text-[#2f3136] disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                Comment
+                              </Button>
+                            </div>
+                            <div className="mt-1 text-right text-[11px] tabular-nums text-muted-foreground">
+                              {(commentDrafts[post.id] || "").length}/{COMMENT_MAX_LENGTH}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     )}
