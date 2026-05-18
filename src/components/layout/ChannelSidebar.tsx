@@ -2155,7 +2155,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
             <>
               <div
                 className={cn(
-                  "flex-1 overflow-y-auto px-2.5 pt-2 pb-5 channel-sidebar-scroll",
+                  "flex-1 overflow-y-auto px-1 pt-2 pb-5 channel-sidebar-scroll",
                   isSortingMode && "bg-foreground/[0.03] border-2 border-dashed border-border/50 rounded-xl mx-1 my-1",
                 )}
                 style={{ touchAction: "pan-y" }}
@@ -2205,7 +2205,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
             <ContextMenuTrigger asChild disabled={isSortingMode}>
               <div
                 className={cn(
-                  "flex-1 overflow-y-auto px-2.5 pt-2 pb-5 channel-sidebar-scroll",
+                  "flex-1 overflow-y-auto px-1 pt-2 pb-5 channel-sidebar-scroll",
                   isSortingMode && "bg-foreground/[0.03] border-2 border-dashed border-border/50 rounded-xl mx-1 my-1",
                 )}
                 style={{ touchAction: "pan-y" }}

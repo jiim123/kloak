@@ -6,7 +6,6 @@ import {
   Loader2,
   MessageCircle,
   MessageSquare,
-  MoreHorizontal,
   MoreVertical,
   Pencil,
   Server,
@@ -968,7 +967,7 @@ const UserProfile = () => {
           ) : null}
 
           {!isSelf && (
-            <Button type="button" onClick={handleMessage} className="mt-4" variant="white" size="default">
+            <Button type="button" onClick={handleMessage} className="mt-4 rounded-[4px]" variant="white" size="default">
               <MessageCircle className="h-4 w-4" />
               Message
             </Button>
@@ -1010,7 +1009,7 @@ const UserProfile = () => {
                   <button
                     type="button"
                     onClick={() => setIsComposerOpen(true)}
-                    className="flex h-[62px] w-full items-center rounded-[4px] bg-[#555965] px-4 text-left shadow-sm transition-colors hover:bg-[#5b5f6c]"
+                    className="flex h-[50px] w-full items-center rounded-[4px] bg-[#4D4F58] px-4 text-left shadow-sm transition-colors hover:bg-[#555862]"
                   >
                     <AvatarWithDecoration user={profileUser} className="h-9 w-9 shrink-0" />
                     <span className="mx-4 h-9 w-px bg-[#686d79]" />
@@ -1144,7 +1143,7 @@ const UserProfile = () => {
                     </div>
 
                     <div className="mt-3">
-                      <h3 className="break-words text-base font-semibold leading-6">{post.title}</h3>
+                      <h3 className="break-words text-[15px] font-semibold leading-6">{post.title}</h3>
                       <div className="mt-3">
                         <ProfileMarkdown content={post.content} />
                       </div>
@@ -1233,8 +1232,8 @@ const UserProfile = () => {
                               const canDeleteComment = currentUser?.id === comment.user_id || currentUser?.id === post.user_id;
                               const isEditingComment = editingCommentId === comment.id;
                               return (
-                                <div key={comment.id} className="flex items-center gap-3">
-                                  <AvatarWithDecoration user={commentUser} className="h-7 w-7 shrink-0" />
+                                  <div key={comment.id} className="flex items-center gap-3">
+                                    <AvatarWithDecoration user={commentUser} className="h-9 w-9 shrink-0" />
                                   <div className="min-w-0 flex-1 rounded-[6px] bg-background/30 px-3 py-2">
                                     <div className="flex min-h-5 items-center gap-2">
                                       <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -1344,7 +1343,7 @@ const UserProfile = () => {
                           </div>
                         )}
                         <div className="flex items-start gap-2">
-                          <AvatarWithDecoration user={currentUser || profileUser} className="h-7 w-7 shrink-0" />
+                          <AvatarWithDecoration user={currentUser || profileUser} className="h-9 w-9 shrink-0" />
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
                               <input
@@ -1387,8 +1386,8 @@ const UserProfile = () => {
                 ))
               ) : (
                 <div className="flex min-h-[190px] flex-col items-center justify-center rounded-[6px] border border-dashed border-border text-center text-sm font-medium text-muted-foreground">
-                  <MoreHorizontal className="mb-3 h-9 w-9 opacity-60" />
-                  No posts yet.
+                  <img src="/klo-sad.svg" alt="" aria-hidden="true" className="mb-3 h-32 w-32 opacity-50" />
+                  No updates yet!
                 </div>
               )}
             </div>

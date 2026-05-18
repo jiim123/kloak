@@ -1134,6 +1134,32 @@ body {
   border-radius: 4px;
 }
 
+.server-settings-reference button[role="switch"] {
+  width: 34px;
+  height: 12px;
+  border-width: 0;
+  border-radius: 9999px !important;
+  background-color: #535966;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  overflow: visible;
+}
+
+.server-settings-reference button[role="switch"][data-state="checked"] {
+  background-color: #55d642;
+}
+
+.server-settings-reference button[role="switch"] > span {
+  width: 18px;
+  height: 18px;
+  background-color: #f3f4f6;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  transform: translateX(0);
+}
+
+.server-settings-reference button[role="switch"][data-state="checked"] > span {
+  transform: translateX(16px);
+}
+
 .server-settings-reference .user-settings-nav-row {
   border-radius: 0;
 }

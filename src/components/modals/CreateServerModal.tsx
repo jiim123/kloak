@@ -164,7 +164,6 @@ export const CreateServerModal = () => {
           banner_url: "/default_server_banner.png",
         };
 
-        toast.success(`Server "${server.name}" created!`);
         setCurrentServer(serverWithBanner);
         await fetchChannels(server.id);
         await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -304,7 +303,7 @@ export const CreateServerModal = () => {
                     )}
                   </div>
 
-                  <p className="mb-2 max-w-[280px] truncate text-center text-[32px] font-semibold leading-none text-white">{createdServer.name}</p>
+                  <p className="mb-2 max-w-[280px] truncate pb-1 text-center text-[32px] font-semibold leading-[1.15] text-white">{createdServer.name}</p>
                   <p className="mb-8 text-center text-[14px] text-[#d0d4db]">Your server is personalized and ready for you.</p>
 
                   <Button

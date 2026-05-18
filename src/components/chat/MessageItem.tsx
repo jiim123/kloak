@@ -1024,9 +1024,16 @@ export const MessageItem = memo(function MessageItem({
   const isAnnouncementChannel = currentChannel?.type === "announcement";
 
   const innerClassName = useMemo(() => {
+    const messageSpacing = compactMode
+      ? "gap-2 py-0.5"
+      : isAnnouncementChannel && !isGrouped
+        ? "gap-3 py-3"
+        : isGrouped
+          ? "gap-3 py-[1px]"
+          : "gap-3 py-0.5";
     const classes = [
       "group relative z-0 hover:z-10 focus-within:z-10 flex px-4 rounded-lg hover:bg-muted/40",
-      compactMode ? "gap-2 py-0.5" : isGrouped ? "gap-3 py-[1px]" : "gap-3 py-0.5",
+      messageSpacing,
     ];
     if (isAnnouncementChannel && !isGrouped) {
       classes.push("bg-primary/5 border-l-2 border-l-primary/50 ml-1");
@@ -1036,6 +1043,15 @@ export const MessageItem = memo(function MessageItem({
     if (isPending) classes.push("opacity-70");
     return classes.join(" ");
   }, [compactMode, isMentioned, isHighlighted, isPending, isAnnouncementChannel, isGrouped]);
+
+  const messageContentClassName = useMemo(
+    () =>
+      cn(
+        "text-[14px] font-normal leading-[1.5] sm:leading-[1.45] font-[Inter,system-ui,sans-serif] [&>div]:flex [&>div]:items-center [&>div]:flex-wrap overflow-hidden",
+        isAnnouncementChannel ? "w-full max-w-[90%] sm:max-w-none" : "max-w-[90%] sm:max-w-none",
+      ),
+    [isAnnouncementChannel],
+  );
 
   const topCustomRoleColor = useMemo(() => {
     if (isDM) return null;
@@ -1508,7 +1524,7 @@ export const MessageItem = memo(function MessageItem({
                         <PollMessage pollId={pollId} />
                       </div>
                     ) : (
-                      <div className="text-[14px] font-normal leading-[1.5] sm:leading-[1.45] font-[Inter,system-ui,sans-serif] [&>div]:flex [&>div]:items-center [&>div]:flex-wrap overflow-hidden sm:max-w-[650px] max-w-[90%]">
+                      <div className={messageContentClassName}>
                         {currentChannel?.type === "announcement" ? (
                           (() => {
                             // Only show title+body split when there's an explicit double-newline separator

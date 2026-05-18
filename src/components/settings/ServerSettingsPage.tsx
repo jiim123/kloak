@@ -3816,7 +3816,7 @@ export const ServerSettingsPage = () => {
                       </>
                     ) : (
                       <div className="flex flex-col items-center justify-center py-8 text-center">
-                        <Smile className="w-12 h-12 text-muted-foreground/50 mb-3" />
+                        <img src="/klo-sad.svg" alt="" aria-hidden="true" className="h-32 w-32 mb-3 opacity-50" />
                         <p className="text-sm text-muted-foreground">No custom emojis yet</p>
                         <p className="text-xs text-muted-foreground mt-1">Upload your first emoji above</p>
                       </div>

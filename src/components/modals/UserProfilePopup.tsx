@@ -758,7 +758,6 @@ export const UserProfilePopup = () => {
     const shouldCollapseBio = Boolean(bioText && bioText.length > 180);
     const statusText = profileUser.custom_status?.trim();
     const selfStatusLabel = statusText || "Set a status";
-    const identityLabel = profileUser.is_bot ? "Bot" : !currentServer ? statusLabels[presence.status] : null;
     const themeStyle: CSSProperties = {
       color: fg,
       background:
@@ -821,11 +820,6 @@ export const UserProfilePopup = () => {
           <div className="mt-3 min-w-0">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                {identityLabel && (
-                  <div className="mb-2 truncate text-[12px] font-bold leading-none" style={{ color: accent }}>
-                    {identityLabel}
-                  </div>
-                )}
                 <div className="flex min-w-0 items-center gap-2">
                   <h2 className="truncate text-[19px] font-extrabold leading-none tracking-normal">
                     {profileUser.display_name || profileUser.username}
