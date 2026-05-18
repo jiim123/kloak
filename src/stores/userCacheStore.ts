@@ -27,7 +27,7 @@ interface CachedEntry {
  */
 const VISUAL_FIELDS: ReadonlySet<string> = new Set([
   'username', 'display_name', 'avatar_url', 'banner_url',
-  'avatar_decoration', 'profile_effect', 'bio', 'banner_color',
+  'avatar_decoration', 'profile_effect', 'bio', 'tagline', 'banner_color',
   'custom_status',
 ]);
 

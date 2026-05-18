@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useCallback, useRef, Suspense, lazy } from "react";
 import { useNavigate, useSearchParams, useLocation, useParams, Outlet } from "react-router-dom";
 import { AnimatePresence, motion, MotionConfig } from "framer-motion";
-import { Link2, Plus, Users, X } from "lucide-react";
+import { Link2, Plus, UserCircle, Users, X } from "lucide-react";
 import { useAuthStore, initializeAuth } from "@/stores/authStore";
 import { useUIStore } from "@/stores/uiStore";
 import { getCachedServerChannelMap, useServerStore } from "@/stores/serverStore";
@@ -37,6 +37,7 @@ const InviteModal = lazy(() => import("@/components/modals/InviteModal").then(m 
 const CreateChannelModal = lazy(() => import("@/components/modals/CreateChannelModal").then(m => ({ default: m.CreateChannelModal })));
 const EditChannelModal = lazy(() => import("@/components/modals/EditChannelModal").then(m => ({ default: m.EditChannelModal })));
 const UserProfilePopup = lazy(() => import("@/components/modals/UserProfilePopup").then(m => ({ default: m.UserProfilePopup })));
+const UserProfilePage = lazy(() => import("@/pages/UserProfile"));
 const PinnedMessagesPanel = lazy(() => import("@/components/modals/PinnedMessagesPanel").then(m => ({ default: m.PinnedMessagesPanel })));
 const SearchModal = lazy(() => import("@/components/modals/SearchModal").then(m => ({ default: m.SearchModal })));
 const QuickSwitcherModal = lazy(() => import("@/components/modals/QuickSwitcherModal").then(m => ({ default: m.QuickSwitcherModal })));
@@ -100,7 +101,7 @@ const AppLayout = () => {
 
   // Mask server/channel/DM IDs from the URL bar for privacy
   useEffect(() => {
-    if (location.pathname.startsWith('/app') && location.pathname !== '/app') {
+    if (location.pathname.startsWith('/app') && location.pathname !== '/app' && !location.pathname.startsWith('/app/profiles/')) {
       window.history.replaceState(null, '', '/app');
     }
   }, [location.pathname, location.search]);
@@ -151,13 +152,14 @@ const AppLayout = () => {
   const currentPath = location.pathname.replace("/app", "") || "/";
   const isServerOverviewView = !!params.serverId && currentPath === `/servers/${params.serverId}/overview`;
   const isServerMembersView = !!params.serverId && currentPath === `/servers/${params.serverId}/members`;
+  const isProfileView = !!params.userId && currentPath === `/profiles/${params.userId}`;
   
   const isServerSpecialView = isServerOverviewView || isServerMembersView;
   const currentChannelType = currentChannel?.type;
   const canUseUnifiedHeader =
     currentChannelType !== "voice";
   const showDesktopUnifiedChannelHeader =
-    !isMobile && currentServer !== null && !isServerSpecialView && canUseUnifiedHeader && Boolean(currentChannel);
+    !isMobile && currentServer !== null && !isServerSpecialView && !isProfileView && canUseUnifiedHeader && Boolean(currentChannel);
   const overviewHeaderChannel: Channel | null = useMemo(() => {
     if (!currentServer) return null;
     return {
@@ -180,6 +182,9 @@ const AppLayout = () => {
       allowed_link_domains: [],
       ghost_mode: false,
       block_attachments: false,
+      disable_reactions: false,
+      disable_polls: false,
+      auto_delete_seconds: null,
     };
   }, [currentServer]);
   const membersHeaderChannel: Channel | null = useMemo(() => {
@@ -204,6 +209,9 @@ const AppLayout = () => {
       allowed_link_domains: [],
       ghost_mode: false,
       block_attachments: false,
+      disable_reactions: false,
+      disable_polls: false,
+      auto_delete_seconds: null,
     };
   }, [currentServer]);
 
@@ -616,6 +624,14 @@ const AppLayout = () => {
     navigate("/app/friends");
   }, [navigate, setCurrentConversation, setCurrentServer]);
 
+  const openProfilePage = useCallback(() => {
+    if (!user?.id) return;
+    setIsAddServerPanelOpen(false);
+    setCurrentServer(null);
+    setCurrentConversation(null);
+    navigate(`/app/profiles/${user.id}`);
+  }, [navigate, setCurrentConversation, setCurrentServer, user?.id]);
+
   const closeQuickAccessPanel = useCallback(() => {
     setIsAddServerPanelOpen(false);
   }, []);
@@ -640,7 +656,9 @@ const AppLayout = () => {
     return null;
   }
 
-  const desktopTitle = isDMView
+  const desktopTitle = isProfileView
+    ? "Profile"
+    : isDMView
     ? currentConversation
       ? currentConversation.other_user?.display_name || currentConversation.other_user?.username || "Direct Messages"
       : "Direct Messages"
@@ -686,12 +704,17 @@ const AppLayout = () => {
                 <div className="flex-1 overflow-hidden bg-layout-chat relative w-full">
                   <VoicePersistentHost />
                   {/* Keep all views mounted, toggle visibility with CSS to prevent remount sluggishness */}
+                  {isProfileView && (
+                    <Suspense fallback={null}>
+                      <UserProfilePage />
+                    </Suspense>
+                  )}
                   {currentConversation && (
-                    <div className={isDMView && currentConversation ? "block h-full" : "hidden"}>
+                    <div className={isDMView && currentConversation && !isProfileView ? "block h-full" : "hidden"}>
                       <DMChatArea />
                     </div>
                   )}
-                  {isDMView && !currentConversation && (
+                  {isDMView && !currentConversation && !isProfileView && (
                     isExploreView ? (
                       <div className="h-full overflow-y-auto">
                         <ExploreServers />
@@ -710,7 +733,7 @@ const AppLayout = () => {
                       {isServerMembersView && <ServerMembersPage />}
                       <div
                         className={
-                          !isServerSpecialView && !isDMView ? "block h-full" : "hidden"
+                          !isServerSpecialView && !isDMView && !isProfileView ? "block h-full" : "hidden"
                         }
                       >
                         <ChatArea />
@@ -735,52 +758,81 @@ const AppLayout = () => {
                         animate={{ width: 228, opacity: 1, x: 0 }}
                         exit={{ width: 0, opacity: 0, x: -18 }}
                         transition={addServerPanelTransition}
-                        className="h-full shrink-0 overflow-hidden border-r border-white/8 bg-[#191C21]"
+                        className="h-full shrink-0 overflow-hidden border-r border-black/30 bg-[#2B2D34]"
                       >
                         <div className="flex h-full w-[228px] flex-col">
-                          <div className="flex h-14 shrink-0 items-center justify-between px-4">
-                            <div className="text-[11px] font-bold uppercase tracking-wide text-[#8F949D]">
-                              Quick access
+                          <div className="flex h-[58px] shrink-0 items-center gap-3 border-b border-black/20 px-3 shadow-[0_1px_0_rgba(255,255,255,0.03)]">
+                            <div className="relative h-8 w-8 shrink-0">
+                              {user?.avatar_url ? (
+                                <img src={user.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover" />
+                              ) : (
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#5865F2] text-[12px] font-bold text-white">
+                                  {(user?.display_name || user?.username || "U").slice(0, 2).toUpperCase()}
+                                </div>
+                              )}
+                              <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[#2B2D34] bg-[#23A55A]" />
+                            </div>
+                            <div className="min-w-0 flex-1 truncate text-[14px] font-semibold text-white">
+                              {user?.display_name || user?.username || "Profile"}
                             </div>
                             <button
                               type="button"
                               onClick={() => setIsAddServerPanelOpen(false)}
-                              className="flex h-8 w-8 items-center justify-center rounded-[6px] text-[#9EA3AD] transition-colors hover:bg-white/8 hover:text-white"
-                              aria-label="Close add server panel"
+                              className="flex h-7 w-7 items-center justify-center rounded-[4px] text-[#A7AAB2] transition-colors hover:bg-white/10 hover:text-white"
+                              aria-label="Close quick access menu"
                             >
                               <X className="h-4 w-4" />
                             </button>
                           </div>
 
-                          <nav className="flex flex-col gap-1 px-2">
+                          <nav className="flex flex-col gap-1 px-1.5 py-3">
+                            <div className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wide text-[#B5BAC1]">
+                              Profile
+                            </div>
+                            <button
+                              type="button"
+                              onClick={openProfilePage}
+                              className={cn(
+                                "flex h-8 w-full items-center gap-3 rounded-[2px] px-2.5 text-left text-[14px] font-semibold transition-colors",
+                                isProfileView
+                                  ? "bg-[#4A4D55] text-white"
+                                  : "text-[#B5BAC1] hover:bg-[#3B3E46] hover:text-white",
+                              )}
+                            >
+                              <UserCircle className="h-4 w-4 shrink-0" />
+                              <span className="truncate">Profile</span>
+                            </button>
                             <button
                               type="button"
                               onClick={openCreateServer}
-                              className="flex h-11 w-full items-center gap-3 rounded-[6px] px-3 text-left text-sm font-normal text-[#D7D9DF] transition-colors hover:bg-white/8 hover:text-white"
+                              className="flex h-8 w-full items-center gap-3 rounded-[2px] px-2.5 text-left text-[14px] font-medium text-[#B5BAC1] transition-colors hover:bg-[#3B3E46] hover:text-white"
                             >
-                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] bg-[#252932] text-[#D7D9DF]">
-                                <Plus className="h-4 w-4" />
-                              </span>
-                              <span className="truncate">Create a server</span>
+                              <Plus className="h-4 w-4 shrink-0" />
+                              <span className="truncate">Create Server</span>
                             </button>
                             <button
                               type="button"
                               onClick={openJoinServer}
-                              className="flex h-11 w-full items-center gap-3 rounded-[6px] px-3 text-left text-sm font-normal text-[#D7D9DF] transition-colors hover:bg-white/8 hover:text-white"
+                              className="flex h-8 w-full items-center gap-3 rounded-[2px] px-2.5 text-left text-[14px] font-medium text-[#B5BAC1] transition-colors hover:bg-[#3B3E46] hover:text-white"
                             >
-                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] bg-[#252932] text-[#D7D9DF]">
-                                <Link2 className="h-4 w-4" />
-                              </span>
-                              <span className="truncate">Join a server</span>
+                              <Link2 className="h-4 w-4 shrink-0" />
+                              <span className="truncate">Join by Invite</span>
                             </button>
+
+                            <div className="px-2 pb-1 pt-6 text-[10px] font-bold uppercase tracking-wide text-[#B5BAC1]">
+                              Only visible to you
+                            </div>
                             <button
                               type="button"
                               onClick={openFriendsPage}
-                              className="flex h-11 w-full items-center gap-3 rounded-[6px] px-3 text-left text-sm font-normal text-[#D7D9DF] transition-colors hover:bg-white/8 hover:text-white"
+                              className={cn(
+                                "flex h-8 w-full items-center gap-3 rounded-[2px] px-2.5 text-left text-[14px] font-medium transition-colors",
+                                isFriendsView
+                                  ? "bg-[#4A4D55] text-white"
+                                  : "text-[#8F949D] hover:bg-[#3B3E46] hover:text-white",
+                              )}
                             >
-                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] bg-[#252932] text-[#D7D9DF]">
-                                <Users className="h-4 w-4" />
-                              </span>
+                              <Users className="h-4 w-4 shrink-0" />
                               <span className="truncate">Friends</span>
                             </button>
                           </nav>
@@ -851,12 +903,17 @@ const AppLayout = () => {
                           <div className="min-w-0 flex-1 bg-layout-chat relative overflow-hidden">
                             <VoicePersistentHost />
                             {/* Keep all views mounted, toggle visibility with CSS to prevent remount sluggishness */}
+                            {isProfileView && (
+                              <Suspense fallback={null}>
+                                <UserProfilePage />
+                              </Suspense>
+                            )}
                             {currentConversation && (
-                              <div className={isDMView && currentConversation ? "block h-full" : "hidden"}>
+                              <div className={isDMView && currentConversation && !isProfileView ? "block h-full" : "hidden"}>
                                 <DMChatArea />
                               </div>
                             )}
-                            {isDMView && !currentConversation && (
+                            {isDMView && !currentConversation && !isProfileView && (
                               isExploreView ? (
                                 <div className="h-full overflow-y-auto">
                                   <ExploreServers />
@@ -875,14 +932,14 @@ const AppLayout = () => {
                               <>
                                 {isServerOverviewView && <ServerOverviewView />}
                                 {isServerMembersView && <ServerMembersPage />}
-                                <div className={!isServerSpecialView && !isDMView ? "block h-full" : "hidden"}>
+                                <div className={!isServerSpecialView && !isDMView && !isProfileView ? "block h-full" : "hidden"}>
                                   <ChatArea showHeader={!showDesktopUnifiedChannelHeader} />
                                 </div>
                               </>
                             )}
                           </div>
 
-                          {!isDMView && isMemberSidebarOpen && (
+                          {!isDMView && !isProfileView && isMemberSidebarOpen && (
                             <div className="w-[304px] shrink-0 overflow-hidden">
                               <MembersSidebar />
                             </div>

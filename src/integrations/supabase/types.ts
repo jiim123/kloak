@@ -3038,6 +3038,7 @@ export type Database = {
           profile_theme_primary: string | null
           pronouns: string | null
           status: Database["public"]["Enums"]["user_status"] | null
+          tagline: string | null
           username: string
         }
         Insert: {
@@ -3058,6 +3059,7 @@ export type Database = {
           profile_theme_primary?: string | null
           pronouns?: string | null
           status?: Database["public"]["Enums"]["user_status"] | null
+          tagline?: string | null
           username: string
         }
         Update: {
@@ -3078,6 +3080,7 @@ export type Database = {
           profile_theme_primary?: string | null
           pronouns?: string | null
           status?: Database["public"]["Enums"]["user_status"] | null
+          tagline?: string | null
           username?: string
         }
         Relationships: []

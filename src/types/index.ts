@@ -21,6 +21,7 @@ export interface User {
   profile_theme_primary: string | null;
   profile_theme_accent: string | null;
   bio: string | null;
+  tagline?: string | null;
   status: UserStatus;
   custom_status: string | null;
   created_at: string;

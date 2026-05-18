@@ -97,6 +97,7 @@ const mapAuthUser = (userData: Record<string, unknown>, fallbackStatus: UserStat
   profile_theme_primary: (userData.profile_theme_primary as string | null) ?? null,
   profile_theme_accent: (userData.profile_theme_accent as string | null) ?? null,
   bio: userData.bio as string | null,
+  tagline: (userData.tagline as string | null) ?? null,
   status: (userData.status as UserStatus) || fallbackStatus,
   custom_status: userData.custom_status as string | null,
   created_at: userData.created_at as string,
@@ -392,6 +393,10 @@ export const useAuthStore = create<AuthState>()(
                 "bio" in normalizedUpdates
                   ? (normalizedUpdates.bio as string | null)
                   : ((userData.bio as string | null) ?? user.bio),
+              tagline:
+                "tagline" in normalizedUpdates
+                  ? (normalizedUpdates.tagline as string | null)
+                  : ((userData.tagline as string | null) ?? user.tagline),
               avatar_url:
                 "avatar_url" in normalizedUpdates
                   ? (normalizedUpdates.avatar_url as string | null)

@@ -25,6 +25,10 @@ const buttonVariants = cva(
         outline:
           "rounded-[4px] border border-border bg-transparent text-foreground hover:bg-secondary hover:border-neutral-400 active:bg-secondary-hover",
 
+        // White - Shared light CTA
+        white:
+          "rounded-xl border-0 bg-white text-black hover:bg-white/90 active:bg-white/80 tracking-normal shadow-none",
+
         // Error/Destructive - Dangerous actions
         error:
           "rounded-[4px] bg-destructive text-destructive-foreground hover:bg-destructive-hover hover:shadow-[0_4px_12px_hsl(var(--destructive)/0.3)] active:bg-destructive-active",

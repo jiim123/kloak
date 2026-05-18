@@ -8,6 +8,7 @@ import {
   Loader2,
   MessageCircle,
   Plus,
+  UserCircle,
   UserMinus,
   UserPlus,
   X,
@@ -365,6 +366,7 @@ export const UserProfilePopup = () => {
           profile_theme_primary: d.profile_theme_primary ?? null,
           profile_theme_accent: d.profile_theme_accent ?? null,
           bio: d.bio,
+          tagline: d.tagline ?? null,
           status: d.status as UserStatus,
           custom_status: d.custom_status,
           created_at: d.created_at,
@@ -545,6 +547,12 @@ export const UserProfilePopup = () => {
     }
   };
 
+  const handleOpenProfilePage = () => {
+    if (!profileUser) return;
+    navigate(`/app/profiles/${profileUser.id}`);
+    handleClose();
+  };
+
   const handleFriendAction = async () => {
     if (!currentUser || !profileUser) return;
 
@@ -607,7 +615,7 @@ export const UserProfilePopup = () => {
   };
 
   const renderActionRow = (divider: string, muted: string) => {
-    if (isSelf || !profileUser) return null;
+    if (!profileUser) return null;
 
     const actionClass =
       "group flex min-w-0 flex-1 flex-col items-center gap-1.5 rounded-md bg-transparent px-1 py-1 text-[11px] font-semibold disabled:opacity-40";
@@ -616,8 +624,25 @@ export const UserProfilePopup = () => {
 
     return (
       <div className="mt-4">
-        {!isBlocked ? (
-          <div className={cn("grid gap-2 text-center", hasPendingRequest ? "grid-cols-4" : "grid-cols-3")} style={{ color: muted }}>
+        {isSelf ? (
+          <Button
+            variant="secondary"
+            className="h-9 w-full rounded-lg border text-foreground hover:bg-secondary-hover"
+            style={{ borderColor: divider, backgroundColor: "rgba(0,0,0,0.18)" }}
+            onClick={handleOpenProfilePage}
+          >
+            <UserCircle className="mr-1.5 h-3.5 w-3.5" />
+            Profile
+          </Button>
+        ) : !isBlocked ? (
+          <div className={cn("grid gap-2 text-center", hasPendingRequest ? "grid-cols-5" : "grid-cols-4")} style={{ color: muted }}>
+            <button type="button" onClick={handleOpenProfilePage} className={actionClass}>
+              <span className={iconWrapClass}>
+                <UserCircle className="h-5 w-5" />
+              </span>
+              <span className="max-w-full truncate">Profile</span>
+            </button>
+
             <button type="button" onClick={handleMessage} className={actionClass}>
               <span className={iconWrapClass}>
                 <MessageCircle className="h-5 w-5" />

@@ -41,6 +41,7 @@ const AppContent = () => {
             <Route index element={<EmptyRoute />} />
             <Route path="friends" element={<EmptyRoute />} />
             <Route path="explore" element={<EmptyRoute />} />
+            <Route path="profiles/:userId" element={<EmptyRoute />} />
             <Route path="servers/:serverId" element={<Suspense fallback={null}><ServerAuthGuard><EmptyRoute /></ServerAuthGuard></Suspense>} />
             <Route path="servers/:serverId/overview" element={<Suspense fallback={null}><ServerAuthGuard><EmptyRoute /></ServerAuthGuard></Suspense>} />
             <Route path="servers/:serverId/members" element={<Suspense fallback={null}><ServerAuthGuard><EmptyRoute /></ServerAuthGuard></Suspense>} />
