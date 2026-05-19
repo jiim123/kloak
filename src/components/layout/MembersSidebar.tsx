@@ -334,10 +334,12 @@ const SectionHeader = memo(
           style={colorDot.startsWith("linear-gradient") ? { background: colorDot } : { backgroundColor: colorDot }}
         />
       ) : null}
-      <span className="text-[13px] font-bold text-muted-foreground">
+      <span className="text-[13px] font-bold text-muted-foreground" style={color ? { color } : undefined}>
         {count}
       </span>
-      <span className="text-[13px] font-bold text-muted-foreground">{label}</span>
+      <span className="text-[13px] font-bold text-muted-foreground" style={color ? { color } : undefined}>
+        {label}
+      </span>
     </div>
   ),
 );
