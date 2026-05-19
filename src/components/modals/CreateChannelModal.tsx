@@ -382,7 +382,7 @@ export const CreateChannelModal = () => {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium leading-none text-[#f3f4f7]">Make channel public</p>
                   <p className="mt-2 text-xs leading-5 text-[#b8bec8]">
-                    People who aren't a part of the server will be able to see this channel. The channel's content can be shared with people outside of Guilded.
+                    People who aren't a part of the server will be able to see this channel.
                   </p>
                 </div>
                 <Switch checked={!isPrivate} onCheckedChange={(checked) => setIsPrivate(!checked)} />

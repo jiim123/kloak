@@ -1,6 +1,4 @@
--- Fix offline member pagination after bot member changes.
--- The previous override referenced offline_base outside its CTE scope when
--- _include_count = true, causing the first offline-section expansion to fail.
+-- Keep offline member pagination count calculation inside the CTE scope.
 
 CREATE OR REPLACE FUNCTION public.get_server_members_offline_page_secure(
   _server_id uuid,
@@ -76,7 +74,6 @@ BEGIN
     JOIN public.users u ON u.id = sm.user_id
     WHERE sm.server_id = _server_id
       AND COALESCE(sm.is_banned, false) = false
-      AND COALESCE(u.is_bot, false) = false
       AND (
         (u.last_seen IS NOT NULL AND u.last_seen < _online_cutoff)
         OR (u.last_seen IS NULL AND COALESCE(u.status::text, 'offline') = 'offline')

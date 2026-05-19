@@ -1,19 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ComponentType } from "react";
 import {
   ArrowLeft,
   Bot,
-  Check,
   ChevronRight,
   Loader2,
-  MessageSquare,
   MoreVertical,
   Plus,
   Search,
   Trash2,
-  UserPlus,
   Wand2,
-  X,
-  type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -25,7 +20,7 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import type { Channel, CustomServerRole } from "@/types";
@@ -82,41 +77,79 @@ type ServerBotsRpc = (
 type TriggerOption = {
   id: BotTriggerType;
   label: string;
-  eyebrow: string;
+  category: "MEMBERSHIP" | "CHAT";
   description: string;
-  icon: LucideIcon;
+  icon: ComponentType<{ className?: string }>;
 };
 
 type ActionOption = {
   id: BotActionType;
+  category: "CHAT";
   label: string;
   description: string;
-  icon: LucideIcon;
+  icon: ComponentType<{ className?: string }>;
 };
+
+type FlowBuilderStep =
+  | "overview"
+  | "trigger-picker"
+  | "trigger-details"
+  | "action-picker"
+  | "action-details";
+
+const MemberJoinedIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <path
+      d="M20 18L14 18M17 15V21M4 21C4 17.134 7.13401 14 11 14C11.695 14 12.3663 14.1013 13 14.2899M15 7C15 9.20914 13.2091 11 11 11C8.79086 11 7 9.20914 7 7C7 4.79086 8.79086 3 11 3C13.2091 3 15 4.79086 15 7Z"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const MessageCreatedIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <path
+      d="M9 12H15M12 9V15M21.0039 12C21.0039 16.9706 16.9745 21 12.0039 21C9.9675 21 3.00463 21 3.00463 21C3.00463 21 4.56382 17.2561 3.93982 16.0008C3.34076 14.7956 3.00391 13.4372 3.00391 12C3.00391 7.02944 7.03334 3 12.0039 3C16.9745 3 21.0039 7.02944 21.0039 12Z"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const getCategoryBadgeClass = (category: "MEMBERSHIP" | "CHAT") =>
+  category === "MEMBERSHIP"
+    ? "border border-[#6f5fa4] bg-[#3f3458] text-[#d5c4ff]"
+    : "border border-[#2d7f78] bg-[#183b3a] text-[#93efe5]";
 
 const TRIGGER_OPTIONS: TriggerOption[] = [
   {
     id: "member_joined",
     label: "Member joined",
-    eyebrow: "MEMBERSHIP",
+    category: "MEMBERSHIP",
     description: "When a new member joins the server",
-    icon: UserPlus,
+    icon: MemberJoinedIcon,
   },
   {
     id: "message_created",
     label: "Member sent message to channel",
-    eyebrow: "CHAT",
+    category: "CHAT",
     description: "When someone sends a message in any text channel",
-    icon: MessageSquare,
+    icon: MessageCreatedIcon,
   },
 ];
 
 const ACTION_OPTIONS: ActionOption[] = [
   {
     id: "send_channel_message",
+    category: "CHAT",
     label: "Send message to channel",
     description: "Post a simple system message in a selected channel",
-    icon: MessageSquare,
+    icon: MessageCreatedIcon,
   },
 ];
 
@@ -139,6 +172,10 @@ const BOT_MODAL_PRIMARY_BUTTON_CLASS =
 const BOT_MODAL_CANCEL_BUTTON_CLASS =
   "h-9 rounded-[3px] px-4 text-[#b9bec8] hover:bg-transparent hover:text-white";
 const BOT_MODAL_LABEL_CLASS = "text-xs font-medium uppercase tracking-wide text-[#c4c8d0]";
+const BOT_SELECT_CONTENT_CLASS =
+  "overflow-hidden rounded-md border border-border/50 bg-[#4E505C] p-0 text-[#f4f5f7] shadow-xl";
+const BOT_SELECT_ITEM_CLASS =
+  "rounded-none py-2 pl-9 pr-3 text-sm !text-[#f4f5f7] data-[highlighted]:bg-white/[0.06] data-[highlighted]:text-white focus:bg-white/[0.06] focus:text-white";
 
 const getTriggerOption = (id: BotTriggerType) => TRIGGER_OPTIONS.find((option) => option.id === id) ?? TRIGGER_OPTIONS[0];
 const getActionOption = (id: BotActionType) => ACTION_OPTIONS.find((option) => option.id === id) ?? ACTION_OPTIONS[0];
@@ -162,11 +199,7 @@ const BotAvatar = ({ muted = false }: { name: string; muted?: boolean }) => (
 const FlowIcon = ({ type }: { type: BotTriggerType | BotActionType }) => {
   const option = type === "send_channel_message" ? getActionOption(type) : getTriggerOption(type);
   const Icon = option.icon;
-  return (
-    <div className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-secondary/60 text-muted-foreground">
-      <Icon className="h-3.5 w-3.5" />
-    </div>
-  );
+  return <Icon className="h-5 w-5 text-[#c4c8d0]" />;
 };
 
 export const ServerBotsPanel = ({
@@ -190,9 +223,8 @@ export const ServerBotsPanel = ({
   const [createName, setCreateName] = useState("Test Bot");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isFlowOpen, setIsFlowOpen] = useState(false);
-  const [isPickerOpen, setIsPickerOpen] = useState(false);
-  const [isTriggerDetailsOpen, setIsTriggerDetailsOpen] = useState(false);
-  const [pickerMode, setPickerMode] = useState<"trigger" | "action">("trigger");
+  const [flowBuilderStep, setFlowBuilderStep] = useState<FlowBuilderStep>("overview");
+  const [isTriggerConfigured, setIsTriggerConfigured] = useState(false);
   const [triggerSearch, setTriggerSearch] = useState("");
   const [draftTrigger, setDraftTrigger] = useState<BotTriggerType>("member_joined");
   const [draftAction, setDraftAction] = useState<BotActionType>("send_channel_message");
@@ -328,6 +360,9 @@ export const ServerBotsPanel = ({
     setDraftChannelId(textChannels[0]?.id ?? "");
     setDraftContent(DEFAULT_ACTION_CONTENT.member_joined);
     setDraftCooldown("10");
+    setIsTriggerConfigured(false);
+    setTriggerSearch("");
+    setFlowBuilderStep("overview");
     setIsFlowOpen(true);
   };
 
@@ -358,6 +393,7 @@ export const ServerBotsPanel = ({
       if (error) throw error;
       toast.success("Flow added");
       setIsFlowOpen(false);
+      setFlowBuilderStep("overview");
       await loadBots();
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, "Failed to save flow"));
@@ -383,11 +419,87 @@ export const ServerBotsPanel = ({
     }
   };
 
+  const updateFlowEnabled = async (flow: ServerBotFlow, isEnabled: boolean) => {
+    if (!selectedBot) return;
+
+    setIsSaving(true);
+    try {
+      const { error } = await serverBotsRpc("upsert_server_bot_flow", {
+        _bot_id: selectedBot.id,
+        _user_id: userId,
+        _flow_id: flow.id,
+        _trigger_type: flow.trigger_type,
+        _trigger_config: flow.trigger_config,
+        _action_type: flow.action_type,
+        _action_config: flow.action_config,
+        _is_enabled: isEnabled,
+        _cooldown_seconds: flow.cooldown_seconds,
+      });
+      if (error) throw error;
+      await loadBots();
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to update flow"));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const selectTrigger = (trigger: BotTriggerType) => {
     setDraftTrigger(trigger);
     setDraftContent(DEFAULT_ACTION_CONTENT[trigger]);
-    setIsPickerOpen(false);
-    setIsTriggerDetailsOpen(true);
+    if (trigger !== "message_created") setDraftTriggerChannelId(ALL_CHANNELS_VALUE);
+    setFlowBuilderStep("trigger-details");
+  };
+
+  const selectAction = (action: BotActionType) => {
+    setDraftAction(action);
+    setFlowBuilderStep("action-details");
+  };
+
+  const closeFlowBuilder = (open: boolean) => {
+    setIsFlowOpen(open);
+    if (!open) {
+      setFlowBuilderStep("overview");
+      setTriggerSearch("");
+    }
+  };
+
+  const flowDialogTitle =
+    flowBuilderStep === "trigger-picker"
+      ? "Select trigger"
+      : flowBuilderStep === "trigger-details"
+        ? "Trigger details"
+        : flowBuilderStep === "action-picker"
+          ? "Select action"
+          : flowBuilderStep === "action-details"
+            ? "Action details"
+            : "Add a flow";
+
+  const canGoBackInFlow =
+    flowBuilderStep === "trigger-picker" ||
+    flowBuilderStep === "trigger-details" ||
+    flowBuilderStep === "action-picker" ||
+    flowBuilderStep === "action-details";
+
+  const handleFlowBack = () => {
+    if (flowBuilderStep === "trigger-picker") {
+      setFlowBuilderStep("overview");
+      return;
+    }
+
+    if (flowBuilderStep === "trigger-details") {
+      setFlowBuilderStep("trigger-picker");
+      return;
+    }
+
+    if (flowBuilderStep === "action-picker") {
+      setFlowBuilderStep("overview");
+      return;
+    }
+
+    if (flowBuilderStep === "action-details") {
+      setFlowBuilderStep("action-picker");
+    }
   };
 
   const filteredTriggers = TRIGGER_OPTIONS.filter((option) => {
@@ -420,23 +532,17 @@ export const ServerBotsPanel = ({
         </button>
 
         <div className="mb-7 flex items-center gap-4">
-          <BotAvatar name={selectedBot.name} />
-          <div className="w-full max-w-md space-y-1">
-            <Label className="text-xs font-medium text-muted-foreground">Name</Label>
-            <div className="flex items-center gap-2">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-[#9b7b25] bg-[#d6aa2f] text-[#2d3037]">
+            <Bot className="h-6 w-6" />
+          </div>
+          <div className="w-full max-w-md">
+            <Label className="text-[10px] font-semibold leading-none text-[#c4c8d0]">Name</Label>
+            <div className="border-b border-white/80">
               <Input
                 value={selectedBot.name}
-                maxLength={32}
-                onChange={(event) => {
-                  const nextName = event.target.value;
-                  setBots((current) =>
-                    current.map((bot) => (bot.id === selectedBot.id ? { ...bot, name: nextName } : bot)),
-                  );
-                }}
-                onBlur={(event) => updateBot(selectedBot, { name: event.target.value })}
-                className="h-8 border-0 bg-transparent px-0 py-0 text-sm text-foreground shadow-none focus-visible:ring-0"
+                disabled
+                className="h-7 cursor-default rounded-none border-0 bg-transparent px-0 py-0 text-sm text-[#f3f4f7] opacity-100 shadow-none outline-none disabled:cursor-default disabled:opacity-100 focus-visible:ring-0 focus-visible:ring-offset-0"
               />
-              <Check className="h-4 w-4 text-muted-foreground" />
             </div>
           </div>
         </div>
@@ -456,30 +562,72 @@ export const ServerBotsPanel = ({
         </div>
 
         {selectedBot.flows.length > 0 ? (
-          <div className="max-w-2xl">
+          <div className="max-w-3xl space-y-2">
             {selectedBot.flows.map((flow) => {
               const trigger = getTriggerOption(flow.trigger_type);
               const action = getActionOption(flow.action_type);
-              const channelName = textChannels.find((channel) => channel.id === flow.action_config.channel_id)?.name;
+              const triggerChannelId =
+                typeof flow.trigger_config.channel_id === "string" ? flow.trigger_config.channel_id : null;
+              const triggerChannelName = triggerChannelId
+                ? textChannels.find((channel) => channel.id === triggerChannelId)?.name
+                : null;
+              const actionChannelName = textChannels.find((channel) => channel.id === flow.action_config.channel_id)?.name;
+              const triggerChannelLabel =
+                flow.trigger_type === "message_created" ? (triggerChannelName ? `#${triggerChannelName}` : "All channels") : "Any member";
+              const actionChannelLabel = actionChannelName ? `#${actionChannelName}` : "No channel";
+              const triggerRoleId = typeof flow.trigger_config.role_id === "string" ? flow.trigger_config.role_id : null;
+              const triggerRoleName = triggerRoleId
+                ? selectableRoles.find((role) => role.id === triggerRoleId)?.name
+                : null;
+              const actorLabel = triggerRoleName ? triggerRoleName : "anyone";
+              const triggerDescription =
+                flow.trigger_type === "message_created"
+                  ? `by ${actorLabel} in ${triggerChannelLabel}`
+                  : `by ${actorLabel}`;
+
               return (
-                <div key={flow.id} className="flex items-center gap-3 border-b border-border/50 py-3 last:border-b-0">
-                  <FlowIcon type={flow.trigger_type} />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {trigger.label} {"->"} {action.label}
-                    </p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {channelName ? `#${channelName}` : "No channel"} / {flow.action_config.content}
-                    </p>
+                <div
+                  key={flow.id}
+                  className="flex items-center gap-3 rounded-[4px] border border-[#3f4450] bg-[#2f343d] px-3 py-2"
+                >
+                  <div className="grid min-w-0 flex-1 grid-cols-1 items-center gap-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:gap-3">
+                    <div className="flex min-w-0 items-center gap-2 rounded-[3px] border border-[#414753] bg-[#363b45] px-3 py-2">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[3px] bg-[#2c3139]">
+                        <FlowIcon type={flow.trigger_type} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-semibold leading-4 text-[#f3f4f7]">{trigger.label}</p>
+                        <p className="truncate text-[11px] leading-4 text-[#aeb4c0]">{triggerDescription}</p>
+                      </div>
+                    </div>
+
+                    <ChevronRight className="mx-auto h-4 w-4 shrink-0 rotate-90 text-[#8c939f] sm:rotate-0" />
+
+                    <div className="flex min-w-0 items-center gap-2 rounded-[3px] border border-[#414753] bg-[#363b45] px-3 py-2">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[3px] bg-[#2c3139]">
+                        <FlowIcon type={flow.action_type} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-semibold leading-4 text-[#f3f4f7]">{action.label}</p>
+                        <p className="truncate text-[11px] leading-4 text-[#aeb4c0]">to {actionChannelLabel}</p>
+                      </div>
+                    </div>
                   </div>
+
+                  <Switch
+                    checked={flow.is_enabled}
+                    disabled={isSaving}
+                    onCheckedChange={(checked) => updateFlowEnabled(flow, checked)}
+                  />
+
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="sm" className="h-8 w-8 rounded-[3px] p-0">
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem className="text-destructive" onClick={() => deleteFlow(flow)}>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => deleteFlow(flow)}>
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete flow
                       </DropdownMenuItem>
@@ -508,7 +656,7 @@ export const ServerBotsPanel = ({
           </div>
         )}
 
-        <Dialog open={isFlowOpen} onOpenChange={setIsFlowOpen}>
+        <Dialog open={isFlowOpen} onOpenChange={closeFlowBuilder}>
           <DialogContent className={BOT_FLOW_MODAL_CONTENT_CLASS}>
             <form
               onSubmit={(event) => {
@@ -518,297 +666,311 @@ export const ServerBotsPanel = ({
               className="flex max-h-[82vh] flex-col overflow-hidden"
             >
               <div className="border-b border-[#2b3039] bg-[#2f343d] px-5 py-3">
-                <div className="text-base font-medium leading-none tracking-tight">Add a flow</div>
+                <div className="flex items-center gap-2">
+                  {canGoBackInFlow && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleFlowBack}
+                      className="h-8 w-8 rounded-[3px] text-[#c4c8d0] hover:bg-[#3a3f4b] hover:text-white"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                  )}
+                  <div className="text-base font-medium leading-none tracking-tight">{flowDialogTitle}</div>
+                </div>
               </div>
 
-              <div className="space-y-4 overflow-y-auto px-6 py-4">
-                <div className="grid grid-cols-[1fr_auto] items-center border border-[#4a4f5a] bg-[#2f343d]">
-                  <button
-                    type="button"
-                    className="flex items-center gap-3 px-3 py-3 text-left"
-                    onClick={() => {
-                      setPickerMode("trigger");
-                      setTriggerSearch("");
-                      setIsPickerOpen(true);
-                    }}
-                  >
-                    <FlowIcon type={draftTrigger} />
-                    <div>
-                      <p className="text-sm font-medium leading-none text-[#f3f4f7]">Trigger</p>
-                      <p className="mt-1.5 text-xs leading-5 text-[#c4c8d0]">{getTriggerOption(draftTrigger).label}</p>
-                    </div>
-                  </button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setPickerMode("trigger");
-                      setTriggerSearch("");
-                      setIsPickerOpen(true);
-                    }}
-                    className="mr-3 h-8 rounded-[3px] border-[#42464f] px-4 text-xs text-[#e2e4e9] hover:bg-[#30333d]"
-                  >
-                    Add
-                  </Button>
-                </div>
+              {flowBuilderStep === "overview" && (
+                <div className="space-y-4 overflow-y-auto px-6 py-4">
+                  <div className="grid grid-cols-[1fr_auto] items-center border border-[#424753] bg-[#333842] transition-colors hover:bg-[#3a3f4b]">
+                    <button
+                      type="button"
+                      className="flex items-center gap-3 px-3 py-3 text-left"
+                      onClick={() => {
+                        setTriggerSearch("");
+                        setFlowBuilderStep("trigger-picker");
+                      }}
+                    >
+                      <FlowIcon type={draftTrigger} />
+                      <div>
+                        <p className="text-sm font-medium leading-none text-[#f3f4f7]">Trigger</p>
+                        {isTriggerConfigured && (
+                          <p className="mt-1.5 text-xs leading-5 text-[#c4c8d0]">{getTriggerOption(draftTrigger).label}</p>
+                        )}
+                      </div>
+                    </button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setTriggerSearch("");
+                        setFlowBuilderStep("trigger-picker");
+                      }}
+                      className="mr-3 h-8 rounded-[3px] border-[#4f5562] bg-transparent px-4 text-xs text-[#e2e4e9] hover:bg-[#3a3f4b]"
+                    >
+                      Add
+                    </Button>
+                  </div>
 
-                <div className="grid grid-cols-[1fr_auto] items-center border border-[#4a4f5a] bg-[#2f343d]">
-                  <button
-                    type="button"
-                    className="flex items-center gap-3 px-3 py-3 text-left"
-                    onClick={() => {
-                      setPickerMode("action");
-                      setIsPickerOpen(true);
-                    }}
-                  >
-                    <FlowIcon type={draftAction} />
-                    <div>
-                      <p className="text-sm font-medium leading-none text-[#f3f4f7]">Action</p>
-                      <p className="mt-1.5 text-xs leading-5 text-[#c4c8d0]">{getActionOption(draftAction).label}</p>
-                    </div>
-                  </button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setPickerMode("action");
-                      setIsPickerOpen(true);
-                    }}
-                    className="mr-3 h-8 rounded-[3px] border-[#42464f] px-4 text-xs text-[#e2e4e9] hover:bg-[#30333d]"
-                  >
-                    Add
-                  </Button>
+                  <div className="grid grid-cols-[1fr_auto] items-center border border-[#424753] bg-[#333842] transition-colors hover:bg-[#3a3f4b]">
+                    <button
+                      type="button"
+                      className="flex items-center gap-3 px-3 py-3 text-left"
+                      onClick={() => {
+                        if (!isTriggerConfigured) return;
+                        setFlowBuilderStep("action-picker");
+                      }}
+                    >
+                      <FlowIcon type={draftAction} />
+                      <div>
+                        <p className="text-sm font-medium leading-none text-[#f3f4f7]">Action</p>
+                        {isTriggerConfigured && (
+                          <p className="mt-1.5 text-xs leading-5 text-[#c4c8d0]">{getActionOption(draftAction).label}</p>
+                        )}
+                      </div>
+                    </button>
+                    {isTriggerConfigured ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setFlowBuilderStep("action-picker")}
+                        className="mr-3 h-8 rounded-[3px] border-[#4f5562] bg-transparent px-4 text-xs text-[#e2e4e9] hover:bg-[#3a3f4b]"
+                      >
+                        Add
+                      </Button>
+                    ) : (
+                      <div className="mr-3 h-8 w-[58px]" />
+                    )}
+                  </div>
                 </div>
+              )}
 
-                <div>
-                  <Label className={BOT_MODAL_LABEL_CLASS}>Channel</Label>
-                  <Select value={draftChannelId} onValueChange={setDraftChannelId}>
-                    <SelectTrigger className="mt-2 h-9 rounded-none border-0 border-b border-white/80 bg-transparent px-0 text-sm text-[#f3f4f7] shadow-none focus:ring-0 focus:ring-offset-0">
-                      <SelectValue placeholder="Select channel" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {textChannels.map((channel) => (
-                        <SelectItem key={channel.id} value={channel.id}>
-                          #{channel.name}
+              {flowBuilderStep === "trigger-picker" && (
+                <div className="overflow-y-auto px-6 py-4">
+                  <div className="mb-4 flex h-9 items-center gap-2 border border-[#4a4f5a] bg-[#2f343d] px-3">
+                    <Search className="h-4 w-4 text-[#9ea4af]" />
+                    <Input
+                      value={triggerSearch}
+                      onChange={(event) => setTriggerSearch(event.target.value)}
+                      placeholder={`Search ${TRIGGER_OPTIONS.length} triggers`}
+                      className="h-8 border-0 bg-transparent px-0 text-sm text-[#f3f4f7] shadow-none placeholder:text-[#767b85] focus-visible:ring-0"
+                    />
+                  </div>
+                  <ScrollArea className="max-h-[380px]">
+                    <div className="space-y-2">
+                      {filteredTriggers.map((trigger) => {
+                        const Icon = trigger.icon;
+                        return (
+                          <button
+                            key={trigger.id}
+                            type="button"
+                            onClick={() => selectTrigger(trigger.id)}
+                            className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-3 border border-[#4a4f5a] bg-[#2f343d] px-3 py-2 text-left hover:bg-[#30333d]"
+                          >
+                            <Icon className="h-6 w-6 text-[#c4c8d0]" />
+                            <span className="min-w-0">
+                              <span className="mb-1 flex items-center gap-2">
+                                <span
+                                  className={cn(
+                                    "inline-flex rounded-[3px] px-1.5 py-0.5 text-[9px] font-bold tracking-wide",
+                                    getCategoryBadgeClass(trigger.category),
+                                  )}
+                                >
+                                  {trigger.category}
+                                </span>
+                                <span className="truncate text-sm font-medium text-[#f3f4f7]">{trigger.label}</span>
+                              </span>
+                              <span className="block truncate text-xs text-[#c4c8d0]">{trigger.description}</span>
+                            </span>
+                            <span className="rounded-[3px] border border-[#42464f] px-3 py-1 text-xs font-medium text-[#e2e4e9]">
+                              Select
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
+
+              {flowBuilderStep === "trigger-details" && (
+                <div className="space-y-4 overflow-y-auto px-6 py-4">
+                  <div>
+                    <Label className={BOT_MODAL_LABEL_CLASS}>Type</Label>
+                    <div className="mt-2 border-b border-white/80 pb-2 text-sm text-[#f3f4f7]">
+                      {getTriggerOption(draftTrigger).label}
+                    </div>
+                  </div>
+
+                  {draftTrigger === "message_created" && (
+                    <div>
+                      <Label className={BOT_MODAL_LABEL_CLASS}>Channel</Label>
+                      <Select value={draftTriggerChannelId} onValueChange={setDraftTriggerChannelId}>
+                        <SelectTrigger className="mt-2 h-9 rounded-none border-0 border-b border-white/80 bg-transparent px-0 text-sm text-[#f3f4f7] shadow-none focus:ring-0 focus:ring-offset-0">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className={BOT_SELECT_CONTENT_CLASS}>
+                          <SelectItem value={ALL_CHANNELS_VALUE} className={BOT_SELECT_ITEM_CLASS}>
+                            All channels
+                          </SelectItem>
+                          {textChannels.map((channel) => (
+                            <SelectItem key={channel.id} value={channel.id} className={BOT_SELECT_ITEM_CLASS}>
+                              #{channel.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  <div>
+                    <Label className={BOT_MODAL_LABEL_CLASS}>Performed by</Label>
+                    <Select value={draftTriggerRoleId} onValueChange={setDraftTriggerRoleId}>
+                      <SelectTrigger className="mt-2 h-9 rounded-none border-0 border-b border-white/80 bg-transparent px-0 text-sm text-[#f3f4f7] shadow-none focus:ring-0 focus:ring-offset-0">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className={BOT_SELECT_CONTENT_CLASS}>
+                        <SelectItem value={ANY_ROLE_VALUE} className={BOT_SELECT_ITEM_CLASS}>
+                          Any member or role
                         </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                        {selectableRoles.map((role) => (
+                          <SelectItem key={role.id} value={role.id} className={BOT_SELECT_ITEM_CLASS}>
+                            {role.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
+              )}
 
-                <div>
-                  <Label className={BOT_MODAL_LABEL_CLASS}>Message</Label>
-                  <Input
-                    value={draftContent}
-                    onChange={(event) => setDraftContent(event.target.value)}
-                    maxLength={500}
-                    className={BOT_MODAL_INPUT_CLASS}
-                  />
+              {flowBuilderStep === "action-picker" && (
+                <div className="space-y-2 overflow-y-auto px-6 py-4">
+                  {ACTION_OPTIONS.map((action) => {
+                    const Icon = action.icon;
+                    return (
+                      <button
+                        key={action.id}
+                        type="button"
+                        onClick={() => selectAction(action.id)}
+                        className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-3 border border-[#4a4f5a] bg-[#2f343d] px-3 py-2 text-left hover:bg-[#30333d]"
+                      >
+                        <Icon className="h-6 w-6 text-[#c4c8d0]" />
+                        <span className="min-w-0">
+                          <span className="mb-1 flex items-center gap-2">
+                            <span
+                              className={cn(
+                                "inline-flex rounded-[3px] px-1.5 py-0.5 text-[9px] font-bold tracking-wide",
+                                getCategoryBadgeClass(action.category),
+                              )}
+                            >
+                              {action.category}
+                            </span>
+                            <span className="truncate text-sm font-medium text-[#f3f4f7]">{action.label}</span>
+                          </span>
+                          <span className="block truncate text-xs text-[#c4c8d0]">{action.description}</span>
+                        </span>
+                        <span className="rounded-[3px] border border-[#42464f] px-3 py-1 text-xs font-medium text-[#e2e4e9]">
+                          Select
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
+              )}
 
-                <div>
-                  <Label className={BOT_MODAL_LABEL_CLASS}>Cooldown</Label>
-                  <Input
-                    value={draftCooldown}
-                    onChange={(event) => setDraftCooldown(event.target.value.replace(/\D/g, "").slice(0, 4))}
-                    className={BOT_MODAL_INPUT_CLASS}
-                  />
+              {flowBuilderStep === "action-details" && (
+                <div className="space-y-4 overflow-y-auto px-6 py-4">
+                  <div>
+                    <Label className={BOT_MODAL_LABEL_CLASS}>Type</Label>
+                    <div className="mt-2 border-b border-white/80 pb-2 text-sm text-[#f3f4f7]">
+                      {getActionOption(draftAction).label}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className={BOT_MODAL_LABEL_CLASS}>Channel</Label>
+                    <Select value={draftChannelId} onValueChange={setDraftChannelId}>
+                      <SelectTrigger className="mt-2 h-9 rounded-none border-0 border-b border-white/80 bg-transparent px-0 text-sm text-[#f3f4f7] shadow-none focus:ring-0 focus:ring-offset-0">
+                        <SelectValue placeholder="Select channel" />
+                      </SelectTrigger>
+                      <SelectContent className={BOT_SELECT_CONTENT_CLASS}>
+                        {textChannels.map((channel) => (
+                          <SelectItem key={channel.id} value={channel.id} className={BOT_SELECT_ITEM_CLASS}>
+                            #{channel.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label className={BOT_MODAL_LABEL_CLASS}>Message</Label>
+                    <Input
+                      value={draftContent}
+                      onChange={(event) => setDraftContent(event.target.value)}
+                      maxLength={500}
+                      className={BOT_MODAL_INPUT_CLASS}
+                    />
+                  </div>
+
+                  <div>
+                    <Label className={BOT_MODAL_LABEL_CLASS}>Cooldown</Label>
+                    <Input
+                      value={draftCooldown}
+                      onChange={(event) => setDraftCooldown(event.target.value.replace(/\D/g, "").slice(0, 4))}
+                      className={BOT_MODAL_INPUT_CLASS}
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="flex items-center justify-end gap-3 border-t border-[#2c3139] bg-[#30353f] px-5 py-3">
                 <Button
                   type="button"
                   variant="ghost"
-                  onClick={() => setIsFlowOpen(false)}
+                  onClick={() => closeFlowBuilder(false)}
                   className={BOT_MODAL_CANCEL_BUTTON_CLASS}
                 >
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={isSaving || !textChannels.length}
-                  className={BOT_MODAL_PRIMARY_BUTTON_CLASS}
-                >
-                  {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Save flow
-                </Button>
+                {flowBuilderStep === "overview" && (
+                  <Button
+                    type="submit"
+                    disabled={isSaving || !textChannels.length}
+                    className={BOT_MODAL_PRIMARY_BUTTON_CLASS}
+                  >
+                    {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save flow
+                  </Button>
+                )}
+                {flowBuilderStep === "trigger-details" && (
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setIsTriggerConfigured(true);
+                      setFlowBuilderStep("overview");
+                    }}
+                    className={BOT_MODAL_PRIMARY_BUTTON_CLASS}
+                  >
+                    Next
+                  </Button>
+                )}
+                {flowBuilderStep === "action-details" && (
+                  <Button
+                    type="button"
+                    onClick={() => setFlowBuilderStep("overview")}
+                    className={BOT_MODAL_PRIMARY_BUTTON_CLASS}
+                  >
+                    Next
+                  </Button>
+                )}
               </div>
             </form>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={isTriggerDetailsOpen} onOpenChange={setIsTriggerDetailsOpen}>
-          <DialogContent className={BOT_FLOW_MODAL_CONTENT_CLASS}>
-            <div className="border-b border-[#2b3039] bg-[#2f343d] px-5 py-3">
-              <div className="text-base font-medium leading-none tracking-tight">Trigger details</div>
-            </div>
-
-            <div className="space-y-4 overflow-y-auto px-6 py-4">
-              <div>
-                <Label className={BOT_MODAL_LABEL_CLASS}>Type</Label>
-                <Select
-                  value={draftTrigger}
-                  onValueChange={(value) => {
-                    const nextTrigger = value as BotTriggerType;
-                    setDraftTrigger(nextTrigger);
-                    setDraftContent(DEFAULT_ACTION_CONTENT[nextTrigger]);
-                    if (nextTrigger !== "message_created") setDraftTriggerChannelId(ALL_CHANNELS_VALUE);
-                  }}
-                >
-                  <SelectTrigger className="mt-2 h-9 rounded-none border-0 border-b border-white/80 bg-transparent px-0 text-sm text-[#f3f4f7] shadow-none focus:ring-0 focus:ring-offset-0">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TRIGGER_OPTIONS.map((trigger) => (
-                      <SelectItem key={trigger.id} value={trigger.id}>
-                        {trigger.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {draftTrigger === "message_created" && (
-                <div>
-                  <Label className={BOT_MODAL_LABEL_CLASS}>Channel</Label>
-                  <Select value={draftTriggerChannelId} onValueChange={setDraftTriggerChannelId}>
-                    <SelectTrigger className="mt-2 h-9 rounded-none border-0 border-b border-white/80 bg-transparent px-0 text-sm text-[#f3f4f7] shadow-none focus:ring-0 focus:ring-offset-0">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={ALL_CHANNELS_VALUE}>All channels</SelectItem>
-                      {textChannels.map((channel) => (
-                        <SelectItem key={channel.id} value={channel.id}>
-                          #{channel.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              <div>
-                <Label className={BOT_MODAL_LABEL_CLASS}>Performed by</Label>
-                <Select value={draftTriggerRoleId} onValueChange={setDraftTriggerRoleId}>
-                  <SelectTrigger className="mt-2 h-9 rounded-none border-0 border-b border-white/80 bg-transparent px-0 text-sm text-[#f3f4f7] shadow-none focus:ring-0 focus:ring-offset-0">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ANY_ROLE_VALUE}>Any member or role</SelectItem>
-                    {selectableRoles.map((role) => (
-                      <SelectItem key={role.id} value={role.id}>
-                        {role.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 border-t border-[#2c3139] bg-[#30353f] px-5 py-3">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setIsTriggerDetailsOpen(false)}
-                className={BOT_MODAL_CANCEL_BUTTON_CLASS}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                onClick={() => setIsTriggerDetailsOpen(false)}
-                className={BOT_MODAL_PRIMARY_BUTTON_CLASS}
-              >
-                Next
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={isPickerOpen} onOpenChange={setIsPickerOpen}>
-          <DialogContent className={BOT_FLOW_MODAL_CONTENT_CLASS}>
-            <div className="border-b border-[#2b3039] bg-[#2f343d] px-5 py-3">
-              <div className="text-base font-medium leading-none tracking-tight">Select a {pickerMode}</div>
-            </div>
-            {pickerMode === "trigger" ? (
-              <div className="overflow-y-auto px-6 py-4">
-                <div className="mb-4 flex h-9 items-center gap-2 border border-[#4a4f5a] bg-[#2f343d] px-3">
-                  <Search className="h-4 w-4 text-[#9ea4af]" />
-                  <Input
-                    value={triggerSearch}
-                    onChange={(event) => setTriggerSearch(event.target.value)}
-                    placeholder={`Search ${TRIGGER_OPTIONS.length} triggers`}
-                    className="h-8 border-0 bg-transparent px-0 text-sm text-[#f3f4f7] shadow-none placeholder:text-[#767b85] focus-visible:ring-0"
-                  />
-                </div>
-                <ScrollArea className="max-h-[380px]">
-                  <div className="space-y-2">
-                    {filteredTriggers.map((trigger) => {
-                      const Icon = trigger.icon;
-                      return (
-                        <button
-                          key={trigger.id}
-                          type="button"
-                          onClick={() => selectTrigger(trigger.id)}
-                          className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-3 border border-[#4a4f5a] bg-[#2f343d] px-3 py-2 text-left hover:bg-[#30333d]"
-                        >
-                          <Icon className="h-5 w-5 text-[#9ea4af]" />
-                          <span className="min-w-0">
-                            <span className="mb-1 inline-flex rounded-[2px] bg-[#42464f] px-1.5 py-0.5 text-[9px] font-bold text-[#d7dbe3]">
-                              {trigger.eyebrow}
-                            </span>
-                            <span className="block truncate text-sm font-medium text-[#f3f4f7]">{trigger.label}</span>
-                            <span className="block truncate text-xs text-[#c4c8d0]">{trigger.description}</span>
-                          </span>
-                          <span className="rounded-[3px] border border-[#42464f] px-3 py-1 text-xs font-medium text-[#e2e4e9]">
-                            Select
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </ScrollArea>
-              </div>
-            ) : (
-              <div className="space-y-2 overflow-y-auto px-6 py-4">
-                {ACTION_OPTIONS.map((action) => {
-                  const Icon = action.icon;
-                  return (
-                    <button
-                      key={action.id}
-                      type="button"
-                      onClick={() => {
-                        setDraftAction(action.id);
-                        setIsPickerOpen(false);
-                      }}
-                      className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-3 border border-[#4a4f5a] bg-[#2f343d] px-3 py-2 text-left hover:bg-[#30333d]"
-                    >
-                      <Icon className="h-5 w-5 text-[#9ea4af]" />
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium text-[#f3f4f7]">{action.label}</span>
-                        <span className="block truncate text-xs text-[#c4c8d0]">{action.description}</span>
-                      </span>
-                      <span className="rounded-[3px] border border-[#42464f] px-3 py-1 text-xs font-medium text-[#e2e4e9]">
-                        Select
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-            <div className="flex items-center justify-end gap-3 border-t border-[#2c3139] bg-[#30353f] px-5 py-3">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setIsPickerOpen(false)}
-                className={BOT_MODAL_CANCEL_BUTTON_CLASS}
-              >
-                Cancel
-              </Button>
-            </div>
           </DialogContent>
         </Dialog>
       </div>
@@ -860,7 +1022,7 @@ export const ServerBotsPanel = ({
                     <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuItem
                     onClick={() => {
                       setSelectedBotId(bot.id);
@@ -870,7 +1032,8 @@ export const ServerBotsPanel = ({
                     <ChevronRight className="mr-2 h-4 w-4" />
                     Open
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="text-destructive" onClick={() => deleteBot(bot)}>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => deleteBot(bot)}>
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete
                   </DropdownMenuItem>
@@ -884,11 +1047,6 @@ export const ServerBotsPanel = ({
           No bots yet
         </div>
       )}
-
-      <p className="mt-5 text-xs text-muted-foreground">
-        Want to code your own Guilded bots? Check out our Guilded API for bots.{" "}
-        <span className="font-medium text-foreground">Apply for API early access</span>
-      </p>
 
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className={BOT_MODAL_CONTENT_CLASS}>
