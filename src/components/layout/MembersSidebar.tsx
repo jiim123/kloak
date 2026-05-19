@@ -324,24 +324,36 @@ const SectionHeader = memo(
     colorDot?: string;
     icon?: string | null;
     serverId?: string;
-  }) => (
-    <div className="flex items-center gap-1 px-3 pb-1.5 pt-3">
-      {false && icon && serverId ? (
-        <RoleIconPreview icon={icon} serverId={serverId} className="flex-shrink-0" />
-      ) : colorDot ? (
+  }) => {
+    const textStyle = color
+      ? color.startsWith("linear-gradient")
+        ? ({
+            background: color,
+            WebkitBackgroundClip: "text",
+            backgroundClip: "text",
+            color: "transparent",
+          } as React.CSSProperties)
+        : ({ color } as React.CSSProperties)
+      : undefined;
+
+    return (
+      <div className="flex items-center gap-1 px-3 pb-1.5 pt-3">
+        {!icon && colorDot ? (
         <div
           className="hidden w-2.5 h-2.5 rounded-full flex-shrink-0"
           style={colorDot.startsWith("linear-gradient") ? { background: colorDot } : { backgroundColor: colorDot }}
         />
       ) : null}
-      <span className="text-[13px] font-bold text-muted-foreground" style={color ? { color } : undefined}>
-        {count}
-      </span>
-      <span className="text-[13px] font-bold text-muted-foreground" style={color ? { color } : undefined}>
-        {label}
-      </span>
-    </div>
-  ),
+        <span className="text-[13px] font-bold text-muted-foreground" style={textStyle}>
+          {count}
+        </span>
+        <span className="text-[13px] font-bold text-muted-foreground" style={textStyle}>
+          {label}
+        </span>
+        {icon && serverId ? <RoleIconPreview icon={icon} serverId={serverId} className="flex-shrink-0" /> : null}
+      </div>
+    );
+  },
 );
 SectionHeader.displayName = "SectionHeader";
 
@@ -856,22 +868,22 @@ export const MembersSidebar = () => {
       const isServerOwner = currentServer?.owner_id === member.user_id;
 
       const memberRoles = member.roles || [];
+      let priorityRole: CustomServerRole | null = null;
       let priorityCustomRoleColor: string | null = null;
       if (memberRoles.length > 0) {
         const resolved = memberRoles
           .map((mr) => roles.find((r) => r.id === mr.id) ?? mr)
           .filter(Boolean) as CustomServerRole[];
-        let best: CustomServerRole | null = null;
         for (const r of resolved) {
-          if (!best) {
-            best = r;
+          if (!priorityRole) {
+            priorityRole = r;
             continue;
           }
           const aPos = typeof r.position === "number" ? r.position : Number.POSITIVE_INFINITY;
-          const bPos = typeof best.position === "number" ? best.position : Number.POSITIVE_INFINITY;
-          if (aPos < bPos) best = r;
+          const bPos = typeof priorityRole.position === "number" ? priorityRole.position : Number.POSITIVE_INFINITY;
+          if (aPos < bPos) priorityRole = r;
         }
-        priorityCustomRoleColor = best?.color ?? null;
+        priorityCustomRoleColor = priorityRole?.color ?? null;
       }
 
       const isGradientName = !!priorityCustomRoleColor && priorityCustomRoleColor.startsWith("linear-gradient");
@@ -1091,14 +1103,12 @@ export const MembersSidebar = () => {
       .forEach((role) => {
         const roleMembers = roleGroups.get(role.id) || [];
         if (roleMembers.length === 0) return;
-        const isGradient = role.color.startsWith("linear-gradient");
-        const textColor = isGradient ? (role.color.match(/#[0-9a-fA-F]{6}/) || ["#5865F2"])[0] : role.color;
         rows.push({
           kind: "section",
           key: `section-role-${role.id}`,
           label: role.name,
           count: roleMembers.length,
-          color: textColor,
+          color: role.color,
           colorDot: role.color,
           icon: role.icon,
           withTopSpacing: rows.length > 0,
