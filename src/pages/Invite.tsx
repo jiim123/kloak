@@ -1,8 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { Loader2, Users, ArrowRight, Frown } from "lucide-react";
-import { NavigationMenu } from "@/components/layout/NavigationMenu";
-import { Footer } from "@/components/ui/footer-section";
+import {
+  ArrowRight,
+  BadgeCheck,
+  Disc3,
+  Frown,
+  Gamepad2,
+  Headphones,
+  IceCreamCone,
+  Loader2,
+  Mouse,
+  Sprout,
+  Users,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -14,6 +24,7 @@ import { SEO } from "@/components/seo";
 import { SEO_CONFIG } from "@/lib/seo";
 import { getServerInitials } from "@/lib/serverUtils";
 import { getAuthEntryPath } from "@/lib/tauriRuntime";
+import { cn } from "@/lib/utils";
 
 type InviteServer = {
   id: string;
@@ -22,7 +33,23 @@ type InviteServer = {
   banner_url: string | null;
   about: string | null;
   inviter_username: string | null;
+  member_count?: number | null;
 };
+
+const invitePatternIcons = [
+  Gamepad2,
+  Disc3,
+  IceCreamCone,
+  Headphones,
+  Mouse,
+  Sprout,
+  Disc3,
+  Gamepad2,
+  Sprout,
+  Mouse,
+  IceCreamCone,
+  Headphones,
+];
 
 const Invite = () => {
   const params = useParams();
@@ -43,6 +70,7 @@ const Invite = () => {
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [showBannedModal, setShowBannedModal] = useState(false);
   const isAlreadyMember = !!server && !!servers.find((s) => s.id === server.id);
+  const accountName = user?.display_name || user?.username || null;
 
   useEffect(() => {
     if (didInitAuth.current) return;
@@ -76,7 +104,7 @@ const Invite = () => {
 
         const row = (lookupData ?? [])[0] as unknown as InviteServer | undefined;
         if (!cancelled) setServer(row ?? null);
-      } catch (e) {
+      } catch {
         if (!cancelled) setServer(null);
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -123,6 +151,7 @@ const Invite = () => {
       navigate(`${authEntryPath}?redirect=${encodeURIComponent(returnTo)}`);
       return;
     }
+
     if (server && isAlreadyMember) {
       const existingServer = servers.find((s) => s.id === server.id);
       if (existingServer) {
@@ -132,12 +161,13 @@ const Invite = () => {
         return;
       }
     }
+
     setIsJoining(true);
     try {
       const joinedServer = await joinServer(inviteCode, activeUser.id);
       if (!joinedServer) {
         const storeError = useServerStore.getState().error;
-        if (storeError?.toLowerCase().includes('banned')) {
+        if (storeError?.toLowerCase().includes("banned")) {
           setShowBannedModal(true);
         } else {
           toast.error(storeError || "Failed to join server");
@@ -155,12 +185,16 @@ const Invite = () => {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden flex flex-col bg-background">
-      {/* Banned modal */}
-      <Dialog open={showBannedModal} onOpenChange={(open) => { if (!open) setShowBannedModal(false); }}>
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-[#30333d]">
+      <Dialog
+        open={showBannedModal}
+        onOpenChange={(open) => {
+          if (!open) setShowBannedModal(false);
+        }}
+      >
         <DialogContent className="sm:max-w-sm" hideCloseButton>
           <div className="flex flex-col items-center justify-center gap-4 py-6">
-            <Frown className="w-16 h-16 text-muted-foreground" />
+            <Frown className="h-16 w-16 text-muted-foreground" />
             <p className="text-center text-lg font-medium text-foreground">
               Uh oh, seems that you have been banned from this server
             </p>
@@ -171,78 +205,115 @@ const Invite = () => {
         </DialogContent>
       </Dialog>
 
-      <SEO 
+      <SEO
         title={server ? `Join ${server.name}` : SEO_CONFIG.invite.title}
         description={server?.about || SEO_CONFIG.invite.description}
       />
 
-      <NavigationMenu />
-
-      <div className="flex-1 w-full p-4 flex items-center justify-center">
+      <main className="flex flex-1 items-center justify-center p-4 sm:p-6 lg:p-8">
         {isLoading ? (
-          <div className="w-full max-w-md rounded-3xl border border-border/60 bg-card/70 p-10 shadow-2xl backdrop-blur">
+          <div className="w-full max-w-[810px] rounded-[4px] bg-[#363944] p-10 shadow-[0_20px_70px_rgba(0,0,0,0.35)]">
             <div className="flex flex-col items-center justify-center gap-3 py-10">
-              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Loading invite…</p>
+              <Loader2 className="h-6 w-6 animate-spin text-white" />
+              <p className="text-sm text-[#c5c8d0]">Loading invite...</p>
             </div>
           </div>
         ) : !server ? (
-          <div className="w-full max-w-md rounded-3xl border border-border/60 bg-card/70 p-10 text-center shadow-2xl backdrop-blur">
-            <h1 className="text-2xl font-semibold">Invite not found</h1>
-            <p className="mt-2 text-sm text-muted-foreground">This invite may be invalid or revoked.</p>
+          <div className="w-full max-w-md rounded-[4px] bg-[#363944] p-10 text-center shadow-[0_20px_70px_rgba(0,0,0,0.35)]">
+            <h1 className="text-2xl font-semibold text-white">Invite not found</h1>
+            <p className="mt-2 text-sm text-[#c5c8d0]">This invite may be invalid or revoked.</p>
             <div className="mt-8">
-              <Button variant="outline" onClick={() => navigate("/")}>Go Home</Button>
+              <Button variant="outline" onClick={() => navigate("/")}>
+                Go Home
+              </Button>
             </div>
           </div>
         ) : (
-          <div className="w-full max-w-md overflow-hidden rounded-3xl border border-border/60 bg-card/70 shadow-2xl backdrop-blur">
-            <div className="p-8 sm:p-10">
-              <div className="mt-6 flex items-center gap-4">
-                <Avatar className="h-16 w-16 rounded-2xl">
-                  {server.icon_url ? (
-                    <AvatarImage src={server.icon_url} />
-                  ) : null}
-                  <AvatarFallback className="rounded-2xl text-lg bg-secondary text-foreground font-bold">
-                    {getServerInitials(server.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="min-w-0">
-                  <p className="text-sm text-muted-foreground">
-                    You’ve been invited{server.inviter_username ? ` by ${server.inviter_username}` : ""} to join
-                  </p>
-                  <h1 className="mt-1 text-2xl font-semibold leading-tight truncate">{server.name}</h1>
-                </div>
-              </div>
+          <div className="invite-page-card grid grid-cols-1 overflow-hidden rounded-[4px] bg-[#363944] shadow-[0_20px_70px_rgba(0,0,0,0.35)]">
+            <section className="flex min-h-[418px] flex-col items-center justify-center px-6 py-8 text-center sm:px-12">
+              <p className="text-[15px] font-normal leading-tight text-[#f2f3f5]">
+                {server.inviter_username ? `Accept ${server.inviter_username}'s invite to join` : "Accept invite to join"}
+              </p>
 
-              {!!server.about && (
-                <p className="mt-4 text-sm text-muted-foreground leading-relaxed line-clamp-3">
-                  {server.about}
-                </p>
+              <Avatar className="mt-5 h-14 w-14 rounded-full bg-[#252832] ring-1 ring-black/25">
+                {server.icon_url ? <AvatarImage src={server.icon_url} alt={server.name} className="object-cover" /> : null}
+                <AvatarFallback className="rounded-full bg-[#242833] text-base font-bold text-white">
+                  {getServerInitials(server.name)}
+                </AvatarFallback>
+              </Avatar>
+
+              <h1 className="mt-4 max-w-full truncate text-[24px] font-bold leading-tight text-white">{server.name}</h1>
+
+              {typeof server.member_count === "number" && server.member_count >= 0 && (
+                <div className="mt-5 flex items-center justify-center gap-2 text-[13px] font-medium text-[#c8ccd4]">
+                  <Users className="h-4 w-4 text-white" />
+                  <span>{server.member_count.toLocaleString()} members</span>
+                </div>
               )}
 
-              <div className="mt-8">
-                <Button onClick={handleJoin} disabled={isJoining} className="w-full">
-                  {isJoining ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Users className="w-4 h-4 mr-2" />
-                  )}
-                  {isAlreadyMember ? "Open Server" : "Join Server"}
-                  {!isJoining && <ArrowRight className="w-4 h-4 ml-2" />}
+              {!!server.about && (
+                <p className="mt-5 max-w-[320px] text-[13px] leading-[18px] text-[#bfc3cb] line-clamp-3">{server.about}</p>
+              )}
+
+              <div className="mt-8 w-full max-w-[270px]">
+                {accountName && (
+                  <div className="mb-8 text-left">
+                    <div className="text-[12px] font-medium leading-tight text-[#f2f3f5]">What do you want to be called?</div>
+                    <div className="mt-1 flex h-7 items-center border-b border-[#d6d9df]/80">
+                      <span className="min-w-0 flex-1 truncate text-[15px] leading-none text-white">{accountName}</span>
+                      <BadgeCheck className="h-4 w-4 shrink-0 text-[#23d160]" />
+                    </div>
+                  </div>
+                )}
+
+                <Button
+                  onClick={handleJoin}
+                  disabled={isJoining}
+                  variant="white"
+                  className="h-9 w-full rounded-[4px] px-4 text-[14px] font-bold shadow-[0_0_0_1px_rgba(255,255,255,0.18),0_10px_28px_rgba(0,0,0,0.22)]"
+                >
+                  {isJoining ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Users className="mr-2 h-4 w-4" />}
+                  {isAlreadyMember ? "Open Server" : user ? "Continue" : "Accept Invite"}
+                  {!isJoining && <ArrowRight className="ml-2 h-4 w-4" />}
                 </Button>
-                <p className="mt-3 text-xs text-muted-foreground text-center">
-                  {isAlreadyMember ? "You are already in this server." : user ? "You’ll join immediately." : "You’ll be asked to log in first."}
-                </p>
+
+                {!accountName && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => navigate(authEntryPath)}
+                    className="mt-4 h-9 w-full rounded-[4px] text-[14px] text-[#aeb2bc] hover:bg-transparent hover:text-white"
+                  >
+                    Log in
+                  </Button>
+                )}
               </div>
-            </div>
+            </section>
+
+            <section className="relative hidden min-h-[418px] overflow-hidden bg-[#262933] md:block">
+              {server.banner_url ? (
+                <img src={server.banner_url} alt="" className="absolute inset-0 h-full w-full object-cover" />
+              ) : (
+                <div className="absolute inset-0 grid grid-cols-4 gap-x-10 gap-y-8 p-8 opacity-45">
+                  {invitePatternIcons.map((Icon, index) => (
+                    <Icon
+                      key={`${Icon.displayName ?? Icon.name}-${index}`}
+                      className={cn(
+                        "h-11 w-11 stroke-[1.6] text-[#d6d9df]",
+                        index % 3 === 0 && "rotate-12",
+                        index % 4 === 0 && "-rotate-12",
+                      )}
+                    />
+                  ))}
+                </div>
+              )}
+
+              <div className="absolute inset-0 bg-[#262933]/35" />
+            </section>
           </div>
         )}
-      </div>
-
-      <Footer />
+      </main>
     </div>
   );
 };
 
 export default Invite;
-

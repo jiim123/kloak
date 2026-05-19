@@ -1066,6 +1066,16 @@ body {
   color: hsl(139 48% 60%);
 }
 
+.invite-page-card {
+  width: min(calc(100vw - 48px), 810px);
+}
+
+@media (min-width: 768px) {
+  .invite-page-card {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 /* Server settings full-screen layout, matched to the provided reference. */
 .server-settings-reference {
   --background: 225 8% 24%;
