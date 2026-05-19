@@ -835,6 +835,19 @@ const UserProfile = () => {
     );
   }
 
+  if (profileUser.is_bot) {
+    return (
+      <div className="flex h-full items-center justify-center bg-layout-chat px-6 text-center">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Profile not found</h1>
+          <Button className="mt-4" variant="secondary" onClick={() => navigate("/app")}>
+            Back
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   const displayName = profileUser.display_name || profileUser.username;
   const joinedAt = profileUser.created_at ? format(new Date(profileUser.created_at), "MMM d, yyyy") : "Unknown";
   const bannerStyle = profileUser.banner_url

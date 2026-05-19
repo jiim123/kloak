@@ -389,6 +389,11 @@ export const UserProfilePopup = () => {
               }
             : nextProfileUser;
 
+        if (nextProfileWithFreshPresence.is_bot) {
+          closeModal();
+          return;
+        }
+
         setProfileUser(nextProfileWithFreshPresence);
         useUserCacheStore.getState().upsertUser(nextProfileWithFreshPresence);
 
@@ -407,7 +412,7 @@ export const UserProfilePopup = () => {
     };
 
     void fetchProfile();
-  }, [applyCooldownFromDeclinedAt, currentUser?.id, isOpen, serverIds, servers, userId]);
+  }, [applyCooldownFromDeclinedAt, closeModal, currentUser?.id, isOpen, serverIds, servers, userId]);
 
   useEffect(() => {
     if (!isOpen || !userId) return;

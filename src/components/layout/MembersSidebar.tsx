@@ -125,6 +125,10 @@ const parseJson = <T,>(value: unknown, fallback: T): T => {
 };
 
 const getMemberPresence = (member: ServerMember) => {
+  if (member.user?.is_bot) {
+    return { status: "online" as UserStatus, isStale: false, isOffline: false };
+  }
+
   const status = (member.user?.status as UserStatus | undefined) ?? "offline";
   if (status !== "offline" && hasRecentRealtimePresence(member.user_id)) {
     return { status, isStale: false, isOffline: false };
@@ -772,6 +776,7 @@ export const MembersSidebar = () => {
   // re-created every render, causing all ContextMenuItems to re-render
   const handleMemberClick = useCallback(
     (member: ServerMember, anchor?: HTMLElement | null) => {
+      if (member.user?.is_bot) return;
       openUserProfileModal(openModal, member.user_id, anchor ?? null, {
         user: member.user,
         ...LEFT_ALIGNED_USER_PROFILE_POPOVER,

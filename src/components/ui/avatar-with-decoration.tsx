@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Bot } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { getGifStillPreview } from "@/lib/gifPreview";
@@ -30,6 +31,7 @@ export const AvatarWithDecoration = ({
   freezeGifUntilHover = false,
 }: AvatarWithDecorationProps) => {
   const avatarUrl = user?.avatar_url || undefined;
+  const isBot = Boolean(user?.is_bot);
   const [gifPreviewSrc, setGifPreviewSrc] = useState<string | null>(null);
   const [isGifHovered, setIsGifHovered] = useState(false);
 
@@ -70,8 +72,8 @@ export const AvatarWithDecoration = ({
     >
       <Avatar className="w-full h-full">
         <AvatarImage src={displayAvatarUrl} />
-        <AvatarFallback style={{ backgroundColor: user?.banner_color || '#5865F2' }}>
-          {user?.username?.[0]?.toUpperCase() || 'U'}
+        <AvatarFallback style={{ backgroundColor: user?.banner_color || (isBot ? '#F0C94A' : '#5865F2') }}>
+          {isBot ? <Bot className="h-[55%] w-[55%] text-[#252933]" /> : user?.username?.[0]?.toUpperCase() || 'U'}
         </AvatarFallback>
       </Avatar>
     </div>

@@ -1621,6 +1621,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
             custom_status: string | null;
             created_at: string;
             last_seen: string | null;
+            is_bot?: boolean | null;
           };
         }>;
 
@@ -1629,20 +1630,31 @@ export const useServerStore = create<ServerState>((set, get) => ({
         const members: ServerMember[] = typedMembersData
           .filter((item) => !item.is_banned)
           .filter((item) => !blockedUserIdSet.has(item.user_id))
-          .map((item) => ({
-            id: item.id,
-            server_id: item.server_id,
-            user_id: item.user_id,
-            role: item.role,
-            nickname: item.nickname,
-            is_banned: item.is_banned,
-            is_muted: item.is_muted,
-            joined_at: item.joined_at,
-            join_source: item.join_source as ServerMember["join_source"],
-            join_invite_code: item.join_invite_code ?? undefined,
-            user: item.user as any,
-            roles: item.roles as any,
-          }));
+          .map((item) => {
+            const user = item.user?.is_bot
+              ? {
+                  ...item.user,
+                  status: "online",
+                  custom_status: item.user.custom_status || "Bot",
+                  last_seen: item.user.last_seen ?? new Date().toISOString(),
+                }
+              : item.user;
+
+            return {
+              id: item.id,
+              server_id: item.server_id,
+              user_id: item.user_id,
+              role: item.role,
+              nickname: item.nickname,
+              is_banned: item.is_banned,
+              is_muted: item.is_muted,
+              joined_at: item.joined_at,
+              join_source: item.join_source as ServerMember["join_source"],
+              join_invite_code: item.join_invite_code ?? undefined,
+              user: user as any,
+              roles: item.roles as any,
+            };
+          });
 
         // Before setting members into state, preserve real-time presence status
         // for users who have recent Presence channel data (prevents stale DB overwrites)
@@ -1658,6 +1670,18 @@ export const useServerStore = create<ServerState>((set, get) => ({
         });
 
         const mergedMembers = members.map((m) => {
+          if (m.user?.is_bot) {
+            return {
+              ...m,
+              user: {
+                ...m.user,
+                status: "online" as any,
+                custom_status: m.user.custom_status || "Bot",
+                last_seen: m.user.last_seen ?? new Date().toISOString(),
+              },
+            };
+          }
+
           if (hasRecentRealtimePresence(m.user_id)) {
             const existing = existingStatusMap.get(m.user_id);
             if (existing && m.user) {

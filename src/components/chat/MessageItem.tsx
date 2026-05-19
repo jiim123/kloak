@@ -1106,12 +1106,15 @@ export const MessageItem = memo(function MessageItem({
       e.preventDefault();
       e.stopPropagation();
       // Don't show profile in ghost mode for non-admins
-      if (showGhostIdentity) return;
+      if (showGhostIdentity || isBotMessageAuthor) return;
       if (message.user_id) {
-        openUserProfileModal(openModal, message.user_id, e.currentTarget, SIDE_ALIGNED_USER_PROFILE_POPOVER);
+        openUserProfileModal(openModal, message.user_id, e.currentTarget, {
+          user: messageUser,
+          ...SIDE_ALIGNED_USER_PROFILE_POPOVER,
+        });
       }
     },
-    [message.user_id, openModal, showGhostIdentity],
+    [isBotMessageAuthor, message.user_id, messageUser, openModal, showGhostIdentity],
   );
 
   const handleKickUser = useCallback(() => {

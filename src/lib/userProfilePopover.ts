@@ -44,6 +44,7 @@ export const openUserProfileModal = (
   extraData?: Record<string, unknown>,
 ) => {
   if (!userId) return;
+  if ((extraData?.user as { is_bot?: boolean } | undefined)?.is_bot) return;
 
   openModal("userProfile", {
     userId,

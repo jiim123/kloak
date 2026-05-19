@@ -72,6 +72,7 @@ import { RoleColorPicker } from "../modals/RoleColorPicker";
 import { RoleIconPreview } from "@/components/ui/role-icon-preview";
 import { Separator } from "@/components/ui/separator";
 import { EmojiGifPicker } from "../modals/EmojiGifPicker";
+import { ServerBotsPanel } from "./ServerBotsPanel";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -2390,6 +2391,15 @@ export const ServerSettingsPage = () => {
                   </TabsTrigger>
                 )}
 
+                {canManageServer && (
+                  <TabsTrigger
+                    value="bots"
+                    className="w-full h-9 justify-start rounded-none px-[30px] py-0 text-sm font-medium leading-none text-[#d7d9df] data-[state=active]:bg-[#2b2e34] data-[state=active]:text-white data-[state=active]:shadow-none data-[state=inactive]:hover:bg-[#202329] data-[state=inactive]:hover:text-white transition-colors"
+                  >
+                    Bots
+                  </TabsTrigger>
+                )}
+
                 {/* Transfer Ownership & Delete Server - at bottom, separated */}
                 {isOwner && (
                   <>
@@ -3851,6 +3861,19 @@ export const ServerSettingsPage = () => {
                 </div>
               )}
             </TabsContent>
+
+            {/* Bots Tab */}
+            {canManageServer && user && (
+              <TabsContent value="bots" className="m-0 px-[40px] py-[32px] pr-[84px]">
+                <ServerBotsPanel
+                  serverId={server.id}
+                  userId={user.id}
+                  channels={channels}
+                  roles={visibleRoles}
+                  canManageBots={canManageServer}
+                />
+              </TabsContent>
+            )}
 
             {/* Integrations Tab */}
             {canManageChannels && (
