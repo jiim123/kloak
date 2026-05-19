@@ -258,7 +258,7 @@ const Invite = () => {
               <div className="mt-8 w-full max-w-[270px]">
                 {accountName && (
                   <div className="mb-8 text-left">
-                    <div className="text-[12px] font-medium leading-tight text-[#f2f3f5]">What do you want to be called?</div>
+                    <div className="text-[12px] font-medium leading-tight text-[#f2f3f5]">You're logged in as</div>
                     <div className="mt-1 flex h-7 items-center border-b border-[#d6d9df]/80">
                       <span className="min-w-0 flex-1 truncate text-[15px] leading-none text-white">{accountName}</span>
                       <BadgeCheck className="h-4 w-4 shrink-0 text-[#23d160]" />
