@@ -203,11 +203,11 @@ export const ServerOverviewView = () => {
                   />
                 </div>
               ) : (
-                <div className="h-44 sm:h-56 bg-[#10131b]" />
+                <div className="h-44 sm:h-56 bg-secondary" />
               )}
               <div className="relative px-5 pb-6 pt-0 text-center">
                 <div className="-mt-16 sm:-mt-20 flex justify-center">
-                  <Avatar className="w-28 h-28 rounded-xl bg-[#191c25] ring-[6px] ring-[#34363D]">
+                  <Avatar className="w-28 h-28 rounded-xl bg-background ring-[6px] ring-card">
                     <AvatarImage src={currentServer.icon_url || undefined} className="rounded-xl object-cover" />
                     <AvatarFallback
                       className="rounded-xl text-3xl font-semibold"
@@ -247,7 +247,7 @@ export const ServerOverviewView = () => {
                   <button
                     key={announcement.id}
                     onClick={() => navigate(`/app/servers/${currentServer.id}/channels/${announcement.channel_id}`)}
-                    className="min-h-[96px] w-full text-left rounded-md border border-border/40 bg-[#2F3138] p-4 hover:bg-[#393C46] transition-colors"
+                    className="min-h-[96px] w-full text-left rounded-md border border-border/60 bg-card p-4 hover:bg-secondary/70 transition-colors"
                   >
                     <div className="text-[15px] font-semibold leading-6 line-clamp-2">{announcement.content}</div>
                     <div className="mt-2 text-xs text-muted-foreground/90">
@@ -276,7 +276,7 @@ export const ServerOverviewView = () => {
                   <button
                     key={thread.id}
                     onClick={() => navigate(`/app/servers/${currentServer.id}/channels/${thread.channel_id}`)}
-                    className="min-h-[104px] w-full text-left rounded-md border border-border/40 bg-[#2F3138] p-4 hover:bg-[#393C46] transition-colors"
+                    className="min-h-[104px] w-full text-left rounded-md border border-border/60 bg-card p-4 hover:bg-secondary/70 transition-colors"
                   >
                     <div className="text-[15px] font-semibold leading-6 line-clamp-2">{thread.title}</div>
                     <div className="mt-1 text-sm text-muted-foreground/95">

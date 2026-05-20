@@ -758,7 +758,7 @@ const AppLayout = () => {
                         animate={{ width: 228, opacity: 1, x: 0 }}
                         exit={{ width: 0, opacity: 0, x: -18 }}
                         transition={addServerPanelTransition}
-                        className="h-full shrink-0 overflow-hidden border-r border-black/30 bg-[#2B2D34]"
+                        className="h-full shrink-0 overflow-hidden border-r border-border/70 bg-layout-sidebar"
                       >
                         <div className="flex h-full w-[228px] flex-col">
                           <div className="flex h-[58px] shrink-0 items-center gap-3 border-b border-black/20 px-3 shadow-[0_1px_0_rgba(255,255,255,0.03)]">
@@ -770,7 +770,7 @@ const AppLayout = () => {
                                   {(user?.display_name || user?.username || "U").slice(0, 2).toUpperCase()}
                                 </div>
                               )}
-                              <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[#2B2D34] bg-[#23A55A]" />
+                              <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-layout-sidebar bg-[#23A55A]" />
                             </div>
                             <div className="min-w-0 flex-1 truncate text-[14px] font-semibold text-white">
                               {user?.display_name || user?.username || "Profile"}
@@ -778,7 +778,7 @@ const AppLayout = () => {
                             <button
                               type="button"
                               onClick={() => setIsAddServerPanelOpen(false)}
-                              className="flex h-7 w-7 items-center justify-center rounded-[4px] text-[#A7AAB2] transition-colors hover:bg-white/10 hover:text-white"
+                              className="flex h-7 w-7 items-center justify-center rounded-[4px] text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
                               aria-label="Close quick access menu"
                             >
                               <X className="h-4 w-4" />
@@ -786,7 +786,7 @@ const AppLayout = () => {
                           </div>
 
                           <nav className="flex flex-col gap-1 px-1.5 py-3">
-                            <div className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wide text-[#B5BAC1]">
+                            <div className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
                               Profile
                             </div>
                             <button
@@ -795,8 +795,8 @@ const AppLayout = () => {
                               className={cn(
                                 "flex h-8 w-full items-center gap-3 rounded-[2px] px-2.5 text-left text-[14px] font-semibold transition-colors",
                                 isProfileView
-                                  ? "bg-[#4A4D55] text-white"
-                                  : "text-[#B5BAC1] hover:bg-[#3B3E46] hover:text-white",
+                                  ? "bg-secondary text-foreground"
+                                  : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground",
                               )}
                             >
                               <UserCircle className="h-4 w-4 shrink-0" />
@@ -805,7 +805,7 @@ const AppLayout = () => {
                             <button
                               type="button"
                               onClick={openCreateServer}
-                              className="flex h-8 w-full items-center gap-3 rounded-[2px] px-2.5 text-left text-[14px] font-medium text-[#B5BAC1] transition-colors hover:bg-[#3B3E46] hover:text-white"
+                              className="flex h-8 w-full items-center gap-3 rounded-[2px] px-2.5 text-left text-[14px] font-medium text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
                             >
                               <Plus className="h-4 w-4 shrink-0" />
                               <span className="truncate">Create Server</span>
@@ -813,13 +813,13 @@ const AppLayout = () => {
                             <button
                               type="button"
                               onClick={openJoinServer}
-                              className="flex h-8 w-full items-center gap-3 rounded-[2px] px-2.5 text-left text-[14px] font-medium text-[#B5BAC1] transition-colors hover:bg-[#3B3E46] hover:text-white"
+                              className="flex h-8 w-full items-center gap-3 rounded-[2px] px-2.5 text-left text-[14px] font-medium text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
                             >
                               <Link2 className="h-4 w-4 shrink-0" />
                               <span className="truncate">Join by Invite</span>
                             </button>
 
-                            <div className="px-2 pb-1 pt-6 text-[10px] font-bold uppercase tracking-wide text-[#B5BAC1]">
+                            <div className="px-2 pb-1 pt-6 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
                               Only visible to you
                             </div>
                             <button
@@ -828,8 +828,8 @@ const AppLayout = () => {
                               className={cn(
                                 "flex h-8 w-full items-center gap-3 rounded-[2px] px-2.5 text-left text-[14px] font-medium transition-colors",
                                 isFriendsView
-                                  ? "bg-[#4A4D55] text-white"
-                                  : "text-[#8F949D] hover:bg-[#3B3E46] hover:text-white",
+                                  ? "bg-secondary text-foreground"
+                                  : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground",
                               )}
                             >
                               <Users className="h-4 w-4 shrink-0" />

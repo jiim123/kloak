@@ -2030,14 +2030,14 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              className="w-[var(--radix-dropdown-menu-trigger-width)] overflow-hidden rounded-md bg-[#4E505C] p-0"
+              className="w-[var(--radix-dropdown-menu-trigger-width)] overflow-hidden rounded-md p-0"
               align="start"
               sideOffset={4}
             >
               {/* Invite People */}
               <DropdownMenuItem
                 onClick={handleOpenInvite}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-white/[0.04] focus:bg-white/[0.06]"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-secondary/60 focus:bg-secondary/70"
               >
                 <div className="flex h-5 w-5 items-center justify-center flex-shrink-0">
                   <UserPlusIcon className="h-4 w-4" />
@@ -2052,7 +2052,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
                   {/* Server Settings */}
                   <DropdownMenuItem
                     onClick={handleOpenServerSettings}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-white/[0.04] focus:bg-white/[0.06]"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-secondary/60 focus:bg-secondary/70"
                   >
                     <div className="flex h-5 w-5 items-center justify-center flex-shrink-0">
                       <SettingsIcon className="h-4 w-4" />
@@ -2065,7 +2065,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
                       {/* Create Channel */}
                       <DropdownMenuItem
                         onClick={handleOpenCreateChannel}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-white/[0.04] focus:bg-white/[0.06]"
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-secondary/60 focus:bg-secondary/70"
                       >
                         <div className="flex h-5 w-5 items-center justify-center flex-shrink-0">
                           <HashIcon className="h-4 w-4" />
@@ -2076,7 +2076,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
                       {/* Create Category */}
                       <DropdownMenuItem
                         onClick={handleOpenCreateCategory}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-white/[0.04] focus:bg-white/[0.06]"
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-secondary/60 focus:bg-secondary/70"
                       >
                         <div className="flex h-5 w-5 items-center justify-center flex-shrink-0">
                           <FolderPlusIcon className="h-4 w-4" />
@@ -2095,7 +2095,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
                   {/* Leave Server */}
                   <DropdownMenuItem
                     onClick={handleLeaveServer}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-white/[0.04] focus:bg-white/[0.06]"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-secondary/60 focus:bg-secondary/70"
                   >
                     <div className="flex h-5 w-5 items-center justify-center flex-shrink-0">
                       <LogOutIcon className="h-4 w-4" />
@@ -2123,8 +2123,8 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
               placeholder={`Search ${currentServer.name}`}
               aria-label="Search server channels"
               className={cn(
-                "h-8 w-full rounded-full border-0 bg-black/20 pl-8 pr-3 text-[13px] font-medium text-foreground placeholder:text-muted-foreground/70",
-                "outline-none transition-colors focus:bg-black/28 focus:ring-2 focus:ring-primary/35",
+                "h-8 w-full rounded-full border-0 bg-secondary pl-8 pr-3 text-[13px] font-medium text-foreground placeholder:text-muted-foreground/70",
+                "outline-none transition-colors focus:bg-secondary/80 focus:ring-2 focus:ring-primary/35",
               )}
             />
           </label>

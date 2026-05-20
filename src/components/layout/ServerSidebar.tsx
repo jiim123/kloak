@@ -86,7 +86,7 @@ const SERVER_FOLDERS_STORAGE_KEY = "kloak-server-folders-v1";
 const EMPTY_FOLDER_STATE: ServerFolderState = { folders: [], serverToFolder: {} };
 const EMPTY_CHANNEL_IDS: string[] = [];
 const MODAL_CONTENT_CLASS =
-  "max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-[#4a4f5a] bg-[#333842] p-0 text-[#f4f5f7] shadow-2xl sm:max-w-[448px]";
+  "max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-border bg-card p-0 text-foreground shadow-2xl sm:max-w-[448px]";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ANIMATION VARIANTS — static objects, never re-created
@@ -188,7 +188,7 @@ const ServerIconVisual = memo(({ server }: { server: ServerWithMembership }) => 
       <div
         className={cn(
           "w-11 h-11 overflow-hidden rounded-[12px] flex items-center justify-center shadow-[0_6px_18px_rgba(0,0,0,0.28)]",
-          !server.icon_url ? "bg-[#2f323d]" : "bg-[#23262f]",
+          !server.icon_url ? "bg-secondary" : "bg-card",
         )}
       >
         {server.icon_url ? (
@@ -454,8 +454,8 @@ const DraggableServerItem = memo(
                       className={cn(
                         "w-11 h-11 overflow-hidden rounded-[12px] shadow-[0_8px_20px_rgba(0,0,0,0.28)]",
                         isActive
-                          ? "p-[2px] bg-[#3A3D44] text-[#1f222a]"
-                          : "bg-[#262933] text-white hover:bg-[#2c2f39]",
+                          ? "p-[2px] bg-primary text-primary-foreground"
+                          : "bg-secondary text-foreground hover:bg-secondary/80",
                         !server.icon_url && !isActive && getServerColor(server.name),
                       )}
                     >
@@ -474,7 +474,7 @@ const DraggableServerItem = memo(
                           </Avatar>
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
-                            <span className={cn("text-sm font-bold", isActive ? "text-[#1f222a]" : "text-white")}>
+                            <span className={cn("text-sm font-bold", isActive ? "text-primary-foreground" : "text-foreground")}>
                               {getServerInitials(server.name)}
                             </span>
                           </div>
@@ -1235,7 +1235,7 @@ export const ServerSidebar = ({
   );
 
   return (
-    <div className="h-full w-[68px] shrink-0 flex flex-col items-center relative overflow-hidden bg-[#1E2025]">
+    <div className="h-full w-[68px] shrink-0 flex flex-col items-center relative overflow-hidden bg-layout-sidebar">
       <DndContext
         sensors={sensors}
         onDragStart={handleDragStart}
@@ -1304,7 +1304,7 @@ export const ServerSidebar = ({
       </DndContext>
 
       {/* Sticky Add Server button at bottom */}
-      <div className="absolute bottom-0 left-0 right-0 px-3 pb-3 pt-2 bg-[#1E2025] z-10">
+      <div className="absolute bottom-0 left-0 right-0 px-3 pb-3 pt-2 bg-layout-sidebar z-10">
         <div className="w-5 h-px bg-white/14 rounded-full shrink-0 mx-auto mb-2" />
         <div className="flex flex-col items-center gap-2">
           <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
@@ -1456,7 +1456,7 @@ export const ServerSidebar = ({
                 <svg
                   viewBox="0 0 64 64"
                   xmlns="http://www.w3.org/2000/svg"
-                  className={cn("w-[36px] h-[36px]", isQuickAccessActive ? "text-white" : "text-[#9E9EA7]")}
+                  className={cn("w-[36px] h-[36px]", isQuickAccessActive ? "text-foreground" : "text-muted-foreground")}
                   aria-hidden="true"
                 >
                   <path d="M32,32.83a9.52,9.52,0,0,1-9.56-9.57A9.57,9.57,0,1,1,32,32.83ZM32,16.7a6.43,6.43,0,0,0-4.08,1.42,6.58,6.58,0,0,0,1.51,11.19,6.69,6.69,0,0,0,5.3-.07,6.57,6.57,0,0,0,1.65-10.86A6.5,6.5,0,0,0,32,16.7Z" fill="currentColor" />
@@ -1480,14 +1480,14 @@ export const ServerSidebar = ({
       <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
         <DialogContent className={MODAL_CONTENT_CLASS} hideCloseButton>
           <div className="flex max-h-[82vh] flex-col overflow-hidden">
-            <div className="border-b border-[#2b3039] bg-[#2f343d] px-5 py-3">
+            <div className="border-b border-border bg-secondary/40 px-5 py-3">
               <div className="text-base font-medium leading-none tracking-tight">Create Folder</div>
             </div>
             <div className="space-y-5 overflow-y-auto px-6 py-4">
-              <p className="text-sm leading-6 text-[#b8bec8]">Choose a name and color for your server folder.</p>
+              <p className="text-sm leading-6 text-muted-foreground">Choose a name and color for your server folder.</p>
               <div className="grid grid-cols-[1fr_auto] items-end gap-3">
                 <div className="space-y-2">
-                  <Label htmlFor="kloak-folder-name" className="text-xs font-medium uppercase tracking-wide text-[#c4c8d0]">
+                  <Label htmlFor="kloak-folder-name" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     Name
                   </Label>
                   <Input
@@ -1496,11 +1496,11 @@ export const ServerSidebar = ({
                     onChange={(e) => setNewFolderName(e.target.value)}
                     placeholder="e.g. Work, Friends, Gaming"
                     autoFocus
-                    className="h-9 rounded-[3px] border border-[#4a4f5a] bg-[#2f343d] text-sm text-[#f3f4f7] placeholder:text-[#9ea4af]"
+                    className="h-9 rounded-[3px] border border-border bg-secondary/40 text-sm text-foreground placeholder:text-muted-foreground"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="kloak-folder-color" className="text-xs font-medium uppercase tracking-wide text-[#c4c8d0]">
+                  <Label htmlFor="kloak-folder-color" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     Color
                   </Label>
                   <Input
@@ -1508,17 +1508,17 @@ export const ServerSidebar = ({
                     type="color"
                     value={newFolderColor}
                     onChange={(e) => setNewFolderColor(e.target.value)}
-                    className="h-9 w-14 rounded-[3px] border border-[#4a4f5a] bg-[#2f343d] p-1"
+                    className="h-9 w-14 rounded-[3px] border border-border bg-secondary/40 p-1"
                   />
                 </div>
               </div>
             </div>
-            <div className="flex items-center justify-end gap-3 border-t border-[#2c3139] bg-[#30353f] px-5 py-3">
+            <div className="flex items-center justify-end gap-3 border-t border-border bg-secondary/30 px-5 py-3">
               <Button
                 type="button"
                 variant="ghost"
                 onClick={() => setIsCreateFolderOpen(false)}
-                className="h-9 rounded-[3px] px-4 text-[#b9bec8] hover:bg-transparent hover:text-white"
+                className="h-9 rounded-[3px] px-4 text-muted-foreground hover:bg-transparent hover:text-foreground"
               >
                 Cancel
               </Button>
@@ -1526,7 +1526,7 @@ export const ServerSidebar = ({
                 type="button"
                 onClick={handleCreateFolder}
                 disabled={!newFolderName.trim()}
-                className="h-9 rounded-[3px] bg-[#d7dbe3] px-5 font-medium text-[#363b44] hover:bg-white"
+                className="h-9 rounded-[3px] bg-primary px-5 font-medium text-primary-foreground hover:bg-primary/90"
               >
                 Create
               </Button>

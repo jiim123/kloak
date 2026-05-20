@@ -108,14 +108,14 @@ export const DMSidebar = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-[#373941] overflow-hidden">
+    <div className="h-full flex flex-col bg-layout-sidebar overflow-hidden">
         {/* Section header with Create Group */}
-        <div className="px-4 pt-3 pb-2 flex items-center justify-between border-b border-white/10">
+        <div className="px-4 pt-3 pb-2 flex items-center justify-between border-b border-border/60">
           <h3 className="text-xs font-semibold text-foreground/85 uppercase tracking-[0.12em]">Direct Messages</h3>
           <Button
             variant="ghost"
             size="icon-sm"
-            className="h-6 w-6 text-foreground/80 hover:text-foreground hover:bg-white/10"
+            className="h-6 w-6 text-foreground/80 hover:text-foreground hover:bg-secondary/70"
             onClick={() => setShowCreateGroup(true)}
             title="Create Group"
           >

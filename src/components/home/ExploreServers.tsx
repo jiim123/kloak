@@ -55,7 +55,7 @@ const LazyCardMount = ({ children }: { children: ReactNode }) => {
 
   return (
     <div ref={cardRef} className="h-full">
-      {isVisible ? children : <div className="h-[226px] rounded-lg bg-[#262936]/70" />}
+      {isVisible ? children : <div className="h-[226px] rounded-lg bg-card" />}
     </div>
   );
 };
@@ -208,42 +208,42 @@ const ExploreServersOriginal = () => {
           type="button"
           onClick={() => handleCardClick(server)}
           className={cn(
-            "group relative block h-full w-full overflow-hidden rounded-lg bg-[#292B31] text-left",
-            "border border-white/[0.03] transition-colors hover:bg-[#2c2f3d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70",
+            "group relative block h-full w-full overflow-hidden rounded-lg bg-card text-left",
+            "border border-border/60 transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70",
             compact ? "min-h-[206px]" : "min-h-[226px]",
           )}
         >
-          <div className="relative h-[76px] w-full overflow-hidden bg-[#313543]">
+          <div className="relative h-[76px] w-full overflow-hidden bg-secondary">
             {server.banner_url ? (
               <img src={server.banner_url} alt="" className="h-full w-full object-cover" loading="lazy" />
             ) : (
-              <div className="h-full w-full bg-gradient-to-br from-[#3b4050] via-[#2f3442] to-[#232733]" />
+              <div className="h-full w-full bg-gradient-to-br from-secondary via-card to-background" />
             )}
             <div className="absolute inset-0 bg-gradient-to-b from-black/5 to-black/45" />
           </div>
 
           <div className="absolute left-1/2 top-9 -translate-x-1/2">
-            <div className="flex h-[64px] w-[64px] items-center justify-center overflow-hidden rounded-xl bg-[#191c25] ring-4 ring-[#262936]">
+            <div className="flex h-[64px] w-[64px] items-center justify-center overflow-hidden rounded-xl bg-background ring-4 ring-card">
               {server.icon_url ? (
                 <img src={server.icon_url} alt={server.name} className="h-full w-full object-cover" loading="lazy" />
               ) : (
-                <span className="text-sm font-semibold text-white">{getServerInitials(server.name)}</span>
+                <span className="text-sm font-semibold text-foreground">{getServerInitials(server.name)}</span>
               )}
             </div>
           </div>
 
           <div className="flex min-h-[128px] flex-col items-center px-4 pb-4 pt-9 text-center">
             <div className="flex max-w-full items-center justify-center gap-1.5">
-              <span className="truncate text-[15px] font-semibold leading-5 text-white">{server.name}</span>
-              {server.is_verified && <CheckCircle2 className="h-4 w-4 shrink-0 fill-sky-400 text-[#262936]" />}
+              <span className="truncate text-[15px] font-semibold leading-5 text-foreground">{server.name}</span>
+              {server.is_verified && <CheckCircle2 className="h-4 w-4 shrink-0 fill-sky-400 text-card" />}
             </div>
 
-            <p className="mt-2 line-clamp-3 min-h-[48px] text-[11px] leading-4 text-white/48">
+            <p className="mt-2 line-clamp-3 min-h-[48px] text-[11px] leading-4 text-muted-foreground">
               {server.about || "Public community"}
             </p>
 
-            <div className="mt-auto flex w-full items-center justify-between pt-3 text-[11px] font-semibold text-white/78">
-              <span className="inline-flex items-center gap-1 rounded bg-black/18 px-2 py-1">
+            <div className="mt-auto flex w-full items-center justify-between pt-3 text-[11px] font-semibold text-muted-foreground">
+              <span className="inline-flex items-center gap-1 rounded bg-secondary px-2 py-1">
                 <Users className="h-3 w-3" />
                 {formatMemberCount(server.member_count)} members
               </span>
@@ -266,11 +266,11 @@ const ExploreServersOriginal = () => {
   };
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-[#373941]">
+    <div className="flex h-full flex-col overflow-hidden bg-layout-chat">
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="relative min-h-full overflow-hidden">
           <div className="pointer-events-none absolute inset-0">
-            <div className="absolute inset-0 bg-[#373941]" />
+            <div className="absolute inset-0 bg-layout-chat" />
           </div>
 
           <div className="relative mx-auto flex w-full max-w-7xl flex-col px-4 pb-8 pt-10 sm:px-6 lg:px-8">
@@ -280,33 +280,33 @@ const ExploreServersOriginal = () => {
               transition={{ duration: 0.35 }}
               className="mx-auto flex w-full max-w-xl flex-col items-center text-center"
             >
-              <h1 className="text-[23px] font-bold tracking-tight text-white">Find communities</h1>
-              <p className="mt-2 max-w-md text-[13px] leading-4 text-white/68">
+              <h1 className="text-[23px] font-bold tracking-tight text-foreground">Find communities</h1>
+              <p className="mt-2 max-w-md text-[13px] leading-4 text-muted-foreground">
               Jump into our public communities to find your people, start a conversation, and find a group to hang out with.
               </p>
 
               <div className="relative mt-5 w-full">
-                <Search className="absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-white/52" />
+                <Search className="absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search communities"
-                  className="h-12 rounded-full border-0 bg-[#1d202b] pl-11 pr-4 text-[13px] font-medium text-white placeholder:text-white/45 focus-visible:ring-1 focus-visible:ring-white/20"
+                  className="h-12 rounded-full border border-border/60 bg-card pl-11 pr-4 text-[13px] font-medium text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-primary/60"
                 />
               </div>
             </motion.div>
 
             <div className="mt-14 space-y-5">
               <div className="flex items-center justify-between">
-                <h2 className="text-[17px] font-bold text-white">Featured communities</h2>
-                {featuredServers.length > 4 && <ChevronRight className="h-6 w-6 text-white/80" aria-hidden="true" />}
+                <h2 className="text-[17px] font-bold text-foreground">Featured communities</h2>
+                {featuredServers.length > 4 && <ChevronRight className="h-6 w-6 text-muted-foreground" aria-hidden="true" />}
               </div>
 
               {isLoading ? (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="flex items-center justify-center gap-2 py-12 text-sm text-white/60"
+                  className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground"
                 >
                   <Loader2 className="h-4 w-4 animate-spin" />
                   <span>Loading public servers...</span>
@@ -315,11 +315,11 @@ const ExploreServersOriginal = () => {
                 <motion.div
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="rounded-lg bg-[#262936]/75 px-4 py-12 text-center"
+                  className="rounded-lg bg-card px-4 py-12 text-center"
                 >
-                  <Search className="mx-auto h-6 w-6 text-white/45" />
-                  <p className="mt-3 text-sm font-medium text-white/65">No public communities found.</p>
-                  {query && <p className="mt-1 text-xs text-white/45">Try a different search term</p>}
+                  <Search className="mx-auto h-6 w-6 text-muted-foreground" />
+                  <p className="mt-3 text-sm font-medium text-muted-foreground">No public communities found.</p>
+                  {query && <p className="mt-1 text-xs text-muted-foreground/70">Try a different search term</p>}
                 </motion.div>
               ) : (
                 <motion.div
@@ -336,8 +336,8 @@ const ExploreServersOriginal = () => {
             {!isLoading && regularServersWithoutFeatured.length > 0 && (
               <div className="mt-8 space-y-4">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-[15px] font-bold text-white">All communities</h2>
-                  <span className="text-xs font-medium text-white/45">{regularServersWithoutFeatured.length}</span>
+                  <h2 className="text-[15px] font-bold text-foreground">All communities</h2>
+                  <span className="text-xs font-medium text-muted-foreground">{regularServersWithoutFeatured.length}</span>
                 </div>
                 <motion.div
                   initial={{ opacity: 0 }}
@@ -352,7 +352,7 @@ const ExploreServersOriginal = () => {
 
             {!isLoading && regularServersWithoutFeatured.length > 0 && (
               <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-                <div className="text-xs font-medium text-white/45">
+                <div className="text-xs font-medium text-muted-foreground">
                   Showing {regularPageStart + 1}-{Math.min(regularPageStart + PAGE_SIZE, regularServersWithoutFeatured.length)} of {regularServersWithoutFeatured.length}
                 </div>
                 <div className="flex items-center gap-2">
@@ -361,11 +361,11 @@ const ExploreServersOriginal = () => {
                     variant="outline"
                     disabled={safeRegularPage <= 1}
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    className="h-8 border-white/10 bg-white/5 text-xs text-white hover:bg-white/10 hover:text-white"
+                    className="h-8 border-border/70 bg-card text-xs text-foreground hover:bg-secondary hover:text-foreground"
                   >
                     Previous
                   </Button>
-                  <div className="min-w-[88px] text-center text-xs font-medium text-white/45">
+                  <div className="min-w-[88px] text-center text-xs font-medium text-muted-foreground">
                     Page {safeRegularPage} of {regularTotalPages}
                   </div>
                   <Button
@@ -373,7 +373,7 @@ const ExploreServersOriginal = () => {
                     variant="outline"
                     disabled={safeRegularPage >= regularTotalPages}
                     onClick={() => setCurrentPage((p) => Math.min(regularTotalPages, p + 1))}
-                    className="h-8 border-white/10 bg-white/5 text-xs text-white hover:bg-white/10 hover:text-white"
+                    className="h-8 border-border/70 bg-card text-xs text-foreground hover:bg-secondary hover:text-foreground"
                   >
                     Next
                   </Button>

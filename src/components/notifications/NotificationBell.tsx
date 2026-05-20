@@ -283,18 +283,18 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
       <PopoverTrigger asChild>{variant === "sidebar" ? renderSidebarTrigger() : renderDefaultTrigger()}</PopoverTrigger>
 
       <PopoverContent
-        className="w-96 overflow-hidden rounded-[4px] border border-[#4a4f5a] bg-[#333842] p-0 text-[#f4f5f7] shadow-2xl"
+        className="w-96 overflow-hidden rounded-[4px] border border-border bg-card p-0 text-foreground shadow-2xl"
         align="end"
         sideOffset={8}
       >
-        <div className="flex items-center justify-between border-b border-[#2b3039] bg-[#2f343d] px-4 py-3">
+        <div className="flex items-center justify-between border-b border-border bg-secondary/40 px-4 py-3">
           <h3 className="text-base font-medium leading-none tracking-tight">Notifications</h3>
           <div className="flex items-center gap-1">
             {filteredUnreadCount > 0 && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 rounded-[3px] text-[#b8bec8] transition-colors hover:bg-[#3b4049] hover:text-white"
+                className="h-7 w-7 rounded-[3px] text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
                 onClick={handleMarkAllAsRead}
                 title="Mark all as read"
               >
@@ -305,7 +305,7 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 rounded-[3px] text-[#b8bec8] transition-colors hover:bg-[#3b4049] hover:text-white"
+                className="h-7 w-7 rounded-[3px] text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
                 onClick={handleClearAll}
                 title="Clear all"
               >
@@ -331,7 +331,7 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
                     className={cn(
                       "group relative flex flex-col gap-2 border border-transparent px-3 py-3 transition-colors animate-notification-enter",
                       isUnread && cn(colors.bgUnread, "border-white/5"),
-                      !showFriendActions && "cursor-pointer hover:border-[#454b56] hover:bg-[#363b45]"
+                      !showFriendActions && "cursor-pointer hover:border-border hover:bg-secondary/70"
                     )}
                     style={{
                       animationDelay: `${index * 50}ms`,
@@ -346,14 +346,14 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
                       <div
                         className={cn(
                           "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[4px]",
-                          isUnread ? cn(colors.bg, colors.text) : "bg-[#3a404a] text-[#9ea4af]"
+                          isUnread ? cn(colors.bg, colors.text) : "bg-secondary text-muted-foreground"
                         )}
                       >
                         {getNotificationIcon(notification)}
                       </div>
 
                       <div className="min-w-0 flex-1 overflow-hidden pt-0.5">
-                        <p className={cn("line-clamp-2 break-words text-sm text-[#f3f4f7]", isUnread && "font-medium")}>
+                        <p className={cn("line-clamp-2 break-words text-sm text-foreground", isUnread && "font-medium")}>
                           {notification.type === "mention" &&
                             (() => {
                               if (!notification.link) return null;
@@ -363,7 +363,7 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
                                 if (!serverId) return null;
                                 const serverName = useServerStore.getState().servers.find((s) => s.id === serverId)?.name;
                                 return serverName ? (
-                                  <span className="mr-1.5 text-xs font-normal text-[#9ea4af]">{serverName} /</span>
+                                  <span className="mr-1.5 text-xs font-normal text-muted-foreground">{serverName} /</span>
                                 ) : null;
                               } catch {
                                 return null;
@@ -372,7 +372,7 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
                           {notification.title}
                         </p>
                         {notification.body && (
-                          <p className="mt-1 line-clamp-1 break-all text-xs text-[#b8bec8]">
+                          <p className="mt-1 line-clamp-1 break-all text-xs text-muted-foreground">
                             {notification.type === "friend_request" ? (
                               (() => {
                                 const username = extractUsernameFromBody(notification.body);
@@ -383,7 +383,7 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
                                   return (
                                     <>
                                       <span
-                                        className="cursor-pointer font-medium text-white hover:underline"
+                                        className="cursor-pointer font-medium text-foreground hover:underline"
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           if (request?.id) {
@@ -408,7 +408,7 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
                             )}
                           </p>
                         )}
-                        <p className="mt-1.5 text-xs text-[#8f96a2]">
+                        <p className="mt-1.5 text-xs text-muted-foreground/80">
                           {notification.created_at &&
                             formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
                         </p>
@@ -418,7 +418,7 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 flex-shrink-0 rounded-[3px] text-[#9ea4af] transition-all hover:bg-[#3b4049] hover:text-white"
+                          className="h-8 w-8 flex-shrink-0 rounded-[3px] text-muted-foreground transition-all hover:bg-secondary/70 hover:text-foreground"
                           onClick={(e) => {
                             e.stopPropagation();
                             deleteNotification(notification.id);
@@ -433,7 +433,7 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
                       <div className="ml-[52px] flex gap-2">
                         <Button
                           size="sm"
-                          className="h-9 flex-1 rounded-[3px] bg-[#d7dbe3] text-xs font-medium text-[#363b44] hover:bg-white"
+                          className="h-9 flex-1 rounded-[3px] bg-primary text-xs font-medium text-primary-foreground hover:bg-primary/90"
                           disabled={isProcessing}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -446,7 +446,7 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-9 flex-1 rounded-[3px] border-[#4a4f5a] bg-transparent text-xs text-[#e2e4e9] hover:bg-[#30333d]"
+                          className="h-9 flex-1 rounded-[3px] border-border bg-transparent text-xs text-foreground hover:bg-secondary/70"
                           disabled={isProcessing}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -464,11 +464,11 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
-              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-[4px] bg-[#2f343d]">
-                <Bell className="h-7 w-7 text-[#666d78]" />
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-[4px] bg-secondary/40">
+                <Bell className="h-7 w-7 text-muted-foreground/60" />
               </div>
-              <p className="text-sm font-medium text-[#f3f4f7]">No notifications yet</p>
-              <p className="mt-1 text-xs text-[#9ea4af]">We&apos;ll let you know when something arrives.</p>
+              <p className="text-sm font-medium text-foreground">No notifications yet</p>
+              <p className="mt-1 text-xs text-muted-foreground">We&apos;ll let you know when something arrives.</p>
             </div>
           )}
         </ScrollArea>

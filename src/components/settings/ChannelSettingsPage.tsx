@@ -84,12 +84,12 @@ const SettingsRow = ({
   className?: string;
 }) => (
   <div className={cn("flex min-h-[72px] items-center gap-4 py-4", disabled && "opacity-60", className)}>
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[6px] bg-[#3d414c]">
-      <Icon className="h-[18px] w-[18px] text-[#b9bfca]" />
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[6px] bg-secondary">
+      <Icon className="h-[18px] w-[18px] text-muted-foreground" />
     </div>
     <div className="min-w-0 flex-1">
-      <p className="text-sm font-semibold leading-5 text-[#f2f3f5]">{label}</p>
-      <p className="mt-0.5 text-xs leading-5 text-[#c5cad4]">{description}</p>
+      <p className="text-sm font-semibold leading-5 text-foreground">{label}</p>
+      <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{description}</p>
     </div>
     <div className="shrink-0">{children}</div>
   </div>
@@ -128,10 +128,10 @@ const SettingsSection = ({
 }) => (
   <section className="space-y-2">
     <div className="space-y-1">
-      <h3 className="text-[13px] font-semibold uppercase tracking-wide text-[#c7ccd6]">{title}</h3>
-      {description && <p className="text-xs leading-5 text-[#aeb4bf]">{description}</p>}
+      <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
+      {description && <p className="text-xs leading-5 text-muted-foreground">{description}</p>}
     </div>
-    <div className="divide-y divide-[#4a4f5a]">{children}</div>
+    <div className="divide-y divide-border">{children}</div>
   </section>
 );
 
@@ -503,7 +503,7 @@ export const ChannelSettingsPage = () => {
           description="Members can only send one message within the selected interval."
         >
           <Select value={slowmodeSeconds} onValueChange={setSlowmodeSeconds}>
-            <SelectTrigger className="h-9 w-[220px] rounded-[4px] border-[#555b68] bg-[#323641] text-sm">
+            <SelectTrigger className="h-9 w-[220px] rounded-[4px] border-border bg-secondary/40 text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="rounded-[4px] border-border/50">
@@ -567,8 +567,8 @@ export const ChannelSettingsPage = () => {
           <div className="ml-[52px] space-y-3 py-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-[#f2f3f5]">Whitelisted Domains</p>
-                <p className="text-xs text-[#c5cad4] mt-0.5">Allow links from these domains for all users</p>
+                <p className="text-sm font-semibold text-foreground">Whitelisted Domains</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Allow links from these domains for all users</p>
               </div>
             </div>
 
@@ -577,7 +577,7 @@ export const ChannelSettingsPage = () => {
                 value={newDomain}
                 onChange={(e) => setNewDomain(e.target.value.toLowerCase())}
                 placeholder="e.g. github.com"
-                className="h-9 rounded-[4px] border-[#555b68] bg-[#323641] text-sm"
+                className="h-9 rounded-[4px] border-border bg-secondary/40 text-sm"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
@@ -611,7 +611,7 @@ export const ChannelSettingsPage = () => {
                 {allowedLinkDomains.map((domain) => (
                   <span
                     key={domain}
-                    className="inline-flex items-center gap-1 rounded-[4px] bg-[#414650] px-2 py-1 text-xs font-medium text-[#e3e5e8]"
+                    className="inline-flex items-center gap-1 rounded-[4px] bg-secondary px-2 py-1 text-xs font-medium text-foreground"
                   >
                     {domain}
                     <button
@@ -663,7 +663,7 @@ export const ChannelSettingsPage = () => {
           description="Pinned and system messages are preserved."
         >
           <Select value={autoDeleteSeconds} onValueChange={setAutoDeleteSeconds}>
-            <SelectTrigger className="h-9 w-[220px] rounded-[4px] border-[#555b68] bg-[#323641] text-sm">
+            <SelectTrigger className="h-9 w-[220px] rounded-[4px] border-border bg-secondary/40 text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="rounded-[4px] border-border/50">
@@ -850,15 +850,15 @@ export const ChannelSettingsPage = () => {
 
   return (
     <>
-      <div className="server-settings-reference h-full flex bg-[#363944] text-[#dbdee1]">
+      <div className="server-settings-reference h-full flex bg-background text-foreground">
         {/* Sidebar Navigation */}
-        <div className="w-[250px] flex-shrink-0 bg-[#171a1f] flex flex-col overflow-hidden">
+        <div className="w-[250px] flex-shrink-0 bg-layout-sidebar flex flex-col overflow-hidden">
           {/* Channel/Category Name Header */}
           <div className="px-[30px] pt-[32px] pb-[12px]">
-            <h2 className="text-xs font-medium uppercase tracking-widest text-[#a9adb7] truncate">
+            <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground truncate">
               {isCategory ? "Category settings" : "Channel settings"}
             </h2>
-            <p className="text-[11px] text-[#7f8490] mt-1 truncate">
+            <p className="text-[11px] text-muted-foreground mt-1 truncate">
               {isCategory ? category?.name : `#${channel?.name}`}
             </p>
           </div>
@@ -877,8 +877,8 @@ export const ChannelSettingsPage = () => {
                     className={cn(
                       NAV_ITEM_CLASS,
                       isActive
-                        ? "bg-[#2b2e34] text-white"
-                        : "text-[#d7d9df] hover:bg-[#202329] hover:text-white",
+                        ? "bg-secondary text-foreground"
+                        : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground",
                     )}
                   >
                     <Icon className="w-4 h-4" />
@@ -888,11 +888,11 @@ export const ChannelSettingsPage = () => {
               })}
 
               {/* Delete - at bottom, separated */}
-              <Separator className="my-5 bg-[#2b2e34]" />
+              <Separator className="my-5 bg-secondary" />
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirm(true)}
-                className={cn(NAV_ITEM_CLASS, "text-[#f05d5d] hover:bg-[#202329] hover:text-[#ff7373]")}
+                className={cn(NAV_ITEM_CLASS, "text-destructive hover:bg-secondary/70 hover:text-destructive")}
               >
                 <Trash2 className="w-4 h-4" />
                 Delete {isCategory ? "Category" : "Channel"}
@@ -901,12 +901,12 @@ export const ChannelSettingsPage = () => {
           </ScrollArea>
 
           {showSaveButton && (
-            <div className="px-4 pb-4 pt-2 border-t border-[#2b2e34] space-y-2">
+            <div className="px-4 pb-4 pt-2 border-t border-border space-y-2">
               <Button
                 type="button"
                 onClick={handleSubmit}
                 disabled={isSubmitting || ((activeTab === "overview" || isCategory) && !name.trim())}
-                className="w-full h-9 bg-[#f1c40f] hover:bg-[#ddb40d] text-[#1a1c21] font-semibold"
+                className="w-full h-9 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
               >
                 {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 Save changes
@@ -916,7 +916,7 @@ export const ChannelSettingsPage = () => {
                 variant="ghost"
                 size="sm"
                 onClick={resetActiveTabChanges}
-                className="w-full h-7 bg-transparent text-xs text-[#9ea2ad] hover:bg-[#202329] hover:text-white"
+                className="w-full h-7 bg-transparent text-xs text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
               >
                 Cancel
               </Button>
@@ -925,14 +925,14 @@ export const ChannelSettingsPage = () => {
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 overflow-hidden relative flex flex-col bg-[#363944]">
+        <div className="flex-1 overflow-hidden relative flex flex-col bg-background">
           {/* Close Button (ESC) */}
           <Button
             type="button"
             variant="ghost"
             size="icon"
             onClick={handleClose}
-            className="absolute top-[48px] right-[46px] z-10 h-10 w-10 bg-transparent text-[#aeb1bb] hover:bg-[#202329] hover:text-white"
+            className="absolute top-[48px] right-[46px] z-10 h-10 w-10 bg-transparent text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
             aria-label="Close channel settings"
           >
             <X className="w-7 h-7" />
@@ -947,7 +947,7 @@ export const ChannelSettingsPage = () => {
             /* Other tabs: titled scrollable content */
             <div className="flex-1 overflow-y-auto">
               <div className="px-[40px] py-[32px] pr-[84px]">
-                <h2 className="text-[20px] leading-7 font-bold mb-1 text-white">
+                <h2 className="text-[20px] leading-7 font-bold mb-1 text-foreground">
                   {navItems.find((n) => n.id === activeTab)?.label}
                 </h2>
                 <p className="text-sm text-muted-foreground mb-6">

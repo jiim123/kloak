@@ -1480,7 +1480,7 @@ export const MessageItem = memo(function MessageItem({
                                 <span className="inline-flex items-center mr-1.5 cursor-help">{roleIconNode}</span>
                               </RoleIconWrapper>
                             </TooltipTrigger>
-                            <TooltipContent className="border-transparent bg-[#4F515D] text-white">
+                            <TooltipContent>
                               {priorityRoleWithIcon.name}
                             </TooltipContent>
                           </Tooltip>
@@ -1506,7 +1506,7 @@ export const MessageItem = memo(function MessageItem({
                                   <span className="inline-flex items-center cursor-help">{roleIconNode}</span>
                                 </RoleIconWrapper>
                               </TooltipTrigger>
-                              <TooltipContent className="border-transparent bg-[#4F515D] text-white">
+                              <TooltipContent>
                                 {priorityRoleWithIcon.name}
                               </TooltipContent>
                             </Tooltip>
@@ -1584,7 +1584,7 @@ export const MessageItem = memo(function MessageItem({
                         <TooltipTrigger asChild>
                           <span className="text-[10px] text-muted-foreground cursor-help ml-1">(edited)</span>
                         </TooltipTrigger>
-                        <TooltipContent className="border-transparent bg-[#4F515D] text-white">
+                        <TooltipContent>
                           {new Date(message.edited_at).toLocaleString()}
                         </TooltipContent>
                       </Tooltip>
@@ -1611,7 +1611,7 @@ export const MessageItem = memo(function MessageItem({
               {!isBeingEdited && !message.is_system_message && (
                 <div
                   className={cn(
-                    "absolute right-2 -top-4 z-20 hidden md:flex items-center gap-0.5 bg-[#4E505C] border border-border/70 rounded-md shadow-xl p-0.5 transition-opacity duration-100",
+                    "absolute right-2 -top-4 z-20 hidden md:flex items-center gap-0.5 rounded-md border border-[hsl(var(--menu-border))] bg-[hsl(var(--menu))] p-0.5 text-[hsl(var(--menu-foreground))] shadow-xl shadow-black/30 transition-opacity duration-100",
                     showMoreMenu || showDesktopEmojiPicker || isRowHovered
                       ? "md:opacity-100"
                       : "md:opacity-0",
@@ -1622,7 +1622,7 @@ export const MessageItem = memo(function MessageItem({
                     topEmojis.map((emoji) => (
                       <button
                         key={`quick-${emoji}`}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-transparent transition-colors hover:bg-muted"
+                         className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-transparent transition-colors hover:bg-[hsl(var(--menu-hover))]"
                         onClick={() => handleAddReaction(emoji)}
                         aria-label={`React with ${emoji}`}
                         title={`React with ${emoji}`}
@@ -1639,7 +1639,7 @@ export const MessageItem = memo(function MessageItem({
                       serverId={currentServer?.id}
                     >
                       <button
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-transparent text-[hsl(var(--menu-foreground))]/70 transition-colors hover:bg-[hsl(var(--menu-hover))] hover:text-[hsl(var(--menu-foreground))]"
                         aria-label="Add reaction"
                         title="Add reaction"
                       >
@@ -1648,13 +1648,13 @@ export const MessageItem = memo(function MessageItem({
                     </EmojiPicker>
                   )}
                   {effectiveCanAddReactions && !isBlockedUser && (
-                    <div className="mx-0.5 h-4 w-px bg-white/20" aria-hidden="true" />
+                    <div className="mx-0.5 h-4 w-px bg-[hsl(var(--menu-separator))]" aria-hidden="true" />
                   )}
 
                   {/* Reply - Hide for blocked users */}
                   {!isBlockedUser && (
                     <button
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                       className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-transparent text-[hsl(var(--menu-foreground))]/70 transition-colors hover:bg-[hsl(var(--menu-hover))] hover:text-[hsl(var(--menu-foreground))]"
                       onClick={handleReply}
                       aria-label="Reply"
                       title="Reply"
@@ -1687,31 +1687,31 @@ export const MessageItem = memo(function MessageItem({
                   >
                     <DropdownMenuTrigger asChild>
                       <button
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                       className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-transparent text-[hsl(var(--menu-foreground))]/70 transition-colors hover:bg-[hsl(var(--menu-hover))] hover:text-[hsl(var(--menu-foreground))]"
                         aria-label="More actions"
                         title="More"
                       >
                         <MoreHorizontal className="w-4 h-4" />
                       </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="min-w-[190px] overflow-hidden rounded-md bg-[#4E505C] p-0">
+                    <DropdownMenuContent align="end" className="min-w-[190px] overflow-hidden rounded-md p-0">
                       {isOwnMessage && (
                         <DropdownMenuItem onClick={handleStartEditing} className="rounded-none px-3 py-2">
                           <Pencil className="h-4 w-4 shrink-0 mr-2" />
                           Edit
                         </DropdownMenuItem>
                       )}
-                      {isOwnMessage && <DropdownMenuSeparator className="mx-0 my-0 bg-white/10" />}
+                      {isOwnMessage && <DropdownMenuSeparator className="mx-0 my-0" />}
                       <DropdownMenuItem onClick={handleShareMessage} className="rounded-none px-3 py-2">
                         <Share2 className="h-4 w-4 shrink-0 mr-2" />
                         Share message
                       </DropdownMenuItem>
-                      <DropdownMenuSeparator className="mx-0 my-0 bg-white/10" />
+                      <DropdownMenuSeparator className="mx-0 my-0" />
                       <DropdownMenuItem onClick={handleCopyMessageLink} className="rounded-none px-3 py-2">
                         <Link2 className="h-4 w-4 shrink-0 mr-2" />
                         Copy link
                       </DropdownMenuItem>
-                      {canPinMessages && <DropdownMenuSeparator className="mx-0 my-0 bg-white/10" />}
+                      {canPinMessages && <DropdownMenuSeparator className="mx-0 my-0" />}
                       {canPinMessages && (
                         <DropdownMenuItem onClick={handlePin} className="rounded-none px-3 py-2">
                           <Pin className="h-4 w-4 shrink-0 mr-2" />
@@ -1822,13 +1822,13 @@ export const MessageItem = memo(function MessageItem({
                         "inline-flex h-7 items-center gap-1 rounded-full border px-2 py-0 transition-colors duration-150",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1 focus-visible:ring-offset-background",
                         reaction.hasReacted
-                          ? "border-[#73716c] bg-[#5F5E5B] text-white hover:bg-[#6a6965]"
-                          : "border-[#5f626d] bg-[#50504f4a] text-[#d8dbe2] hover:bg-[#5a5a585e]",
+                          ? "border-primary/40 bg-primary/15 text-foreground hover:bg-primary/20"
+                          : "border-border bg-secondary/50 text-muted-foreground hover:bg-secondary hover:text-foreground",
                         !effectiveCanAddReactions && "opacity-50 cursor-not-allowed",
                       )}
                     >
                       {reactionEmojiNode(reaction.emoji)}
-                      <span className={cn("text-[11px] leading-none text-[#d7dae2]", reaction.hasReacted ? "font-semibold" : "font-normal")}>
+                      <span className={cn("text-[11px] leading-none", reaction.hasReacted ? "font-semibold text-foreground" : "font-normal text-muted-foreground")}>
                         {reaction.count}
                       </span>
                     </button>

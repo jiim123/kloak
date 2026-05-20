@@ -673,7 +673,7 @@ const RolePermissionsEditorInline = ({
                       className={cn(
                         "h-6 px-2.5 py-1 text-[10px] font-medium",
                         state === true
-                          ? "bg-emerald-600 text-white shadow-sm"
+                          ? "bg-emerald-600 text-foreground shadow-sm"
                           : "text-muted-foreground hover:text-foreground",
                       )}
                     >
@@ -2323,13 +2323,13 @@ export const ServerSettingsPage = () => {
         className="hidden"
       />
 
-      <div className="server-settings-reference h-full flex bg-[#363944] text-[#dbdee1]">
+      <div className="server-settings-reference h-full flex bg-background text-foreground">
         {/* Sidebar Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex overflow-hidden">
-          <div className="w-[250px] flex-shrink-0 bg-[#171a1f] flex flex-col overflow-hidden">
+          <div className="w-[250px] flex-shrink-0 bg-layout-sidebar flex flex-col overflow-hidden">
             {/* Server Name Header */}
             <div className="px-[30px] pt-[32px] pb-[12px]">
-              <h2 className="text-xs font-medium uppercase tracking-widest text-[#a9adb7] truncate">
+              <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground truncate">
                 Server settings
               </h2>
             </div>
@@ -2340,7 +2340,7 @@ export const ServerSettingsPage = () => {
                 {/* Overview */}
                 <TabsTrigger
                   value="overview"
-                  className="w-full h-9 justify-start rounded-none px-[30px] py-0 text-sm font-medium leading-none text-[#d7d9df] data-[state=active]:bg-[#2b2e34] data-[state=active]:text-white data-[state=active]:shadow-none data-[state=inactive]:hover:bg-[#202329] data-[state=inactive]:hover:text-white transition-colors"
+                  className="w-full h-9 justify-start rounded-none px-[30px] py-0 text-sm font-medium leading-none text-muted-foreground data-[state=active]:bg-secondary data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=inactive]:hover:bg-secondary/70 data-[state=inactive]:hover:text-foreground transition-colors"
                 >
                   Overview
                 </TabsTrigger>
@@ -2348,7 +2348,7 @@ export const ServerSettingsPage = () => {
                 {canManageEmojis && (
                   <TabsTrigger
                     value="emojis"
-                    className="w-full h-9 justify-start rounded-none px-[30px] py-0 text-sm font-medium leading-none text-[#d7d9df] data-[state=active]:bg-[#2b2e34] data-[state=active]:text-white data-[state=active]:shadow-none data-[state=inactive]:hover:bg-[#202329] data-[state=inactive]:hover:text-white transition-colors"
+                    className="w-full h-9 justify-start rounded-none px-[30px] py-0 text-sm font-medium leading-none text-muted-foreground data-[state=active]:bg-secondary data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=inactive]:hover:bg-secondary/70 data-[state=inactive]:hover:text-foreground transition-colors"
                   >
                     Emojis
                   </TabsTrigger>
@@ -2356,27 +2356,27 @@ export const ServerSettingsPage = () => {
 
                 <TabsTrigger
                   value="roles"
-                  className="w-full h-9 justify-start rounded-none px-[30px] py-0 text-sm font-medium leading-none text-[#d7d9df] data-[state=active]:bg-[#2b2e34] data-[state=active]:text-white data-[state=active]:shadow-none data-[state=inactive]:hover:bg-[#202329] data-[state=inactive]:hover:text-white transition-colors"
+                  className="w-full h-9 justify-start rounded-none px-[30px] py-0 text-sm font-medium leading-none text-muted-foreground data-[state=active]:bg-secondary data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=inactive]:hover:bg-secondary/70 data-[state=inactive]:hover:text-foreground transition-colors"
                 >
                   Roles
                 </TabsTrigger>
                 {canManageInvites && (
                   <TabsTrigger
                     value="invites"
-                    className="w-full h-9 justify-start rounded-none px-[30px] py-0 text-sm font-medium leading-none text-[#d7d9df] data-[state=active]:bg-[#2b2e34] data-[state=active]:text-white data-[state=active]:shadow-none data-[state=inactive]:hover:bg-[#202329] data-[state=inactive]:hover:text-white transition-colors"
+                    className="w-full h-9 justify-start rounded-none px-[30px] py-0 text-sm font-medium leading-none text-muted-foreground data-[state=active]:bg-secondary data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=inactive]:hover:bg-secondary/70 data-[state=inactive]:hover:text-foreground transition-colors"
                   >
                     Invites
                   </TabsTrigger>
                 )}
                 <TabsTrigger
                   value="members"
-                  className="w-full h-9 justify-start rounded-none px-[30px] py-0 text-sm font-medium leading-none text-[#d7d9df] data-[state=active]:bg-[#2b2e34] data-[state=active]:text-white data-[state=active]:shadow-none data-[state=inactive]:hover:bg-[#202329] data-[state=inactive]:hover:text-white transition-colors"
+                  className="w-full h-9 justify-start rounded-none px-[30px] py-0 text-sm font-medium leading-none text-muted-foreground data-[state=active]:bg-secondary data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=inactive]:hover:bg-secondary/70 data-[state=inactive]:hover:text-foreground transition-colors"
                 >
                   Members
                 </TabsTrigger>
                 <TabsTrigger
                   value="bans"
-                  className="w-full h-9 justify-start rounded-none px-[30px] py-0 text-sm font-medium leading-none text-[#d7d9df] data-[state=active]:bg-[#2b2e34] data-[state=active]:text-white data-[state=active]:shadow-none data-[state=inactive]:hover:bg-[#202329] data-[state=inactive]:hover:text-white transition-colors"
+                  className="w-full h-9 justify-start rounded-none px-[30px] py-0 text-sm font-medium leading-none text-muted-foreground data-[state=active]:bg-secondary data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=inactive]:hover:bg-secondary/70 data-[state=inactive]:hover:text-foreground transition-colors"
                 >
                   Bans
                 </TabsTrigger>
@@ -2384,7 +2384,7 @@ export const ServerSettingsPage = () => {
                 {canManageChannels && (
                   <TabsTrigger
                     value="integrations"
-                    className="w-full h-9 justify-start rounded-none px-[30px] py-0 text-sm font-medium leading-none text-[#d7d9df] data-[state=active]:bg-[#2b2e34] data-[state=active]:text-white data-[state=active]:shadow-none data-[state=inactive]:hover:bg-[#202329] data-[state=inactive]:hover:text-white transition-colors"
+                    className="w-full h-9 justify-start rounded-none px-[30px] py-0 text-sm font-medium leading-none text-muted-foreground data-[state=active]:bg-secondary data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=inactive]:hover:bg-secondary/70 data-[state=inactive]:hover:text-foreground transition-colors"
                   >
                     Integrations
                   </TabsTrigger>
@@ -2393,10 +2393,10 @@ export const ServerSettingsPage = () => {
                 {/* Transfer Ownership & Delete Server - at bottom, separated */}
                 {isOwner && (
                   <>
-                    <Separator className="my-5 bg-[#2b2e34]" />
+                    <Separator className="my-5 bg-secondary" />
                     <TabsTrigger
                       value="transfer"
-                      className="w-full h-9 justify-start rounded-none px-[30px] py-0 text-sm font-medium leading-none text-[#d7d9df] data-[state=active]:bg-[#2b2e34] data-[state=active]:text-white data-[state=active]:shadow-none data-[state=inactive]:hover:bg-[#202329] data-[state=inactive]:hover:text-white transition-colors"
+                      className="w-full h-9 justify-start rounded-none px-[30px] py-0 text-sm font-medium leading-none text-muted-foreground data-[state=active]:bg-secondary data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=inactive]:hover:bg-secondary/70 data-[state=inactive]:hover:text-foreground transition-colors"
                     >
                       Transfer Ownership
                     </TabsTrigger>
@@ -2405,7 +2405,7 @@ export const ServerSettingsPage = () => {
                       variant="ghost"
                       size="sm"
                       onClick={() => setShowDeleteConfirm(true)}
-                      className="!flex !h-9 !w-full !justify-start !gap-0 !rounded-none !bg-transparent !px-[30px] !py-0 !text-left !text-sm !font-medium !leading-none !text-[#f05d5d] hover:!bg-[#202329] hover:!text-[#ff7373] sm:!text-sm"
+                      className="!flex !h-9 !w-full !justify-start !gap-0 !rounded-none !bg-transparent !px-[30px] !py-0 !text-left !text-sm !font-medium !leading-none !text-destructive hover:!bg-secondary/70 hover:!text-destructive sm:!text-sm"
                     >
                       Delete Server
                     </Button>
@@ -2415,12 +2415,12 @@ export const ServerSettingsPage = () => {
             </ScrollArea>
 
             {showSidebarSave && (
-              <div className="px-4 pb-4 pt-2 border-t border-[#2b2e34] space-y-2">
+              <div className="px-4 pb-4 pt-2 border-t border-border space-y-2">
                 <Button
                   type="button"
                   onClick={saveActiveTabChanges}
                   disabled={isSavingTabChanges || isLoading || isUploadingIcon || isUploadingBanner}
-                  className="w-full h-9 bg-[#f1c40f] hover:bg-[#ddb40d] text-[#1a1c21] font-semibold"
+                  className="w-full h-9 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
                 >
                   {(isSavingTabChanges || isLoading || isUploadingIcon || isUploadingBanner) && (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -2432,7 +2432,7 @@ export const ServerSettingsPage = () => {
                   variant="ghost"
                   size="sm"
                   onClick={() => void resetActiveTabChanges()}
-                  className="w-full h-7 bg-transparent text-xs text-[#9ea2ad] hover:bg-[#202329] hover:text-white"
+                  className="w-full h-7 bg-transparent text-xs text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
                 >
                   Cancel
                 </Button>
@@ -2441,14 +2441,14 @@ export const ServerSettingsPage = () => {
           </div>
 
           {/* Main Content Area */}
-          <div className="flex-1 overflow-y-auto relative bg-[#363944]">
+          <div className="flex-1 overflow-y-auto relative bg-background">
             {/* Close Button (ESC) */}
             <Button
               type="button"
               variant="ghost"
               size="icon"
               onClick={closeServerSettings}
-              className="absolute top-[48px] right-[46px] z-10 h-10 w-10 bg-transparent text-[#aeb1bb] hover:bg-[#202329] hover:text-white"
+              className="absolute top-[48px] right-[46px] z-10 h-10 w-10 bg-transparent text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
               aria-label="Close server settings"
             >
               <X className="w-7 h-7" />
@@ -2456,7 +2456,7 @@ export const ServerSettingsPage = () => {
 
             {/* Overview Tab */}
             <TabsContent value="overview" className="m-0 px-[40px] py-[32px] pr-[84px]">
-              <h2 className="text-[20px] leading-7 font-bold mb-[26px] text-white">Overview</h2>
+              <h2 className="text-[20px] leading-7 font-bold mb-[26px] text-foreground">Overview</h2>
               <form id="server-settings-overview-form" onSubmit={handleSubmit(onSubmit)} className="space-y-5 max-w-3xl">
                 {/* Server Information */}
                 <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-4">
@@ -3544,8 +3544,8 @@ export const ServerSettingsPage = () => {
                   {/* Import from emoji.gg - highlighted */}
                   <div className="flex items-center justify-between p-4 rounded-xl" style={{ backgroundColor: 'hsl(238, 84%, 65%)' }}>
                     <div className="min-w-0 flex-1">
-                      <h4 className="text-sm font-medium text-white">Import from emoji.gg</h4>
-                      <p className="text-xs text-white/70 mt-0.5">
+                      <h4 className="text-sm font-medium text-foreground">Import from emoji.gg</h4>
+                      <p className="text-xs text-foreground/70 mt-0.5">
                         Browse and import emoji packs from emoji.gg
                       </p>
                     </div>
@@ -3553,7 +3553,7 @@ export const ServerSettingsPage = () => {
                       type="button"
                       size="sm"
                       onClick={() => openModal("import-emoji-pack")}
-                      className="h-9 rounded-[3px] bg-[#d7dbe3] px-5 font-medium text-[#363b44] hover:bg-white"
+                      className="h-9 rounded-[3px] bg-primary px-5 font-medium text-primary-foreground hover:bg-primary/90"
                     >
                       <Link2 className="w-4 h-4 mr-2" />
                       Import Pack
@@ -3612,7 +3612,7 @@ export const ServerSettingsPage = () => {
                           variant="outline"
                           onClick={clearEmoji}
                           disabled={isUploadingEmoji && !!emojiFile}
-                          className="h-9 rounded-[3px] border-[#4a4f5a] bg-transparent px-4 text-[#d7dbe3] hover:bg-[#3e434d] hover:text-white"
+                          className="h-9 rounded-[3px] border-border bg-transparent px-4 text-foreground hover:bg-secondary/70 hover:text-foreground"
                         >
                           Clear
                         </Button>
@@ -3621,7 +3621,7 @@ export const ServerSettingsPage = () => {
                           size="sm"
                           onClick={uploadServerEmoji}
                           disabled={isUploadingEmoji || !emojiFile || !emojiName.trim()}
-                          className="h-9 flex-1 rounded-[3px] bg-[#d7dbe3] px-5 font-medium text-[#363b44] hover:bg-white disabled:bg-[#6f7480] disabled:text-[#2f333b] sm:flex-none"
+                          className="h-9 flex-1 rounded-[3px] bg-primary px-5 font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-secondary disabled:text-muted-foreground sm:flex-none"
                         >
                           {isUploadingEmoji && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                           Upload
@@ -3876,7 +3876,7 @@ export const ServerSettingsPage = () => {
                       type="button"
                       size="sm"
                       onClick={() => openModal("import-discord-template")}
-                      className="h-9 flex-shrink-0 rounded-[3px] bg-[#d7dbe3] px-5 font-medium text-[#363b44] hover:bg-white"
+                      className="h-9 flex-shrink-0 rounded-[3px] bg-primary px-5 font-medium text-primary-foreground hover:bg-primary/90"
                     >
                       <Download className="w-4 h-4 mr-2" />
                       Import
@@ -3967,7 +3967,7 @@ export const ServerSettingsPage = () => {
               type="button"
               variant="outline"
               onClick={() => setShowDeleteConfirm(false)}
-              className="h-9 !rounded-[3px] border-[#4a4f5a] bg-transparent px-4 text-[#d7dbe3] hover:bg-[#3e434d] hover:text-white"
+              className="h-9 !rounded-[3px] border-border bg-transparent px-4 text-foreground hover:bg-secondary/70 hover:text-foreground"
             >
               Cancel
             </Button>

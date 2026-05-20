@@ -15,7 +15,7 @@ export function DesktopTitleBar({ title }: { title?: string }) {
   const location = useLocation();
 
   return (
-    <div className="flex h-9 w-full select-none items-stretch border-b border-white/5 bg-layout-sidebar text-foreground">
+    <div className="flex h-9 w-full select-none items-stretch border-b border-border/60 bg-layout-sidebar text-foreground">
       {/* Drag region + title */}
       <div
         className="flex min-w-0 flex-1 items-center justify-center px-3 text-sm"
@@ -32,7 +32,7 @@ export function DesktopTitleBar({ title }: { title?: string }) {
         <button
           type="button"
           aria-label="Minimize"
-          className="w-12 hover:bg-white/10 active:bg-white/15"
+          className="w-12 hover:bg-secondary active:bg-secondary/80"
           onClick={() => void withCurrentWindow((w) => w.minimize())}
         >
           <Minus className="mx-auto h-4 w-4 opacity-90" />
@@ -40,7 +40,7 @@ export function DesktopTitleBar({ title }: { title?: string }) {
         <button
           type="button"
           aria-label="Maximize"
-          className="w-12 hover:bg-white/10 active:bg-white/15"
+          className="w-12 hover:bg-secondary active:bg-secondary/80"
           onClick={() => void withCurrentWindow((w) => w.toggleMaximize())}
         >
           <Square className="mx-auto h-3.5 w-3.5 opacity-90" />

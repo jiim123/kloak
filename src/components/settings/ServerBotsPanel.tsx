@@ -121,10 +121,7 @@ const MessageCreatedIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-const getCategoryBadgeClass = (category: "MEMBERSHIP" | "CHAT") =>
-  category === "MEMBERSHIP"
-    ? "border border-[#6f5fa4] bg-[#3f3458] text-[#d5c4ff]"
-    : "border border-[#2d7f78] bg-[#183b3a] text-[#93efe5]";
+const getCategoryBadgeClass = () => "border border-border bg-secondary text-muted-foreground";
 
 const TRIGGER_OPTIONS: TriggerOption[] = [
   {
@@ -162,20 +159,20 @@ const ALL_CHANNELS_VALUE = "all";
 const ANY_ROLE_VALUE = "any";
 
 const BOT_MODAL_CONTENT_CLASS =
-  "max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-[#4a4f5a] bg-[#333842] p-0 text-[#f4f5f7] shadow-2xl sm:max-w-[448px]";
+  "max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-border bg-card p-0 text-foreground shadow-2xl sm:max-w-[448px]";
 const BOT_FLOW_MODAL_CONTENT_CLASS =
-  "max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-[#4a4f5a] bg-[#333842] p-0 text-[#f4f5f7] shadow-2xl sm:max-w-[640px]";
+  "max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-border bg-card p-0 text-foreground shadow-2xl sm:max-w-[640px]";
 const BOT_MODAL_INPUT_CLASS =
-  "mt-2 h-9 rounded-none border-0 border-b border-white/80 bg-transparent px-0 text-sm text-[#f3f4f7] shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0";
+  "mt-2 h-9 rounded-none border-0 border-b border-border bg-transparent px-0 text-sm text-foreground shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0";
 const BOT_MODAL_PRIMARY_BUTTON_CLASS =
-  "h-9 rounded-[3px] bg-[#d7dbe3] px-5 font-medium text-[#363b44] hover:bg-white disabled:bg-[#454b55] disabled:text-[#858b96] disabled:opacity-100";
+  "h-9 rounded-[3px] bg-primary px-5 font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-secondary disabled:text-muted-foreground disabled:opacity-100";
 const BOT_MODAL_CANCEL_BUTTON_CLASS =
-  "h-9 rounded-[3px] px-4 text-[#b9bec8] hover:bg-transparent hover:text-white";
-const BOT_MODAL_LABEL_CLASS = "text-xs font-medium uppercase tracking-wide text-[#c4c8d0]";
+  "h-9 rounded-[3px] px-4 text-muted-foreground hover:bg-transparent hover:text-foreground";
+const BOT_MODAL_LABEL_CLASS = "text-xs font-medium uppercase tracking-wide text-muted-foreground";
 const BOT_SELECT_CONTENT_CLASS =
-  "overflow-hidden rounded-md border border-border/50 bg-[#4E505C] p-0 text-[#f4f5f7] shadow-xl";
+  "overflow-hidden rounded-md border border-[hsl(var(--menu-border))] bg-[hsl(var(--menu))] p-0 text-[hsl(var(--menu-foreground))] shadow-xl shadow-black/30";
 const BOT_SELECT_ITEM_CLASS =
-  "rounded-none py-2 pl-9 pr-3 text-sm !text-[#f4f5f7] data-[highlighted]:bg-white/[0.06] data-[highlighted]:text-white focus:bg-white/[0.06] focus:text-white";
+  "rounded-none py-2 pl-9 pr-3 text-sm !text-[hsl(var(--menu-foreground))] data-[highlighted]:bg-[hsl(var(--menu-focus))] data-[highlighted]:text-[hsl(var(--menu-foreground))] focus:bg-[hsl(var(--menu-focus))] focus:text-[hsl(var(--menu-foreground))]";
 
 const getTriggerOption = (id: BotTriggerType) => TRIGGER_OPTIONS.find((option) => option.id === id) ?? TRIGGER_OPTIONS[0];
 const getActionOption = (id: BotActionType) => ACTION_OPTIONS.find((option) => option.id === id) ?? ACTION_OPTIONS[0];
@@ -199,7 +196,7 @@ const BotAvatar = ({ muted = false }: { name: string; muted?: boolean }) => (
 const FlowIcon = ({ type }: { type: BotTriggerType | BotActionType }) => {
   const option = type === "send_channel_message" ? getActionOption(type) : getTriggerOption(type);
   const Icon = option.icon;
-  return <Icon className="h-5 w-5 text-[#c4c8d0]" />;
+  return <Icon className="h-5 w-5 text-muted-foreground" />;
 };
 
 export const ServerBotsPanel = ({
@@ -532,16 +529,16 @@ export const ServerBotsPanel = ({
         </button>
 
         <div className="mb-7 flex items-center gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-[#9b7b25] bg-[#d6aa2f] text-[#2d3037]">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-border bg-primary text-primary-foreground">
             <Bot className="h-6 w-6" />
           </div>
           <div className="w-full max-w-md">
-            <Label className="text-[10px] font-semibold leading-none text-[#c4c8d0]">Name</Label>
-            <div className="border-b border-white/80">
+            <Label className="text-[10px] font-semibold leading-none text-muted-foreground">Name</Label>
+            <div className="border-b border-border">
               <Input
                 value={selectedBot.name}
                 disabled
-                className="h-7 cursor-default rounded-none border-0 bg-transparent px-0 py-0 text-sm text-[#f3f4f7] opacity-100 shadow-none outline-none disabled:cursor-default disabled:opacity-100 focus-visible:ring-0 focus-visible:ring-offset-0"
+                className="h-7 cursor-default rounded-none border-0 bg-transparent px-0 py-0 text-sm text-foreground opacity-100 shadow-none outline-none disabled:cursor-default disabled:opacity-100 focus-visible:ring-0 focus-visible:ring-offset-0"
               />
             </div>
           </div>
@@ -588,28 +585,28 @@ export const ServerBotsPanel = ({
               return (
                 <div
                   key={flow.id}
-                  className="flex items-center gap-3 rounded-[4px] border border-[#3f4450] bg-[#2f343d] px-3 py-2"
+                  className="flex items-center gap-3 rounded-[4px] border border-border bg-secondary/40 px-3 py-2"
                 >
                   <div className="grid min-w-0 flex-1 grid-cols-1 items-center gap-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:gap-3">
-                    <div className="flex min-w-0 items-center gap-2 rounded-[3px] border border-[#414753] bg-[#363b45] px-3 py-2">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[3px] bg-[#2c3139]">
+                    <div className="flex min-w-0 items-center gap-2 rounded-[3px] border border-border bg-secondary/50 px-3 py-2">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[3px] bg-secondary">
                         <FlowIcon type={flow.trigger_type} />
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate text-xs font-semibold leading-4 text-[#f3f4f7]">{trigger.label}</p>
-                        <p className="truncate text-[11px] leading-4 text-[#aeb4c0]">{triggerDescription}</p>
+                        <p className="truncate text-xs font-semibold leading-4 text-foreground">{trigger.label}</p>
+                        <p className="truncate text-[11px] leading-4 text-muted-foreground">{triggerDescription}</p>
                       </div>
                     </div>
 
-                    <ChevronRight className="mx-auto h-4 w-4 shrink-0 rotate-90 text-[#8c939f] sm:rotate-0" />
+                    <ChevronRight className="mx-auto h-4 w-4 shrink-0 rotate-90 text-muted-foreground sm:rotate-0" />
 
-                    <div className="flex min-w-0 items-center gap-2 rounded-[3px] border border-[#414753] bg-[#363b45] px-3 py-2">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[3px] bg-[#2c3139]">
+                    <div className="flex min-w-0 items-center gap-2 rounded-[3px] border border-border bg-secondary/50 px-3 py-2">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[3px] bg-secondary">
                         <FlowIcon type={flow.action_type} />
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate text-xs font-semibold leading-4 text-[#f3f4f7]">{action.label}</p>
-                        <p className="truncate text-[11px] leading-4 text-[#aeb4c0]">to {actionChannelLabel}</p>
+                        <p className="truncate text-xs font-semibold leading-4 text-foreground">{action.label}</p>
+                        <p className="truncate text-[11px] leading-4 text-muted-foreground">to {actionChannelLabel}</p>
                       </div>
                     </div>
                   </div>
@@ -665,7 +662,7 @@ export const ServerBotsPanel = ({
               }}
               className="flex max-h-[82vh] flex-col overflow-hidden"
             >
-              <div className="border-b border-[#2b3039] bg-[#2f343d] px-5 py-3">
+              <div className="border-b border-border bg-secondary/40 px-5 py-3">
                 <div className="flex items-center gap-2">
                   {canGoBackInFlow && (
                     <Button
@@ -673,7 +670,7 @@ export const ServerBotsPanel = ({
                       variant="ghost"
                       size="icon"
                       onClick={handleFlowBack}
-                      className="h-8 w-8 rounded-[3px] text-[#c4c8d0] hover:bg-[#3a3f4b] hover:text-white"
+                      className="h-8 w-8 rounded-[3px] text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
                     >
                       <ArrowLeft className="h-4 w-4" />
                     </Button>
@@ -684,7 +681,7 @@ export const ServerBotsPanel = ({
 
               {flowBuilderStep === "overview" && (
                 <div className="space-y-4 overflow-y-auto px-6 py-4">
-                  <div className="grid grid-cols-[1fr_auto] items-center border border-[#424753] bg-[#333842] transition-colors hover:bg-[#3a3f4b]">
+                  <div className="grid grid-cols-[1fr_auto] items-center border border-border bg-card transition-colors hover:bg-secondary/70">
                     <button
                       type="button"
                       className="flex items-center gap-3 px-3 py-3 text-left"
@@ -695,9 +692,9 @@ export const ServerBotsPanel = ({
                     >
                       <FlowIcon type={draftTrigger} />
                       <div>
-                        <p className="text-sm font-medium leading-none text-[#f3f4f7]">Trigger</p>
+                        <p className="text-sm font-medium leading-none text-foreground">Trigger</p>
                         {isTriggerConfigured && (
-                          <p className="mt-1.5 text-xs leading-5 text-[#c4c8d0]">{getTriggerOption(draftTrigger).label}</p>
+                          <p className="mt-1.5 text-xs leading-5 text-muted-foreground">{getTriggerOption(draftTrigger).label}</p>
                         )}
                       </div>
                     </button>
@@ -709,13 +706,13 @@ export const ServerBotsPanel = ({
                         setTriggerSearch("");
                         setFlowBuilderStep("trigger-picker");
                       }}
-                      className="mr-3 h-8 rounded-[3px] border-[#4f5562] bg-transparent px-4 text-xs text-[#e2e4e9] hover:bg-[#3a3f4b]"
+                      className="mr-3 h-8 rounded-[3px] border-border bg-transparent px-4 text-xs text-foreground hover:bg-secondary/70"
                     >
                       Add
                     </Button>
                   </div>
 
-                  <div className="grid grid-cols-[1fr_auto] items-center border border-[#424753] bg-[#333842] transition-colors hover:bg-[#3a3f4b]">
+                  <div className="grid grid-cols-[1fr_auto] items-center border border-border bg-card transition-colors hover:bg-secondary/70">
                     <button
                       type="button"
                       className="flex items-center gap-3 px-3 py-3 text-left"
@@ -726,9 +723,9 @@ export const ServerBotsPanel = ({
                     >
                       <FlowIcon type={draftAction} />
                       <div>
-                        <p className="text-sm font-medium leading-none text-[#f3f4f7]">Action</p>
+                        <p className="text-sm font-medium leading-none text-foreground">Action</p>
                         {isTriggerConfigured && (
-                          <p className="mt-1.5 text-xs leading-5 text-[#c4c8d0]">{getActionOption(draftAction).label}</p>
+                          <p className="mt-1.5 text-xs leading-5 text-muted-foreground">{getActionOption(draftAction).label}</p>
                         )}
                       </div>
                     </button>
@@ -738,7 +735,7 @@ export const ServerBotsPanel = ({
                         size="sm"
                         variant="outline"
                         onClick={() => setFlowBuilderStep("action-picker")}
-                        className="mr-3 h-8 rounded-[3px] border-[#4f5562] bg-transparent px-4 text-xs text-[#e2e4e9] hover:bg-[#3a3f4b]"
+                        className="mr-3 h-8 rounded-[3px] border-border bg-transparent px-4 text-xs text-foreground hover:bg-secondary/70"
                       >
                         Add
                       </Button>
@@ -751,13 +748,13 @@ export const ServerBotsPanel = ({
 
               {flowBuilderStep === "trigger-picker" && (
                 <div className="overflow-y-auto px-6 py-4">
-                  <div className="mb-4 flex h-9 items-center gap-2 border border-[#4a4f5a] bg-[#2f343d] px-3">
-                    <Search className="h-4 w-4 text-[#9ea4af]" />
+                  <div className="mb-4 flex h-9 items-center gap-2 border border-border bg-secondary/40 px-3">
+                    <Search className="h-4 w-4 text-muted-foreground" />
                     <Input
                       value={triggerSearch}
                       onChange={(event) => setTriggerSearch(event.target.value)}
                       placeholder={`Search ${TRIGGER_OPTIONS.length} triggers`}
-                      className="h-8 border-0 bg-transparent px-0 text-sm text-[#f3f4f7] shadow-none placeholder:text-[#767b85] focus-visible:ring-0"
+                      className="h-8 border-0 bg-transparent px-0 text-sm text-foreground shadow-none placeholder:text-muted-foreground focus-visible:ring-0"
                     />
                   </div>
                   <ScrollArea className="max-h-[380px]">
@@ -769,9 +766,9 @@ export const ServerBotsPanel = ({
                             key={trigger.id}
                             type="button"
                             onClick={() => selectTrigger(trigger.id)}
-                            className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-3 border border-[#4a4f5a] bg-[#2f343d] px-3 py-2 text-left hover:bg-[#30333d]"
+                            className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-3 border border-border bg-secondary/40 px-3 py-2 text-left hover:bg-secondary/70"
                           >
-                            <Icon className="h-6 w-6 text-[#c4c8d0]" />
+                            <Icon className="h-6 w-6 text-muted-foreground" />
                             <span className="min-w-0">
                               <span className="mb-1 flex items-center gap-2">
                                 <span
@@ -782,11 +779,11 @@ export const ServerBotsPanel = ({
                                 >
                                   {trigger.category}
                                 </span>
-                                <span className="truncate text-sm font-medium text-[#f3f4f7]">{trigger.label}</span>
+                                <span className="truncate text-sm font-medium text-foreground">{trigger.label}</span>
                               </span>
-                              <span className="block truncate text-xs text-[#c4c8d0]">{trigger.description}</span>
+                              <span className="block truncate text-xs text-muted-foreground">{trigger.description}</span>
                             </span>
-                            <span className="rounded-[3px] border border-[#42464f] px-3 py-1 text-xs font-medium text-[#e2e4e9]">
+                            <span className="rounded-[3px] border border-border px-3 py-1 text-xs font-medium text-foreground">
                               Select
                             </span>
                           </button>
@@ -801,7 +798,7 @@ export const ServerBotsPanel = ({
                 <div className="space-y-4 overflow-y-auto px-6 py-4">
                   <div>
                     <Label className={BOT_MODAL_LABEL_CLASS}>Type</Label>
-                    <div className="mt-2 border-b border-white/80 pb-2 text-sm text-[#f3f4f7]">
+                    <div className="mt-2 border-b border-border pb-2 text-sm text-foreground">
                       {getTriggerOption(draftTrigger).label}
                     </div>
                   </div>
@@ -810,7 +807,7 @@ export const ServerBotsPanel = ({
                     <div>
                       <Label className={BOT_MODAL_LABEL_CLASS}>Channel</Label>
                       <Select value={draftTriggerChannelId} onValueChange={setDraftTriggerChannelId}>
-                        <SelectTrigger className="mt-2 h-9 rounded-none border-0 border-b border-white/80 bg-transparent px-0 text-sm text-[#f3f4f7] shadow-none focus:ring-0 focus:ring-offset-0">
+                        <SelectTrigger className="mt-2 h-9 rounded-none border-0 border-b border-border bg-transparent px-0 text-sm text-foreground shadow-none focus:ring-0 focus:ring-offset-0">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className={BOT_SELECT_CONTENT_CLASS}>
@@ -830,7 +827,7 @@ export const ServerBotsPanel = ({
                   <div>
                     <Label className={BOT_MODAL_LABEL_CLASS}>Performed by</Label>
                     <Select value={draftTriggerRoleId} onValueChange={setDraftTriggerRoleId}>
-                      <SelectTrigger className="mt-2 h-9 rounded-none border-0 border-b border-white/80 bg-transparent px-0 text-sm text-[#f3f4f7] shadow-none focus:ring-0 focus:ring-offset-0">
+                      <SelectTrigger className="mt-2 h-9 rounded-none border-0 border-b border-border bg-transparent px-0 text-sm text-foreground shadow-none focus:ring-0 focus:ring-offset-0">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className={BOT_SELECT_CONTENT_CLASS}>
@@ -857,9 +854,9 @@ export const ServerBotsPanel = ({
                         key={action.id}
                         type="button"
                         onClick={() => selectAction(action.id)}
-                        className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-3 border border-[#4a4f5a] bg-[#2f343d] px-3 py-2 text-left hover:bg-[#30333d]"
+                        className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-3 border border-border bg-secondary/40 px-3 py-2 text-left hover:bg-secondary/70"
                       >
-                        <Icon className="h-6 w-6 text-[#c4c8d0]" />
+                        <Icon className="h-6 w-6 text-muted-foreground" />
                         <span className="min-w-0">
                           <span className="mb-1 flex items-center gap-2">
                             <span
@@ -870,11 +867,11 @@ export const ServerBotsPanel = ({
                             >
                               {action.category}
                             </span>
-                            <span className="truncate text-sm font-medium text-[#f3f4f7]">{action.label}</span>
+                            <span className="truncate text-sm font-medium text-foreground">{action.label}</span>
                           </span>
-                          <span className="block truncate text-xs text-[#c4c8d0]">{action.description}</span>
+                          <span className="block truncate text-xs text-muted-foreground">{action.description}</span>
                         </span>
-                        <span className="rounded-[3px] border border-[#42464f] px-3 py-1 text-xs font-medium text-[#e2e4e9]">
+                        <span className="rounded-[3px] border border-border px-3 py-1 text-xs font-medium text-foreground">
                           Select
                         </span>
                       </button>
@@ -887,7 +884,7 @@ export const ServerBotsPanel = ({
                 <div className="space-y-4 overflow-y-auto px-6 py-4">
                   <div>
                     <Label className={BOT_MODAL_LABEL_CLASS}>Type</Label>
-                    <div className="mt-2 border-b border-white/80 pb-2 text-sm text-[#f3f4f7]">
+                    <div className="mt-2 border-b border-border pb-2 text-sm text-foreground">
                       {getActionOption(draftAction).label}
                     </div>
                   </div>
@@ -895,7 +892,7 @@ export const ServerBotsPanel = ({
                   <div>
                     <Label className={BOT_MODAL_LABEL_CLASS}>Channel</Label>
                     <Select value={draftChannelId} onValueChange={setDraftChannelId}>
-                      <SelectTrigger className="mt-2 h-9 rounded-none border-0 border-b border-white/80 bg-transparent px-0 text-sm text-[#f3f4f7] shadow-none focus:ring-0 focus:ring-offset-0">
+                      <SelectTrigger className="mt-2 h-9 rounded-none border-0 border-b border-border bg-transparent px-0 text-sm text-foreground shadow-none focus:ring-0 focus:ring-offset-0">
                         <SelectValue placeholder="Select channel" />
                       </SelectTrigger>
                       <SelectContent className={BOT_SELECT_CONTENT_CLASS}>
@@ -929,7 +926,7 @@ export const ServerBotsPanel = ({
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-3 border-t border-[#2c3139] bg-[#30353f] px-5 py-3">
+              <div className="flex items-center justify-end gap-3 border-t border-border bg-secondary/30 px-5 py-3">
                 <Button
                   type="button"
                   variant="ghost"
@@ -1057,7 +1054,7 @@ export const ServerBotsPanel = ({
             }}
             className="flex max-h-[82vh] flex-col overflow-hidden"
           >
-            <div className="border-b border-[#2b3039] bg-[#2f343d] px-5 py-3">
+            <div className="border-b border-border bg-secondary/40 px-5 py-3">
               <div className="text-base font-medium leading-none tracking-tight">Create bot</div>
             </div>
 
@@ -1074,7 +1071,7 @@ export const ServerBotsPanel = ({
               />
             </div>
 
-            <div className="flex items-center justify-end gap-3 border-t border-[#2c3139] bg-[#30353f] px-5 py-3">
+            <div className="flex items-center justify-end gap-3 border-t border-border bg-secondary/30 px-5 py-3">
               <Button
                 type="button"
                 variant="ghost"

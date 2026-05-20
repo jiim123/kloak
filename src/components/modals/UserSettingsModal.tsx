@@ -1396,12 +1396,12 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
       {/* Desktop: In-layout page (rendered from AppLayout) */}
       {variant === "page" && !isMobile && (
-        <div className="server-settings-reference h-full flex bg-[#363944] text-[#dbdee1]">
+        <div className="server-settings-reference h-full flex bg-background text-foreground">
           {/* Sidebar Navigation */}
-          <div className="w-[250px] flex-shrink-0 bg-[#171a1f] flex flex-col overflow-hidden">
+          <div className="w-[250px] flex-shrink-0 bg-layout-sidebar flex flex-col overflow-hidden">
             {/* Settings Title Header */}
             <div className="px-[30px] pt-[32px] pb-[12px]">
-              <h2 className="text-xs font-medium uppercase tracking-widest text-[#a9adb7] truncate">
+              <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground truncate">
                 User settings
               </h2>
             </div>
@@ -1419,8 +1419,8 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                       className={cn(
                         "user-settings-nav-row w-full h-9 justify-start px-[30px] py-0 text-left text-sm font-medium leading-none transition-colors",
                         isActive
-                          ? "bg-[#2b2e34] text-white"
-                          : "text-[#d7d9df] hover:bg-[#202329] hover:text-white",
+                          ? "bg-secondary text-foreground"
+                          : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground",
                       )}
                     >
                       {item.label}
@@ -1429,11 +1429,11 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 })}
 
                 {/* Logout - at bottom, separated */}
-                <Separator className="my-5 bg-[#2b2e34]" />
+                <Separator className="my-5 bg-secondary" />
                 <button
                   type="button"
                   onClick={handleLogoutClick}
-                  className="user-settings-nav-row w-full h-9 px-[30px] py-0 text-left text-sm font-medium leading-none text-[#f05d5d] transition-colors hover:bg-[#202329] hover:text-[#ff7373]"
+                  className="user-settings-nav-row w-full h-9 px-[30px] py-0 text-left text-sm font-medium leading-none text-destructive transition-colors hover:bg-secondary/70 hover:text-destructive"
                 >
                   Log Out
                 </button>
@@ -1442,14 +1442,14 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           </div>
 
           {/* Main Content Area */}
-          <div className="flex-1 overflow-y-auto relative bg-[#363944]">
+          <div className="flex-1 overflow-y-auto relative bg-background">
             {/* Close Button (ESC) */}
             <Button
               type="button"
               variant="ghost"
               size="icon"
               onClick={handleClose}
-              className="absolute top-[48px] right-[46px] z-10 h-10 w-10 bg-transparent text-[#aeb1bb] hover:bg-[#202329] hover:text-white"
+              className="absolute top-[48px] right-[46px] z-10 h-10 w-10 bg-transparent text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
               aria-label="Close user settings"
             >
               <X className="w-7 h-7" />
@@ -1457,7 +1457,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
             {/* Content */}
             <div className="px-[40px] py-[32px] pr-[84px]">
-              <h2 className="text-[20px] leading-7 font-bold mb-[26px] text-white">{activeNavItem?.label}</h2>
+              <h2 className="text-[20px] leading-7 font-bold mb-[26px] text-foreground">{activeNavItem?.label}</h2>
               <div className="max-w-3xl">{renderContent()}</div>
             </div>
           </div>
@@ -1601,7 +1601,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 setShowDeleteConfirm(true);
               }}
               disabled={isLoadingPreview}
-              className="rounded-xl bg-red-600 text-white hover:bg-red-700"
+              className="rounded-xl bg-red-600 text-foreground hover:bg-red-700"
             >
               Continue to Delete
             </AlertDialogAction>
@@ -1623,7 +1623,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
             <AlertDialogCancel className="m-0 rounded-xl">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteAccount}
-              className="rounded-xl bg-red-600 text-white hover:bg-red-700"
+              className="rounded-xl bg-red-600 text-foreground hover:bg-red-700"
             >
               {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
               Delete Forever

@@ -3,7 +3,8 @@ import { persist } from "zustand/middleware";
 
 // All available themes
 export const THEMES = [
-  { id: "default", name: "Dark", description: "Default dark theme" },
+  { id: "default", name: "Default", description: "Original gray dark theme" },
+  { id: "amoled", name: "AMOLED", description: "Pure black theme for OLED displays" },
   { id: "light", name: "Light", description: "Clean light theme" },
 ] as const;
 

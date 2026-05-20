@@ -218,7 +218,7 @@ const ActionBar = memo(
     const iconBtnClass =
       "flex h-10 w-10 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground transition-colors disabled:cursor-not-allowed disabled:opacity-40";
     const menuItemClass =
-      "min-h-[36px] cursor-pointer gap-2.5 px-3 py-2 text-[13px] font-semibold text-[#dbdee1] focus:bg-white/[0.07] hover:bg-white/[0.07]";
+      "min-h-[36px] cursor-pointer gap-2.5 px-3 py-2 text-[13px] font-semibold text-popover-foreground focus:bg-secondary/70 hover:bg-secondary/70";
 
     return (
       <div className="flex min-h-[44px] items-stretch gap-1">
@@ -228,7 +228,7 @@ const ActionBar = memo(
               <button
                 type="button"
                 disabled={!canSendMessage}
-                className="flex h-11 w-11 items-center justify-center border-r border-white/10 text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex h-11 w-11 items-center justify-center border-r border-border/60 text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
                 aria-label="Open message actions"
               >
                 <Plus className="h-6 w-6" />
@@ -238,7 +238,7 @@ const ActionBar = memo(
               align="start"
               side="top"
               sideOffset={8}
-              className="w-[292px] rounded-md border border-white/10 bg-[#4E505C] p-0 shadow-[0_10px_28px_rgba(0,0,0,0.35)]"
+              className="w-[292px] rounded-md border border-border/80 bg-popover p-0 shadow-[0_10px_28px_rgba(0,0,0,0.5)]"
             >
               {onAttachClick && (
                 <DropdownMenuItem
@@ -246,7 +246,7 @@ const ActionBar = memo(
                   onSelect={onAttachClick}
                   className={menuItemClass}
                 >
-                  <Paperclip className="h-4 w-4 text-[#b5bac1]" />
+                  <Paperclip className="h-4 w-4 text-muted-foreground" />
                   <span>Media or file</span>
                 </DropdownMenuItem>
               )}
@@ -257,10 +257,10 @@ const ActionBar = memo(
                   onSelect={() => setShowCreatePoll(true)}
                   className={`${menuItemClass} items-start`}
                 >
-                  <SquareChartGantt className="mt-0.5 h-4 w-4 text-[#b5bac1]" />
+                  <SquareChartGantt className="mt-0.5 h-4 w-4 text-muted-foreground" />
                   <span className="flex flex-col leading-tight">
                     <span>Poll</span>
-                    <span className="mt-0.5 text-[13px] font-medium text-[#b5bac1]">
+                    <span className="mt-0.5 text-[13px] font-medium text-muted-foreground">
                       A single or multiple-choice question.
                     </span>
                   </span>

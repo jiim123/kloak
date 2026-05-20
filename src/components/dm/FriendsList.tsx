@@ -308,15 +308,15 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
   );
 
   return (
-    <div className="h-full flex flex-col bg-[#373941] overflow-hidden">
-      <div className="px-4 pt-3 pb-2 flex items-center justify-between border-b border-white/10">
+    <div className="h-full flex flex-col bg-layout-chat overflow-hidden">
+      <div className="px-4 pt-3 pb-2 flex items-center justify-between border-b border-border/60">
         <h3 className="text-xs font-semibold text-foreground/85 uppercase tracking-[0.12em]">Friends</h3>
         <Button
           variant="ghost"
           size="sm"
           className={cn(
-            "h-8 gap-2 rounded-md px-3 text-foreground/90 hover:bg-white/10 hover:text-foreground",
-            showAddFriend && "bg-white/10 text-foreground",
+            "h-8 gap-2 rounded-md px-3 text-foreground/90 hover:bg-secondary/70 hover:text-foreground",
+            showAddFriend && "bg-secondary text-foreground",
           )}
           onClick={() => setShowAddFriend(!showAddFriend)}
         >
@@ -325,7 +325,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
         </Button>
       </div>
 
-      <div className="px-4 pt-3 pb-3 border-b border-white/10">
+      <div className="px-4 pt-3 pb-3 border-b border-border/60">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
@@ -340,7 +340,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
       <div className="flex-1 overflow-y-auto">
         <div className="flex flex-col">
           {showAddFriend && (
-            <div className="mx-4 mt-4 rounded-lg border border-white/10 bg-[#313338] p-4">
+            <div className="mx-4 mt-4 rounded-lg border border-border/60 bg-card p-4">
               <h3 className="mb-2 text-sm font-medium text-foreground">Add Friend</h3>
               <p className="mb-3 text-sm text-muted-foreground">You can add a friend with their username.</p>
               <div className="flex gap-2">
