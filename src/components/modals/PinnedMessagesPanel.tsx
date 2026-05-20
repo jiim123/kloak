@@ -50,16 +50,16 @@ export const PinnedMessagesPanel = () => {
     <Sheet open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <SheetContent
         side="right"
-        className="w-[min(440px,calc(100vw-1rem))] max-w-[calc(100vw-1rem)] gap-0 overflow-hidden border-l border-[#4a4f5a] bg-[#333842] p-0 text-[#f4f5f7] shadow-2xl sm:w-[560px] sm:max-w-[560px]"
+        className="app-shell-theme-scope w-[min(440px,calc(100vw-1rem))] max-w-[calc(100vw-1rem)] gap-0 overflow-hidden border-l border-border bg-background p-0 text-foreground shadow-2xl sm:w-[560px] sm:max-w-[560px]"
         hideCloseButton
       >
         <div className="flex h-full flex-col overflow-hidden">
-          <div className="border-b border-[#2b3039] bg-[#2f343d] px-5 py-3">
+          <div className="border-b border-border bg-card px-5 py-3">
             <div className="flex items-center gap-2">
-              <Pin className="h-4 w-4 text-[#d7dbe3]" />
+              <Pin className="h-4 w-4 text-foreground" />
               <div className="text-base font-medium leading-none tracking-tight">Pinned Messages</div>
             </div>
-            <p className="mt-1 text-xs leading-5 text-[#b8bec8]">
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
               {currentChannel ? `#${currentChannel.name}` : "No channel selected"}
               {pinnedMessages.length > 0 ? ` | ${pinnedMessages.length} pinned` : ""}
             </p>
@@ -69,12 +69,12 @@ export const PinnedMessagesPanel = () => {
             <div className="space-y-4 px-6 py-4">
               {isLoading ? (
                 <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 text-center">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-[6px] border border-white/10 bg-[#2d3139]">
-                    <Loader2 className="h-5 w-5 animate-spin text-[#d7dbe3]" />
+                  <div className="flex h-12 w-12 items-center justify-center rounded-[6px] border border-border bg-card">
+                    <Loader2 className="h-5 w-5 animate-spin text-foreground" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-[#f3f4f7]">Loading pinned messages</p>
-                    <p className="mt-1 text-xs leading-5 text-[#b8bec8]">
+                    <p className="text-sm font-medium text-foreground">Loading pinned messages</p>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
                       Fetching saved messages for this channel.
                     </p>
                   </div>
@@ -87,7 +87,7 @@ export const PinnedMessagesPanel = () => {
                     return (
                       <div
                         key={message.id}
-                        className="group rounded-[4px] border border-[#4a4f5a] bg-[#2f343d] p-4 transition-colors hover:border-[#5a6070] hover:bg-[#323741]"
+                        className="group rounded-[4px] border border-border bg-card p-4 transition-colors hover:border-muted-foreground/35 hover:bg-muted/70"
                       >
                         <div className="flex items-start gap-3">
                           <Avatar className="h-9 w-9 flex-shrink-0 rounded-full">
@@ -101,16 +101,16 @@ export const PinnedMessagesPanel = () => {
                             <div className="mb-2 flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                                  <span className="text-sm font-medium text-[#f3f4f7]">
+                                  <span className="text-sm font-medium text-foreground">
                                     {msgUser?.display_name || msgUser?.username || "Unknown user"}
                                   </span>
                                   {message.created_at && (
-                                    <span className="text-xs text-[#9ea4af]">
+                                    <span className="text-xs text-muted-foreground">
                                       {format(new Date(message.created_at), "MMM d, h:mm a")}
                                     </span>
                                   )}
                                 </div>
-                                <div className="mt-1 flex items-center gap-1 text-[11px] uppercase tracking-[0.16em] text-[#c4c8d0]">
+                                <div className="mt-1 flex items-center gap-1 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
                                   <Pin className="h-3 w-3" />
                                   Pinned message
                                 </div>
@@ -121,7 +121,7 @@ export const PinnedMessagesPanel = () => {
                                   type="button"
                                   variant="ghost"
                                   size="icon"
-                                  className="h-8 w-8 flex-shrink-0 rounded-[3px] text-[#b9bec8] opacity-0 transition-opacity hover:bg-[#3a404b] hover:text-white group-hover:opacity-100 focus-visible:opacity-100"
+                                  className="h-8 w-8 flex-shrink-0 rounded-[3px] text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100"
                                   onClick={() => handleUnpin(message.id)}
                                   aria-label="Unpin message"
                                 >
@@ -137,7 +137,7 @@ export const PinnedMessagesPanel = () => {
                               }
 
                               return (
-                                <div className="text-sm leading-6 text-[#e2e4e9]">
+                                <div className="text-sm leading-6 text-foreground">
                                   <MessageContent
                                     content={message.content}
                                     currentUserId={user?.id}
@@ -163,11 +163,11 @@ export const PinnedMessagesPanel = () => {
                 </div>
               ) : (
                 <div className="flex min-h-[320px] flex-col items-center justify-center px-6 text-center">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-[6px] border border-white/10 bg-[#2d3139]">
-                    <Pin className="h-6 w-6 text-[#9ea4af]" />
+                  <div className="flex h-14 w-14 items-center justify-center rounded-[6px] border border-border bg-card">
+                    <Pin className="h-6 w-6 text-muted-foreground" />
                   </div>
-                  <p className="mt-4 text-sm font-medium text-[#f3f4f7]">No pinned messages</p>
-                  <p className="mt-1 max-w-[280px] text-xs leading-5 text-[#b8bec8]">
+                  <p className="mt-4 text-sm font-medium text-foreground">No pinned messages</p>
+                  <p className="mt-1 max-w-[280px] text-xs leading-5 text-muted-foreground">
                     Pin important messages here so they stay easy to find later.
                   </p>
                 </div>
@@ -175,12 +175,12 @@ export const PinnedMessagesPanel = () => {
             </div>
           </ScrollArea>
 
-          <div className="flex items-center justify-end gap-3 border-t border-[#2c3139] bg-[#30353f] px-5 py-3">
+          <div className="flex items-center justify-end gap-3 border-t border-border bg-card px-5 py-3">
             <Button
               type="button"
               variant="ghost"
               onClick={handleClose}
-              className="h-9 rounded-[3px] px-4 text-[#b9bec8] hover:bg-transparent hover:text-white"
+              className="h-9 rounded-[3px] px-4 text-muted-foreground hover:bg-transparent hover:text-foreground"
             >
               Close
             </Button>

@@ -24,6 +24,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useUIStore } from "@/stores/uiStore";
+import { useFriendStore } from "@/stores/friendStore";
 import { useUnreadDMsContext } from "@/hooks/useUnreadDMsContext";
 import { useUnreadChannelsContext } from "@/hooks/useUnreadChannelsContext";
 import { useDMStore } from "@/stores/dmStore";
@@ -602,6 +603,7 @@ export const ServerSidebar = ({
     totalUnread: totalDMUnread,
     hasUnread: hasDMUnread,
   } = useUnreadDMsContext();
+  const pendingFriendRequestCount = useFriendStore((s) => s.pendingRequests.length);
 
   const [hoveredServer, setHoveredServer] = useState<string | null>(null);
   const [tooltipsEnabled, setTooltipsEnabled] = useState(false);
@@ -622,6 +624,7 @@ export const ServerSidebar = ({
   const totalHomeBadge = totalDMUnread;
   const isExploreActive = location.pathname === "/app/explore";
   const isDMActive = location.pathname === "/app" && currentServer === null;
+  const hasPendingFriendRequests = pendingFriendRequestCount > 0;
   const isQuickAccessActive = isAddServerPanelOpen || location.pathname === "/app/friends";
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
@@ -1054,8 +1057,9 @@ export const ServerSidebar = ({
   const quickAccessPillState = useMemo(() => {
     if (isQuickAccessActive) return "active";
     if (hoveredServer === "quick-access") return "hover";
+    if (hasPendingFriendRequests) return "unread";
     return "hidden";
-  }, [isQuickAccessActive, hoveredServer]);
+  }, [isQuickAccessActive, hoveredServer, hasPendingFriendRequests]);
 
   // FIX #18: Helper to compute pill state for a server (called in render map)
   const computePillState = useCallback(
@@ -1467,10 +1471,22 @@ export const ServerSidebar = ({
                   <path d="M17.06,52.52a1.52,1.52,0,0,1-.93-.32,25.6,25.6,0,0,1-6.42-7.41,1.5,1.5,0,0,1,0-1.52,16.36,16.36,0,0,1,14.09-8,17.19,17.19,0,0,1,2.35.16,1.5,1.5,0,0,1,.41,2.86,13.49,13.49,0,0,0-8,12.32v.24a1.5,1.5,0,0,1-1.49,1.63Zm-4.28-8.44a23.2,23.2,0,0,0,3,3.79,16.5,16.5,0,0,1,4.94-9.21A13.36,13.36,0,0,0,12.78,44.08Z" fill="currentColor" />
                   <path d="M32,57.7c-.32,0-.65,0-1,0l-.81,0c-.41,0-.85-.07-1.29-.13a4.6,4.6,0,0,1-.6-.07l-.7-.1L27,57.2c-.38-.08-.71-.15-1-.24s-.72-.17-1.11-.29L24,56.42c-.32-.1-.63-.21-.95-.34a23.66,23.66,0,0,1-3.82-1.79L18.8,54l-.21-.13A25.72,25.72,0,1,1,47.87,52.2c-.27.21-.54.42-.81.61l-.39.27c-.14.11-.32.23-.49.34s-.59.39-.9.57-.59.35-.88.51c-.64.36-1.29.68-2,1-.29.13-.61.27-.93.39s-.44.17-.7.27l-.15.05-.88.3-.67.2-.72.19-.74.19c-.83.18-1.66.32-2.46.42l-1,.1a6.71,6.71,0,0,1-.67,0l-.56,0h-.24Zm.47-3h0ZM32,9.3A22.68,22.68,0,0,0,18,49.84a23.85,23.85,0,0,0,2.16,1.5l.23.14.36.21a20.28,20.28,0,0,0,3.4,1.59c.3.12.54.2.8.28a7.63,7.63,0,0,0,.73.23c.33.1.65.19,1,.26s.58.14.84.2l.68.12.62.1.43.05a11.44,11.44,0,0,0,1.19.11,7.59,7.59,0,0,0,.79,0,7.59,7.59,0,0,0,.8,0h.64c.21,0,.42,0,.63,0l.67,0c.32,0,.58,0,.84-.09A21.74,21.74,0,0,0,37,54.14c.22,0,.43-.1.64-.16l.6-.15.63-.19.77-.26.13-.05.63-.24c.31-.12.55-.23.79-.34.63-.28,1.21-.56,1.77-.87l.8-.47c.25-.15.51-.31.75-.48l.37-.24.09-.07.31-.22c.28-.2.51-.38.74-.56A22.69,22.69,0,0,0,32,9.3Z" fill="currentColor" />
                 </svg>
+                <AnimatePresence>
+                  {hasPendingFriendRequests && (
+                    <motion.span
+                      initial={badgeInitial}
+                      animate={badgeAnimate}
+                      exit={badgeExit}
+                      className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
+                    >
+                      {pendingFriendRequestCount > 99 ? "99+" : pendingFriendRequestCount}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </MotionButton>
             </TooltipTrigger>
             <TooltipContent side="right" className="font-medium">
-              Quick Access
+              Quick Access{hasPendingFriendRequests ? ` (${pendingFriendRequestCount} friend request${pendingFriendRequestCount === 1 ? "" : "s"})` : ""}
             </TooltipContent>
           </Tooltip>
         </div>

@@ -125,6 +125,7 @@ const AppLayout = () => {
   const setCurrentConversation = useDMStore((s) => s.setCurrentConversation);
   const fetchConversations = useDMStore((s) => s.fetchConversations);
   const fetchFriends = useFriendStore((s) => s.fetchFriends);
+  const pendingFriendRequestCount = useFriendStore((s) => s.pendingRequests.length);
   const isMobileRaw = useIsMobile();
   const joinedVoiceChannelId = useVoiceStore((s) => s.joinedChannelId);
   const authEntryPath = getAuthEntryPath();
@@ -498,6 +499,7 @@ const AppLayout = () => {
   const isDMView = currentServer === null;
   const isExploreView = isDMView && currentPath === "/explore";
   const isFriendsView = isDMView && currentPath === "/friends";
+  const hasPendingFriendRequests = pendingFriendRequestCount > 0;
 
   const serverIdsKey = useMemo(() => {
     if (!servers || servers.length === 0) return "";
@@ -833,7 +835,15 @@ const AppLayout = () => {
                               )}
                             >
                               <Users className="h-4 w-4 shrink-0" />
-                              <span className="truncate">Friends</span>
+                              <span className="min-w-0 flex-1 truncate">Friends</span>
+                              {hasPendingFriendRequests && (
+                                <span
+                                  className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-[4px] bg-destructive px-1.5 text-[11px] font-bold leading-none text-destructive-foreground"
+                                  aria-label={`${pendingFriendRequestCount} pending friend request${pendingFriendRequestCount === 1 ? "" : "s"}`}
+                                >
+                                  {pendingFriendRequestCount > 99 ? "99+" : pendingFriendRequestCount}
+                                </span>
+                              )}
                             </button>
                           </nav>
                         </div>

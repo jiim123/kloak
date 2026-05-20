@@ -49,6 +49,7 @@ import type { Message } from "@/types";
 const selectCurrentChannel = (s: ReturnType<typeof useServerStore.getState>) => s.currentChannel;
 const selectCurrentServer = (s: ReturnType<typeof useServerStore.getState>) => s.currentServer;
 const selectFetchMembers = (s: ReturnType<typeof useServerStore.getState>) => s.fetchMembers;
+const selectMembers = (s: ReturnType<typeof useServerStore.getState>) => s.members;
 const selectMembersServerId = (s: ReturnType<typeof useServerStore.getState>) => s.membersServerId;
 const selectUser = (s: ReturnType<typeof useAuthStore.getState>) => s.user;
 const selectSetMobileSidebarOpen = (s: ReturnType<typeof useUIStore.getState>) => s.setMobileSidebarOpen;
@@ -190,6 +191,7 @@ export const ChatArea = ({ showHeader = true }: ChatAreaProps) => {
   const currentChannel = useServerStore(selectCurrentChannel);
   const currentServer = useServerStore(selectCurrentServer);
   const fetchMembers = useServerStore(selectFetchMembers);
+  const members = useServerStore(selectMembers);
   const membersServerId = useServerStore(selectMembersServerId);
   const user = useAuthStore(selectUser);
   const setMobileSidebarOpen = useUIStore(selectSetMobileSidebarOpen);
@@ -202,10 +204,26 @@ export const ChatArea = ({ showHeader = true }: ChatAreaProps) => {
   const channelName = currentChannel?.name ?? "";
   const serverId = currentServer?.id ?? null;
   const isGhostMode = currentChannel?.ghost_mode ?? false;
+  const hasCurrentUserMember = useMemo(
+    () => !!user?.id && members.some((member) => member.user_id === user.id),
+    [members, user?.id],
+  );
   const channelMessages = useMessageStore((s) => {
     if (!channelId) return EMPTY_MESSAGES;
     return s.messagesByChannel[channelId]?.messages ?? EMPTY_MESSAGES;
   });
+
+  const membershipFetchKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!serverId || !user?.id || !channelId) return;
+    if (membersServerId === serverId && hasCurrentUserMember) return;
+
+    const fetchKey = `${serverId}:${user.id}:${membersServerId ?? "none"}:${hasCurrentUserMember ? "present" : "missing"}`;
+    if (membershipFetchKeyRef.current === fetchKey) return;
+    membershipFetchKeyRef.current = fetchKey;
+
+    void fetchMembers(serverId, { force: membersServerId === serverId });
+  }, [serverId, user?.id, channelId, membersServerId, hasCurrentUserMember, fetchMembers]);
 
   const { typingUsers, startTyping, stopTyping } = useTyping(isGhostMode ? null : channelId);
   const pinnedMessages = useMemo(() => {
