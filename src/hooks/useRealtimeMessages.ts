@@ -531,6 +531,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
                 const effectiveReactionUserId = revealIdentity
                   ? newReaction.user_id
                   : getGhostPseudonymousUserId(newReaction.user_id, channelId);
+                const reactionUserAliases = new Set([newReaction.user_id, effectiveReactionUserId]);
 
                 const { messagesByChannel } = useMessageStore.getState();
                 const channelData = messagesByChannel[channelId];
@@ -540,7 +541,16 @@ export const useRealtimeMessages = (channelId: string | null) => {
                 if (messageIndex === -1) return;
 
                 const message = channelData.messages[messageIndex];
-                const reactions = [...(message.reactions || [])];
+                const reactions = (message.reactions || []).map((reaction) => {
+                  const users = Array.from(
+                    new Set(reaction.users.map((entry) => (reactionUserAliases.has(entry) ? effectiveReactionUserId : entry))),
+                  );
+                  return {
+                    ...reaction,
+                    users,
+                    count: users.length,
+                  };
+                });
                 const existingGroup = reactions.find((r) => r.emoji === newReaction.emoji);
 
                 if (existingGroup) {
@@ -584,6 +594,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
                 const effectiveReactionUserId = revealIdentity
                   ? oldReaction.user_id
                   : getGhostPseudonymousUserId(oldReaction.user_id, channelId);
+                const reactionUserAliases = new Set([oldReaction.user_id, effectiveReactionUserId]);
 
                 const { messagesByChannel } = useMessageStore.getState();
                 const channelData = messagesByChannel[channelId];
@@ -595,11 +606,12 @@ export const useRealtimeMessages = (channelId: string | null) => {
                 const reactions = (message.reactions || [])
                   .map((r) => {
                     if (r.emoji !== oldReaction.emoji) return r;
-                    if (!r.users.includes(effectiveReactionUserId)) return r;
+                    if (!r.users.some((entry) => reactionUserAliases.has(entry))) return r;
+                    const users = r.users.filter((entry) => !reactionUserAliases.has(entry));
                     return {
                       ...r,
-                      count: Math.max(0, r.count - 1),
-                      users: r.users.filter((u) => u !== effectiveReactionUserId),
+                      count: users.length,
+                      users,
                       hasReacted: oldReaction.user_id === currentUserId ? false : r.hasReacted,
                     };
                   })

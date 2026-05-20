@@ -7,6 +7,7 @@ import { useSyncStore } from "@/stores/syncStore";
 import { useUserCacheStore, bulkSetUsersInCache, fetchAndCacheUser } from "@/stores/userCacheStore";
 import { resolveSignedUrls, isSupabaseAttachmentUrl } from "@/lib/signedUrl";
 import { afterNextPaint, beginChatPerf, endChatPerf, markChatPerf } from "@/lib/chatPerf";
+import { canRevealGhostIdentityForUser, getGhostPseudonymousUserId } from "@/lib/ghostIdentity";
 import { toast } from "sonner";
 import type { Message, MessageAttachment, MessageReply, ReactionGroup, User } from "@/types";
 
@@ -265,24 +266,45 @@ const updateMessageInCaches = (
   return changed ? nextByChannel : messagesByChannel;
 };
 
+const getReactionDisplayUserId = (channelId: string, userId: string) => {
+  const serverState = useServerStore.getState();
+  const channel =
+    serverState.currentChannel?.id === channelId
+      ? serverState.currentChannel
+      : serverState.channels.find((entry) => entry.id === channelId);
+
+  const isGhostMode = !!channel?.ghost_mode;
+  const revealIdentity = canRevealGhostIdentityForUser({
+    isGhostMode,
+    authorUserId: userId,
+    members: serverState.members,
+    ownerId: serverState.currentServer?.owner_id,
+  });
+
+  return revealIdentity ? userId : getGhostPseudonymousUserId(userId, channelId);
+};
+
 const addReactionToMessage = (message: Message, userId: string, emoji: string): Message => {
+  const displayUserId = getReactionDisplayUserId(message.channel_id, userId);
+  const userAliases = new Set([userId, displayUserId]);
   const reactions = (message.reactions || []).map((reaction) => ({
     ...reaction,
-    users: [...reaction.users],
+    users: Array.from(new Set(reaction.users.map((entry) => (userAliases.has(entry) ? displayUserId : entry)))),
   }));
   const existingGroup = reactions.find((reaction) => reaction.emoji === emoji);
 
   if (existingGroup) {
-    if (!existingGroup.users.includes(userId)) {
+    if (!existingGroup.users.includes(displayUserId)) {
       existingGroup.count += 1;
-      existingGroup.users.push(userId);
+      existingGroup.users.push(displayUserId);
     }
+    existingGroup.count = existingGroup.users.length;
     existingGroup.hasReacted = true;
   } else {
     reactions.push({
       emoji,
       count: 1,
-      users: [userId],
+      users: [displayUserId],
       hasReacted: true,
     });
   }
@@ -291,14 +313,17 @@ const addReactionToMessage = (message: Message, userId: string, emoji: string): 
 };
 
 const removeReactionFromMessage = (message: Message, userId: string, emoji: string): Message => {
+  const displayUserId = getReactionDisplayUserId(message.channel_id, userId);
+  const userAliases = new Set([userId, displayUserId]);
   const reactions = (message.reactions || [])
     .map((reaction) => {
       if (reaction.emoji !== emoji) return reaction;
-      if (!reaction.users.includes(userId)) return reaction;
+      if (!reaction.users.some((entry) => userAliases.has(entry))) return reaction;
+      const users = reaction.users.filter((entry) => !userAliases.has(entry));
       return {
         ...reaction,
-        count: Math.max(0, reaction.count - 1),
-        users: reaction.users.filter((entry) => entry !== userId),
+        count: users.length,
+        users,
         hasReacted: false,
       };
     })
