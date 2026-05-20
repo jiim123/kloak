@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMessageUser } from "@/stores/userCacheStore";
 import {
@@ -557,6 +557,10 @@ export const MessageInput = ({
     textareaRef.current.style.height = "0px";
     textareaRef.current.style.height = `${Math.min(Math.max(textareaRef.current.scrollHeight, MIN_TEXTAREA_HEIGHT), MAX_TEXTAREA_HEIGHT)}px`;
   }, []);
+
+  useLayoutEffect(() => {
+    resizeTextarea();
+  }, [content, resizeTextarea]);
 
   useEffect(() => {
     if (slowmodeCooldownUntil <= Date.now()) return;

@@ -1098,7 +1098,8 @@ body {
 }
 
 /* Screenshot-inspired app shell. Scoped so public/landing pages keep their brand treatment. */
-.discord-inspired {
+.discord-inspired,
+.app-shell-theme-scope {
   --background: 225 8% 20%;
   --foreground: 220 14% 92%;
   --card: 225 8% 22%;
@@ -1128,6 +1129,9 @@ body {
   --kloak-idle: 45 100% 50%;
   --kloak-dnd: 358 77% 58%;
   --kloak-offline: 225 5% 56%;
+}
+
+.discord-inspired {
   background: hsl(var(--chat));
 }
 
@@ -1165,7 +1169,8 @@ body {
   color: hsl(139 48% 60%);
 }
 
-.light .discord-inspired {
+.light .discord-inspired,
+.light .app-shell-theme-scope {
   --background: 0 0% 98%;
   --foreground: 225 10% 12%;
   --card: 0 0% 100%;
@@ -1210,7 +1215,8 @@ body {
   color: hsl(142 46% 26%);
 }
 
-.amoled .discord-inspired {
+.amoled .discord-inspired,
+.amoled .app-shell-theme-scope {
   --background: 0 0% 0%;
   --foreground: 0 0% 91%;
   --card: 0 0% 5%;
@@ -1318,6 +1324,13 @@ body {
 
 .server-settings-reference button:not([role="tab"]):not([aria-label="Close server settings"]):not([aria-label="Close user settings"]) {
   border-radius: 4px;
+}
+
+.default .server-settings-reference button:disabled:not([role="switch"]):not(.server-settings-keep-primary-on-disabled) {
+  background-color: hsl(var(--secondary)) !important;
+  border-color: hsl(var(--border)) !important;
+  color: hsl(var(--muted-foreground)) !important;
+  opacity: 1;
 }
 
 .server-settings-reference button[role="switch"] {

@@ -353,7 +353,7 @@ export const ServerMembersPage = () => {
   }
 
   return (
-    <div className="h-full overflow-y-auto bg-[#363944] text-[#D7D9DF]">
+    <div className="h-full overflow-y-auto bg-layout-members text-[#D7D9DF]">
       <div className="mx-auto w-full max-w-6xl px-4 py-4 sm:px-6 sm:py-6">
           <div className="mb-3 flex min-h-11 items-center gap-3">
             <div className="relative w-[220px] shrink-0">
@@ -569,7 +569,7 @@ export const ServerMembersPage = () => {
                   </Avatar>
                   <span
                     className={cn(
-                      "absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[#363944]",
+                      "absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-layout-members",
                       isOnline ? "bg-[#3BA55D]" : "bg-[#747986]",
                     )}
                   />

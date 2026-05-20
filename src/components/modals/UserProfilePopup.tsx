@@ -750,7 +750,6 @@ export const UserProfilePopup = () => {
     const divider = light ? "rgba(11, 11, 15, 0.12)" : "rgba(248, 250, 252, 0.12)";
     const surface = light ? "rgba(255,255,255,0.44)" : "rgba(31,32,36,0.92)";
     const overlay = light ? "rgba(255,255,255,0.38)" : "rgba(0,0,0,0.22)";
-    const accent = profileUser.profile_theme_accent || profileUser.profile_theme_primary || profileUser.banner_color || "#23a55a";
     const bannerUrl = profileUser.banner_url;
     const hasProfileDecoration = Boolean(profileUser.avatar_decoration);
     const presence = getEffectivePresence(profileUser.status || "offline", profileUser.last_seen, profileUser.id);
@@ -782,12 +781,7 @@ export const UserProfilePopup = () => {
             <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-black/5 to-black/45" />
           </div>
         ) : (
-          <div
-            className="relative h-[88px]"
-            style={{
-              background: `linear-gradient(135deg, ${withAlpha(profileUser.banner_color, "e6")} 0%, ${withAlpha(accent, "99")} 100%)`,
-            }}
-          />
+          <div className="relative h-[88px]" />
         )}
 
         {displayEffectSrc && (

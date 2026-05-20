@@ -3319,7 +3319,7 @@ export const ServerSettingsPage = () => {
                       size="sm"
                       onClick={createInvite}
                       disabled={isCreatingInvite || isLoadingInvites}
-                      className="flex-shrink-0"
+                      className="flex-shrink-0 bg-primary text-primary-foreground hover:bg-primary/90"
                     >
                       {isCreatingInvite && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                       Create Invite
@@ -3621,7 +3621,7 @@ export const ServerSettingsPage = () => {
                           size="sm"
                           onClick={uploadServerEmoji}
                           disabled={isUploadingEmoji || !emojiFile || !emojiName.trim()}
-                          className="h-9 flex-1 rounded-[3px] bg-primary px-5 font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-secondary disabled:text-muted-foreground sm:flex-none"
+                          className="server-settings-keep-primary-on-disabled h-9 flex-1 rounded-[3px] bg-primary px-5 font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-100 disabled:bg-primary/90 disabled:text-primary-foreground sm:flex-none"
                         >
                           {isUploadingEmoji && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                           Upload

@@ -283,7 +283,7 @@ export const NotificationBell = ({ variant = "default" }: NotificationBellProps)
       <PopoverTrigger asChild>{variant === "sidebar" ? renderSidebarTrigger() : renderDefaultTrigger()}</PopoverTrigger>
 
       <PopoverContent
-        className="w-96 overflow-hidden rounded-[4px] border border-border bg-card p-0 text-foreground shadow-2xl"
+        className="app-shell-theme-scope w-96 overflow-hidden rounded-[4px] border border-border bg-card p-0 text-foreground shadow-2xl"
         align="end"
         sideOffset={8}
       >

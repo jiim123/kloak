@@ -440,7 +440,7 @@ export const ImportEmojiPackModal = () => {
                 <Button
                   onClick={importEmojis}
                   disabled={isImporting || selectedEmojis.size === 0}
-                  className="flex-1 sm:flex-none rounded-xl"
+                  className="flex-1 sm:flex-none rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   {isImporting ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />

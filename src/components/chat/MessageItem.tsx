@@ -165,7 +165,11 @@ const RoleIconWrapper = forwardRef<HTMLSpanElement, RoleIconWrapperProps>(
   ({ children, className, isHovered, onHoverChange, onMouseEnter, onMouseLeave, ...props }, ref) => (
     <span
       ref={ref}
-      className={cn("inline-flex items-center", isHovered && "animate-pulse", className)}
+      className={cn(
+        "inline-flex h-4 w-4 shrink-0 items-center justify-center align-middle leading-none",
+        isHovered && "animate-pulse",
+        className,
+      )}
       onMouseEnter={(e) => {
         onMouseEnter?.(e);
         onHoverChange(true);
@@ -471,10 +475,10 @@ export const MessageItem = memo(function MessageItem({
       const url = customEmojiMap.get(match[1]);
       if (!url) return null;
       return (
-        <img src={url} alt={icon} className="inline-block w-4 h-4 align-text-bottom object-contain" loading="lazy" />
+        <img src={url} alt={icon} className="block h-4 w-4 object-contain" loading="lazy" />
       );
     }
-    return <FluentEmoji emoji={icon} size={16} className="align-text-bottom" />;
+    return <FluentEmoji emoji={icon} size={16} className="block" />;
   }, [priorityRoleWithIcon?.icon, customEmojiMap]);
 
   const resolveCustomEmojiUrl = useCallback(
@@ -1476,8 +1480,12 @@ export const MessageItem = memo(function MessageItem({
                         {roleIconNode && priorityRoleWithIcon && (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <RoleIconWrapper isHovered={hoveredRoleIcon} onHoverChange={setHoveredRoleIcon}>
-                                <span className="inline-flex items-center mr-1.5 cursor-help">{roleIconNode}</span>
+                              <RoleIconWrapper
+                                className="mr-1.5 cursor-help"
+                                isHovered={hoveredRoleIcon}
+                                onHoverChange={setHoveredRoleIcon}
+                              >
+                                {roleIconNode}
                               </RoleIconWrapper>
                             </TooltipTrigger>
                             <TooltipContent>
@@ -1490,7 +1498,7 @@ export const MessageItem = memo(function MessageItem({
                     ) : (
                       !isGrouped &&
                       messageUser && (
-                        <div className="flex items-baseline gap-1.5 font-[Inter,system-ui,sans-serif]">
+                        <div className="flex items-center gap-1.5 font-[Inter,system-ui,sans-serif]">
                           <span
                             onClick={handleUsernameClick}
                             className={`text-[14px] font-medium leading-tight hover:underline cursor-pointer ${usernameColorClass}`}
@@ -1502,8 +1510,12 @@ export const MessageItem = memo(function MessageItem({
                           {roleIconNode && priorityRoleWithIcon && (
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <RoleIconWrapper isHovered={hoveredRoleIcon} onHoverChange={setHoveredRoleIcon}>
-                                  <span className="inline-flex items-center cursor-help">{roleIconNode}</span>
+                                <RoleIconWrapper
+                                  className="cursor-help"
+                                  isHovered={hoveredRoleIcon}
+                                  onHoverChange={setHoveredRoleIcon}
+                                >
+                                  {roleIconNode}
                                 </RoleIconWrapper>
                               </TooltipTrigger>
                               <TooltipContent>

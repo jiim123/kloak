@@ -1736,7 +1736,7 @@ export const ServerSettingsModal = () => {
                       type="submit"
                       disabled={isLoading || isUploadingIcon || isUploadingBanner}
                       rounded="xl"
-                      className="h-10 w-full"
+                      className="h-10 w-full bg-primary text-primary-foreground hover:bg-primary/90"
                     >
                       {(isLoading || isUploadingIcon || isUploadingBanner) && (
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -2348,7 +2348,7 @@ export const ServerSettingsModal = () => {
                         onClick={uploadServerEmoji}
                         disabled={isUploadingEmoji || !emojiFile || !emojiName.trim()}
                         rounded="xl"
-                        className="h-10 w-full"
+                        className="h-10 w-full bg-primary text-primary-foreground hover:bg-primary/90"
                       >
                         {isUploadingEmoji && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                         Upload Emoji
@@ -2727,7 +2727,7 @@ export const ServerSettingsModal = () => {
                           type="submit"
                           disabled={isLoading || isUploadingIcon || isUploadingBanner}
                           rounded="xl"
-                          className="h-10 flex-1 sm:flex-none"
+                          className="h-10 flex-1 sm:flex-none bg-primary text-primary-foreground hover:bg-primary/90"
                         >
                           {(isLoading || isUploadingIcon || isUploadingBanner) && (
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -3276,10 +3276,9 @@ export const ServerSettingsModal = () => {
                           </div>
                           <Button
                             type="button"
-                            variant="outline"
                             rounded="xl"
                             onClick={() => openModal("import-emoji-pack")}
-                            className="h-9 flex-shrink-0"
+                            className="h-9 flex-shrink-0 bg-primary text-primary-foreground hover:bg-primary/90"
                           >
                             <Link2 className="w-4 h-4 mr-2" />
                             Import Pack
@@ -3343,7 +3342,7 @@ export const ServerSettingsModal = () => {
                               onClick={uploadServerEmoji}
                               disabled={isUploadingEmoji || !emojiFile || !emojiName.trim()}
                               rounded="xl"
-                              className="h-10 flex-1 sm:flex-none"
+                              className="h-10 flex-1 sm:flex-none bg-primary text-primary-foreground hover:bg-primary/90"
                             >
                               {isUploadingEmoji && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                               Upload

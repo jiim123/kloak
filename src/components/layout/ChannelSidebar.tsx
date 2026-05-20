@@ -2037,7 +2037,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
               {/* Invite People */}
               <DropdownMenuItem
                 onClick={handleOpenInvite}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-secondary/60 focus:bg-secondary/70"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-[hsl(var(--menu-hover))] focus:bg-[hsl(var(--menu-focus))]"
               >
                 <div className="flex h-5 w-5 items-center justify-center flex-shrink-0">
                   <UserPlusIcon className="h-4 w-4" />
@@ -2052,7 +2052,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
                   {/* Server Settings */}
                   <DropdownMenuItem
                     onClick={handleOpenServerSettings}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-secondary/60 focus:bg-secondary/70"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-[hsl(var(--menu-hover))] focus:bg-[hsl(var(--menu-focus))]"
                   >
                     <div className="flex h-5 w-5 items-center justify-center flex-shrink-0">
                       <SettingsIcon className="h-4 w-4" />
@@ -2065,7 +2065,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
                       {/* Create Channel */}
                       <DropdownMenuItem
                         onClick={handleOpenCreateChannel}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-secondary/60 focus:bg-secondary/70"
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-[hsl(var(--menu-hover))] focus:bg-[hsl(var(--menu-focus))]"
                       >
                         <div className="flex h-5 w-5 items-center justify-center flex-shrink-0">
                           <HashIcon className="h-4 w-4" />
@@ -2076,7 +2076,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
                       {/* Create Category */}
                       <DropdownMenuItem
                         onClick={handleOpenCreateCategory}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-secondary/60 focus:bg-secondary/70"
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-[hsl(var(--menu-hover))] focus:bg-[hsl(var(--menu-focus))]"
                       >
                         <div className="flex h-5 w-5 items-center justify-center flex-shrink-0">
                           <FolderPlusIcon className="h-4 w-4" />
@@ -2095,7 +2095,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
                   {/* Leave Server */}
                   <DropdownMenuItem
                     onClick={handleLeaveServer}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-secondary/60 focus:bg-secondary/70"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-[hsl(var(--menu-hover))] focus:bg-[hsl(var(--menu-focus))]"
                   >
                     <div className="flex h-5 w-5 items-center justify-center flex-shrink-0">
                       <LogOutIcon className="h-4 w-4" />
