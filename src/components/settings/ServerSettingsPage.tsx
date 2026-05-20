@@ -2415,7 +2415,7 @@ export const ServerSettingsPage = () => {
             </ScrollArea>
 
             {showSidebarSave && (
-              <div className="px-4 pb-4 pt-2 border-t border-border space-y-2">
+              <div className="px-4 pb-4 pt-2 space-y-2">
                 <Button
                   type="button"
                   onClick={saveActiveTabChanges}
