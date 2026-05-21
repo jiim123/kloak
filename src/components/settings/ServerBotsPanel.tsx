@@ -121,7 +121,7 @@ const MessageCreatedIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-const getCategoryBadgeClass = () => "border border-border bg-secondary text-muted-foreground";
+const getCategoryBadgeClass = (_category?: string) => "border border-border bg-secondary text-muted-foreground";
 
 const TRIGGER_OPTIONS: TriggerOption[] = [
   {
