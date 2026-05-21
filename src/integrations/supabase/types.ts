@@ -4767,6 +4767,7 @@ export type Database = {
         | "forum"
         | "tasks"
         | "media"
+        | "calendar"
         | "streaming"
       friendship_status: "pending" | "accepted" | "blocked" | "declined"
       mention_type: "user" | "everyone" | "here" | "role"
@@ -4953,6 +4954,7 @@ export const Constants = {
         "forum",
         "tasks",
         "media",
+        "calendar",
         "streaming",
       ],
       friendship_status: ["pending", "accepted", "blocked", "declined"],

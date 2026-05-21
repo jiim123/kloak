@@ -1359,6 +1359,32 @@ body {
   transform: translateX(16px);
 }
 
+.calendar-event-dialog button[role="switch"] {
+  width: 34px;
+  height: 12px;
+  border-width: 0;
+  border-radius: 9999px !important;
+  background-color: #535966;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  overflow: visible;
+}
+
+.calendar-event-dialog button[role="switch"][data-state="checked"] {
+  background-color: #55d642;
+}
+
+.calendar-event-dialog button[role="switch"] > span {
+  width: 18px;
+  height: 18px;
+  background-color: #f3f4f6;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  transform: translateX(0);
+}
+
+.calendar-event-dialog button[role="switch"][data-state="checked"] > span {
+  transform: translateX(16px);
+}
+
 .server-settings-reference .user-settings-nav-row {
   border-radius: 0;
 }
@@ -1425,6 +1451,18 @@ body {
   background-color: hsl(0 0% 100%);
 }
 
+.light .calendar-event-dialog button[role="switch"] {
+  background-color: hsl(220 13% 78%);
+}
+
+.light .calendar-event-dialog button[role="switch"][data-state="checked"] {
+  background-color: #23a55a;
+}
+
+.light .calendar-event-dialog button[role="switch"] > span {
+  background-color: hsl(0 0% 100%);
+}
+
 .light .server-settings-reference .border-b,
 .light .server-settings-reference .divide-y > :not([hidden]) ~ :not([hidden]) {
   border-color: hsl(220 13% 88%);
@@ -1484,6 +1522,18 @@ body {
 }
 
 .amoled .server-settings-reference button[role="switch"] > span {
+  background-color: hsl(0 0% 94%);
+}
+
+.amoled .calendar-event-dialog button[role="switch"] {
+  background-color: hsl(0 0% 21%);
+}
+
+.amoled .calendar-event-dialog button[role="switch"][data-state="checked"] {
+  background-color: #55d642;
+}
+
+.amoled .calendar-event-dialog button[role="switch"] > span {
   background-color: hsl(0 0% 94%);
 }
 

@@ -1,5 +1,5 @@
 import { memo, useMemo, useCallback } from "react";
-import { Menu, Hash, Volume2, Users, ClipboardList, Megaphone, MessageSquare, Film } from "lucide-react";
+import { Menu, Hash, Volume2, Users, ClipboardList, Megaphone, MessageSquare, Film, CalendarDays } from "lucide-react";
 import { useServerStore } from "@/stores/serverStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useDMStore } from "@/stores/dmStore";
@@ -49,6 +49,9 @@ export const MobileHeader = memo(({ isDMView }: MobileHeaderProps) => {
     }
     if (currentChannel.type === "tasks") {
       return <ClipboardList className="w-5 h-5 text-muted-foreground shrink-0" />;
+    }
+    if (currentChannel.type === "calendar") {
+      return <CalendarDays className="w-5 h-5 text-muted-foreground shrink-0" />;
     }
 
     return <Hash className="w-5 h-5 text-muted-foreground shrink-0" />;

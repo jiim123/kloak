@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 const ForumChannelArea = React.lazy(() => import("@/components/forum/ForumChannelArea").then(m => ({ default: m.ForumChannelArea })));
 const MediaChannelArea = React.lazy(() => import("@/components/media/MediaChannelArea").then(m => ({ default: m.MediaChannelArea })));
 const TasksChannelArea = React.lazy(() => import("@/components/tasks/TasksChannelArea").then(m => ({ default: m.TasksChannelArea })));
+const CalendarChannelArea = React.lazy(() => import("@/components/calendar/CalendarChannelArea").then(m => ({ default: m.CalendarChannelArea })));
 const AnnouncementChatArea = React.lazy(() => import("@/components/announcement/AnnouncementChatArea").then(m => ({ default: m.AnnouncementChatArea })));
 
 const ChannelLoadingSkeleton = () => (
@@ -313,6 +314,10 @@ export const ChatArea = ({ showHeader = true }: ChatAreaProps) => {
 
   if (channelType === "tasks") {
     return <Suspense fallback={<ChannelLoadingSkeleton />}><TasksChannelArea showHeader={showHeader} /></Suspense>;
+  }
+
+  if (channelType === "calendar") {
+    return <Suspense fallback={<ChannelLoadingSkeleton />}><CalendarChannelArea showHeader={showHeader} /></Suspense>;
   }
 
   return (

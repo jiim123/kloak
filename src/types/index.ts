@@ -144,6 +144,7 @@ export interface Server {
   enable_join_messages?: boolean;
   enable_leave_messages?: boolean;
   min_account_age_days?: number;
+  timezone?: string;
 }
 
 export interface ServerWithMembership extends Server {
@@ -180,7 +181,7 @@ export interface ServerMember {
 // Channel Types
 // ============================================
 
-export type ChannelType = 'text' | 'voice' | 'announcement' | 'forum' | 'tasks' | 'media';
+export type ChannelType = 'text' | 'voice' | 'announcement' | 'forum' | 'tasks' | 'media' | 'calendar';
 
 export interface ChannelCategory {
   id: string;

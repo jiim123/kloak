@@ -294,6 +294,7 @@ interface ServerState {
       is_nsfw?: boolean;
       about?: string | null;
       min_account_age_days?: number;
+      timezone?: string;
     },
   ) => Promise<void>;
   joinServer: (inviteCode: string, userId: string, joinSource?: "discover" | "invite_link") => Promise<Server | null>;
@@ -458,6 +459,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
           enable_join_messages?: boolean;
           enable_leave_messages?: boolean;
           min_account_age_days?: number;
+          timezone?: string;
           created_at: string;
           role: ServerRole;
           nickname: string | null;
@@ -482,6 +484,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
           enable_join_messages: item.enable_join_messages ?? true,
           enable_leave_messages: item.enable_leave_messages ?? true,
           min_account_age_days: item.min_account_age_days ?? 0,
+          timezone: item.timezone ?? "UTC",
           created_at: item.created_at,
           role: item.role,
           nickname: item.nickname,
@@ -611,6 +614,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
       enable_join_messages?: boolean;
       enable_leave_messages?: boolean;
       min_account_age_days?: number;
+      timezone?: string;
     },
   ) => {
     // Note: publishing is owner-only in the update_server RPC
@@ -641,6 +645,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
             system_channel_leave_id: result.server.system_channel_leave_id ?? null,
             enable_join_messages: result.server.enable_join_messages ?? false,
             enable_leave_messages: result.server.enable_leave_messages ?? false,
+            timezone: result.server.timezone ?? updates.timezone,
           }
         : updates;
 

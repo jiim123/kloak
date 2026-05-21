@@ -10,6 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import {
   CheckSquare,
+  CalendarDays,
   FileVideo,
   Grid2X2,
   Hash,
@@ -23,7 +24,7 @@ import { useRateLimit } from "@/hooks/useRateLimit";
 import { rateLimitToast } from "@/lib/rateLimitToast";
 
 const CHANNEL_TYPE_OPTIONS: {
-  value: "text" | "voice" | "forum" | "announcement" | "tasks" | "media";
+  value: "text" | "voice" | "forum" | "announcement" | "tasks" | "media" | "calendar";
   label: string;
   description: string;
   icon: LucideIcon;
@@ -63,6 +64,12 @@ const CHANNEL_TYPE_OPTIONS: {
     label: "Media",
     description: "A dedicated space for sharing images, videos, and visual inspiration.",
     icon: FileVideo,
+  },
+  {
+    value: "calendar",
+    label: "Calendar",
+    description: "Schedule events, coordinate game nights, and keep everyone in sync.",
+    icon: CalendarDays,
   },
 ];
 
@@ -144,6 +151,19 @@ const ChannelTypePreview = ({ type }: { type: ChannelType }) => {
         <div className="rounded-md bg-primary/25" />
         <div className="rounded-md bg-primary/20" />
         <div className="rounded-md bg-primary/35" />
+      </div>
+    );
+  }
+
+  if (type === "calendar") {
+    return (
+      <div className="grid h-[144px] grid-cols-7 gap-1 rounded-xl border border-border/50 bg-secondary/30 p-3">
+        {Array.from({ length: 28 }).map((_, index) => (
+          <div
+            key={index}
+            className={`rounded-sm border border-border/30 ${index === 10 ? "bg-primary/30" : "bg-background/35"}`}
+          />
+        ))}
       </div>
     );
   }
@@ -231,7 +251,7 @@ export const CreateChannelModal = () => {
 
   const [mode, setMode] = useState<"channel" | "category">("channel");
   const [name, setName] = useState("");
-  const [selectedChannelType, setSelectedChannelType] = useState<"text" | "voice" | "forum" | "announcement" | "tasks" | "media">("text");
+  const [selectedChannelType, setSelectedChannelType] = useState<"text" | "voice" | "forum" | "announcement" | "tasks" | "media" | "calendar">("text");
   const [isPrivate, setIsPrivate] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -346,7 +366,7 @@ export const CreateChannelModal = () => {
                 </Label>
                 <RadioGroup
                   value={selectedChannelType}
-                  onValueChange={(value) => setSelectedChannelType(value as "text" | "voice" | "forum" | "announcement" | "tasks" | "media")}
+                  onValueChange={(value) => setSelectedChannelType(value as "text" | "voice" | "forum" | "announcement" | "tasks" | "media" | "calendar")}
                   className="mt-2"
                 >
                   <div className="grid gap-4 sm:grid-cols-[130px_minmax(0,1fr)]">

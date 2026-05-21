@@ -119,6 +119,25 @@ const serverSettingsSchema = z.object({
 
 type ServerSettingsForm = z.infer<typeof serverSettingsSchema>;
 
+const FALLBACK_TIMEZONES = [
+  "UTC",
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "Europe/London",
+  "Europe/Berlin",
+  "Asia/Colombo",
+  "Asia/Singapore",
+  "Asia/Tokyo",
+  "Australia/Sydney",
+];
+
+const TIMEZONE_OPTIONS =
+  typeof Intl !== "undefined" && typeof (Intl as any).supportedValuesOf === "function"
+    ? ((Intl as any).supportedValuesOf("timeZone") as string[])
+    : FALLBACK_TIMEZONES;
+
 type PublicationRequirement = {
   key: string;
   label: string;
@@ -797,6 +816,7 @@ export const ServerSettingsPage = () => {
   const [isNsfwDraft, setIsNsfwDraft] = useState(false);
   const [minAccountAgeDraft, setMinAccountAgeDraft] = useState<number>(0);
   const [isPublishedDraft, setIsPublishedDraft] = useState(false);
+  const [serverTimezoneDraft, setServerTimezoneDraft] = useState("UTC");
   const [editingRole, setEditingRole] = useState<CustomServerRole | null>(null);
   const [roleName, setRoleName] = useState("");
   const [roleColor, setRoleColor] = useState("#5865F2");
@@ -1339,6 +1359,7 @@ export const ServerSettingsPage = () => {
       setIsNsfwDraft(!!server.is_nsfw);
       setMinAccountAgeDraft(Number(server.min_account_age_days || 0));
       setIsPublishedDraft(!!server.is_published);
+      setServerTimezoneDraft(server.timezone || "UTC");
       setIconFile(null);
       if (iconPreview) URL.revokeObjectURL(iconPreview);
       setIconPreview(null);
@@ -1508,6 +1529,7 @@ export const ServerSettingsPage = () => {
       setIsNsfwDraft(!!server.is_nsfw);
       setMinAccountAgeDraft(Number(server.min_account_age_days || 0));
       setIsPublishedDraft(!!server.is_published);
+      setServerTimezoneDraft(server.timezone || "UTC");
       setPendingTabOps({});
       setBaselineRoles(roles);
       setStagedRoles(roles);
@@ -2104,6 +2126,7 @@ export const ServerSettingsPage = () => {
       updates.is_nsfw = !!isNsfwDraft;
       updates.min_account_age_days = Number(minAccountAgeDraft || 0);
       updates.is_published = !!isPublishedDraft;
+      updates.timezone = serverTimezoneDraft || "UTC";
 
       await updateServer(server.id, user.id, updates);
 
@@ -2119,6 +2142,7 @@ export const ServerSettingsPage = () => {
         setIsNsfwDraft(!!updatedServer.is_nsfw);
         setMinAccountAgeDraft(Number(updatedServer.min_account_age_days || 0));
         setIsPublishedDraft(!!updatedServer.is_published);
+        setServerTimezoneDraft(updatedServer.timezone || "UTC");
       }
 
       await loadPublicationEligibility();
@@ -2291,6 +2315,7 @@ export const ServerSettingsPage = () => {
     isNsfwDraft !== !!server.is_nsfw ||
     minAccountAgeDraft !== Number(server.min_account_age_days || 0) ||
     isPublishedDraft !== !!server.is_published ||
+    serverTimezoneDraft !== (server.timezone || "UTC") ||
     !!iconFile ||
     !!bannerFile ||
     iconRemoved ||
@@ -2589,6 +2614,31 @@ export const ServerSettingsPage = () => {
                     </p>
                   </div>
                 </div>
+
+                {canManageServer && (
+                  <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
+                    <Label className="text-sm font-medium">Server Timezone</Label>
+                    <div className="space-y-2 rounded-lg border border-border/50 bg-secondary/30 p-3">
+                      <Select value={serverTimezoneDraft} onValueChange={setServerTimezoneDraft}>
+                        <SelectTrigger className="h-10 text-sm">
+                          <SelectValue placeholder="Select timezone" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <ScrollArea className="max-h-72">
+                            {TIMEZONE_OPTIONS.map((timezone) => (
+                              <SelectItem key={timezone} value={timezone}>
+                                {timezone.replace(/_/g, " ")}
+                              </SelectItem>
+                            ))}
+                          </ScrollArea>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Calendar event defaults use this timezone. Members still see event times in their own local timezone.
+                      </p>
+                    </div>
+                  </div>
+                )}
 
 
                 {/* Age-Restricted Server (owner-only) */}
