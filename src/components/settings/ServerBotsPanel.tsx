@@ -176,7 +176,7 @@ const BOT_SELECT_ITEM_CLASS =
 
 const getTriggerOption = (id: BotTriggerType) => TRIGGER_OPTIONS.find((option) => option.id === id) ?? TRIGGER_OPTIONS[0];
 const getActionOption = (id: BotActionType) => ACTION_OPTIONS.find((option) => option.id === id) ?? ACTION_OPTIONS[0];
-const serverBotsRpc: ServerBotsRpc = (fn, args) => supabase.rpc(fn, args) as Promise<{ data: unknown; error: { message?: string } | null }>;
+const serverBotsRpc: ServerBotsRpc = (fn, args) => (supabase.rpc as (name: string, args?: unknown) => unknown)(fn, args) as Promise<{ data: unknown; error: { message?: string } | null }>;
 const getErrorMessage = (error: unknown, fallback: string) =>
   error && typeof error === "object" && "message" in error && typeof error.message === "string" ? error.message : fallback;
 
