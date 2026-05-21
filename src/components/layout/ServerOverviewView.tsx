@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { format, formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow, isSameDay } from "date-fns";
 import { useServerStore } from "@/stores/serverStore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuthStore } from "@/stores/authStore";
@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import type { User } from "@/types";
 import { stripMarkdown } from "@/lib/message";
+import { Check, HelpCircle, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface AnnouncementCard {
   id: string;
@@ -26,12 +28,42 @@ interface ForumActivityCard {
   channel_name: string;
 }
 
+interface CalendarEventCard {
+  id: string;
+  channel_id: string;
+  title: string;
+  color: string;
+  starts_at: string;
+  ends_at: string;
+  is_all_day: boolean;
+  allow_rsvps: boolean;
+  rsvp_count: number;
+  viewer_rsvp_status: string | null;
+  channel_name: string;
+}
+
+const formatOverviewEventTime = (event: CalendarEventCard) => {
+  if (event.is_all_day) return "All day";
+
+  const startsAt = new Date(event.starts_at);
+  const endsAt = new Date(event.ends_at);
+  const startLabel = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(startsAt);
+  const endLabel = new Intl.DateTimeFormat(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+    ...(isSameDay(startsAt, endsAt) ? {} : { month: "short", day: "numeric" }),
+  }).format(endsAt);
+
+  return `${startLabel} - ${endLabel}`;
+};
+
 export const ServerOverviewView = () => {
   const { currentServer, members, channels } = useServerStore();
   const userId = useAuthStore((s) => s.user?.id);
   const navigate = useNavigate();
   const [recentAnnouncements, setRecentAnnouncements] = useState<AnnouncementCard[]>([]);
   const [recentForumActivity, setRecentForumActivity] = useState<ForumActivityCard[]>([]);
+  const [upcomingCalendarEvents, setUpcomingCalendarEvents] = useState<CalendarEventCard[]>([]);
 
   useEffect(() => {
     if (!currentServer || !userId) return;
@@ -187,9 +219,98 @@ export const ServerOverviewView = () => {
     void fetchForumActivity();
   }, [currentServer, channels, userId, members]);
 
+  useEffect(() => {
+    if (!currentServer || !userId) return;
+
+    const fetchCalendarEvents = async () => {
+      try {
+        const calendarChannels = channels.filter((c) => c.type === "calendar");
+        if (calendarChannels.length === 0) {
+          setUpcomingCalendarEvents([]);
+          return;
+        }
+
+        const channelNameById = new Map(calendarChannels.map((channel) => [channel.id, channel.name]));
+        const now = new Date();
+        const rangeEnd = new Date(now);
+        rangeEnd.setDate(rangeEnd.getDate() + 60);
+
+        const eventLists = await Promise.all(
+          calendarChannels.map(async (channel) => {
+            const { data, error } = await (supabase.rpc as any)("get_calendar_events", {
+              _channel_id: channel.id,
+              _user_id: userId,
+              _starts_after: now.toISOString(),
+              _starts_before: rangeEnd.toISOString(),
+            });
+            if (error) throw error;
+            return Array.isArray(data) ? data : [];
+          }),
+        );
+
+        const events = eventLists
+          .flat()
+          .filter((event: any) => event?.id && new Date(event.ends_at).getTime() >= Date.now())
+          .map((event: any) => ({
+            id: event.id,
+            channel_id: event.channel_id,
+            title: event.title || "Untitled event",
+            color: event.color || "#0ea5e9",
+            starts_at: event.starts_at,
+            ends_at: event.ends_at,
+            is_all_day: Boolean(event.is_all_day),
+            allow_rsvps: Boolean(event.allow_rsvps),
+            rsvp_count: Number(event.rsvp_count ?? 0),
+            viewer_rsvp_status: event.viewer_rsvp_status ?? null,
+            channel_name: channelNameById.get(event.channel_id) || "calendar",
+          }))
+          .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime())
+          .slice(0, 4);
+
+        setUpcomingCalendarEvents(events);
+      } catch (error) {
+        console.error("Failed to fetch calendar events:", error);
+        setUpcomingCalendarEvents([]);
+      }
+    };
+
+    void fetchCalendarEvents();
+  }, [currentServer, channels, userId]);
+
+  const handleCalendarRsvp = async (event: CalendarEventCard, status: "going" | "none") => {
+    if (!userId || !event.allow_rsvps) return;
+
+    try {
+      const { data, error } = await (supabase.rpc as any)("set_calendar_event_rsvp", {
+        _event_id: event.id,
+        _user_id: userId,
+        _status: status,
+      });
+      if (error) throw error;
+      const result = data as { success?: boolean; error?: string } | null;
+      if (result && result.success === false) throw new Error(result.error || "Failed to update RSVP");
+
+      setUpcomingCalendarEvents((events) =>
+        events.map((item) => {
+          if (item.id !== event.id) return item;
+          const wasGoing = item.viewer_rsvp_status === "going";
+          const isGoing = status === "going";
+          return {
+            ...item,
+            viewer_rsvp_status: isGoing ? "going" : null,
+            rsvp_count: Math.max(0, item.rsvp_count + (isGoing && !wasGoing ? 1 : !isGoing && wasGoing ? -1 : 0)),
+          };
+        }),
+      );
+    } catch (error) {
+      console.error("Failed to update calendar RSVP:", error);
+    }
+  };
+
   if (!currentServer) return null;
 
   const hasAnnouncements = recentAnnouncements.length > 0;
+  const hasCalendarEvents = upcomingCalendarEvents.length > 0;
   return (
     <div className="h-full overflow-y-auto bg-layout-members">
       <div className="space-y-4">
@@ -227,9 +348,80 @@ export const ServerOverviewView = () => {
         </div>
 
         <div className="mx-auto w-full max-w-6xl px-4 pb-4 sm:px-6 sm:pb-6">
-          {hasAnnouncements && (
+          {hasCalendarEvents && (
             <>
               <div className="flex items-center gap-2 mb-3">
+                <div className="text-sm font-semibold">Upcoming events</div>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {upcomingCalendarEvents.map((event) => (
+                  <div
+                    key={event.id}
+                    className="min-h-[118px] overflow-hidden rounded-md border border-[#343945] bg-[#262b34] text-left shadow-sm"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/app/servers/${currentServer.id}/channels/${event.channel_id}`)}
+                      className="block w-full px-3 py-3 text-left transition-colors hover:bg-[#2d333d]"
+                    >
+                      <div className="flex items-start gap-2">
+                        <span
+                          className="mt-1 h-2 w-2 shrink-0 rounded-full"
+                          style={{ backgroundColor: event.color }}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-[13px] font-semibold leading-5 text-[#f1f3f6]">{event.title}</div>
+                          <div className="truncate text-xs text-[#b9c0cb]">
+                            {event.allow_rsvps
+                              ? `${event.rsvp_count} ${event.rsvp_count === 1 ? "is" : "are"} going`
+                              : "RSVP not enabled"}
+                          </div>
+                          <div className="mt-1 truncate text-xs text-[#d7dbe3]">
+                            {format(new Date(event.starts_at), "EEE, MMM d")} at {formatOverviewEventTime(event)}
+                          </div>
+                          <div className="mt-1 truncate text-[11px] text-[#9da5b2]">#{event.channel_name}</div>
+                        </div>
+                      </div>
+                    </button>
+                    {event.allow_rsvps && (
+                      <div className="grid h-8 grid-cols-3 border-t border-[#3a404c] bg-[#242933] text-[#c6ccd6]">
+                        <button
+                          type="button"
+                          onClick={() => void handleCalendarRsvp(event, "going")}
+                          className={cn(
+                            "flex items-center justify-center border-r border-[#3a404c] transition-colors hover:bg-[#313743] hover:text-white",
+                            event.viewer_rsvp_status === "going" && "bg-primary/90 text-primary-foreground hover:bg-primary",
+                          )}
+                          aria-label={`Join ${event.title}`}
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          className="flex cursor-default items-center justify-center border-r border-[#3a404c] text-[#9da5b2]"
+                          aria-label="Maybe RSVP is not available"
+                        >
+                          <HelpCircle className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleCalendarRsvp(event, "none")}
+                          className="flex items-center justify-center transition-colors hover:bg-[#313743] hover:text-white"
+                          aria-label={`Leave ${event.title}`}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {hasAnnouncements && (
+            <>
+              <div className={cn("flex items-center gap-2 mb-3", hasCalendarEvents && "mt-6")}>
                 <div className="text-sm font-semibold">Latest announcements</div>
                 <button
                   type="button"
@@ -297,7 +489,7 @@ export const ServerOverviewView = () => {
             </>
           )}
 
-          {!hasAnnouncements && recentForumActivity.length === 0 && (
+          {!hasCalendarEvents && !hasAnnouncements && recentForumActivity.length === 0 && (
             <div className="mt-6 flex min-h-[220px] flex-col items-center justify-center rounded-[8px] px-6 py-10 text-center">
               <svg
                 viewBox="0 0 24 24"
@@ -320,7 +512,7 @@ export const ServerOverviewView = () => {
                 <path d="M6.5 17.5H10.5" stroke="currentColor" strokeLinecap="round" />
               </svg>
               <p className="text-sm font-medium text-foreground">Nothing to show yet</p>
-              <p className="mt-1 text-xs text-muted-foreground">Announcements and forum activity will appear here.</p>
+              <p className="mt-1 text-xs text-muted-foreground">Events, announcements, and forum activity will appear here.</p>
             </div>
           )}
         </div>
