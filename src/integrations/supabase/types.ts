@@ -2911,6 +2911,143 @@ export type Database = {
           },
         ]
       }
+      user_profile_post_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          post_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          post_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          post_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_profile_post_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "user_profile_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_profile_post_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_profile_post_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_profile_post_reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_profile_post_reactions_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "user_profile_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_profile_post_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_profile_post_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_profile_posts: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_profile_posts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_profile_posts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_server_folders: {
         Row: {
           folder_data: Json
@@ -3444,6 +3581,14 @@ export type Database = {
         }
         Returns: string
       }
+      create_profile_post: {
+        Args: { _content: string; _title: string; _user_id: string }
+        Returns: Json
+      }
+      create_profile_post_comment: {
+        Args: { _content: string; _post_id: string; _user_id: string }
+        Returns: Json
+      }
       create_server_invite: {
         Args: {
           _expires_in_seconds?: number
@@ -3563,6 +3708,14 @@ export type Database = {
         Args: { _message_id: string; _user_id: string }
         Returns: undefined
       }
+      delete_profile_post: {
+        Args: { _post_id: string; _user_id: string }
+        Returns: boolean
+      }
+      delete_profile_post_comment: {
+        Args: { _comment_id: string; _user_id: string }
+        Returns: boolean
+      }
       delete_role_permission: {
         Args: { _permission_id: string; _user_id: string }
         Returns: undefined
@@ -3612,6 +3765,10 @@ export type Database = {
         Args: { _content: string; _message_id: string; _user_id: string }
         Returns: Json
       }
+      edit_profile_post_comment: {
+        Args: { _comment_id: string; _content: string; _user_id: string }
+        Returns: Json
+      }
       edit_thread_message: {
         Args: { _content: string; _message_id: string }
         Returns: Json
@@ -3650,15 +3807,6 @@ export type Database = {
           last_read_at: string
           last_read_message_id: string
           mention_count: number
-          unread_count: number
-        }[]
-      }
-      get_user_server_unread_summary: {
-        Args: { _blocked_user_ids?: string[]; _user_id: string }
-        Returns: {
-          channel_ids: string[]
-          mention_count: number
-          server_id: string
           unread_count: number
         }[]
       }
@@ -3739,10 +3887,6 @@ export type Database = {
         }[]
       }
       get_explore_servers: { Args: never; Returns: Json }
-      get_server_publication_eligibility: {
-        Args: { _server_id: string; _user_id: string }
-        Returns: Json
-      }
       get_friend_dashboard: { Args: { _user_id: string }; Returns: Json }
       get_invite_details_by_code: {
         Args: { _invite_code: string }
@@ -3753,6 +3897,7 @@ export type Database = {
           id: string
           invite_code: string
           inviter_username: string
+          member_count: number
           name: string
         }[]
       }
@@ -3853,6 +3998,10 @@ export type Database = {
         }
         Returns: Json
       }
+      get_server_publication_eligibility: {
+        Args: { _server_id: string; _user_id: string }
+        Returns: Json
+      }
       get_server_recent_announcements_secure: {
         Args: { _limit?: number; _server_id: string; _user_id: string }
         Returns: Json
@@ -3876,6 +4025,10 @@ export type Database = {
       }
       get_task_categories: {
         Args: { _channel_id: string; _user_id: string }
+        Returns: Json
+      }
+      get_task_secure: {
+        Args: { _task_id: string; _user_id: string }
         Returns: Json
       }
       get_thread_by_message_id: { Args: { _message_id: string }; Returns: Json }
@@ -3922,6 +4075,15 @@ export type Database = {
       }
       get_user_server_folders: { Args: { _user_id: string }; Returns: Json }
       get_user_server_tabs: { Args: { _user_id: string }; Returns: string[] }
+      get_user_server_unread_summary: {
+        Args: { _blocked_user_ids?: string[]; _user_id: string }
+        Returns: {
+          channel_ids: string[]
+          mention_count: number
+          server_id: string
+          unread_count: number
+        }[]
+      }
       get_user_servers: { Args: { _user_id: string }; Returns: Json }
       get_user_voice_settings: { Args: { p_user_id: string }; Returns: Json }
       get_users_basic_secure: {
@@ -4152,6 +4314,10 @@ export type Database = {
           _server_ids?: string[]
           _target_user_id: string
         }
+        Returns: Json
+      }
+      profile_post_reactions_json: {
+        Args: { _post_id: string; _requesting_user_id: string }
         Returns: Json
       }
       publish_e2e_key_bundle: {
@@ -4437,6 +4603,14 @@ export type Database = {
       }
       toggle_pin_message: {
         Args: { _message_id: string; _user_id: string }
+        Returns: Json
+      }
+      toggle_profile_post_reaction: {
+        Args: { _emoji: string; _post_id: string; _user_id: string }
+        Returns: Json
+      }
+      toggle_thread_reaction: {
+        Args: { _emoji: string; _message_id: string; _user_id: string }
         Returns: Json
       }
       transfer_ownership: {
