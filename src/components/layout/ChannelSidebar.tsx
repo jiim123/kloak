@@ -1780,6 +1780,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
       ? currentServer.banner_url
       : `${currentServer.banner_url}${currentServer.banner_url.includes("?") ? "&" : "?"}cb=${encodeURIComponent(currentServer.banner_url.split("/").pop()?.split("?")[0] ?? "")}`
     : null;
+  const serverInitial = currentServer.name.trim().charAt(0).toUpperCase() || "#";
 
   // Shared channel list rendering (used by both mobile and desktop)
   const renderChannelList = (
@@ -1995,36 +1996,82 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
     <div className="h-full flex flex-col">
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Server header with banner */}
-        <div className="relative">
+        <div
+          className={cn(
+            "relative z-10 overflow-hidden border-b border-border/35 bg-[hsl(var(--layout-channels))]",
+            "transition-shadow duration-200",
+            isServerHeaderCondensed && "shadow-[0_8px_24px_rgba(0,0,0,0.18)]",
+          )}
+        >
           <DropdownMenu>
             <div
               className={cn(
-                "relative overflow-hidden transition-[height] duration-200 ease-out",
-                isServerHeaderCondensed ? "h-0" : "h-24",
+                "relative overflow-hidden transition-[height,opacity] duration-200 ease-out",
+                isServerHeaderCondensed ? "h-0 opacity-0" : "h-32 opacity-100",
               )}
             >
               {serverBannerUrl ? (
-                <img
-                  src={serverBannerUrl}
-                  alt={`${currentServer.name} banner`}
-                  className="h-full w-full object-cover"
-                />
+                <>
+                  <img
+                    src={serverBannerUrl}
+                    alt={`${currentServer.name} banner`}
+                    className="h-full w-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.08),rgba(0,0,0,0.58))]" />
+                </>
               ) : (
-                <div className="h-full w-full bg-[linear-gradient(135deg,hsl(350_42%_23%),hsl(31_31%_25%)_68%,hsl(var(--sidebar)))]" />
+                <div className="h-full w-full bg-[radial-gradient(circle_at_22%_22%,hsl(var(--primary)/0.42),transparent_34%),linear-gradient(135deg,hsl(350_42%_23%),hsl(31_31%_25%)_62%,hsl(var(--sidebar)))]" />
               )}
-              <div className="absolute inset-0 bg-black/10" />
+              <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[hsl(var(--layout-channels))] via-[hsl(var(--layout-channels)/0.42)] to-transparent" />
             </div>
             <DropdownMenuTrigger asChild>
-              <button className="group flex h-12 w-full items-center gap-3 px-4 text-left transition-colors hover:bg-foreground/[0.03] active:scale-[0.995]">
-                <div className="flex min-w-0 flex-1 items-center gap-1.5">
-                  <h2 className="min-w-0 truncate text-[17px] font-semibold leading-none text-foreground">
-                    {currentServer.name}
-                  </h2>
-                  {resolvedServerVerified && (
-                    <CheckCircle2 className="h-4 w-4 shrink-0 fill-sky-400 text-[hsl(223_7%_20%)]" />
+              <button
+                className={cn(
+                  "group relative flex w-full items-center gap-3 overflow-hidden text-left transition-[height,background-color,padding,box-shadow] duration-200 active:scale-[0.995]",
+                  isServerHeaderCondensed
+                    ? "h-14 px-3 bg-[hsl(var(--layout-channels))] hover:bg-foreground/[0.035]"
+                    : "h-12 px-4 hover:bg-foreground/[0.03]",
+                )}
+              >
+                {isServerHeaderCondensed && (
+                  <>
+                    {serverBannerUrl ? (
+                      <img
+                        src={serverBannerUrl}
+                        alt=""
+                        className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-35 blur-md"
+                      />
+                    ) : (
+                      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_22%_22%,hsl(var(--primary)/0.25),transparent_36%),linear-gradient(135deg,hsl(350_42%_18%),hsl(31_31%_19%)_62%,hsl(var(--layout-channels)))]" />
+                    )}
+                    <div className="pointer-events-none absolute inset-0 bg-[hsl(var(--layout-channels)/0.62)]" />
+                  </>
+                )}
+                <div
+                  className={cn(
+                    "relative shrink-0 items-center justify-center overflow-hidden rounded-xl bg-secondary text-sm font-semibold text-foreground ring-1 ring-border/60 transition-[width,height,opacity,transform] duration-200",
+                    isServerHeaderCondensed ? "flex h-9 w-9 opacity-100 scale-100" : "h-0 w-0 opacity-0 scale-90",
+                  )}
+                >
+                  {currentServer.icon_url ? (
+                    <img src={currentServer.icon_url} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <span>{serverInitial}</span>
                   )}
                 </div>
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors group-hover:bg-foreground/[0.06] group-hover:text-foreground">
+                <div className="relative flex min-w-0 flex-1 items-center gap-1.5">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <h2 className="min-w-0 truncate text-[15px] font-semibold leading-5 text-foreground">
+                        {currentServer.name}
+                      </h2>
+                      {resolvedServerVerified && (
+                        <CheckCircle2 className="h-4 w-4 shrink-0 fill-sky-400 text-[hsl(223_7%_20%)]" />
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors group-hover:bg-foreground/[0.06] group-hover:text-foreground">
                   <ChevronDownIcon className="h-4 w-4" />
                 </div>
               </button>
