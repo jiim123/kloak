@@ -42,6 +42,7 @@ import { fetchServerEmojis } from "@/lib/serverEmojis";
 import { useUserCacheStore } from "@/stores/userCacheStore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { isPollMessageContent, getPollIdFromContent, usePollLabel } from "@/lib/poll";
 
 import type { Message } from "@/types";
 
