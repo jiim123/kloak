@@ -50,6 +50,7 @@ type CalendarEvent = {
   allowed_role_ids: string[];
   rsvp_count: number;
   viewer_rsvp_status: string | null;
+  created_at: string;
 };
 
 type CalendarEventDetails = CalendarEvent & {
