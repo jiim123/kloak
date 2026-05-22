@@ -3985,6 +3985,10 @@ export type Database = {
         Args: { _comment_id: string; _user_id: string }
         Returns: boolean
       }
+      delete_calendar_event: {
+        Args: { _event_id: string; _user_id: string }
+        Returns: Json
+      }
       delete_calendar_event_comment: {
         Args: { _comment_id: string; _user_id: string }
         Returns: boolean
@@ -4982,6 +4986,28 @@ export type Database = {
       unmute_member: {
         Args: { _server_id: string; _target_user_id: string; _user_id: string }
         Returns: undefined
+      }
+      update_calendar_event: {
+        Args: {
+          _allow_rsvps?: boolean
+          _allowed_role_ids?: string[]
+          _attendance_limit?: number
+          _color?: string
+          _description?: string
+          _ends_at?: string
+          _event_id: string
+          _is_all_day?: boolean
+          _limit_attendance?: boolean
+          _location?: string
+          _recurrence?: string
+          _restrict_roles?: boolean
+          _starts_at?: string
+          _timezone?: string
+          _title: string
+          _url?: string
+          _user_id: string
+        }
+        Returns: Json
       }
       update_category: {
         Args: { _category_id: string; _updates: string; _user_id: string }
