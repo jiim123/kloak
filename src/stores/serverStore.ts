@@ -983,6 +983,18 @@ export const useServerStore = create<ServerState>((set, get) => ({
           } else {
             await get().fetchRoles(serverId);
           }
+          // Also restore cached role permissions so permission evaluation
+          // works immediately on the cached fast path.
+          const cachedRolePerms = rolePermissionsCache.get(serverId);
+          if (
+            cachedRolePerms &&
+            Date.now() - cachedRolePerms.cachedAt < PERMISSIONS_TTL_MS &&
+            get().currentServer?.id === serverId
+          ) {
+            set({ rolePermissions: cachedRolePerms.data });
+          } else if (get().currentServer?.id === serverId) {
+            void get().fetchRolePermissions(serverId);
+          }
           return;
         }
 
