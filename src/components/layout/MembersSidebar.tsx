@@ -472,15 +472,11 @@ export const MembersSidebar = () => {
     exitMassBanMode();
   }, [currentServer?.id, exitMassBanMode]);
 
-  // Subscribe to realtime member updates
-  useRealtimeMembers(currentServer?.id || null);
-
-  // Lazy-load members
+  // Refresh members when the sidebar opens (initial load happens at app level).
   useEffect(() => {
     if (!currentServer?.id) return;
-    if (!isMemberSidebarOpen && isMobile) return;
     fetchMembers(currentServer.id);
-  }, [currentServer?.id, isMemberSidebarOpen, isMobile, fetchMembers]);
+  }, [currentServer?.id, fetchMembers]);
 
   // Fetch total member count
   useEffect(() => {
