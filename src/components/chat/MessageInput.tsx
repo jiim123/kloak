@@ -1123,7 +1123,7 @@ export const MessageInput = ({
   }
 
   return (
-    <div className="px-5 pb-5 pt-2 relative bg-transparent">
+    <div className="px-3 pb-3 pt-2 sm:px-5 sm:pb-5 relative bg-transparent">
       <input
         ref={fileInputRef}
         type="file"
