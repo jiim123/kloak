@@ -1722,10 +1722,16 @@ export const MessageItem = memo(function MessageItem({
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="min-w-[190px] overflow-hidden rounded-md p-0">
-                      {isOwnMessage && (
+                      {isOwnMessage && !pollId && (
                         <DropdownMenuItem onClick={handleStartEditing} className="rounded-none px-3 py-2">
                           <Pencil className="h-4 w-4 shrink-0 mr-2" />
                           Edit
+                        </DropdownMenuItem>
+                      )}
+                      {isOwnMessage && pollId && !pollIsClosed && (
+                        <DropdownMenuItem onClick={handleEndPoll} className="rounded-none px-3 py-2">
+                          <Pencil className="h-4 w-4 shrink-0 mr-2" />
+                          End poll
                         </DropdownMenuItem>
                       )}
                       {isOwnMessage && <DropdownMenuSeparator className="mx-0 my-0" />}
