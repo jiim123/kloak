@@ -7,6 +7,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useMessageUser } from "@/stores/userCacheStore";
 import { getMessagePreview } from "@/lib/message";
 import { getSignedAttachmentUrl } from "@/lib/signedUrl";
+import { getPollIdFromContent, isPollMessageContent, usePollLabel } from "@/lib/poll";
 import type { Message } from "@/types";
 
 const MODAL_CONTENT_CLASS =
