@@ -2070,7 +2070,7 @@ export const MessageItem = memo(function MessageItem({
                     onClick={handleMobileDelete}
                   >
                     <Trash2 className="w-5 h-5" />
-                    <span className="font-medium">Delete Message</span>
+                    <span className="font-medium">{pollId ? "Delete Poll" : "Delete Message"}</span>
                   </button>
                 </>
               )}
