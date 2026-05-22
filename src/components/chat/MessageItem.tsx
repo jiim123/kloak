@@ -854,6 +854,15 @@ export const MessageItem = memo(function MessageItem({
     }
   }, [user, message.id, message.is_pinned, pinMessage, checkPinLimit]);
 
+  // Poll-specific state and actions (for own poll messages)
+  const pollIsClosed = usePollStore((s) => (pollId ? !!s.pollsById[pollId]?.is_closed : false));
+  const handleEndPoll = useCallback(async () => {
+    if (!pollId) return;
+    const ok = await usePollStore.getState().closePoll(pollId);
+    if (ok) toast.success("Poll ended");
+    else toast.error("Failed to end poll");
+  }, [pollId]);
+
   const isExternalEmoji = useCallback(
     (emoji: string): boolean => {
       const match = emoji.match(/^:([a-z0-9_]{2,12}):$/i);
