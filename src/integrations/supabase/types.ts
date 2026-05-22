@@ -233,6 +233,297 @@ export type Database = {
         }
         Relationships: []
       }
+      calendar_event_comment_reactions: {
+        Row: {
+          comment_id: string
+          created_at: string
+          emoji: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string
+          emoji: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string
+          emoji?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_event_comment_reactions_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_event_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_event_comment_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_event_comment_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calendar_event_comments: {
+        Row: {
+          content: string
+          created_at: string
+          edited_at: string | null
+          event_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          edited_at?: string | null
+          event_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          edited_at?: string | null
+          event_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_event_comments_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_event_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_event_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calendar_event_reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          event_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          event_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          event_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_event_reactions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_event_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_event_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calendar_event_rsvps: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_event_rsvps_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_event_rsvps_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_event_rsvps_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calendar_events: {
+        Row: {
+          allow_rsvps: boolean
+          allowed_role_ids: string[]
+          attendance_limit: number | null
+          channel_id: string
+          color: string
+          created_at: string
+          created_by: string
+          description: string | null
+          ends_at: string
+          id: string
+          is_all_day: boolean
+          limit_attendance: boolean
+          location: string | null
+          recurrence: string
+          restrict_roles: boolean
+          server_id: string
+          starts_at: string
+          timezone: string
+          title: string
+          updated_at: string
+          url: string | null
+        }
+        Insert: {
+          allow_rsvps?: boolean
+          allowed_role_ids?: string[]
+          attendance_limit?: number | null
+          channel_id: string
+          color?: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          ends_at: string
+          id?: string
+          is_all_day?: boolean
+          limit_attendance?: boolean
+          location?: string | null
+          recurrence?: string
+          restrict_roles?: boolean
+          server_id: string
+          starts_at: string
+          timezone?: string
+          title: string
+          updated_at?: string
+          url?: string | null
+        }
+        Update: {
+          allow_rsvps?: boolean
+          allowed_role_ids?: string[]
+          attendance_limit?: number | null
+          channel_id?: string
+          color?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          ends_at?: string
+          id?: string
+          is_all_day?: boolean
+          limit_attendance?: boolean
+          location?: string | null
+          recurrence?: string
+          restrict_roles?: boolean
+          server_id?: string
+          starts_at?: string
+          timezone?: string
+          title?: string
+          updated_at?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_events_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_events_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       category_permissions: {
         Row: {
           allowed: boolean
@@ -2124,6 +2415,7 @@ export type Database = {
           owner_id: string
           system_channel_join_id: string | null
           system_channel_leave_id: string | null
+          timezone: string
         }
         Insert: {
           about?: string | null
@@ -2142,6 +2434,7 @@ export type Database = {
           owner_id: string
           system_channel_join_id?: string | null
           system_channel_leave_id?: string | null
+          timezone?: string
         }
         Update: {
           about?: string | null
@@ -2160,6 +2453,7 @@ export type Database = {
           owner_id?: string
           system_channel_join_id?: string | null
           system_channel_leave_id?: string | null
+          timezone?: string
         }
         Relationships: [
           {
@@ -3530,6 +3824,29 @@ export type Database = {
         Args: { _device_id: number; _user_id: string }
         Returns: number
       }
+      create_calendar_event: {
+        Args: {
+          _allow_rsvps?: boolean
+          _allowed_role_ids?: string[]
+          _attendance_limit?: number
+          _channel_id: string
+          _color?: string
+          _description?: string
+          _ends_at?: string
+          _is_all_day?: boolean
+          _limit_attendance?: boolean
+          _location?: string
+          _recurrence?: string
+          _restrict_roles?: boolean
+          _server_id: string
+          _starts_at?: string
+          _timezone?: string
+          _title: string
+          _url?: string
+          _user_id: string
+        }
+        Returns: Json
+      }
       create_category: {
         Args: {
           _name: string
@@ -3665,6 +3982,10 @@ export type Database = {
         Returns: boolean
       }
       delete_announcement_comment: {
+        Args: { _comment_id: string; _user_id: string }
+        Returns: boolean
+      }
+      delete_calendar_event_comment: {
         Args: { _comment_id: string; _user_id: string }
         Returns: boolean
       }
@@ -3819,6 +4140,19 @@ export type Database = {
         Returns: Json
       }
       get_blocked_users: { Args: { _user_id: string }; Returns: Json }
+      get_calendar_event_details: {
+        Args: { _event_id: string; _user_id: string }
+        Returns: Json
+      }
+      get_calendar_events: {
+        Args: {
+          _channel_id: string
+          _starts_after?: string
+          _starts_before?: string
+          _user_id: string
+        }
+        Returns: Json
+      }
       get_category_permissions: {
         Args: { _category_id: string }
         Returns: Json
@@ -4118,6 +4452,10 @@ export type Database = {
           _reply_to_id?: string
           _user_id: string
         }
+        Returns: Json
+      }
+      insert_calendar_event_comment: {
+        Args: { _content: string; _event_id: string; _user_id: string }
         Returns: Json
       }
       insert_media_comment: {
@@ -4517,6 +4855,10 @@ export type Database = {
         Returns: Json
       }
       server: { Args: { _server_id: string; _user_id?: string }; Returns: Json }
+      set_calendar_event_rsvp: {
+        Args: { _event_id: string; _status: string; _user_id: string }
+        Returns: Json
+      }
       set_category_permission: {
         Args: {
           _allowed: boolean
@@ -4586,6 +4928,14 @@ export type Database = {
       }
       toggle_announcement_comment_reaction: {
         Args: { _comment_id: string; _emoji: string; _user_id: string }
+        Returns: boolean
+      }
+      toggle_calendar_event_comment_reaction: {
+        Args: { _comment_id: string; _emoji: string; _user_id: string }
+        Returns: boolean
+      }
+      toggle_calendar_event_reaction: {
+        Args: { _emoji: string; _event_id: string; _user_id: string }
         Returns: boolean
       }
       toggle_media_comment_reaction: {
@@ -4767,8 +5117,8 @@ export type Database = {
         | "forum"
         | "tasks"
         | "media"
-        | "calendar"
         | "streaming"
+        | "calendar"
       friendship_status: "pending" | "accepted" | "blocked" | "declined"
       mention_type: "user" | "everyone" | "here" | "role"
       notification_type:
@@ -4954,8 +5304,8 @@ export const Constants = {
         "forum",
         "tasks",
         "media",
-        "calendar",
         "streaming",
+        "calendar",
       ],
       friendship_status: ["pending", "accepted", "blocked", "declined"],
       mention_type: ["user", "everyone", "here", "role"],
