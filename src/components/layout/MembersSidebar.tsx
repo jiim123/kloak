@@ -1246,10 +1246,7 @@ export const MembersSidebar = () => {
     [renderMemberListRow],
   );
 
-  // Show skeleton while loading
-  if (isMembersLoading && members.length === 0) {
-    return <MembersSidebarSkeleton />;
-  }
+  const isLoadingSkeleton = isMembersLoading && members.length === 0;
 
   const sidebarContent = (
     <div
@@ -1441,6 +1438,8 @@ export const MembersSidebar = () => {
     </div>
   );
 
+  const body = isLoadingSkeleton ? <MembersSidebarSkeleton /> : sidebarContent;
+
   if (isMobile) {
     return (
       <Drawer direction="right" open={isMemberSidebarOpen} onOpenChange={setMemberSidebarOpen} modal={false}>
@@ -1449,11 +1448,11 @@ export const MembersSidebar = () => {
           <DrawerHeader className="sr-only">
             <DrawerTitle>Members</DrawerTitle>
           </DrawerHeader>
-          <div className="h-full overflow-hidden">{sidebarContent}</div>
+          <div className="h-full overflow-hidden">{body}</div>
         </DrawerContent>
       </Drawer>
     );
   }
 
-  return sidebarContent;
+  return body;
 };
