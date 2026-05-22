@@ -205,7 +205,7 @@ export const DeleteMessageModal = ({
                   Deleting...
                 </>
               ) : (
-                "Delete Message"
+                isPoll ? "Delete Poll" : "Delete Message"
               )}
             </Button>
           </div>
