@@ -331,31 +331,31 @@ export const EmojiPicker = ({
 
       return (
         <div key={cat.key}>
-          <div className="mb-1.5 px-0.5 text-[10px] font-semibold leading-none text-[#b9bbbe]">
+          <div className="mb-2 sm:mb-1.5 px-0.5 text-xs sm:text-[10px] font-semibold leading-none text-[#b9bbbe]">
             {cat.key === "recent" ? "Frequently used" : cat.name}
           </div>
 
           {cat.emojis.length > 0 ? (
-            <div className="grid grid-cols-9 gap-[1px]">
+            <div className="grid grid-cols-7 gap-1 sm:grid-cols-9 sm:gap-[1px]">
               {cat.emojis
                 .map((emoji, index) => renderRecentOrNativeEmoji(cat.key, emoji, index))
                 .filter(Boolean)}
             </div>
           ) : (
             <div className="flex h-[34px] items-center">
-              <p className="px-0.5 text-[11px] font-medium text-[#8e9297]">No recently used emoji</p>
+              <p className="px-0.5 text-sm sm:text-[11px] font-medium text-[#8e9297]">No recently used emoji</p>
             </div>
           )}
 
           {cat.key === "recent" && selectedServer && (
             <div className="mt-2">
-              <div className="mb-1.5 px-0.5 text-[10px] font-semibold leading-none text-[#b9bbbe]">
+              <div className="mb-2 sm:mb-1.5 px-0.5 text-xs sm:text-[10px] font-semibold leading-none text-[#b9bbbe]">
                 {selectedServer.name}
               </div>
               {loadingServers.has(selectedServer.id) ? (
-                <p className="px-0.5 text-[11px] text-[#8e9297]">Loading emojis...</p>
+                <p className="px-0.5 text-sm sm:text-[11px] text-[#8e9297]">Loading emojis...</p>
               ) : currentServerEmojis.length > 0 ? (
-                <div className="grid grid-cols-9 gap-[1px]">
+                <div className="grid grid-cols-7 gap-1 sm:grid-cols-9 sm:gap-[1px]">
                   {currentServerEmojis.slice(0, 54).map((emoji) =>
                     renderEmojiButton(`server-inline-${emoji.id}`, `:${emoji.name}:`, {
                       label: `:${emoji.name}:`,
