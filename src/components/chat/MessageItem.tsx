@@ -705,6 +705,11 @@ export const MessageItem = memo(function MessageItem({
   }, [user?.id, message.content]);
 
   const pollId = useMemo(() => getPollIdFromContent(message.content), [message.content]);
+  const replyPollId = useMemo(
+    () => (message.reply_to ? getPollIdFromContent(message.reply_to.content) : null),
+    [message.reply_to],
+  );
+  const replyPollLabel = usePollLabel(replyPollId, 40);
 
   // Check if message has embeddable URLs (non-image links that generate previews)
   const hasEmbeddableUrls = useMemo(() => {
