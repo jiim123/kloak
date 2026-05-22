@@ -1661,6 +1661,8 @@ export type Database = {
           id: string
           is_pinned: boolean | null
           is_system_message: boolean | null
+          pinned_at: string | null
+          pinned_by: string | null
           reply_to_id: string | null
           user_id: string
         }
@@ -1673,6 +1675,8 @@ export type Database = {
           id?: string
           is_pinned?: boolean | null
           is_system_message?: boolean | null
+          pinned_at?: string | null
+          pinned_by?: string | null
           reply_to_id?: string | null
           user_id: string
         }
@@ -1685,6 +1689,8 @@ export type Database = {
           id?: string
           is_pinned?: boolean | null
           is_system_message?: boolean | null
+          pinned_at?: string | null
+          pinned_by?: string | null
           reply_to_id?: string | null
           user_id?: string
         }
@@ -1694,6 +1700,20 @@ export type Database = {
             columns: ["channel_id"]
             isOneToOne: false
             referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_pinned_by_fkey"
+            columns: ["pinned_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_pinned_by_fkey"
+            columns: ["pinned_by"]
+            isOneToOne: false
+            referencedRelation: "users_public"
             referencedColumns: ["id"]
           },
           {
