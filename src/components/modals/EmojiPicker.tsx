@@ -481,31 +481,32 @@ export const EmojiPicker = ({
         </div>
       )}
 
-      <div className="px-2 pb-1.5 pt-1.5">
+      <div className="px-3 pb-2 pt-2 sm:px-2 sm:pb-1.5 sm:pt-1.5">
         <div className="relative">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-[14px] w-[14px] -translate-y-1/2 text-[#7b8088]" />
+          <Search className="pointer-events-none absolute left-3 sm:left-2.5 top-1/2 h-5 w-5 sm:h-[14px] sm:w-[14px] -translate-y-1/2 text-[#7b8088]" />
           <input
             ref={searchInputRef}
             type="text"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search"
-            className="h-[28px] w-full rounded-full border border-[#22252a] bg-[#25282d] pl-8 pr-8 text-[11px] leading-none text-[#dcddde] outline-none placeholder:text-[#8e9297] focus:border-[#343940] focus:bg-[#24272c]"
+            className="h-11 sm:h-[28px] w-full rounded-full border border-[#22252a] bg-[#25282d] pl-10 pr-10 sm:pl-8 sm:pr-8 text-base sm:text-[11px] leading-none text-[#dcddde] outline-none placeholder:text-[#8e9297] focus:border-[#343940] focus:bg-[#24272c]"
           />
           {search && (
             <button
               type="button"
-              className="absolute right-1.5 top-1/2 flex h-[18px] w-[18px] -translate-y-1/2 items-center justify-center rounded-full text-[#8e9297] hover:text-[#dcddde]"
+              className="absolute right-2 sm:right-1.5 top-1/2 flex h-7 w-7 sm:h-[18px] sm:w-[18px] -translate-y-1/2 items-center justify-center rounded-full text-[#8e9297] hover:text-[#dcddde]"
               onClick={() => {
                 setSearch("");
                 searchInputRef.current?.focus();
               }}
             >
-              <X className="h-[14px] w-[14px]" />
+              <X className="h-4 w-4 sm:h-[14px] sm:w-[14px]" />
             </button>
           )}
         </div>
       </div>
+
 
       <ScrollArea className={isMobile ? "min-h-0 flex-1 overflow-y-auto" : "h-[224px]"}>
         <div className="px-2 pb-1 pt-0.5">
