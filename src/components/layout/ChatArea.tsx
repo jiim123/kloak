@@ -114,9 +114,17 @@ const PinnedMessageBar = React.memo(function PinnedMessageBar({
 
   const latest = pinnedMessages[0];
   // Phase 1: look up user from centralized cache
-  const latestUser = useUserCacheStore.getState().getUser(latest.user_id) ?? latest.user;
+  const authorUser = useUserCacheStore.getState().getUser(latest.user_id) ?? latest.user;
+  const pinnedById = (latest as any).pinned_by as string | undefined;
+  const pinnedByUser = pinnedById ? useUserCacheStore.getState().getUser(pinnedById) : null;
+  const displayedUser = pinnedByUser ?? authorUser;
 
-  const rawContent = (latest.content || "")
+  const rawMessageContent = (latest.content || "");
+  const isPoll = isPollMessageContent(rawMessageContent);
+  const pollId = isPoll ? getPollIdFromContent(rawMessageContent) : null;
+  const pollLabel = usePollLabel(pollId);
+
+  const rawContent = rawMessageContent
     .replace(/```[\s\S]*?```/g, "[code]")
     .replace(/`[^`]+`/g, "[code]")
     .replace(/\n/g, " ")
@@ -152,9 +160,9 @@ const PinnedMessageBar = React.memo(function PinnedMessageBar({
     <div className="flex items-center gap-2 px-4 py-2 bg-muted/50 border-b border-border/50 flex-shrink-0 min-w-0 overflow-hidden">
       <Pin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
       <Avatar className="w-5 h-5 flex-shrink-0">
-        <AvatarImage src={latestUser?.avatar_url} />
-        <AvatarFallback style={{ backgroundColor: latestUser?.banner_color || "#5865F2" }} className="text-[10px]">
-          {latestUser?.username?.[0]?.toUpperCase() || "?"}
+        <AvatarImage src={displayedUser?.avatar_url} />
+        <AvatarFallback style={{ backgroundColor: displayedUser?.banner_color || "#5865F2" }} className="text-[10px]">
+          {displayedUser?.username?.[0]?.toUpperCase() || "?"}
         </AvatarFallback>
       </Avatar>
       {isNew && (
@@ -162,11 +170,17 @@ const PinnedMessageBar = React.memo(function PinnedMessageBar({
           new
         </span>
       )}
-      <span
-        ref={snippetRef}
-        className="text-sm text-muted-foreground truncate min-w-0 flex-1 inline-flex items-center gap-1 [&_img]:w-4 [&_img]:h-4 [&_img]:inline-block [&_img]:align-middle"
-        dangerouslySetInnerHTML={{ __html: parsedSnippet || "Pinned message" }}
-      />
+      {isPoll ? (
+        <span className="text-sm text-muted-foreground truncate min-w-0 flex-1">
+          {pollLabel}
+        </span>
+      ) : (
+        <span
+          ref={snippetRef}
+          className="text-sm text-muted-foreground truncate min-w-0 flex-1 inline-flex items-center gap-1 [&_img]:w-4 [&_img]:h-4 [&_img]:inline-block [&_img]:align-middle"
+          dangerouslySetInnerHTML={{ __html: parsedSnippet || "Pinned message" }}
+        />
+      )}
       {hasAttachments && (
         <span className="text-sm text-muted-foreground/80 flex-shrink-0">
           {latest.attachments!.length === 1 ? "1 attachment" : `${latest.attachments!.length} attachments`}
