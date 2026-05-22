@@ -166,6 +166,12 @@ export const evaluatePermission = (
       "assign_tasks",
       "change_task_status",
       "delete_tasks",
+      "view_events",
+      "create_events",
+      "edit_own_events",
+      "edit_all_events",
+      "delete_events",
+      "rsvp_events",
     ];
     return modAllowed.includes(permission);
   }
@@ -189,6 +195,10 @@ export const evaluatePermission = (
       "create_tasks",
       "edit_own_tasks",
       "change_task_status",
+      "view_events",
+      "create_events",
+      "edit_own_events",
+      "rsvp_events",
     ];
     return memberAllowed.includes(permission);
   }
@@ -294,6 +304,12 @@ export const getMemberPermissions = (
     "assign_tasks",
     "change_task_status",
     "delete_tasks",
+    "view_events",
+    "create_events",
+    "edit_own_events",
+    "edit_all_events",
+    "delete_events",
+    "rsvp_events",
   ];
 
   for (const permission of allPermissions) {

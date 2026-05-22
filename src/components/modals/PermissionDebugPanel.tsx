@@ -48,6 +48,12 @@ const ALL_PERMISSIONS: Permission[] = [
     'manage_invites',
     'manage_emojis',
     'transfer_ownership',
+    'view_events',
+    'create_events',
+    'edit_own_events',
+    'edit_all_events',
+    'delete_events',
+    'rsvp_events',
 ];
 
 const PERMISSION_LABELS: Record<Permission, string> = {
@@ -89,6 +95,12 @@ const PERMISSION_LABELS: Record<Permission, string> = {
     assign_tasks: 'Assign Tasks',
     change_task_status: 'Change Task Status',
     delete_tasks: 'Delete Tasks',
+    view_events: 'View Events',
+    create_events: 'Create Events',
+    edit_own_events: 'Edit Own Events',
+    edit_all_events: 'Edit All Events',
+    delete_events: 'Delete Events',
+    rsvp_events: 'RSVP to Events',
 };
 
 export function PermissionDebugPanel() {

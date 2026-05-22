@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { addMonths, endOfMonth, format, formatDistanceToNow, isSameDay, startOfMonth, subMonths } from "date-fns";
-import { ArrowLeft, CalendarDays, Check, ChevronLeft, ChevronRight, Clock, Link2, Loader2, MapPin, MessageSquare, Plus, Send, Smile, Trash2, Users } from "lucide-react";
+import { ArrowLeft, CalendarDays, Check, ChevronLeft, ChevronRight, Clock, Link2, Loader2, MapPin, MessageSquare, MoreHorizontal, Pencil, Plus, Smile, Trash2, Users, X } from "lucide-react";
 import { toast } from "sonner";
+import { useSearchParams } from "react-router-dom";
 
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ChannelHeader } from "@/components/chat/ChannelHeader";
 import { MessageContent } from "@/components/chat/MessageContent";
 import { EmojiPicker } from "@/components/modals/EmojiPicker";
@@ -10,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { FluentEmoji } from "@/components/ui/FluentEmoji";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Input } from "@/components/ui/input";
@@ -23,9 +25,12 @@ import { cn } from "@/lib/utils";
 import { encodeCustomEmojisForTransport } from "@/lib/globalEmojiResolver";
 import { getTopEmojis } from "@/lib/emojiRecents";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
+import { openUserProfileModal, SIDE_ALIGNED_USER_PROFILE_POPOVER } from "@/lib/userProfilePopover";
 import { supabase } from "@/integrations/supabase/client";
+import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
+import { useUIStore } from "@/stores/uiStore";
 import type { ReactionGroup, User } from "@/types";
 
 type CalendarEvent = {
@@ -51,13 +56,21 @@ type CalendarEvent = {
   rsvp_count: number;
   viewer_rsvp_status: string | null;
   created_at: string;
+  updated_at: string;
 };
 
 type CalendarEventDetails = CalendarEvent & {
   going_count: number;
+  maybe_count: number;
+  declined_count: number;
   comment_count: number;
+  viewer_can_manage?: boolean;
+  viewer_can_edit?: boolean;
+  viewer_can_delete?: boolean;
   creator?: Pick<User, "id" | "username" | "display_name" | "avatar_url" | "banner_color">;
   attendees?: Pick<User, "id" | "username" | "display_name" | "avatar_url" | "banner_color">[];
+  maybe_attendees?: Pick<User, "id" | "username" | "display_name" | "avatar_url" | "banner_color">[];
+  declined_attendees?: Pick<User, "id" | "username" | "display_name" | "avatar_url" | "banner_color">[];
 };
 
 type CalendarEventComment = {
@@ -84,6 +97,7 @@ type ToggleSettingProps = {
 };
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const EVENT_COMMENT_MAX_LENGTH = 300;
 const EVENT_COLOR_OPTIONS = [
   "#0ea5e9",
   "#22c55e",
@@ -95,6 +109,17 @@ const EVENT_COLOR_OPTIONS = [
   "#ec4899",
 ];
 const DEFAULT_EVENT_COLOR = EVENT_COLOR_OPTIONS[0];
+const RSVP_OPTIONS = [
+  { value: "going", label: "Going" },
+  { value: "maybe", label: "Maybe" },
+  { value: "declined", label: "Declined" },
+] as const;
+const RSVP_LABELS: Record<string, string> = {
+  going: "Going",
+  maybe: "Maybe",
+  declined: "Declined",
+};
+
 
 const pad = (value: number) => String(value).padStart(2, "0");
 
@@ -146,6 +171,11 @@ const getServerDateKey = (date: Date, timeZone: string) => {
 };
 
 const getDateKey = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+
+const getTimeZoneTimeValue = (date: Date, timeZone: string) => {
+  const parts = getTimeZoneParts(date, timeZone);
+  return `${pad(parts.hour)}:${pad(parts.minute)}`;
+};
 
 const getTimeZoneAbbreviation = (timeZone: string) => {
   const parts = new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName: "short" }).formatToParts(new Date());
@@ -209,6 +239,9 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
   const roles = useServerStore((s) => s.roles);
   const fetchRoles = useServerStore((s) => s.fetchRoles);
   const user = useAuthStore((s) => s.user);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { openModal } = useUIStore();
+  const { canPerformInChannel } = useMemberPermissions(currentChannel?.id);
 
   const serverTimezone = currentServer?.timezone || "UTC";
   const serverTimezoneLabel = getTimeZoneAbbreviation(serverTimezone);
@@ -217,6 +250,7 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isEditingEvent, setIsEditingEvent] = useState(false);
   const [selectedDateKey, setSelectedDateKey] = useState(getDateKey(new Date()));
   const [formTab, setFormTab] = useState("basic");
   const [isSaving, setIsSaving] = useState(false);
@@ -239,18 +273,23 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
   const [allowedRoleIds, setAllowedRoleIds] = useState<string[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEventDetails | null>(null);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [eventPendingDelete, setEventPendingDelete] = useState<CalendarEventDetails | null>(null);
   const [eventComments, setEventComments] = useState<CalendarEventComment[]>([]);
   const [eventReactions, setEventReactions] = useState<ReactionGroup[]>([]);
   const [isEventLoading, setIsEventLoading] = useState(false);
   const [eventReply, setEventReply] = useState("");
   const [isPostingEventReply, setIsPostingEventReply] = useState(false);
   const [eventReactionPickerOpen, setEventReactionPickerOpen] = useState(false);
-  const [composerEmojiOpen, setComposerEmojiOpen] = useState(false);
+  const [isDeleteEventDialogOpen, setIsDeleteEventDialogOpen] = useState(false);
+  const [isDeletingEvent, setIsDeletingEvent] = useState(false);
   const [customEmojiMap, setCustomEmojiMap] = useState<Map<string, string>>(new Map());
   const topEmojis = useMemo(() => getTopEmojis(3), []);
 
   const channelId = currentChannel?.id ?? null;
   const serverId = currentServer?.id ?? null;
+  const canCreateEvents = !!channelId && canPerformInChannel("create_events", channelId);
+  const canRsvpEvents = !!channelId && canPerformInChannel("rsvp_events", channelId);
   const restrictableRoles = useMemo(
     () => roles.filter((role) => role.name !== "@everyone").sort((a, b) => b.position - a.position),
     [roles],
@@ -310,6 +349,7 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
 
   const resetFormForDate = useCallback(
     (dateKey: string) => {
+      setIsEditingEvent(false);
       setFormTab("basic");
       setTitle("");
       setEventColor(DEFAULT_EVENT_COLOR);
@@ -330,6 +370,30 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
     },
     [],
   );
+
+  const populateFormFromEvent = useCallback((event: CalendarEventDetails) => {
+    const startsAt = new Date(event.starts_at);
+    const endsAt = new Date(event.ends_at);
+
+    setIsEditingEvent(true);
+    setFormTab("basic");
+    setTitle(event.title);
+    setEventColor(event.color || DEFAULT_EVENT_COLOR);
+    setIsAllDay(event.is_all_day);
+    setStartDate(getServerDateKey(startsAt, serverTimezone));
+    setEndDate(getServerDateKey(endsAt, serverTimezone));
+    setStartTime(getTimeZoneTimeValue(startsAt, serverTimezone));
+    setEndTime(getTimeZoneTimeValue(endsAt, serverTimezone));
+    setRecurrence(event.recurrence || "once");
+    setLocation(event.location || "");
+    setUrl(event.url || "");
+    setDescription(event.description || "");
+    setAllowRsvps(event.allow_rsvps);
+    setLimitAttendance(event.limit_attendance);
+    setAttendanceLimit(event.attendance_limit ? String(event.attendance_limit) : "20");
+    setRestrictRoles(event.restrict_roles);
+    setAllowedRoleIds(event.allowed_role_ids || []);
+  }, [serverTimezone]);
 
   const loadEvents = useCallback(async () => {
     if (!channelId || !serverId || !user?.id) return;
@@ -390,12 +454,37 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
   );
 
   const openCreate = (dateKey: string) => {
+    if (!canCreateEvents) {
+      toast.error("You do not have permission to create events");
+      return;
+    }
     setSelectedDateKey(dateKey);
     resetFormForDate(dateKey);
     setIsCreateOpen(true);
   };
 
-  const handleCreate = async () => {
+  const closeEventDetail = useCallback(() => {
+    setSelectedEventId(null);
+    setSelectedEvent(null);
+    setEventComments([]);
+    setEventReactions([]);
+    setEventReply("");
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.delete("event");
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
+
+  const handleEventDialogOpenChange = (open: boolean) => {
+    setIsCreateOpen(open);
+    if (!open) {
+      setEditingEventId(null);
+      setIsEditingEvent(false);
+    }
+  };
+
+  const submitEvent = async () => {
     if (!channelId || !serverId || !user?.id) return;
     if (!title.trim()) {
       toast.error("Event name is required");
@@ -420,9 +509,14 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
 
     setIsSaving(true);
     try {
-      const { data, error } = await (supabase.rpc as any)("create_calendar_event", {
-        _channel_id: channelId,
-        _server_id: serverId,
+      const rpcName = isEditingEvent ? "update_calendar_event" : "create_calendar_event";
+      const eventIdToUpdate = editingEventId ?? selectedEventId;
+      if (isEditingEvent && !eventIdToUpdate) {
+        toast.error("Event not found");
+        return;
+      }
+      const payload = {
+        ...(isEditingEvent ? { _event_id: eventIdToUpdate } : { _channel_id: channelId, _server_id: serverId }),
         _user_id: user.id,
         _title: title.trim(),
         _color: eventColor,
@@ -439,15 +533,21 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
         _attendance_limit: allowRsvps && limitAttendance ? Number(attendanceLimit) || null : null,
         _restrict_roles: allowRsvps && restrictRoles,
         _allowed_role_ids: allowRsvps && restrictRoles ? allowedRoleIds : [],
-      });
+      };
+      const { data, error } = await (supabase.rpc as any)(rpcName, payload);
       if (error) throw error;
       const result = data as { success?: boolean; error?: string } | null;
-      if (result && result.success === false) throw new Error(result.error || "Failed to create event");
-      toast.success("Event created");
+      if (result && result.success === false) throw new Error(result.error || `Failed to ${isEditingEvent ? "update" : "create"} event`);
+      toast.success(isEditingEvent ? "Event updated" : "Event created");
       setIsCreateOpen(false);
+      setEditingEventId(null);
+      setIsEditingEvent(false);
       await loadEvents();
+      if (isEditingEvent) {
+        await loadSelectedEvent();
+      }
     } catch (error: any) {
-      toast.error(error?.message || "Failed to create event");
+      toast.error(error?.message || `Failed to ${isEditingEvent ? "update" : "create"} event`);
     } finally {
       setIsSaving(false);
     }
@@ -459,14 +559,18 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
     );
   };
 
-  const handleRsvp = async (event: CalendarEvent) => {
+  const handleRsvp = async (event: CalendarEvent, nextStatus?: string | null) => {
     if (!user?.id || !event.allow_rsvps) return;
+    if (!canRsvpEvents) {
+      toast.error("You do not have permission to RSVP to events");
+      return;
+    }
     try {
-      const nextStatus = event.viewer_rsvp_status === "going" ? "none" : "going";
+      const status = nextStatus ?? (event.viewer_rsvp_status === "going" ? "none" : "going");
       const { data, error } = await (supabase.rpc as any)("set_calendar_event_rsvp", {
         _event_id: event.id,
         _user_id: user.id,
-        _status: nextStatus,
+        _status: status,
       });
       if (error) throw error;
       const result = data as { success?: boolean; error?: string } | null;
@@ -537,6 +641,10 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
     if (!selectedEventId) return;
     const channel = supabase
       .channel(`calendar-event:${selectedEventId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "calendar_event_rsvps", filter: `event_id=eq.${selectedEventId}` }, () => {
+        void loadSelectedEvent();
+        void loadEvents();
+      })
       .on("postgres_changes", { event: "*", schema: "public", table: "calendar_event_comments", filter: `event_id=eq.${selectedEventId}` }, () => {
         void loadEventComments();
         void loadSelectedEvent();
@@ -551,19 +659,58 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
     };
   }, [selectedEventId, loadEventComments, loadEventReactions, loadSelectedEvent]);
 
-  const openEvent = (eventId: string) => {
+  const openEvent = useCallback((eventId: string) => {
     setSelectedEventId(eventId);
     setSelectedEvent(null);
     setEventComments([]);
     setEventReactions([]);
     setEventReply("");
+  }, []);
+
+  useEffect(() => {
+    const eventId = searchParams.get("event");
+    if (eventId && eventId !== selectedEventId) {
+      openEvent(eventId);
+    }
+  }, [openEvent, searchParams, selectedEventId]);
+
+  const openEditEvent = () => {
+    if (!selectedEvent) return;
+    populateFormFromEvent(selectedEvent);
+    setEditingEventId(selectedEvent.id);
+    setIsCreateOpen(true);
+    closeEventDetail();
   };
 
-  const handleSelectedEventRsvp = async () => {
+  const handleSelectedEventRsvp = async (nextStatus: string | null) => {
     if (!selectedEvent) return;
-    await handleRsvp(selectedEvent);
+    await handleRsvp(selectedEvent, nextStatus);
     await loadSelectedEvent();
     await loadEvents();
+  };
+
+  const handleDeleteEvent = async () => {
+    const eventIdToDelete = eventPendingDelete?.id ?? selectedEventId;
+    if (!eventIdToDelete || !user?.id) return;
+    setIsDeletingEvent(true);
+    try {
+      const { data, error } = await (supabase.rpc as any)("delete_calendar_event", {
+        _event_id: eventIdToDelete,
+        _user_id: user.id,
+      });
+      if (error) throw error;
+      const result = data as { success?: boolean; error?: string } | null;
+      if (result && result.success === false) throw new Error(result.error || "Failed to delete event");
+      toast.success("Event deleted");
+      setIsDeleteEventDialogOpen(false);
+      setEventPendingDelete(null);
+      closeEventDetail();
+      await loadEvents();
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to delete event");
+    } finally {
+      setIsDeletingEvent(false);
+    }
   };
 
   const handlePostEventComment = async () => {
@@ -625,21 +772,23 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
     const detail = selectedEvent;
     const creatorName = detail?.creator?.display_name || detail?.creator?.username || "Unknown";
     const attendeePreview = detail?.attendees?.slice(0, 5) ?? [];
+    const maybePreview = detail?.maybe_attendees?.slice(0, 5) ?? [];
+    const declinedPreview = detail?.declined_attendees?.slice(0, 5) ?? [];
     const startsAt = detail ? new Date(detail.starts_at) : null;
     const endsAt = detail ? new Date(detail.ends_at) : null;
+    const currentRsvpLabel = detail?.viewer_rsvp_status ? RSVP_LABELS[detail.viewer_rsvp_status] || "Respond" : "Respond";
 
     return (
       <div className="flex h-full min-w-0 flex-col bg-layout-members">
         {showHeader && <ChannelHeader channel={currentChannel} showMessageActions={false} />}
-        <div className="flex min-h-0 flex-1 flex-col bg-[#313640] text-[#f4f5f7]">
-          <div className="flex h-12 shrink-0 items-center gap-2 border-b border-[#262b33] px-3">
+        <div className="flex min-h-0 flex-1 flex-col bg-background text-foreground">
+          <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-3">
             <Button
               variant="ghost"
               size="icon-sm"
-              className="h-8 w-8 rounded-[3px] text-[#c5cad3] hover:bg-[#3d4350]"
+              className="h-8 w-8 rounded-[3px] text-muted-foreground hover:bg-secondary"
               onClick={() => {
-                setSelectedEventId(null);
-                setSelectedEvent(null);
+                closeEventDetail();
                 void loadEvents();
               }}
               aria-label="Back to calendar"
@@ -651,53 +800,112 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
 
           {isEventLoading && !detail ? (
             <div className="flex flex-1 items-center justify-center">
-              <Loader2 className="h-6 w-6 animate-spin text-[#aeb4bf]" />
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : !detail ? (
-            <div className="flex flex-1 items-center justify-center text-sm text-[#aeb4bf]">Event not found</div>
+            <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">Event not found</div>
           ) : (
             <div className="min-h-0 flex-1 overflow-auto">
               <div className="grid min-h-full grid-cols-1 gap-6 p-4 lg:grid-cols-[minmax(0,1fr)_280px]">
                 <main className="min-w-0 space-y-3">
                   <h1 className="px-1 text-xl font-bold">{detail.title}</h1>
-                  <section className="overflow-hidden rounded-[4px] bg-[#2f343d]">
-                    {detail.allow_rsvps && (
-                      <div className="border-b border-[#282d35] p-4">
-                        <Button
-                          variant={detail.viewer_rsvp_status === "going" ? "secondary" : "outline"}
-                          className={cn(
-                            "h-9 rounded-[3px] px-4 text-xs font-semibold",
-                            detail.viewer_rsvp_status === "going"
-                              ? "bg-[#3b8553] text-white hover:bg-[#347849]"
-                              : "border-[#626977] bg-transparent text-[#d7dbe3] hover:bg-[#3b414c]",
-                          )}
-                          onClick={() => void handleSelectedEventRsvp()}
-                        >
-                          <Check className="mr-2 h-4 w-4" />
-                          Going
-                        </Button>
+                  <section className="overflow-hidden rounded-[4px] border border-border bg-card">
+                    {detail.allow_rsvps && canRsvpEvents && (
+                      <div className="border-b border-border p-4">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "h-9 rounded-[3px] px-4 text-xs font-semibold",
+                                detail.viewer_rsvp_status === "going"
+                                  ? "border-emerald-500/60 bg-emerald-500/10 text-foreground hover:bg-emerald-500/15"
+                                  : detail.viewer_rsvp_status === "maybe"
+                                    ? "border-amber-500/60 bg-amber-500/10 text-foreground hover:bg-amber-500/15"
+                                    : detail.viewer_rsvp_status === "declined"
+                                      ? "border-destructive/50 bg-destructive/10 text-foreground hover:bg-destructive/15"
+                                      : "border-border bg-transparent text-foreground hover:bg-secondary",
+                              )}
+                            >
+                              {detail.viewer_rsvp_status === "declined" ? (
+                                <X className="mr-2 h-4 w-4" />
+                              ) : (
+                                <Check className="mr-2 h-4 w-4" />
+                              )}
+                              {currentRsvpLabel}
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
+                            {RSVP_OPTIONS.map((option) => (
+                              <DropdownMenuItem key={option.value} onSelect={() => void handleSelectedEventRsvp(option.value)}>
+                                {option.label}
+                              </DropdownMenuItem>
+                            ))}
+                            {detail.viewer_rsvp_status && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onSelect={() => void handleSelectedEventRsvp("none")}>
+                                  Clear response
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     )}
 
-                    <div className="border-b border-[#282d35] p-4">
-                      <div className="flex items-start gap-3">
-                        <Clock className="mt-0.5 h-4 w-4 shrink-0 text-[#aeb4bf]" />
-                        <div className="text-sm">
-                          <p className="font-semibold">{startsAt ? format(startsAt, "EEEE, MMM d") : "No date"}</p>
-                          <p className="mt-1 text-xs text-[#c7ccd5]">
-                            {detail.is_all_day || !startsAt || !endsAt
-                              ? "All day"
-                              : `${format(startsAt, "h:mm a")} - ${format(endsAt, "h:mm a")} ${serverTimezoneLabel}`}
-                          </p>
+                    <div className="border-b border-border p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3">
+                          <Clock className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                          <div className="text-sm">
+                            <p className="font-semibold">{startsAt ? format(startsAt, "EEEE, MMM d") : "No date"}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {detail.is_all_day || !startsAt || !endsAt
+                                ? "All day"
+                                : `${format(startsAt, "h:mm a")} - ${format(endsAt, "h:mm a")} ${serverTimezoneLabel}`}
+                            </p>
+                          </div>
                         </div>
+                        {(detail.viewer_can_edit || detail.viewer_can_delete || detail.viewer_can_manage) && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon-sm" className="h-8 w-8 rounded-[3px] text-muted-foreground hover:bg-secondary" aria-label="Event actions">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {(detail.viewer_can_edit || detail.viewer_can_manage) && (
+                                <DropdownMenuItem onSelect={openEditEvent}>
+                                  <Pencil className="h-4 w-4" />
+                                  Edit details
+                                </DropdownMenuItem>
+                              )}
+                              {(detail.viewer_can_edit || detail.viewer_can_manage) && detail.viewer_can_delete && <DropdownMenuSeparator />}
+                              {detail.viewer_can_delete && (
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onSelect={() => {
+                                    setEventPendingDelete(detail);
+                                    setIsDeleteEventDialogOpen(true);
+                                    closeEventDetail();
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  Delete event
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </div>
                     </div>
 
                     {(detail.location || detail.url) && (
-                      <div className="space-y-2 border-b border-[#282d35] p-4 text-sm text-[#d7dbe3]">
+                      <div className="space-y-2 border-b border-border p-4 text-sm text-foreground">
                         {detail.location && (
                           <div className="flex items-center gap-3">
-                            <MapPin className="h-4 w-4 text-[#aeb4bf]" />
+                            <MapPin className="h-4 w-4 text-muted-foreground" />
                             <span>{detail.location}</span>
                           </div>
                         )}
@@ -710,7 +918,7 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
                       </div>
                     )}
 
-                    <div className="border-b border-[#282d35] p-4">
+                    <div className="border-b border-border p-4">
                       <div className="flex items-center gap-2 text-xs font-semibold">
                         <Avatar className="h-6 w-6">
                           <AvatarImage src={detail.creator?.avatar_url || undefined} />
@@ -718,18 +926,27 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
                             {creatorName[0]?.toUpperCase() || "?"}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="text-[#d7dbe3]">Created by</span>
-                        <span className="text-primary">{creatorName}</span>
+                        <span className="text-foreground">Created by</span>
+                        <button
+                          type="button"
+                          className="text-primary transition-opacity hover:opacity-80"
+                          onClick={(event) => {
+                            if (!detail.creator?.id) return;
+                            openUserProfileModal(openModal, detail.creator.id, event.currentTarget, SIDE_ALIGNED_USER_PROFILE_POPOVER);
+                          }}
+                        >
+                          {creatorName}
+                        </button>
                       </div>
                     </div>
 
-                    <div className="border-b border-[#282d35] p-4">
-                      <p className="whitespace-pre-wrap break-words text-sm text-[#d7dbe3]">
+                    <div className="border-b border-border p-4">
+                      <p className="whitespace-pre-wrap break-words text-sm text-foreground">
                         {detail.description || "No description"}
                       </p>
                     </div>
 
-                    <div className="flex items-center justify-between border-b border-[#282d35] px-4 py-3 text-xs text-[#aeb4bf]">
+                    <div className="flex items-center justify-between border-b border-border px-4 py-3 text-xs text-muted-foreground">
                       <span>Created {formatDistanceToNow(new Date(detail.created_at), { addSuffix: true })}</span>
                     </div>
 
@@ -824,139 +1041,163 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
                 </main>
 
                 <aside className="space-y-5">
-                  <div>
-                    <div className="mb-3 flex items-center gap-2 text-xs font-bold text-[#f4f5f7]">
-                      <Users className="h-4 w-4 text-[#aeb4bf]" />
-                      <span>{detail.going_count} going</span>
-                    </div>
-                    <div className="space-y-2">
-                      {attendeePreview.map((attendee) => {
-                        const name = attendee.display_name || attendee.username;
-                        return (
-                          <div key={attendee.id} className="flex items-center gap-2 text-xs font-semibold text-[#d7dbe3]">
-                            <Avatar className="h-7 w-7">
-                              <AvatarImage src={attendee.avatar_url || undefined} />
-                              <AvatarFallback style={{ backgroundColor: attendee.banner_color || "#5865f2" }}>
-                                {name[0]?.toUpperCase() || "?"}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="truncate">{name}</span>
-                          </div>
-                        );
-                      })}
-                      {detail.going_count === 0 && <p className="text-xs text-[#aeb4bf]">No one is going yet</p>}
-                    </div>
-                  </div>
-                </aside>
-
-                <section className="lg:col-span-2">
-                  <div className="mb-3 flex items-center gap-2 px-1 text-xs font-semibold text-[#d7dbe3]">
-                    <MessageSquare className="h-4 w-4 text-[#aeb4bf]" />
-                    <span>{eventComments.length} Comments</span>
-                  </div>
-
-                  <div className="rounded-[4px] bg-[#2f343d] px-3 py-3">
-                    <div className="space-y-1">
-                      {eventComments.map((comment) => {
-                        const name = comment.user?.display_name || comment.user?.username || "Unknown";
-                        return (
-                          <div key={comment.id} className="group relative rounded-[3px] px-2 py-2 hover:bg-[#363c47]">
-                            <div className="flex gap-3">
-                              <Avatar className="mt-0.5 h-8 w-8">
-                                <AvatarImage src={comment.user?.avatar_url || undefined} />
-                                <AvatarFallback style={{ backgroundColor: comment.user?.banner_color || "#5865f2" }}>
+                  {[
+                    { label: "Going", count: detail.going_count, users: attendeePreview, empty: "No one is going yet" },
+                    { label: "Maybe", count: detail.maybe_count, users: maybePreview, empty: "No maybes yet" },
+                    { label: "Declined", count: detail.declined_count, users: declinedPreview, empty: "No declines yet" },
+                  ].map((group) => (
+                    <div key={group.label}>
+                      <div className="mb-3 flex items-center gap-2 text-xs font-bold text-foreground">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <span>{group.count} {group.label.toLowerCase()}</span>
+                      </div>
+                      <div className="space-y-2">
+                        {group.users.map((attendee) => {
+                          const name = attendee.display_name || attendee.username;
+                          return (
+                            <div key={attendee.id} className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                              <Avatar className="h-7 w-7">
+                                <AvatarImage src={attendee.avatar_url || undefined} />
+                                <AvatarFallback style={{ backgroundColor: attendee.banner_color || "#5865f2" }}>
                                   {name[0]?.toUpperCase() || "?"}
                                 </AvatarFallback>
                               </Avatar>
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-baseline gap-2">
-                                  <span className="text-sm font-semibold text-[#f4f5f7]">{name}</span>
-                                  <span className="text-[11px] text-[#aeb4bf]">{formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}</span>
-                                </div>
-                                <div className="mt-0.5 text-sm text-[#d7dbe3] [&_img[data-cross-emoji]]:!h-5 [&_img[data-cross-emoji]]:!w-5 [&_img[data-cross-emoji-file-path]]:!h-5 [&_img[data-cross-emoji-file-path]]:!w-5">
-                                  <MessageContent
-                                    content={comment.content}
-                                    currentUserId={user?.id}
-                                    messageId={comment.id}
-                                    messageUser={
-                                      comment.user
-                                        ? {
-                                            id: comment.user.id,
-                                            username: comment.user.username,
-                                            display_name: comment.user.display_name,
-                                          }
-                                        : null
-                                    }
-                                    customEmojiMap={customEmojiMap}
-                                    hideEmbeds
-                                    hideLinksPreview
-                                  />
-                                </div>
-                              </div>
-                            </div>
-
-                            {comment.user_id === user?.id && (
-                              <div
-                                className={cn(
-                                  "absolute right-2 -top-3 z-20 hidden items-center gap-0.5 rounded-md border border-[hsl(var(--menu-border))] bg-[hsl(var(--menu))] p-0.5 text-[hsl(var(--menu-foreground))] shadow-xl shadow-black/30 transition-opacity duration-100 md:flex",
-                                  "md:opacity-0 group-hover:md:opacity-100",
-                                )}
+                              <button
+                                type="button"
+                                className="truncate text-left transition-opacity hover:opacity-80"
+                                onClick={(event) => {
+                                  openUserProfileModal(openModal, attendee.id, event.currentTarget, SIDE_ALIGNED_USER_PROFILE_POPOVER);
+                                }}
                               >
-                                <button
-                                  type="button"
-                                  className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-transparent text-destructive transition-colors hover:bg-destructive/10"
-                                  onClick={() => void handleDeleteEventComment(comment.id)}
-                                  aria-label="Delete comment"
-                                  title="Delete"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                                {name}
+                              </button>
+                            </div>
+                          );
+                        })}
+                        {group.count === 0 && <p className="text-xs text-muted-foreground">{group.empty}</p>}
+                      </div>
                     </div>
+                  ))}
+                </aside>
+
+                <section className="lg:col-span-2">
+                  <div className="mb-3 flex items-center gap-2 px-1 text-xs font-semibold text-foreground">
+                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                    <span>{eventComments.length} Comments</span>
                   </div>
 
-                  <div className="mt-3 flex items-end gap-2 px-1 pb-4">
-                    <Avatar className="h-8 w-8">
+                  {eventComments.length > 0 ? (
+                    <div className="rounded-[4px] border border-border bg-card px-3 py-3">
+                      <div className="space-y-1">
+                        {eventComments.map((comment) => {
+                          const name = comment.user?.display_name || comment.user?.username || "Unknown";
+                          return (
+                            <div key={comment.id} className="group relative rounded-[3px] px-2 py-2 hover:bg-secondary/70">
+                              <div className="flex gap-3">
+                                <Avatar className="mt-0.5 h-8 w-8">
+                                  <AvatarImage src={comment.user?.avatar_url || undefined} />
+                                  <AvatarFallback style={{ backgroundColor: comment.user?.banner_color || "#5865f2" }}>
+                                    {name[0]?.toUpperCase() || "?"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-baseline gap-2">
+                                    <button
+                                      type="button"
+                                      className="text-left text-sm font-semibold text-foreground transition-opacity hover:opacity-80"
+                                      onClick={(event) => {
+                                        if (!comment.user?.id) return;
+                                        openUserProfileModal(openModal, comment.user.id, event.currentTarget, SIDE_ALIGNED_USER_PROFILE_POPOVER);
+                                      }}
+                                    >
+                                      {name}
+                                    </button>
+                                    <span className="text-[11px] text-muted-foreground">{formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}</span>
+                                  </div>
+                                  <div className="mt-0.5 text-sm text-foreground [&_img[data-cross-emoji]]:!h-5 [&_img[data-cross-emoji]]:!w-5 [&_img[data-cross-emoji-file-path]]:!h-5 [&_img[data-cross-emoji-file-path]]:!w-5">
+                                    <MessageContent
+                                      content={comment.content}
+                                      currentUserId={user?.id}
+                                      messageId={comment.id}
+                                      messageUser={
+                                        comment.user
+                                          ? {
+                                              id: comment.user.id,
+                                              username: comment.user.username,
+                                              display_name: comment.user.display_name,
+                                            }
+                                          : null
+                                      }
+                                      customEmojiMap={customEmojiMap}
+                                      hideEmbeds
+                                      hideLinksPreview
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+
+                              {comment.user_id === user?.id && (
+                                <div
+                                  className={cn(
+                                    "absolute right-2 -top-3 z-20 hidden items-center gap-0.5 rounded-md border border-[hsl(var(--menu-border))] bg-[hsl(var(--menu))] p-0.5 text-[hsl(var(--menu-foreground))] shadow-xl shadow-black/30 transition-opacity duration-100 md:flex",
+                                    "md:opacity-0 group-hover:md:opacity-100",
+                                  )}
+                                >
+                                  <button
+                                    type="button"
+                                    className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-transparent text-destructive transition-colors hover:bg-destructive/10"
+                                    onClick={() => void handleDeleteEventComment(comment.id)}
+                                    aria-label="Delete comment"
+                                    title="Delete"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="px-1 text-xs text-muted-foreground">No comments yet.</p>
+                  )}
+
+                  <div className="mt-3 flex items-start gap-2 px-1 pb-4">
+                    <Avatar className="h-9 w-9 shrink-0">
                       <AvatarImage src={user?.avatar_url || undefined} />
                       <AvatarFallback>{user?.username?.[0]?.toUpperCase() || "?"}</AvatarFallback>
                     </Avatar>
-                    <div className="flex min-w-0 flex-1 items-end gap-2 rounded-[4px] bg-[#2f343d] p-2">
-                      <Textarea
-                        value={eventReply}
-                        onChange={(event) => setEventReply(event.target.value)}
-                        placeholder="Post a reply"
-                        className="min-h-9 flex-1 resize-none border-0 bg-transparent px-2 py-2 text-sm text-[#f4f5f7] shadow-none placeholder:text-[#aeb4bf] focus-visible:ring-0"
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" && !event.shiftKey) {
-                            event.preventDefault();
-                            void handlePostEventComment();
-                          }
-                        }}
-                      />
-                      <EmojiPicker
-                        onEmojiSelect={(emoji) => setEventReply((current) => `${current}${emoji}`)}
-                        open={composerEmojiOpen}
-                        onOpenChange={setComposerEmojiOpen}
-                        serverId={currentServer?.id}
-                        customEmojiFormat="inline_token"
-                      >
-                        <button type="button" className="rounded-md p-2 text-[#aeb4bf] hover:bg-[#3d4350] hover:text-white" aria-label="Add emoji">
-                          <Smile className="h-4 w-4" />
-                        </button>
-                      </EmojiPicker>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={eventReply}
+                          onChange={(event) => setEventReply(event.target.value.slice(0, EVENT_COMMENT_MAX_LENGTH))}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" && !event.shiftKey) {
+                              event.preventDefault();
+                              void handlePostEventComment();
+                            }
+                          }}
+                          placeholder="Write a comment"
+                          className="h-9 min-w-0 flex-1 rounded-[6px] border border-border bg-background/40 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          maxLength={EVENT_COMMENT_MAX_LENGTH}
+                        />
                       <Button
-                        size="icon-sm"
-                        className="h-8 w-8 rounded-[3px]"
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-9 min-w-[82px] rounded-[4px] bg-[#d7d9df] px-4 text-[13px] font-semibold text-[#2f3136] transition-colors hover:bg-white hover:text-[#2f3136] disabled:cursor-not-allowed disabled:opacity-60"
                         disabled={!eventReply.trim() || isPostingEventReply}
                         onClick={() => void handlePostEventComment()}
-                        aria-label="Send comment"
+                        aria-label="Comment"
                       >
-                        {isPostingEventReply ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                        {isPostingEventReply ? <Loader2 className="h-4 w-4 animate-spin" /> : "Comment"}
                       </Button>
+                      </div>
+                      <div className="mt-1 text-right text-[11px] tabular-nums text-muted-foreground">
+                        {eventReply.length}/{EVENT_COMMENT_MAX_LENGTH}
+                      </div>
                     </div>
                   </div>
                 </section>
@@ -972,8 +1213,8 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
     <div className="flex h-full min-w-0 flex-col bg-layout-members">
       {showHeader && <ChannelHeader channel={currentChannel} showMessageActions={false} />}
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[#313640] text-[#f4f5f7]">
-        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-[#262b33] px-4 py-3">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background text-foreground">
+        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-border px-4 py-3">
           {view === "month" ? (
             <div className="flex items-center gap-1.5">
               <Button variant="ghost" size="icon-sm" className="h-8 w-8 rounded-[3px]" onClick={() => setVisibleMonth(subMonths(visibleMonth, 1))}>
@@ -989,7 +1230,7 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
           )}
 
           <div className="flex items-center gap-3">
-            <span className="text-xs font-medium uppercase text-[#a7adb8]">{serverTimezoneLabel}</span>
+            <span className="text-xs font-medium uppercase text-muted-foreground">{serverTimezoneLabel}</span>
             <div className="flex items-center gap-1 rounded-[3px] border border-border/60 bg-secondary/20 p-1">
               <Button
                 type="button"
@@ -1025,9 +1266,9 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
 
         {view === "month" ? (
           <div className="min-h-0 flex-1 overflow-auto">
-            <div className="grid grid-cols-7 border-b border-[#282d35] bg-[#313640]">
+            <div className="grid grid-cols-7 border-b border-border bg-background">
               {WEEKDAYS.map((day) => (
-                <div key={day} className="px-3 py-3 text-xs font-medium text-[#d7dbe3]">
+                <div key={day} className="px-3 py-3 text-xs font-medium text-foreground">
                   {day}
                 </div>
               ))}
@@ -1042,17 +1283,19 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
                   <div
                     key={dateKey}
                     className={cn(
-                      "group relative min-h-[108px] cursor-pointer border-b border-r border-[#2b3039] bg-[#303540] p-2 transition-colors hover:bg-[#3a3f4b]",
-                      isOutside && "bg-[#282c34] text-[#6f7580]",
+                      "group relative min-h-[108px] cursor-pointer border-b border-r border-border bg-card p-2 transition-colors hover:bg-secondary/70",
+                      isOutside && "bg-background text-muted-foreground",
                     )}
-                    onClick={() => openCreate(dateKey)}
+                    onClick={() => {
+                      if (canCreateEvents) openCreate(dateKey);
+                    }}
                     role="button"
-                    tabIndex={0}
+                    tabIndex={canCreateEvents ? 0 : -1}
                     onKeyDown={(event) => {
                       if (event.currentTarget !== event.target) return;
                       if (event.key === "Enter" || event.key === " ") {
                         event.preventDefault();
-                        openCreate(dateKey);
+                        if (canCreateEvents) openCreate(dateKey);
                       }
                     }}
                     aria-label={`Create event on ${dateKey}`}
@@ -1064,7 +1307,7 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
                       <Button
                         variant="ghost"
                         size="icon-sm"
-                        className="h-6 w-6 rounded-[3px] opacity-0 hover:bg-[#4a505d] group-hover:opacity-100"
+                        className={cn("h-6 w-6 rounded-[3px] hover:bg-secondary", canCreateEvents ? "opacity-0 group-hover:opacity-100" : "hidden")}
                         onClick={(event) => {
                           event.stopPropagation();
                           openCreate(dateKey);
@@ -1098,7 +1341,7 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
                           {event.title}
                         </div>
                       ))}
-                      {dayEvents.length > 3 && <div className="text-[11px] text-[#aeb4bf]">+{dayEvents.length - 3} more</div>}
+                      {dayEvents.length > 3 && <div className="text-[11px] text-muted-foreground">+{dayEvents.length - 3} more</div>}
                     </div>
                   </div>
                 );
@@ -1107,31 +1350,39 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
           </div>
         ) : (
           <div className="min-h-0 flex-1 overflow-auto p-4">
-            <div className="divide-y divide-[#3b404a] bg-[#2f343d]">
+            <div className="divide-y divide-border rounded-[4px] border border-border bg-card">
               {upcomingEvents.length === 0 && !isLoading ? (
-                <div className="flex flex-col items-center justify-center py-16 text-center text-[#aeb4bf]">
+                <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
                   <CalendarDays className="mb-3 h-9 w-9" />
                   <p className="text-sm">No upcoming events</p>
                 </div>
               ) : (
                 upcomingEvents.map((event) => (
-                  <div
-                    key={event.id}
-                    className="grid cursor-pointer grid-cols-[160px_minmax(0,1fr)_220px] items-center gap-4 px-8 py-7 hover:bg-[#363c47]"
-                    onClick={() => openEvent(event.id)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(keyEvent) => {
-                      if (keyEvent.key === "Enter" || keyEvent.key === " ") {
-                        keyEvent.preventDefault();
-                        openEvent(event.id);
+                  (() => {
+                    return (
+                   <div
+                     key={event.id}
+                      className="grid cursor-pointer grid-cols-[160px_minmax(0,1fr)_220px] items-center gap-4 px-8 py-7 hover:bg-secondary/70"
+                     onClick={(clickEvent) => {
+                       const target = clickEvent.target as HTMLElement;
+                       if (target.closest('[data-event-rsvp-actions="true"]')) return;
+                       openEvent(event.id);
+                     }}
+                     role="button"
+                     tabIndex={0}
+                     onKeyDown={(keyEvent) => {
+                       const target = keyEvent.target as HTMLElement;
+                       if (target.closest('[data-event-rsvp-actions="true"]')) return;
+                       if (keyEvent.key === "Enter" || keyEvent.key === " ") {
+                         keyEvent.preventDefault();
+                         openEvent(event.id);
                       }
                     }}
                     aria-label={`Open event ${event.title}`}
                   >
                     <div>
-                      <p className="text-xs font-medium text-[#b8bec8]">{getUpcomingDateLabel(new Date(event.starts_at))}</p>
-                      <div className="mt-3 flex items-center gap-2 text-xs text-[#f0f2f5]">
+                      <p className="text-xs font-medium text-muted-foreground">{getUpcomingDateLabel(new Date(event.starts_at))}</p>
+                      <div className="mt-3 flex items-center gap-2 text-xs text-foreground">
                         <span
                           className="h-1.5 w-1.5 rounded-full"
                           style={{ backgroundColor: event.color || DEFAULT_EVENT_COLOR }}
@@ -1142,34 +1393,76 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{event.title}</p>
                       {(event.location || event.url) && (
-                        <div className="mt-2 flex min-w-0 items-center gap-3 text-xs text-[#aeb4bf]">
+                        <div className="mt-2 flex min-w-0 items-center gap-3 text-xs text-muted-foreground">
                           {event.location && <span className="inline-flex min-w-0 items-center gap-1 truncate"><MapPin className="h-3 w-3" />{event.location}</span>}
                           {event.url && <span className="inline-flex min-w-0 items-center gap-1 truncate"><Link2 className="h-3 w-3" />{event.url}</span>}
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center justify-end gap-3 text-xs">
+                    <div
+                      className="flex items-center justify-end gap-3 text-xs"
+                      data-event-rsvp-actions="true"
+                      onClick={(clickEvent) => clickEvent.stopPropagation()}
+                      onPointerDown={(pointerEvent) => pointerEvent.stopPropagation()}
+                    >
                       {event.allow_rsvps && (
                         <>
-                          <span className="text-[#d8dce4]">{event.rsvp_count} are going</span>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "h-7 min-w-[72px] rounded-[3px] border-primary/70 bg-transparent px-2 text-[11px] font-medium text-foreground hover:bg-primary/10",
-                              event.viewer_rsvp_status === "going" && "bg-primary text-primary-foreground hover:bg-primary/90",
-                            )}
-                            onClick={(clickEvent) => {
-                              clickEvent.stopPropagation();
-                              void handleRsvp(event);
-                            }}
-                          >
-                            Going
-                          </Button>
+                          <span className="text-foreground">{event.rsvp_count} are going</span>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "!h-6 sm:!h-6 !min-w-[80px] rounded-[3px] !px-1.5 sm:!px-1.5 !text-[11px] sm:!text-[11px] font-medium text-foreground",
+                                  event.viewer_rsvp_status === "going"
+                                    ? "border-emerald-500/60 bg-emerald-500/10 hover:bg-emerald-500/15"
+                                    : event.viewer_rsvp_status === "maybe"
+                                      ? "border-amber-500/60 bg-amber-500/10 hover:bg-amber-500/15"
+                                      : event.viewer_rsvp_status === "declined"
+                                        ? "border-destructive/50 bg-destructive/10 hover:bg-destructive/15"
+                                        : "border-primary/70 bg-transparent hover:bg-primary/10",
+                                )}
+                                onClick={(clickEvent) => clickEvent.stopPropagation()}
+                                onPointerDown={(pointerEvent) => pointerEvent.stopPropagation()}
+                                onKeyDown={(keyEvent) => keyEvent.stopPropagation()}
+                              >
+                                {event.viewer_rsvp_status ? RSVP_LABELS[event.viewer_rsvp_status] || "Respond" : "Respond"}
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {RSVP_OPTIONS.map((option) => (
+                                <DropdownMenuItem
+                                  key={option.value}
+                                  onSelect={(selectEvent) => {
+                                    selectEvent.stopPropagation();
+                                    void handleRsvp(event, option.value);
+                                  }}
+                                >
+                                  {option.label}
+                                </DropdownMenuItem>
+                              ))}
+                              {event.viewer_rsvp_status && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onSelect={(selectEvent) => {
+                                      selectEvent.stopPropagation();
+                                      void handleRsvp(event, "none");
+                                    }}
+                                  >
+                                    Clear response
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </>
                       )}
-                      {!event.allow_rsvps && <span className="text-[#d8dce4]">RSVP not enabled</span>}
+                      {!event.allow_rsvps && <span className="text-foreground">RSVP not enabled</span>}
                     </div>
                   </div>
+                    );
+                  })()
                 ))
               )}
             </div>
@@ -1177,21 +1470,21 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
         )}
       </div>
 
-      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="calendar-event-dialog max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-[#4a4f5a] bg-[#333842] p-0 text-[#f4f5f7] shadow-2xl sm:max-w-[560px]">
+      <Dialog open={isCreateOpen} onOpenChange={handleEventDialogOpenChange}>
+        <DialogContent className="calendar-event-dialog max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-border bg-popover p-0 text-popover-foreground shadow-2xl sm:max-w-[560px]">
           <div className="flex max-h-[82vh] flex-col overflow-hidden">
-            <div className="border-b border-[#2b3039] bg-[#2f343d] px-5 py-3">
-              <h3 className="text-base font-medium leading-none tracking-tight">Create an event</h3>
+            <div className="border-b border-border bg-card px-5 py-3">
+              <h3 className="text-base font-medium leading-none tracking-tight">{isEditingEvent ? "Edit event" : "Create an event"}</h3>
             </div>
             <Tabs value={formTab} onValueChange={setFormTab} className="min-h-0 flex-1 overflow-hidden">
               <TabsList className="mx-6 mt-4 h-10 justify-start gap-7 rounded-none bg-transparent p-0">
-                <TabsTrigger value="basic" className="rounded-[3px] border-b-2 border-transparent bg-transparent px-2 text-sm font-medium text-[#b8bec8] hover:bg-[#3e444f] hover:text-[#f3f4f7] data-[state=active]:border-[#cbd0d8] data-[state=active]:bg-transparent data-[state=active]:text-[#f3f4f7] data-[state=active]:shadow-none">Basic Info</TabsTrigger>
-                <TabsTrigger value="advanced" className="rounded-[3px] border-b-2 border-transparent bg-transparent px-2 text-sm font-medium text-[#b8bec8] hover:bg-[#3e444f] hover:text-[#f3f4f7] data-[state=active]:border-[#cbd0d8] data-[state=active]:bg-transparent data-[state=active]:text-[#f3f4f7] data-[state=active]:shadow-none">Advanced</TabsTrigger>
+                <TabsTrigger value="basic" className="rounded-[3px] border-b-2 border-transparent bg-transparent px-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none">Basic Info</TabsTrigger>
+                <TabsTrigger value="advanced" className="rounded-[3px] border-b-2 border-transparent bg-transparent px-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none">Advanced</TabsTrigger>
               </TabsList>
               <TabsContent value="basic" className="m-0 max-h-[58vh] overflow-y-auto px-6 py-4">
                 <div className="space-y-4">
                   <div className="flex items-end gap-2">
-                    <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Event name" className="h-9 flex-1 rounded-none border-0 border-b border-white/80 bg-transparent px-0 text-sm text-[#f3f4f7] shadow-none outline-none placeholder:text-[#b8bec8] focus-visible:ring-0 focus-visible:ring-offset-0" maxLength={120} />
+                    <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Event name" className="h-9 flex-1 rounded-none border-0 border-b border-border bg-transparent px-0 text-sm text-foreground shadow-none outline-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0" maxLength={120} />
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <button
@@ -1226,8 +1519,8 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
                   <ToggleSetting title="All day" checked={isAllDay} onCheckedChange={setIsAllDay} />
                   <div className="space-y-2">
                     <div className="grid grid-cols-[72px_minmax(0,1fr)_minmax(0,1fr)] items-center gap-2">
-                      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-[#c4c8d0]">
-                        <CalendarDays className="h-3.5 w-3.5 text-[#aeb4bf]" />
+                      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
                         Start
                       </div>
                       <Input
@@ -1237,40 +1530,40 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
                           setStartDate(e.target.value);
                           if (endDate < e.target.value) setEndDate(e.target.value);
                         }}
-                        className="h-9 rounded-[3px] border-[#4a4f5a] bg-[#2f343d] text-sm text-[#f3f4f7] [color-scheme:dark]"
+                        className="h-9 rounded-[3px] border-border bg-card text-sm text-foreground [color-scheme:dark]"
                       />
                       <Input
                         type="time"
                         value={startTime}
                         onChange={(e) => setStartTime(e.target.value)}
                         disabled={isAllDay}
-                        className="h-9 rounded-[3px] border-[#4a4f5a] bg-[#2f343d] text-sm text-[#f3f4f7] [color-scheme:dark]"
+                        className="h-9 rounded-[3px] border-border bg-card text-sm text-foreground [color-scheme:dark]"
                       />
                     </div>
                     <div className="grid grid-cols-[72px_minmax(0,1fr)_minmax(0,1fr)] items-center gap-2">
-                      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-[#c4c8d0]">
-                        <Clock className="h-3.5 w-3.5 text-[#aeb4bf]" />
+                      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                         End
                       </div>
                       <Input
                         type="date"
                         value={endDate}
                         onChange={(e) => setEndDate(e.target.value)}
-                        className="h-9 rounded-[3px] border-[#4a4f5a] bg-[#2f343d] text-sm text-[#f3f4f7] [color-scheme:dark]"
+                        className="h-9 rounded-[3px] border-border bg-card text-sm text-foreground [color-scheme:dark]"
                       />
                       <Input
                         type="time"
                         value={endTime}
                         onChange={(e) => setEndTime(e.target.value)}
                         disabled={isAllDay}
-                        className="h-9 rounded-[3px] border-[#4a4f5a] bg-[#2f343d] text-sm text-[#f3f4f7] [color-scheme:dark]"
+                        className="h-9 rounded-[3px] border-border bg-card text-sm text-foreground [color-scheme:dark]"
                       />
                     </div>
                   </div>
                   <div className="grid grid-cols-[72px_minmax(0,1fr)_minmax(0,1fr)] items-center gap-2">
-                    <div className="text-xs font-medium uppercase tracking-wide text-[#c4c8d0]">Occurs</div>
+                    <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Occurs</div>
                     <Select value={recurrence} onValueChange={setRecurrence}>
-                      <SelectTrigger className="h-9 rounded-[3px] border-[#4a4f5a] bg-[#2f343d]">
+                      <SelectTrigger className="h-9 rounded-[3px] border-border bg-card">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1280,14 +1573,14 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
                         <SelectItem value="monthly">Monthly</SelectItem>
                       </SelectContent>
                     </Select>
-                    <div className="text-right text-xs leading-5 text-[#aeb4bf]">
-                      Server timezone: <span className="font-medium text-[#d7dbe3]">{serverTimezoneLabel}</span>
+                    <div className="text-right text-xs leading-5 text-muted-foreground">
+                      Server timezone: <span className="font-medium text-foreground">{serverTimezoneLabel}</span>
                     </div>
                   </div>
-                  <div className="h-px bg-[#3d424d]" />
-                  <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Location (optional)" className="rounded-none border-0 border-b border-[#8f96a4] bg-transparent px-0 text-sm focus-visible:ring-0" />
-                  <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Url (optional)" className="rounded-none border-0 border-b border-[#8f96a4] bg-transparent px-0 text-sm focus-visible:ring-0" />
-                  <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description (optional)" className="min-h-[112px] resize-none rounded-[3px] border-[#454b57] bg-[#454b57] text-sm" maxLength={2000} />
+                  <div className="h-px bg-border" />
+                  <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Location (optional)" className="rounded-none border-0 border-b border-border bg-transparent px-0 text-sm text-foreground placeholder:text-muted-foreground focus-visible:ring-0" />
+                  <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Url (optional)" className="rounded-none border-0 border-b border-border bg-transparent px-0 text-sm text-foreground placeholder:text-muted-foreground focus-visible:ring-0" />
+                  <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description (optional)" className="min-h-[112px] resize-none rounded-[3px] border-border bg-card text-sm text-foreground placeholder:text-muted-foreground" maxLength={2000} />
                 </div>
               </TabsContent>
               <TabsContent value="advanced" className="m-0 max-h-[58vh] overflow-y-auto px-6 py-4">
@@ -1309,7 +1602,7 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
                         variant="plain"
                       />
                       {limitAttendance && (
-                        <Input value={attendanceLimit} onChange={(e) => setAttendanceLimit(e.target.value.replace(/\D/g, ""))} className="h-9 w-28 rounded-[3px] border-[#4a4f5a] bg-[#2f343d]" placeholder="20" />
+                        <Input value={attendanceLimit} onChange={(e) => setAttendanceLimit(e.target.value.replace(/\D/g, ""))} className="h-9 w-28 rounded-[3px] border-border bg-card text-foreground placeholder:text-muted-foreground" placeholder="20" />
                       )}
                       <ToggleSetting
                         title="Restrict roles"
@@ -1332,8 +1625,8 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
                                     key={role.id}
                                     type="button"
                                     className={cn(
-                                      "flex w-full items-center gap-3 rounded-[3px] px-2.5 py-2 text-left text-sm transition-colors hover:bg-[#444a56]",
-                                      selected && "bg-[#444a56]",
+                                       "flex w-full items-center gap-3 rounded-[3px] px-2.5 py-2 text-left text-sm transition-colors hover:bg-secondary",
+                                       selected && "bg-secondary",
                                     )}
                                     onClick={() => toggleAllowedRole(role.id)}
                                   >
@@ -1341,7 +1634,7 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
                                       checked={selected}
                                       onCheckedChange={() => toggleAllowedRole(role.id)}
                                       onClick={(event) => event.stopPropagation()}
-                                      className="border-[#6b7280] data-[state=checked]:border-primary"
+                                      className="border-border data-[state=checked]:border-primary"
                                       aria-label={`Allow ${role.name}`}
                                     />
                                     <span
@@ -1355,7 +1648,7 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
                               })}
                             </div>
                           ) : (
-                            <div className="px-3 py-2 text-sm text-[#aeb4bf]">No roles available</div>
+                            <div className="px-3 py-2 text-sm text-muted-foreground">No roles available</div>
                           )}
                         </div>
                       )}
@@ -1364,16 +1657,54 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
                 </div>
               </TabsContent>
             </Tabs>
-            <div className="flex items-center justify-end gap-3 border-t border-[#2c3139] bg-[#30353f] px-5 py-3">
-              <Button variant="ghost" className="h-9 rounded-[3px] px-4 text-[#b9bec8] hover:bg-transparent hover:text-white" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
-              <Button disabled={isSaving || !title.trim()} className="h-9 rounded-[3px] bg-[#d7dbe3] px-5 font-medium text-[#363b44] hover:bg-white disabled:bg-[#454b55] disabled:text-[#858b96] disabled:opacity-100" onClick={() => void handleCreate()}>
+            <div className="flex items-center justify-end gap-3 border-t border-border bg-card px-5 py-3">
+              <Button variant="ghost" className="h-9 rounded-[3px] px-4 text-muted-foreground hover:bg-transparent hover:text-foreground" onClick={() => handleEventDialogOpenChange(false)}>Cancel</Button>
+              <Button disabled={isSaving || !title.trim()} className="h-9 rounded-[3px] bg-primary px-5 font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-secondary disabled:text-muted-foreground disabled:opacity-100" onClick={() => void submitEvent()}>
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Create
+                {isEditingEvent ? "Save" : "Create"}
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={isDeleteEventDialogOpen}
+        onOpenChange={(open) => {
+          setIsDeleteEventDialogOpen(open);
+          if (!open) setEventPendingDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Event</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete "{eventPendingDelete?.title || selectedEvent?.title || "this event"}" and remove all RSVPs, comments, and reactions tied to it.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-[3px]"
+              disabled={isDeletingEvent}
+              onClick={() => setIsDeleteEventDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="error"
+              className="rounded-[3px]"
+              loading={isDeletingEvent}
+              disabled={isDeletingEvent}
+              onClick={() => void handleDeleteEvent()}
+            >
+              Delete
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

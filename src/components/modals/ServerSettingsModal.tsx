@@ -3555,7 +3555,7 @@ export const ServerSettingsModal = () => {
       {/* Role Permissions Editor */}
       {editingRolePermissions && server && (
         <Dialog open={!!editingRolePermissions} onOpenChange={(open) => !open && setEditingRolePermissions(null)}>
-          <DialogContent className="bg-background/95 backdrop-blur-xl border-border/50 rounded-2xl max-w-2xl max-h-[90vh]">
+          <DialogContent className="bg-background/95 backdrop-blur-xl border-border/50 rounded-2xl max-w-[calc(100vw-2rem)] sm:max-w-4xl max-h-[90vh]">
             <RolePermissionsEditor
               role={editingRolePermissions}
               serverId={server.id}

@@ -93,7 +93,13 @@ export type Permission =
   | 'edit_all_tasks'
   | 'assign_tasks'
   | 'change_task_status'
-  | 'delete_tasks';
+  | 'delete_tasks'
+  | 'view_events'
+  | 'create_events'
+  | 'edit_own_events'
+  | 'edit_all_events'
+  | 'delete_events'
+  | 'rsvp_events';
 
 export interface RolePermission {
   id: string;

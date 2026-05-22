@@ -1,16 +1,16 @@
-import { useState, useEffect } from 'react';
-import { Checkbox } from '@/components/ui/checkbox';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { Loader2, Save } from 'lucide-react';
+import { Check, Loader2, Minus, Save, Search, ShieldAlert, X } from 'lucide-react';
 import { useServerStore } from '@/stores/serverStore';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import type { Permission, ServerRole, CustomServerRole } from '@/types';
+import type { Permission, CustomServerRole } from '@/types';
 import { BulkPermissionButtons } from '@/components/permissions/BulkPermissionButtons';
+import { PERMISSION_GROUPS, PERMISSION_META } from '@/lib/permissionMeta';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,80 +28,31 @@ interface RolePermissionsEditorProps {
   onClose: () => void;
 }
 
-const PERMISSION_GROUPS: Array<{
-  label: string;
-  permissions: Permission[];
-}> = [
-    {
-      label: 'General Permissions',
-      permissions: ['view_channels', 'read_message_history', 'send_messages', 'add_reactions'],
-    },
-    {
-      label: 'Text Permissions',
-      permissions: ['attach_files', 'embed_links', 'mention_everyone', 'mention_roles', 'use_external_emojis'],
-    },
-    {
-      label: 'Member Permissions',
-      permissions: ['kick_members', 'ban_members', 'mute_members', 'deafen_members', 'move_members', 'manage_nicknames', 'change_nickname'],
-    },
-    {
-      label: 'Channel Permissions',
-      permissions: ['manage_channels', 'manage_messages', 'pin_messages', 'manage_threads'],
-    },
-    {
-      label: 'Administrative Permissions',
-      permissions: ['manage_server', 'manage_roles', 'manage_emojis', 'manage_webhooks', 'manage_invites', 'create_instant_invite', 'transfer_ownership'],
-    },
-    {
-      label: 'Voice Permissions',
-      permissions: ['connect', 'speak', 'use_voice_activation'],
-    },
-    {
-      label: 'Advanced Permissions',
-      permissions: ['use_application_commands'],
-    },
-  ];
+const allRolePermissions = PERMISSION_GROUPS.flatMap((group) => group.permissions);
 
-const PERMISSION_LABELS: Record<Permission, string> = {
-  view_channels: 'View Channels',
-  read_message_history: 'Read Message History',
-  send_messages: 'Send Messages',
-  add_reactions: 'Add Reactions',
-  attach_files: 'Attach Files',
-  embed_links: 'Embed Links',
-  mention_everyone: 'Mention @everyone',
-  mention_roles: 'Mention Roles',
-  use_external_emojis: 'Use External Emojis',
-  kick_members: 'Kick Members',
-  ban_members: 'Ban Members',
-  mute_members: 'Mute Members',
-  deafen_members: 'Deafen Members',
-  move_members: 'Move Members',
-  manage_nicknames: 'Manage Nicknames',
-  change_nickname: 'Change Nickname',
-  manage_channels: 'Manage Channels',
-  manage_messages: 'Manage Messages',
-  pin_messages: 'Pin Messages',
-  manage_threads: 'Manage Threads',
-  manage_server: 'Manage Server',
-  manage_roles: 'Manage Roles',
-  manage_emojis: 'Manage Emojis',
-  manage_webhooks: 'Manage Webhooks',
-  manage_invites: 'Manage Invites',
-  create_instant_invite: 'Create Instant Invite',
-  transfer_ownership: 'Transfer Ownership',
-  connect: 'Connect (Voice)',
-  speak: 'Speak (Voice)',
-  use_voice_activation: 'Use Voice Activation',
-  use_application_commands: 'Use Application Commands',
-  view_tasks: 'View Tasks',
-  create_tasks: 'Create Tasks',
-  edit_own_tasks: 'Edit Own Tasks',
-  edit_all_tasks: 'Edit All Tasks',
-  assign_tasks: 'Assign Tasks',
-  change_task_status: 'Change Task Status',
-  delete_tasks: 'Delete Tasks',
-};
+const permissionValueOptions = [
+  {
+    value: false,
+    label: 'Deny',
+    Icon: X,
+    activeClass: 'bg-destructive text-destructive-foreground border-destructive shadow-sm',
+    inactiveClass: 'text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30',
+  },
+  {
+    value: null,
+    label: 'Inherit',
+    Icon: Minus,
+    activeClass: 'bg-background text-foreground border-border shadow-sm',
+    inactiveClass: 'text-muted-foreground hover:bg-muted hover:text-foreground',
+  },
+  {
+    value: true,
+    label: 'Allow',
+    Icon: Check,
+    activeClass: 'bg-emerald-500 text-white border-emerald-500 shadow-sm',
+    inactiveClass: 'text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-500 hover:border-emerald-500/30',
+  },
+] as const;
 
 export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissionsEditorProps) => {
   const { user } = useAuthStore();
@@ -115,6 +66,8 @@ export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissio
   const [permissionStates, setPermissionStates] = useState<Map<Permission, boolean | null>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [confirmAction, setConfirmAction] = useState<{ type: 'deny' | 'allow'; permissions: Permission[] } | null>(null);
 
   const roleName = role.name;
 
@@ -140,19 +93,8 @@ export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissio
     // Initialize permission states - start with all permissions as unchecked (null)
     const states = new Map<Permission, boolean | null>();
 
-    // Get all possible permissions
-    const allPermissions: Permission[] = [
-      'view_channels', 'read_message_history', 'send_messages', 'add_reactions',
-      'attach_files', 'embed_links', 'mention_everyone', 'mention_roles', 'use_external_emojis',
-      'manage_messages', 'pin_messages', 'manage_channels', 'manage_threads',
-      'kick_members', 'ban_members', 'mute_members', 'deafen_members', 'move_members',
-      'manage_nicknames', 'change_nickname', 'manage_roles', 'manage_server', 'manage_emojis',
-      'manage_webhooks', 'manage_invites', 'create_instant_invite', 'transfer_ownership',
-      'connect', 'speak', 'use_voice_activation', 'use_application_commands'
-    ];
-
     // Initialize all permissions as null (not set)
-    for (const perm of allPermissions) {
+    for (const perm of allRolePermissions) {
       states.set(perm, null);
     }
 
@@ -168,7 +110,38 @@ export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissio
     setPermissionStates(states);
   }, [rolePermissions, role]);
 
-  const [confirmAction, setConfirmAction] = useState<{ type: 'deny' | 'allow'; permissions: Permission[] } | null>(null);
+  const permissionCounts = useMemo(() => {
+    let allowed = 0;
+    let denied = 0;
+    let inherited = 0;
+
+    for (const permission of allRolePermissions) {
+      const state = permissionStates.get(permission) ?? null;
+      if (state === true) allowed += 1;
+      else if (state === false) denied += 1;
+      else inherited += 1;
+    }
+
+    return { allowed, denied, inherited, total: allRolePermissions.length };
+  }, [permissionStates]);
+
+  const filteredGroups = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return PERMISSION_GROUPS;
+
+    return PERMISSION_GROUPS.map((group) => ({
+      ...group,
+      permissions: group.permissions.filter((permission) => {
+        const meta = PERMISSION_META[permission];
+        return (
+          meta.label.toLowerCase().includes(query) ||
+          meta.description.toLowerCase().includes(query) ||
+          permission.toLowerCase().includes(query) ||
+          group.label.toLowerCase().includes(query)
+        );
+      }),
+    })).filter((group) => group.permissions.length > 0);
+  }, [searchQuery]);
 
   const handlePermissionChange = (permission: Permission, value: boolean | null) => {
     setPermissionStates((prev) => {
@@ -188,14 +161,29 @@ export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissio
     });
   };
 
-  const allPermissions = PERMISSION_GROUPS.flatMap(g => g.permissions);
-
   const handleGlobalBulkSet = (value: boolean | null) => {
     if (value !== null) {
-      setConfirmAction({ type: value ? 'allow' : 'deny', permissions: allPermissions });
+      setConfirmAction({ type: value ? 'allow' : 'deny', permissions: allRolePermissions });
     } else {
-      handleBulkSet(allPermissions, null);
+      handleBulkSet(allRolePermissions, null);
     }
+  };
+
+  const getGroupCounts = (permissions: Permission[]) => {
+    let allowed = 0;
+    let denied = 0;
+
+    for (const permission of permissions) {
+      const state = permissionStates.get(permission) ?? null;
+      if (state === true) allowed += 1;
+      if (state === false) denied += 1;
+    }
+
+    return {
+      allowed,
+      denied,
+      inherited: permissions.length - allowed - denied,
+    };
   };
 
   const handleSave = async () => {
@@ -266,87 +254,74 @@ export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissio
   }
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-sm font-medium">Role Permissions</h3>
-        <p className="text-xs text-muted-foreground mt-1">
-          Configure permissions for {roleName}
-        </p>
+    <div className="flex max-h-[82vh] flex-col gap-4">
+      <div className="space-y-3">
+        <div>
+          <h3 className="text-base font-semibold">Role Permissions</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Configure what <span className="font-medium text-foreground">{roleName}</span> can do across the server.
+          </p>
+        </div>
+
+        <div className="border-b border-border/50 pb-3">
+          <BulkPermissionButtons onSet={handleGlobalBulkSet} label="All permissions" />
+        </div>
       </div>
 
-      <ScrollArea className="h-[400px] pr-4">
-        <div className="space-y-6">
-          {/* Global bulk set */}
-          <div className="pb-3 border-b border-border/50">
-            <BulkPermissionButtons
-              onSet={handleGlobalBulkSet}
-              label="Set all permissions:"
-            />
-          </div>
+      <ScrollArea className="min-h-0 flex-1 pr-4">
+        <div className="space-y-8 pb-1">
+          {filteredGroups.map((group) => {
+            return (
+              <section key={group.label} className="space-y-3">
+                <div>
+                  <Label className="text-sm font-semibold text-foreground">{group.label} permissions</Label>
+                </div>
 
-          {PERMISSION_GROUPS.map((group) => (
-            <div key={group.label} className="space-y-3">
-              <Label className="text-xs font-medium text-muted-foreground uppercase">
-                {group.label}
-              </Label>
-              <BulkPermissionButtons
-                onSet={(value) => handleBulkSet(group.permissions, value)}
-                className="mb-1"
-              />
-              <div className="space-y-2 pl-1">
-                {group.permissions.map((permission) => {
-                  const state = permissionStates.get(permission);
+                <div className="divide-y divide-border/50">
+                  {group.permissions.map((permission) => {
+                    const state = permissionStates.get(permission) ?? null;
+                    const meta = PERMISSION_META[permission];
 
-                  return (
-                    <div key={permission} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary/50 group/item">
-                      <Label
-                        htmlFor={permission}
-                        className="text-sm font-normal cursor-pointer flex-1"
-                      >
-                        {PERMISSION_LABELS[permission]}
-                      </Label>
-                      <div className="flex bg-secondary/80 rounded-lg p-0.5 border border-border/50">
-                        <button
-                          onClick={() => handlePermissionChange(permission, false)}
-                          className={cn(
-                            "px-3 py-1 text-[10px] font-medium rounded-md transition-all",
-                            state === false
-                              ? "bg-destructive text-destructive-foreground shadow-sm"
-                              : "text-muted-foreground hover:text-foreground"
-                          )}
-                        >
-                          DENY
-                        </button>
-                        <button
-                          onClick={() => handlePermissionChange(permission, null)}
-                          className={cn(
-                            "px-3 py-1 text-[10px] font-medium rounded-md transition-all",
-                            state === null
-                              ? "bg-background text-foreground shadow-sm border border-border"
-                              : "text-muted-foreground hover:text-foreground"
-                          )}
-                        >
-                          INHERIT
-                        </button>
-                        <button
-                          onClick={() => handlePermissionChange(permission, true)}
-                          className={cn(
-                            "px-3 py-1 text-[10px] font-medium rounded-md transition-all",
-                            state === true
-                              ? "bg-emerald-500 text-white shadow-sm"
-                              : "text-muted-foreground hover:text-foreground"
-                          )}
-                        >
-                          ALLOW
-                        </button>
+                    return (
+                      <div key={permission} className="grid gap-3 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Label className="text-sm font-medium">{meta.label}</Label>
+                            {!meta.enabled && (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/25 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-500">
+                                <ShieldAlert className="h-3 w-3" />
+                                Planned
+                              </span>
+                            )}
+                          </div>
+                          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{meta.description}</p>
+                        </div>
+
+                        <div className="grid w-[108px] grid-cols-3 overflow-hidden rounded-[3px] border border-border/70 bg-muted/30">
+                          {permissionValueOptions.map(({ value, label, Icon, activeClass, inactiveClass }) => (
+                            <button
+                              key={label}
+                              type="button"
+                              onClick={() => handlePermissionChange(permission, value)}
+                              className={cn(
+                                'inline-flex h-7 items-center justify-center border-0 text-xs font-medium transition-colors',
+                                state === value ? activeClass : inactiveClass,
+                              )}
+                              aria-pressed={state === value}
+                              aria-label={`${label} ${meta.label}`}
+                              title={label}
+                            >
+                              <Icon className="h-3.5 w-3.5" />
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <Separator />
-            </div>
-          ))}
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })}
         </div>
       </ScrollArea>
 

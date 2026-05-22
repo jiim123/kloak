@@ -45,6 +45,12 @@ export const PERMISSION_META: Record<Permission, PermissionMeta> = {
   assign_tasks: { label: 'Assign Tasks', description: 'Allows members to assign tasks to other members.', enabled: true },
   change_task_status: { label: 'Change Task Status', description: 'Allows members to change the status of tasks.', enabled: true },
   delete_tasks: { label: 'Delete Tasks', description: 'Allows members to delete tasks.', enabled: true },
+  view_events: { label: 'View Events', description: 'Allows members to view events in calendar channels.', enabled: true },
+  create_events: { label: 'Create Events', description: 'Allows members to create calendar events.', enabled: true },
+  edit_own_events: { label: 'Edit Own Events', description: 'Allows members to edit events they created.', enabled: true },
+  edit_all_events: { label: 'Edit All Events', description: 'Allows members to edit any event regardless of who created it.', enabled: true },
+  delete_events: { label: 'Delete Events', description: 'Allows members to delete calendar events.', enabled: true },
+  rsvp_events: { label: 'RSVP to Events', description: 'Allows members to RSVP to calendar events.', enabled: true },
 };
 
 export const PERMISSION_GROUPS: Array<{
@@ -91,5 +97,10 @@ export const PERMISSION_GROUPS: Array<{
     label: 'Tasks',
     description: 'Task board management',
     permissions: ['view_tasks', 'create_tasks', 'edit_own_tasks', 'edit_all_tasks', 'assign_tasks', 'change_task_status', 'delete_tasks'],
+  },
+  {
+    label: 'Events',
+    description: 'Calendar event management',
+    permissions: ['view_events', 'create_events', 'edit_own_events', 'edit_all_events', 'delete_events', 'rsvp_events'],
   },
 ];

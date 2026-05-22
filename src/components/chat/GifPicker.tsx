@@ -104,7 +104,7 @@ function GifPickerContent({
             <button
               key={gif.id}
               type="button"
-              className="aspect-square overflow-hidden rounded-md sm:rounded-[4px] transition-all hover:ring-2 hover:ring-[#8e9297]/60 focus:outline-none focus:ring-2 focus:ring-[#8e9297]/60"
+              className="aspect-square overflow-hidden rounded-md transition-all hover:ring-2 hover:ring-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/40 sm:rounded-[4px]"
               onClick={() => handleGifClick(gif)}
               onMouseDown={(e) => e.preventDefault()}
             >
@@ -131,8 +131,8 @@ function GifPickerContent({
   return (
     <>
       {/* Tab bar */}
-      <div className="border-b border-[#202225] bg-[#24272c] px-2 py-1.5 sm:px-1.5 sm:py-1">
-        <div className="flex h-12 sm:h-[29px] items-center gap-1 sm:gap-[3px]">
+      <div className="border-b border-border bg-card px-1.5 py-1">
+        <div className="flex h-12 items-center gap-1 sm:h-[29px] sm:gap-[3px]">
         {([
           { key: "trending" as Tab, icon: TrendingUp, label: "Trending" },
           { key: "categories" as Tab, icon: LayoutGrid, label: "Categories" },
@@ -144,8 +144,8 @@ function GifPickerContent({
             className={cn(
               "flex h-10 sm:h-[23px] min-w-0 flex-1 items-center justify-center gap-2 sm:gap-1.5 rounded-md sm:rounded-[3px] px-3 sm:px-2 text-sm sm:text-[11px] font-medium transition-colors",
               tab === key
-                ? "bg-[#36393f] text-[#f2f3f5]"
-                : "text-[#8e9297] hover:bg-[#303339] hover:text-[#dcddde]",
+                ? "bg-secondary text-foreground"
+                : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground",
             )}
             onClick={() => {
               setTab(key);
@@ -163,18 +163,18 @@ function GifPickerContent({
       {tab === "trending" && (
         <div className="px-3 pb-2 pt-2 sm:px-2 sm:pb-1.5 sm:pt-1.5">
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3 sm:left-2.5 top-1/2 h-5 w-5 sm:h-[14px] sm:w-[14px] -translate-y-1/2 text-[#7b8088]" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground sm:left-2.5 sm:h-[14px] sm:w-[14px]" />
             <input
               type="text"
               value={query}
               onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Search GIFs..."
-              className="h-11 sm:h-[28px] w-full rounded-full border border-[#22252a] bg-[#25282d] pl-10 pr-10 sm:pl-8 sm:pr-8 text-base sm:text-[11px] leading-none text-[#dcddde] outline-none placeholder:text-[#8e9297] focus:border-[#343940] focus:bg-[#24272c]"
+              className="h-11 w-full rounded-full border border-border bg-background/70 pl-10 pr-10 text-base leading-none text-foreground outline-none placeholder:text-muted-foreground focus:border-primary/50 focus:bg-background sm:h-[28px] sm:pl-8 sm:pr-8 sm:text-[11px]"
             />
             {query && (
               <button
                 type="button"
-                className="absolute right-2 sm:right-1.5 top-1/2 flex h-7 w-7 sm:h-[18px] sm:w-[18px] -translate-y-1/2 items-center justify-center rounded-full text-[#8e9297] hover:text-[#dcddde]"
+                className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground hover:text-foreground sm:right-1.5 sm:h-[18px] sm:w-[18px]"
                 onClick={() => handleSearchChange("")}
               >
                 <X className="h-4 w-4 sm:h-[14px] sm:w-[14px]" />
@@ -207,7 +207,7 @@ function GifPickerContent({
                   <button
                     key={cat.query}
                     type="button"
-                    className="group relative h-28 sm:h-20 overflow-hidden rounded-md sm:rounded-[4px] focus:outline-none focus:ring-2 focus:ring-[#8e9297]/60"
+                    className="group relative h-28 overflow-hidden rounded-md focus:outline-none focus:ring-2 focus:ring-primary/40 sm:h-20 sm:rounded-[4px]"
                     onClick={() => handleCategoryClick(cat.query)}
                     onMouseDown={(e) => e.preventDefault()}
                   >
@@ -237,7 +237,7 @@ function GifPickerContent({
             <div>
               <button
                 type="button"
-                className="mb-3 sm:mb-2 flex items-center gap-2 sm:gap-1.5 text-sm sm:text-[11px] text-[#8e9297] transition-colors hover:text-[#dcddde]"
+                className="mb-3 flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground sm:mb-2 sm:gap-1.5 sm:text-[11px]"
                 onClick={handleBackToCategories}
               >
                 <X className="h-5 w-5 sm:h-[14px] sm:w-[14px]" />
@@ -262,7 +262,7 @@ function GifPickerContent({
       </ScrollArea>
 
       {/* Klipy Attribution */}
-      <div className="flex h-12 sm:h-[36px] items-center justify-center border-t border-[#202225] bg-[#333743] px-2">
+      <div className="flex h-12 items-center justify-center border-t border-border bg-card px-2 sm:h-[36px]">
         <a
           href="https://klipy.com"
           target="_blank"
@@ -419,7 +419,7 @@ export const GifPicker = ({ children, anchor, onSelect, open, onOpenChange }: Gi
     return (
       <Drawer open={open} onOpenChange={safeOpenChange}>
         {children && <DrawerTrigger asChild>{children}</DrawerTrigger>}
-        <DrawerContent className="flex h-[78vh] max-h-[90vh] flex-col overflow-hidden rounded-t-[4px] border-0 bg-[#282b30] p-0">
+        <DrawerContent className="flex h-[78vh] max-h-[90vh] flex-col overflow-hidden rounded-t-[4px] border border-border bg-popover p-0 text-popover-foreground">
           <GifPickerContent {...contentProps} />
         </DrawerContent>
       </Drawer>
@@ -430,7 +430,7 @@ export const GifPicker = ({ children, anchor, onSelect, open, onOpenChange }: Gi
     <Popover open={open} onOpenChange={safeOpenChange}>
       {anchor ? <PopoverAnchor asChild>{anchor}</PopoverAnchor> : children && <PopoverTrigger asChild>{children}</PopoverTrigger>}
       <PopoverContent
-        className="w-[304px] overflow-hidden rounded-[4px] border-0 bg-[#282b30] p-0 shadow-[0_8px_22px_rgba(0,0,0,0.35)]"
+        className="w-[304px] overflow-hidden rounded-[4px] border border-border bg-popover p-0 text-popover-foreground shadow-[0_8px_22px_rgba(0,0,0,0.35)]"
         side="top"
         align="end"
         sideOffset={8}

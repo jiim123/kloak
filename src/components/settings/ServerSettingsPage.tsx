@@ -19,6 +19,7 @@ import {
   Link2,
   Copy,
   Check,
+  Minus,
   Smile,
   GripVertical,
   Download,
@@ -26,6 +27,7 @@ import {
   Search,
   CircleUser,
   ArrowLeft,
+  ShieldAlert,
 } from "lucide-react";
 import { useRateLimit } from "@/hooks/useRateLimit";
 import { rateLimitToast } from "@/lib/rateLimitToast";
@@ -384,6 +386,12 @@ const PERMISSION_META: Record<Permission, PermissionMeta> = {
   assign_tasks: { label: "Assign Tasks", description: "Allows members to assign tasks to other members.", enabled: true },
   change_task_status: { label: "Change Task Status", description: "Allows members to change the status of tasks.", enabled: true },
   delete_tasks: { label: "Delete Tasks", description: "Allows members to delete tasks.", enabled: true },
+  view_events: { label: "View Events", description: "Allows members to view events in calendar channels.", enabled: true },
+  create_events: { label: "Create Events", description: "Allows members to create calendar events.", enabled: true },
+  edit_own_events: { label: "Edit Own Events", description: "Allows members to edit events they created.", enabled: true },
+  edit_all_events: { label: "Edit All Events", description: "Allows members to edit any event regardless of who created it.", enabled: true },
+  delete_events: { label: "Delete Events", description: "Allows members to delete calendar events.", enabled: true },
+  rsvp_events: { label: "RSVP to Events", description: "Allows members to RSVP to calendar events.", enabled: true },
 };
 
 const PERMISSION_GROUPS: Array<{
@@ -447,7 +455,39 @@ const PERMISSION_GROUPS: Array<{
     description: "Task board management",
     permissions: ["view_tasks", "create_tasks", "edit_own_tasks", "edit_all_tasks", "assign_tasks", "change_task_status", "delete_tasks"],
   },
+  {
+    label: "Events",
+    description: "Calendar event management",
+    permissions: ["view_events", "create_events", "edit_own_events", "edit_all_events", "delete_events", "rsvp_events"],
+  },
 ];
+
+const ALL_ROLE_PERMISSIONS = PERMISSION_GROUPS.flatMap((group) => group.permissions);
+
+const PERMISSION_VALUE_OPTIONS = [
+  {
+    value: false,
+    label: "Deny",
+    Icon: X,
+    activeClass: "border-destructive bg-destructive text-destructive-foreground shadow-sm",
+    inactiveClass: "text-muted-foreground hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive",
+  },
+  {
+    value: null,
+    label: "Inherit",
+    Icon: Minus,
+    activeClass: "border-border bg-background text-foreground shadow-sm",
+    inactiveClass: "text-muted-foreground hover:bg-secondary hover:text-foreground",
+  },
+  {
+    value: true,
+    label: "Allow",
+    Icon: Check,
+    activeClass: "border-emerald-500 bg-emerald-500 text-white shadow-sm",
+    inactiveClass: "text-muted-foreground hover:border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-500",
+  },
+] as const;
+
 // Inline permissions editor component (without modal wrapper, unified with role details)
 const RolePermissionsEditorInline = ({
   role,
@@ -467,6 +507,8 @@ const RolePermissionsEditorInline = ({
 
   const [permissionStates, setPermissionStates] = useState<Map<Permission, boolean | null>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [confirmAction, setConfirmAction] = useState<{ type: "deny" | "allow"; permissions: Permission[] } | null>(null);
 
   useEffect(() => {
     const loadPermissions = async () => {
@@ -494,9 +536,7 @@ const RolePermissionsEditorInline = ({
 
     const states = new Map<Permission, boolean | null>();
 
-    const allPermissions: Permission[] = Object.keys(PERMISSION_META) as Permission[];
-
-    for (const perm of allPermissions) {
+    for (const perm of ALL_ROLE_PERMISSIONS) {
       states.set(perm, null);
     }
 
@@ -509,7 +549,38 @@ const RolePermissionsEditorInline = ({
     setPermissionStates(states);
   }, [rolePermissions, role, initialPermissionStates]);
 
-  const [confirmAction, setConfirmAction] = useState<{ type: 'deny' | 'allow'; permissions: Permission[] } | null>(null);
+  const permissionCounts = useMemo(() => {
+    let allowed = 0;
+    let denied = 0;
+    let inherited = 0;
+
+    for (const permission of ALL_ROLE_PERMISSIONS) {
+      const state = permissionStates.get(permission) ?? null;
+      if (state === true) allowed += 1;
+      else if (state === false) denied += 1;
+      else inherited += 1;
+    }
+
+    return { allowed, denied, inherited };
+  }, [permissionStates]);
+
+  const filteredPermissionGroups = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return PERMISSION_GROUPS;
+
+    return PERMISSION_GROUPS.map((group) => ({
+      ...group,
+      permissions: group.permissions.filter((permission) => {
+        const meta = PERMISSION_META[permission];
+        return (
+          group.label.toLowerCase().includes(query) ||
+          meta.label.toLowerCase().includes(query) ||
+          meta.description.toLowerCase().includes(query) ||
+          permission.toLowerCase().includes(query)
+        );
+      }),
+    })).filter((group) => group.permissions.length > 0);
+  }, [searchQuery]);
 
   const handlePermissionChange = (permission: Permission, value: boolean | null) => {
     setPermissionStates((prev) => {
@@ -532,14 +603,29 @@ const RolePermissionsEditorInline = ({
     });
   };
 
-  const allPermissions = PERMISSION_GROUPS.flatMap(g => g.permissions);
-
   const handleGlobalBulkSet = (value: boolean | null) => {
     if (value !== null) {
-      setConfirmAction({ type: value ? 'allow' : 'deny', permissions: allPermissions });
+      setConfirmAction({ type: value ? 'allow' : 'deny', permissions: ALL_ROLE_PERMISSIONS });
     } else {
-      handleBulkSet(allPermissions, null);
+      handleBulkSet(ALL_ROLE_PERMISSIONS, null);
     }
+  };
+
+  const getGroupCounts = (permissions: Permission[]) => {
+    let allowed = 0;
+    let denied = 0;
+
+    for (const permission of permissions) {
+      const state = permissionStates.get(permission) ?? null;
+      if (state === true) allowed += 1;
+      if (state === false) denied += 1;
+    }
+
+    return {
+      allowed,
+      denied,
+      inherited: permissions.length - allowed - denied,
+    };
   };
 
   useEffect(() => {
@@ -598,6 +684,117 @@ const RolePermissionsEditorInline = ({
       </div>
     );
   }
+
+  return (
+    <div className="space-y-8">
+      <div className="border-b border-border/50 pb-3">
+        <BulkPermissionButtons onSet={handleGlobalBulkSet} label="All permissions" />
+      </div>
+
+      {filteredPermissionGroups.map((group) => {
+        return (
+          <section key={group.label} className="space-y-3">
+            <div>
+              <h4 className="text-sm font-semibold text-foreground">{group.label} permissions</h4>
+            </div>
+
+            <div className="divide-y divide-border/50">
+              {group.permissions.map((permission) => {
+                const meta = PERMISSION_META[permission];
+                const state = permissionStates.get(permission) ?? null;
+                const isDisabled = !meta.enabled;
+
+                return (
+                  <div
+                    key={permission}
+                    className={cn(
+                      "grid gap-3 py-4 transition-colors lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center",
+                      isDisabled && "opacity-50",
+                    )}
+                  >
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-medium">{meta.label}</span>
+                        {isDisabled && (
+                          <Badge
+                            variant="outline"
+                            className="h-5 gap-1 border-amber-500/25 bg-amber-500/10 px-1.5 text-[10px] font-medium text-amber-500"
+                          >
+                            <ShieldAlert className="h-3 w-3" />
+                            Planned
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{meta.description}</p>
+                    </div>
+
+                    <div
+                      className={cn(
+                        "grid w-[108px] grid-cols-3 overflow-hidden rounded-[3px] border border-border/70 bg-secondary/50",
+                        isDisabled && "pointer-events-none",
+                      )}
+                    >
+                      {PERMISSION_VALUE_OPTIONS.map(({ value, label, Icon, activeClass, inactiveClass }) => (
+                        <button
+                          key={label}
+                          type="button"
+                          onClick={() => handlePermissionChange(permission, value)}
+                          disabled={isDisabled}
+                          aria-pressed={state === value}
+                          aria-label={`${label} ${meta.label}`}
+                          title={label}
+                          className={cn(
+                            "inline-flex h-7 items-center justify-center border-0 text-xs font-medium transition-colors",
+                            state === value ? activeClass : inactiveClass,
+                          )}
+                        >
+                          <Icon className="h-3.5 w-3.5" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })}
+
+      <div className="pt-1 text-xs text-muted-foreground">
+        Permission changes are staged and saved with sidebar Save changes.
+      </div>
+
+      <AlertDialog open={!!confirmAction} onOpenChange={(open) => !open && setConfirmAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmAction?.type === "deny" ? "Deny All Permissions?" : "Allow All Permissions?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to set all permissions to {confirmAction?.type === "deny" ? "Deny" : "Allow"}? This will override any individual settings.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-[3px]">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (confirmAction) {
+                  handleBulkSet(confirmAction.permissions, confirmAction.type === "allow");
+                }
+                setConfirmAction(null);
+              }}
+              className={cn(
+                "rounded-[3px]",
+                confirmAction?.type === "deny" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : "",
+              )}
+            >
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
 
   return (
     <div className="space-y-6">

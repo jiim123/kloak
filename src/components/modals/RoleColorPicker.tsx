@@ -325,7 +325,7 @@ export const RoleColorPicker = ({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-start gap-x-2.5 gap-y-2">
+      <div className="flex w-full flex-wrap items-start gap-x-2.5 gap-y-2">
         {colorType === 'solid' ? (
           <ColorPickerPopover color={color} onColorChange={onColorChange}>
             <button
@@ -365,7 +365,7 @@ export const RoleColorPicker = ({
           </div>
         )}
 
-        <div className="min-w-[180px] max-w-[270px] flex-1 pt-0.5">
+        <div className="min-w-0 flex-1 pt-0.5">
           <div className="flex flex-wrap gap-x-2 gap-y-2">
             {colorType === 'solid'
               ? PRESET_COLORS.map((preset) => (

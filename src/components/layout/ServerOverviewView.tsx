@@ -42,6 +42,8 @@ interface CalendarEventCard {
   channel_name: string;
 }
 
+type CalendarRsvpStatus = "going" | "maybe" | "declined" | "none";
+
 const formatOverviewEventTime = (event: CalendarEventCard) => {
   if (event.is_all_day) return "All day";
 
@@ -277,7 +279,7 @@ export const ServerOverviewView = () => {
     void fetchCalendarEvents();
   }, [currentServer, channels, userId]);
 
-  const handleCalendarRsvp = async (event: CalendarEventCard, status: "going" | "none") => {
+  const handleCalendarRsvp = async (event: CalendarEventCard, status: CalendarRsvpStatus) => {
     if (!userId || !event.allow_rsvps) return;
 
     try {
@@ -295,9 +297,10 @@ export const ServerOverviewView = () => {
           if (item.id !== event.id) return item;
           const wasGoing = item.viewer_rsvp_status === "going";
           const isGoing = status === "going";
+          const nextViewerStatus = status === "none" ? null : status;
           return {
             ...item,
-            viewer_rsvp_status: isGoing ? "going" : null,
+            viewer_rsvp_status: nextViewerStatus,
             rsvp_count: Math.max(0, item.rsvp_count + (isGoing && !wasGoing ? 1 : !isGoing && wasGoing ? -1 : 0)),
           };
         }),
@@ -357,12 +360,12 @@ export const ServerOverviewView = () => {
                 {upcomingCalendarEvents.map((event) => (
                   <div
                     key={event.id}
-                    className="min-h-[118px] overflow-hidden rounded-md border border-[#343945] bg-[#262b34] text-left shadow-sm"
+                    className="min-h-[118px] overflow-hidden rounded-md border border-border/60 bg-card text-left shadow-sm"
                   >
                     <button
                       type="button"
-                      onClick={() => navigate(`/app/servers/${currentServer.id}/channels/${event.channel_id}`)}
-                      className="block w-full px-3 py-3 text-left transition-colors hover:bg-[#2d333d]"
+                      onClick={() => navigate(`/app/servers/${currentServer.id}/channels/${event.channel_id}?event=${event.id}`)}
+                      className="block w-full px-3 py-3 text-left transition-colors hover:bg-secondary/70"
                     >
                       <div className="flex items-start gap-2">
                         <span
@@ -370,27 +373,28 @@ export const ServerOverviewView = () => {
                           style={{ backgroundColor: event.color }}
                         />
                         <div className="min-w-0 flex-1">
-                          <div className="truncate text-[13px] font-semibold leading-5 text-[#f1f3f6]">{event.title}</div>
-                          <div className="truncate text-xs text-[#b9c0cb]">
+                          <div className="truncate text-[13px] font-semibold leading-5 text-foreground">{event.title}</div>
+                          <div className="truncate text-xs text-muted-foreground/95">
                             {event.allow_rsvps
                               ? `${event.rsvp_count} ${event.rsvp_count === 1 ? "is" : "are"} going`
                               : "RSVP not enabled"}
                           </div>
-                          <div className="mt-1 truncate text-xs text-[#d7dbe3]">
+                          <div className="mt-1 truncate text-xs text-foreground/90">
                             {format(new Date(event.starts_at), "EEE, MMM d")} at {formatOverviewEventTime(event)}
                           </div>
-                          <div className="mt-1 truncate text-[11px] text-[#9da5b2]">#{event.channel_name}</div>
+                          <div className="mt-1 truncate text-[11px] text-muted-foreground/90">#{event.channel_name}</div>
                         </div>
                       </div>
                     </button>
                     {event.allow_rsvps && (
-                      <div className="grid h-8 grid-cols-3 border-t border-[#3a404c] bg-[#242933] text-[#c6ccd6]">
+                      <div className="grid h-8 grid-cols-3 border-t border-border/60 bg-card text-muted-foreground">
                         <button
                           type="button"
                           onClick={() => void handleCalendarRsvp(event, "going")}
                           className={cn(
-                            "flex items-center justify-center border-r border-[#3a404c] transition-colors hover:bg-[#313743] hover:text-white",
-                            event.viewer_rsvp_status === "going" && "bg-primary/90 text-primary-foreground hover:bg-primary",
+                            "flex items-center justify-center border-r border-border/60 transition-colors hover:bg-secondary/70 hover:text-foreground",
+                            event.viewer_rsvp_status === "going" &&
+                              "bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/20 hover:text-emerald-100",
                           )}
                           aria-label={`Join ${event.title}`}
                         >
@@ -398,16 +402,25 @@ export const ServerOverviewView = () => {
                         </button>
                         <button
                           type="button"
-                          className="flex cursor-default items-center justify-center border-r border-[#3a404c] text-[#9da5b2]"
-                          aria-label="Maybe RSVP is not available"
+                          onClick={() => void handleCalendarRsvp(event, "maybe")}
+                          className={cn(
+                            "flex items-center justify-center border-r border-border/60 transition-colors hover:bg-secondary/70 hover:text-foreground",
+                            event.viewer_rsvp_status === "maybe" && "bg-amber-500/15 text-amber-200 hover:bg-amber-500/20",
+                          )}
+                          aria-label={`Maybe attend ${event.title}`}
                         >
                           <HelpCircle className="h-3.5 w-3.5" />
                         </button>
                         <button
                           type="button"
-                          onClick={() => void handleCalendarRsvp(event, "none")}
-                          className="flex items-center justify-center transition-colors hover:bg-[#313743] hover:text-white"
-                          aria-label={`Leave ${event.title}`}
+                          onClick={() =>
+                            void handleCalendarRsvp(event, event.viewer_rsvp_status === "declined" ? "none" : "declined")
+                          }
+                          className={cn(
+                            "flex items-center justify-center transition-colors hover:bg-secondary/70 hover:text-foreground",
+                            event.viewer_rsvp_status === "declined" && "bg-destructive/15 text-destructive hover:bg-destructive/20",
+                          )}
+                          aria-label={`Decline ${event.title}`}
                         >
                           <X className="h-3.5 w-3.5" />
                         </button>
