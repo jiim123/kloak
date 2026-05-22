@@ -77,7 +77,7 @@ import { handleError, showSuccess, showWarning } from "@/lib/errorHandler";
 import { formatMessageTimestamp } from "@/lib/format";
 import { formatDistanceToNow } from "date-fns";
 import { isImageOnlyMessage, stripMarkdown } from "@/lib/message";
-import { isPollMessageContent } from "@/lib/poll";
+import { isPollMessageContent, getPollIdFromContent, formatPollLabel } from "@/lib/poll";
 import { MessageContent, ReplyPreview } from "@/components/chat/MessageContent";
 import { MessageInput } from "@/components/chat/MessageInput";
 import { ImageLightbox } from "@/components/modals/ImageLightbox";
