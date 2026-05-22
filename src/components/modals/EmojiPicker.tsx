@@ -260,7 +260,7 @@ export const EmojiPicker = ({
         key={key}
         type="button"
         className={cn(
-          "flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-[4px] transition-colors duration-100",
+          "flex h-11 w-11 sm:h-[28px] sm:w-[28px] shrink-0 items-center justify-center rounded-md sm:rounded-[4px] transition-colors duration-100",
           "hover:bg-[#3b3f45] focus:bg-[#3b3f45] focus:outline-none active:bg-[#454950]",
           options?.disabled && "pointer-events-none opacity-40",
           options?.className,
@@ -279,15 +279,16 @@ export const EmojiPicker = ({
         title={label}
       >
         {options?.url ? (
-          <img src={options.url} alt={label} className="h-[22px] w-[22px] object-contain" loading="lazy" />
+          <img src={options.url} alt={label} className="h-7 w-7 sm:h-[22px] sm:w-[22px] object-contain" loading="lazy" />
         ) : options?.textFallback ? (
-          <span className="block max-w-full truncate text-[9px] leading-none text-[#b9bbbe]">{options.textFallback}</span>
+          <span className="block max-w-full truncate text-[11px] sm:text-[9px] leading-none text-[#b9bbbe]">{options.textFallback}</span>
         ) : (
-          <FluentEmoji emoji={emoji} size={22} />
+          <FluentEmoji emoji={emoji} size={isMobile ? 28 : 22} />
         )}
       </button>
     );
   };
+
 
   const renderServerEmojiGrid = () => {
     if (!selectedServerForEmoji || !selectedServer) return null;
