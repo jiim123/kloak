@@ -4139,6 +4139,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      ensure_calendar_event_role_permissions: {
+        Args: { _server_id: string }
+        Returns: undefined
+      }
       evaluate_raid_escalation: { Args: never; Returns: undefined }
       fetch_key_backup: { Args: { _user_id: string }; Returns: Json }
       fetch_prekey_bundle: { Args: { _target_user_id: string }; Returns: Json }
@@ -5215,6 +5219,12 @@ export type Database = {
         | "assign_tasks"
         | "change_task_status"
         | "delete_tasks"
+        | "view_events"
+        | "create_events"
+        | "edit_own_events"
+        | "edit_all_events"
+        | "delete_events"
+        | "rsvp_events"
       server_role: "owner" | "admin" | "moderator" | "member"
       task_priority: "low" | "medium" | "high"
       task_status: "open" | "in_progress" | "completed" | "archived"
@@ -5404,6 +5414,12 @@ export const Constants = {
         "assign_tasks",
         "change_task_status",
         "delete_tasks",
+        "view_events",
+        "create_events",
+        "edit_own_events",
+        "edit_all_events",
+        "delete_events",
+        "rsvp_events",
       ],
       server_role: ["owner", "admin", "moderator", "member"],
       task_priority: ["low", "medium", "high"],
