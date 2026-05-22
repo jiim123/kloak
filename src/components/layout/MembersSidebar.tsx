@@ -1246,10 +1246,7 @@ export const MembersSidebar = () => {
     [renderMemberListRow],
   );
 
-  // Show skeleton while loading
-  if (isMembersLoading && members.length === 0) {
-    return <MembersSidebarSkeleton />;
-  }
+  const isLoadingSkeleton = isMembersLoading && members.length === 0;
 
   const sidebarContent = (
     <div
