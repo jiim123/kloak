@@ -571,7 +571,7 @@ export const EmojiPicker = ({
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerTrigger asChild>{children}</DrawerTrigger>
-        <DrawerContent className="flex h-[70vh] max-h-[90vh] flex-col overflow-hidden rounded-t-[4px] border-0 bg-[#282b30] p-0">
+        <DrawerContent className="flex h-[78vh] max-h-[90vh] flex-col overflow-hidden rounded-t-[4px] border-0 bg-[#282b30] p-0">
           {pickerContent}
         </DrawerContent>
       </Drawer>
