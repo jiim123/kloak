@@ -1100,8 +1100,12 @@ export const useServerStore = create<ServerState>((set, get) => ({
             }
           }
         }
-        if (isActiveServer && rolePermissionsFromSurface) {
-          set({ rolePermissions: rolePermissionsFromSurface });
+        if (isActiveServer) {
+          if (rolePermissionsFromSurface) {
+            set({ rolePermissions: rolePermissionsFromSurface });
+          } else {
+            void get().fetchRolePermissions(serverId);
+          }
         }
       } catch (error) {
         console.error("Failed to fetch channels:", error);
