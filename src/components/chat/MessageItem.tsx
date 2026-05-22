@@ -69,7 +69,8 @@ import { useMessageUser, fetchAndCacheUser, getUserFromCache, getOrFetchUser } f
 import { useMessageMaps } from "./MessageMapsContext";
 import { cn } from "@/lib/utils";
 import { useSignedUrl } from "@/hooks/useSignedUrl";
-import { getPollIdFromContent, isPollMessageContent } from "@/lib/poll";
+import { getPollIdFromContent, isPollMessageContent, usePollLabel } from "@/lib/poll";
+import { usePollStore } from "@/stores/pollStore";
 import { canRevealGhostIdentityForUser } from "@/lib/ghostIdentity";
 import { pickFirstNonBlank } from "@/lib/utils";
 import { openUserProfileModal, SIDE_ALIGNED_USER_PROFILE_POPOVER } from "@/lib/userProfilePopover";
