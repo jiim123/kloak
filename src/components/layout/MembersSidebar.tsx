@@ -404,7 +404,6 @@ export const MembersSidebar = () => {
   const roles = useServerStore((s) => s.roles);
   const isMembersLoading = useServerStore((s) => s.isMembersLoading);
   const fetchMembers = useServerStore((s) => s.fetchMembers);
-  const fetchRolePermissions = useServerStore((s) => s.fetchRolePermissions);
   const assignRoleToMember = useServerStore((s) => s.assignRoleToMember);
   const removeRoleFromMember = useServerStore((s) => s.removeRoleFromMember);
 
