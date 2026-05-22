@@ -547,22 +547,23 @@ export const EmojiPicker = ({
       </ScrollArea>
 
 
-      <div className="flex h-[36px] shrink-0 items-center justify-between border-t border-[#202225] bg-[#333743] px-2">
+      <div className="flex h-14 sm:h-[36px] shrink-0 items-center justify-between border-t border-[#202225] bg-[#333743] px-3 sm:px-2">
         <div className="flex min-w-0 items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-[4px]">
+          <div className="flex h-10 w-10 sm:h-7 sm:w-7 items-center justify-center rounded-[4px]">
             {previewEmoji?.url ? (
-              <img src={previewEmoji.url} alt={previewEmoji.label} className="h-[26px] w-[26px] object-contain" />
+              <img src={previewEmoji.url} alt={previewEmoji.label} className="h-9 w-9 sm:h-[26px] sm:w-[26px] object-contain" />
             ) : previewEmoji?.native ? (
-              <FluentEmoji emoji={previewEmoji.native} size={24} />
+              <FluentEmoji emoji={previewEmoji.native} size={isMobile ? 32 : 24} />
             ) : (
-              <Smile className="h-4 w-4 text-[#b9bbbe]" />
+              <Smile className="h-6 w-6 sm:h-4 sm:w-4 text-[#b9bbbe]" />
             )}
           </div>
-          <span className="truncate text-[11px] font-medium text-[#b9bbbe]">
+          <span className="truncate text-sm sm:text-[11px] font-medium text-[#b9bbbe]">
             {previewEmoji?.label?.replace(/^:/, "").replace(/:$/, "") || "Select an emoji"}
           </span>
         </div>
       </div>
+
     </div>
   );
 
