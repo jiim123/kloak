@@ -509,14 +509,14 @@ export const EmojiPicker = ({
 
 
       <ScrollArea className={isMobile ? "min-h-0 flex-1 overflow-y-auto" : "h-[224px]"}>
-        <div className="px-2 pb-1 pt-0.5">
+        <div className="px-3 pb-2 pt-1 sm:px-2 sm:pb-1 sm:pt-0.5">
           {search.trim() ? (
             filteredEmojis && filteredEmojis.length > 0 ? (
               <>
-                <div className="mb-1.5 px-0.5 text-[10px] font-semibold leading-none text-[#b9bbbe]">
+                <div className="mb-2 sm:mb-1.5 px-0.5 text-xs sm:text-[10px] font-semibold leading-none text-[#b9bbbe]">
                   Results for "{search.trim()}"
                 </div>
-                <div className="grid grid-cols-9 gap-[1px]">
+                <div className="grid grid-cols-7 gap-1 sm:grid-cols-9 sm:gap-[1px]">
                   {filteredEmojis.map((item, index) => {
                     if (item.type === "native") {
                       return renderEmojiButton(`search-native-${item.emoji}-${index}`, item.emoji);
@@ -535,7 +535,7 @@ export const EmojiPicker = ({
               </>
             ) : (
               <div className="flex h-[120px] items-center justify-center text-center">
-                <p className="text-[11px] font-medium text-[#8e9297]">No emoji found</p>
+                <p className="text-sm sm:text-[11px] font-medium text-[#8e9297]">No emoji found</p>
               </div>
             )
           ) : activeCategory === "server" ? (
@@ -545,6 +545,7 @@ export const EmojiPicker = ({
           )}
         </div>
       </ScrollArea>
+
 
       <div className="flex h-[36px] shrink-0 items-center justify-between border-t border-[#202225] bg-[#333743] px-2">
         <div className="flex min-w-0 items-center gap-2">
