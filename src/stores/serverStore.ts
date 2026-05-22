@@ -619,12 +619,25 @@ export const useServerStore = create<ServerState>((set, get) => ({
   ) => {
     // Note: publishing is owner-only in the update_server RPC
     try {
+      // Strip is_published if it matches the current value — the RPC re-validates
+      // public-server requirements whenever is_published=true is in the payload,
+      // which would block unrelated edits (e.g. banner) on already-published servers.
+      let sanitizedUpdates: typeof updates = updates;
+      if (Object.prototype.hasOwnProperty.call(updates, "is_published")) {
+        const current = get().servers.find((s) => s.id === serverId);
+        if (current && current.is_published === updates.is_published) {
+          const { is_published: _ignored, ...rest } = updates;
+          sanitizedUpdates = rest;
+        }
+      }
+
       // Use RPC function to bypass RLS
       const { data, error } = await supabase.rpc("update_server", {
         _server_id: serverId,
         _user_id: userId,
-        _updates: updates,
+        _updates: sanitizedUpdates,
       });
+
 
       if (error) {
         console.error("update_server RPC error:", error);
