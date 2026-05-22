@@ -1488,13 +1488,14 @@ const MobileOptimizedInput = memo(
               placeholder={forumPlaceholder || (dmPlaceholder ? (hasAttachments ? "Add a comment..." : `Message @${dmPlaceholder.length > (isMobile ? 12 : 17) ? dmPlaceholder.slice(0, isMobile ? 12 : 17) + "..." : dmPlaceholder}`) : (isLockedByNotice ? "Write a message..." : canSendMessage ? `Message ${channelName || "channel"}` : "Locked"))}
               disabled={!canSendMessage}
               rows={1}
-              className="message-input-textarea w-full resize-none bg-transparent py-2 text-foreground outline-none min-h-[40px] max-h-[160px] overflow-y-auto placeholder:text-muted-foreground/60 font-[Inter,system-ui,sans-serif]"
+              className="message-input-textarea w-full resize-none bg-transparent py-2.5 sm:py-2 text-foreground outline-none min-h-[40px] max-h-[140px] sm:max-h-[160px] overflow-y-auto placeholder:text-muted-foreground/60 font-[Inter,system-ui,sans-serif]"
               style={{
-                fontSize: "15px",
+                fontSize: isMobile ? "16px" : "15px",
                 lineHeight: "1.45",
                 fontWeight: 400,
               }}
             />
+
           }
         />
       </div>
