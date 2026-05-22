@@ -1268,7 +1268,7 @@ export const MessageItem = memo(function MessageItem({
       {(() => {
         const replyContent = message.reply_to.content;
         if (isPollMessageContent(replyContent)) {
-          return <span className="flex-shrink-0 italic">poll</span>;
+          return <span className="truncate italic text-muted-foreground/90 sm:max-w-[320px] max-w-[190px]">{replyPollLabel.toLowerCase()}</span>;
         }
         if (isImageOnlyMessage(replyContent)) {
           return (
