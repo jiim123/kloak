@@ -1999,13 +1999,23 @@ export const MessageItem = memo(function MessageItem({
                 </button>
               )}
               {/* Edit (own messages) */}
-              {isOwnMessage && (
+              {isOwnMessage && !pollId && (
                 <button
                   className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
                   onClick={handleMobileEdit}
                 >
                   <Pencil className="w-5 h-5 text-muted-foreground" />
                   <span className="font-medium">Edit</span>
+                </button>
+              )}
+              {/* End poll (own poll messages) */}
+              {isOwnMessage && pollId && !pollIsClosed && (
+                <button
+                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
+                  onClick={() => { handleEndPoll(); setShowMobileActions(false); }}
+                >
+                  <Pencil className="w-5 h-5 text-muted-foreground" />
+                  <span className="font-medium">End poll</span>
                 </button>
               )}
 
