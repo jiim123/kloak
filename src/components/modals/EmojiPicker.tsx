@@ -298,16 +298,16 @@ export const EmojiPicker = ({
 
     return (
       <div>
-        <div className="mb-1.5 px-0.5 text-[10px] font-semibold leading-none text-[#b9bbbe]">
+        <div className="mb-2 sm:mb-1.5 px-0.5 text-xs sm:text-[10px] font-semibold leading-none text-[#b9bbbe]">
           {selectedServer.name}
           {isDisabledSection && <span className="ml-1 text-[#8e9297]">- External disabled</span>}
         </div>
         {loadingServers.has(selectedServerForEmoji) ? (
           <div className="flex h-[120px] items-center justify-center text-center">
-            <p className="text-[11px] text-[#8e9297]">Loading emojis...</p>
+            <p className="text-sm sm:text-[11px] text-[#8e9297]">Loading emojis...</p>
           </div>
         ) : currentServerEmojis.length > 0 ? (
-          <div className={cn("grid grid-cols-9 gap-[1px]", isDisabledSection && "pointer-events-none opacity-50")}>
+          <div className={cn("grid grid-cols-7 gap-1 sm:grid-cols-9 sm:gap-[1px]", isDisabledSection && "pointer-events-none opacity-50")}>
             {currentServerEmojis.map((emoji) =>
               renderEmojiButton(`server-${emoji.id}`, `:${emoji.name}:`, {
                 label: `:${emoji.name}:`,
@@ -318,7 +318,7 @@ export const EmojiPicker = ({
           </div>
         ) : (
           <div className="flex h-[120px] items-center justify-center text-center">
-            <p className="text-[11px] font-medium text-[#8e9297]">No custom emojis</p>
+            <p className="text-sm sm:text-[11px] font-medium text-[#8e9297]">No custom emojis</p>
           </div>
         )}
       </div>
