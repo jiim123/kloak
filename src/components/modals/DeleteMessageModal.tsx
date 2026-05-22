@@ -134,7 +134,7 @@ export const DeleteMessageModal = ({
       <DialogContent className={MODAL_CONTENT_CLASS} hideCloseButton>
         <div className="flex max-h-[82vh] flex-col overflow-hidden">
           <div className="border-b border-[#2b3039] bg-[#2f343d] px-5 py-3">
-            <div className="text-base font-medium leading-none tracking-tight">Delete Message</div>
+            <div className="text-base font-medium leading-none tracking-tight">{isPoll ? "Delete Poll" : "Delete Message"}</div>
           </div>
 
           <div className="space-y-5 overflow-y-auto px-6 py-4">
