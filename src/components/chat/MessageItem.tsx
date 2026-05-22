@@ -1769,12 +1769,21 @@ export const MessageItem = memo(function MessageItem({
               <Copy className="w-4 h-4" />
               Copy Text
             </ContextMenuItem>
-            {isOwnMessage && (
+            {isOwnMessage && !pollId && (
               <>
                 <ContextMenuSeparator />
                 <ContextMenuItem onClick={handleStartEditing}>
                   <Pencil className="w-4 h-4" />
                   Edit Message
+                </ContextMenuItem>
+              </>
+            )}
+            {isOwnMessage && pollId && !pollIsClosed && (
+              <>
+                <ContextMenuSeparator />
+                <ContextMenuItem onClick={handleEndPoll}>
+                  <Pencil className="w-4 h-4" />
+                  End Poll
                 </ContextMenuItem>
               </>
             )}
