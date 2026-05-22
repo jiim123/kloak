@@ -122,7 +122,10 @@ export const DeleteMessageModal = ({
 
   const displayContent = messageContent || (message ? message.content : "");
   const displayUser = useMessageUser(message?.user_id);
-  const { images, caption } = parseContentImages(displayContent);
+  const isPoll = isPollMessageContent(displayContent);
+  const pollId = isPoll ? getPollIdFromContent(displayContent) : null;
+  const pollLabel = usePollLabel(pollId);
+  const { images, caption } = isPoll ? { images: [] as string[], caption: "" } : parseContentImages(displayContent);
   const hasImages = images.length > 0;
   const displayName = displayUser?.display_name || displayUser?.username || "Unknown";
 
