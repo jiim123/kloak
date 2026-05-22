@@ -69,7 +69,8 @@ import { useMessageUser, fetchAndCacheUser, getUserFromCache, getOrFetchUser } f
 import { useMessageMaps } from "./MessageMapsContext";
 import { cn } from "@/lib/utils";
 import { useSignedUrl } from "@/hooks/useSignedUrl";
-import { getPollIdFromContent, isPollMessageContent } from "@/lib/poll";
+import { getPollIdFromContent, isPollMessageContent, usePollLabel } from "@/lib/poll";
+import { usePollStore } from "@/stores/pollStore";
 import { canRevealGhostIdentityForUser } from "@/lib/ghostIdentity";
 import { pickFirstNonBlank } from "@/lib/utils";
 import { openUserProfileModal, SIDE_ALIGNED_USER_PROFILE_POPOVER } from "@/lib/userProfilePopover";
@@ -704,6 +705,11 @@ export const MessageItem = memo(function MessageItem({
   }, [user?.id, message.content]);
 
   const pollId = useMemo(() => getPollIdFromContent(message.content), [message.content]);
+  const replyPollId = useMemo(
+    () => (message.reply_to ? getPollIdFromContent(message.reply_to.content) : null),
+    [message.reply_to],
+  );
+  const replyPollLabel = usePollLabel(replyPollId, 40);
 
   // Check if message has embeddable URLs (non-image links that generate previews)
   const hasEmbeddableUrls = useMemo(() => {
@@ -852,6 +858,15 @@ export const MessageItem = memo(function MessageItem({
       toast.error(error instanceof Error ? error.message : "Failed to pin/unpin message");
     }
   }, [user, message.id, message.is_pinned, pinMessage, checkPinLimit]);
+
+  // Poll-specific state and actions (for own poll messages)
+  const pollIsClosed = usePollStore((s) => (pollId ? !!s.pollsById[pollId]?.is_closed : false));
+  const handleEndPoll = useCallback(async () => {
+    if (!pollId) return;
+    const ok = await usePollStore.getState().closePoll(pollId);
+    if (ok) toast.success("Poll ended");
+    else toast.error("Failed to end poll");
+  }, [pollId]);
 
   const isExternalEmoji = useCallback(
     (emoji: string): boolean => {
@@ -1253,7 +1268,7 @@ export const MessageItem = memo(function MessageItem({
       {(() => {
         const replyContent = message.reply_to.content;
         if (isPollMessageContent(replyContent)) {
-          return <span className="flex-shrink-0 italic">poll</span>;
+          return <span className="truncate italic text-muted-foreground/90 sm:max-w-[320px] max-w-[190px]">{replyPollLabel.toLowerCase()}</span>;
         }
         if (isImageOnlyMessage(replyContent)) {
           return (
@@ -1707,10 +1722,16 @@ export const MessageItem = memo(function MessageItem({
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="min-w-[190px] overflow-hidden rounded-md p-0">
-                      {isOwnMessage && (
+                      {isOwnMessage && !pollId && (
                         <DropdownMenuItem onClick={handleStartEditing} className="rounded-none px-3 py-2">
                           <Pencil className="h-4 w-4 shrink-0 mr-2" />
                           Edit
+                        </DropdownMenuItem>
+                      )}
+                      {isOwnMessage && pollId && !pollIsClosed && (
+                        <DropdownMenuItem onClick={handleEndPoll} className="rounded-none px-3 py-2">
+                          <Pencil className="h-4 w-4 shrink-0 mr-2" />
+                          End poll
                         </DropdownMenuItem>
                       )}
                       {isOwnMessage && <DropdownMenuSeparator className="mx-0 my-0" />}
@@ -1748,12 +1769,21 @@ export const MessageItem = memo(function MessageItem({
               <Copy className="w-4 h-4" />
               Copy Text
             </ContextMenuItem>
-            {isOwnMessage && (
+            {isOwnMessage && !pollId && (
               <>
                 <ContextMenuSeparator />
                 <ContextMenuItem onClick={handleStartEditing}>
                   <Pencil className="w-4 h-4" />
                   Edit Message
+                </ContextMenuItem>
+              </>
+            )}
+            {isOwnMessage && pollId && !pollIsClosed && (
+              <>
+                <ContextMenuSeparator />
+                <ContextMenuItem onClick={handleEndPoll}>
+                  <Pencil className="w-4 h-4" />
+                  End Poll
                 </ContextMenuItem>
               </>
             )}
@@ -1783,7 +1813,7 @@ export const MessageItem = memo(function MessageItem({
                   className="text-destructive focus:text-destructive"
                 >
                   <Trash2 className="w-4 h-4" />
-                  Delete Message
+                  {pollId ? "Delete Poll" : "Delete Message"}
                 </ContextMenuItem>
               </>
             )}
@@ -1969,13 +1999,23 @@ export const MessageItem = memo(function MessageItem({
                 </button>
               )}
               {/* Edit (own messages) */}
-              {isOwnMessage && (
+              {isOwnMessage && !pollId && (
                 <button
                   className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
                   onClick={handleMobileEdit}
                 >
                   <Pencil className="w-5 h-5 text-muted-foreground" />
                   <span className="font-medium">Edit</span>
+                </button>
+              )}
+              {/* End poll (own poll messages) */}
+              {isOwnMessage && pollId && !pollIsClosed && (
+                <button
+                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
+                  onClick={() => { handleEndPoll(); setShowMobileActions(false); }}
+                >
+                  <Pencil className="w-5 h-5 text-muted-foreground" />
+                  <span className="font-medium">End poll</span>
                 </button>
               )}
 
@@ -2030,7 +2070,7 @@ export const MessageItem = memo(function MessageItem({
                     onClick={handleMobileDelete}
                   >
                     <Trash2 className="w-5 h-5" />
-                    <span className="font-medium">Delete Message</span>
+                    <span className="font-medium">{pollId ? "Delete Poll" : "Delete Message"}</span>
                   </button>
                 </>
               )}

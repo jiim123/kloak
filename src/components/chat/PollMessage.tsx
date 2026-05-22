@@ -192,15 +192,26 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
 
       {showResults ? (
         <div className="mt-5">
-          {!isClosed && userResponseCount > 0 && (
-            <button
-              type="button"
-              onClick={handleEditResponse}
-              className="text-[13px] font-semibold text-[#a7adb8] transition-colors hover:text-white"
-            >
-              Edit response
-            </button>
-          )}
+          <div className="flex flex-wrap items-center gap-3">
+            {!isClosed && userResponseCount > 0 && (
+              <button
+                type="button"
+                onClick={handleEditResponse}
+                className="text-[13px] font-semibold text-[#a7adb8] transition-colors hover:text-white"
+              >
+                Edit response
+              </button>
+            )}
+            {!isClosed && !hasVoted && showResultsOverride && (
+              <button
+                type="button"
+                onClick={handleViewResultsToggle}
+                className="text-[13px] font-semibold text-[#a7adb8] transition-colors hover:text-white"
+              >
+                Back to poll
+              </button>
+            )}
+          </div>
           {timeLabel && <div className="mt-3 text-[11px] text-[#8f97a3]">{timeLabel}</div>}
         </div>
       ) : (

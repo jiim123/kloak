@@ -77,7 +77,7 @@ import { handleError, showSuccess, showWarning } from "@/lib/errorHandler";
 import { formatMessageTimestamp } from "@/lib/format";
 import { formatDistanceToNow } from "date-fns";
 import { isImageOnlyMessage, stripMarkdown } from "@/lib/message";
-import { isPollMessageContent } from "@/lib/poll";
+import { isPollMessageContent, getPollIdFromContent, formatPollLabel } from "@/lib/poll";
 import { MessageContent, ReplyPreview } from "@/components/chat/MessageContent";
 import { MessageInput } from "@/components/chat/MessageInput";
 import { ImageLightbox } from "@/components/modals/ImageLightbox";
@@ -2896,7 +2896,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                                         @{getUserFromCache(msg.reply_to.user_id)?.username || msg.reply_to.user?.username || "unknown"}
                                       </span>
                                       {isPollMessageContent(msg.reply_to.content) ? (
-                                        <span className="italic">poll</span>
+                                        <span className="truncate italic max-w-[200px]">{formatPollLabel(getPollIdFromContent(msg.reply_to.content), 40).toLowerCase()}</span>
                                       ) : isImageOnlyMessage(msg.reply_to.content) ? (
                                         <img
                                           src={msg.reply_to.content.trim()}
@@ -3509,7 +3509,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
                                         @{getUserFromCache(msg.reply_to.user_id)?.username || msg.reply_to.user?.username || "unknown"}
                                       </span>
                                       {isPollMessageContent(msg.reply_to.content) ? (
-                                        <span className="italic">poll</span>
+                                        <span className="truncate italic max-w-[200px]">{formatPollLabel(getPollIdFromContent(msg.reply_to.content), 40).toLowerCase()}</span>
                                       ) : isImageOnlyMessage(msg.reply_to.content) ? (
                                         <img
                                           src={msg.reply_to.content.trim()}

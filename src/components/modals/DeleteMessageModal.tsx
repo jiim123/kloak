@@ -7,6 +7,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useMessageUser } from "@/stores/userCacheStore";
 import { getMessagePreview } from "@/lib/message";
 import { getSignedAttachmentUrl } from "@/lib/signedUrl";
+import { getPollIdFromContent, isPollMessageContent, usePollLabel } from "@/lib/poll";
 import type { Message } from "@/types";
 
 const MODAL_CONTENT_CLASS =
@@ -121,7 +122,10 @@ export const DeleteMessageModal = ({
 
   const displayContent = messageContent || (message ? message.content : "");
   const displayUser = useMessageUser(message?.user_id);
-  const { images, caption } = parseContentImages(displayContent);
+  const isPoll = isPollMessageContent(displayContent);
+  const pollId = isPoll ? getPollIdFromContent(displayContent) : null;
+  const pollLabel = usePollLabel(pollId);
+  const { images, caption } = isPoll ? { images: [] as string[], caption: "" } : parseContentImages(displayContent);
   const hasImages = images.length > 0;
   const displayName = displayUser?.display_name || displayUser?.username || "Unknown";
 
@@ -130,13 +134,15 @@ export const DeleteMessageModal = ({
       <DialogContent className={MODAL_CONTENT_CLASS} hideCloseButton>
         <div className="flex max-h-[82vh] flex-col overflow-hidden">
           <div className="border-b border-[#2b3039] bg-[#2f343d] px-5 py-3">
-            <div className="text-base font-medium leading-none tracking-tight">Delete Message</div>
+            <div className="text-base font-medium leading-none tracking-tight">{isPoll ? "Delete Poll" : "Delete Message"}</div>
           </div>
 
           <div className="space-y-5 overflow-y-auto px-6 py-4">
             <div className="space-y-2">
               <p className="text-sm leading-6 text-[#f3f4f7]">
-                Are you sure you want to delete this message? This action cannot be undone.
+                {isPoll
+                  ? "Are you sure you want to delete this poll? All votes will be lost and this action cannot be undone."
+                  : "Are you sure you want to delete this message? This action cannot be undone."}
               </p>
             </div>
 
@@ -151,7 +157,9 @@ export const DeleteMessageModal = ({
                   )}
                 </div>
 
-                {(caption || !hasImages) && (
+                {isPoll ? (
+                  <p className="mt-3 line-clamp-3 text-sm italic text-[#cfd4de]">{pollLabel}</p>
+                ) : (caption || !hasImages) && (
                   <p className="mt-3 line-clamp-3 text-sm text-[#cfd4de]">
                     {getMessagePreview(caption || displayContent, 200)}
                   </p>
@@ -197,7 +205,7 @@ export const DeleteMessageModal = ({
                   Deleting...
                 </>
               ) : (
-                "Delete Message"
+                isPoll ? "Delete Poll" : "Delete Message"
               )}
             </Button>
           </div>
