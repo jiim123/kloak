@@ -418,7 +418,7 @@ export const EmojiPicker = ({
     <div className="flex h-full min-h-0 flex-col bg-[#282b30] text-[#dcddde]">
       {!search.trim() && (
         <div className="border-b border-[#202225] bg-[#24272c] px-1.5 py-1">
-          <div ref={categoryScrollRef} className="flex h-[29px] items-center gap-[3px] overflow-x-auto scrollbar-hide">
+          <div ref={categoryScrollRef} className="flex h-11 sm:h-[29px] items-center gap-1 sm:gap-[3px] overflow-x-auto scrollbar-hide">
             {categories.map((cat) => {
               const Icon = CATEGORY_ICON_MAP[cat.key as keyof typeof CATEGORY_ICON_MAP] || Smile;
               const isActive = activeCategory === cat.key;
@@ -427,7 +427,7 @@ export const EmojiPicker = ({
                   key={cat.key}
                   type="button"
                   className={cn(
-                    "flex h-[23px] w-[24px] shrink-0 items-center justify-center rounded-[3px] text-[#8e9297] transition-colors",
+                    "flex h-10 w-10 sm:h-[23px] sm:w-[24px] shrink-0 items-center justify-center rounded-md sm:rounded-[3px] text-[#8e9297] transition-colors",
                     isActive && activeCategory !== "server"
                       ? "bg-[#36393f] text-[#f2f3f5]"
                       : "hover:bg-[#303339] hover:text-[#dcddde]",
@@ -438,13 +438,13 @@ export const EmojiPicker = ({
                   }}
                   title={cat.name}
                 >
-                  <Icon className="h-[18px] w-[18px]" strokeWidth={2.2} />
+                  <Icon className="h-6 w-6 sm:h-[18px] sm:w-[18px]" strokeWidth={2.2} />
                 </button>
               );
             })}
           </div>
           {servers.length > 0 && (
-            <div className="mt-1 flex h-[30px] items-center gap-[4px] overflow-x-auto scrollbar-hide">
+            <div className="mt-1 flex h-12 sm:h-[30px] items-center gap-1.5 sm:gap-[4px] overflow-x-auto scrollbar-hide">
               {servers.map((server) => {
                 const isExternal = server.id !== serverId;
                 const isDisabled = isExternal && !allowExternalEmojis;
@@ -455,7 +455,7 @@ export const EmojiPicker = ({
                     key={server.id}
                     type="button"
                     className={cn(
-                      "flex h-[28px] w-[28px] shrink-0 items-center justify-center overflow-hidden rounded-[5px] border border-transparent bg-[#36393f] text-[9px] font-semibold text-[#dcddde] transition-colors",
+                      "flex h-11 w-11 sm:h-[28px] sm:w-[28px] shrink-0 items-center justify-center overflow-hidden rounded-md sm:rounded-[5px] border border-transparent bg-[#36393f] text-xs sm:text-[9px] font-semibold text-[#dcddde] transition-colors",
                       "hover:border-[#555b64] hover:bg-[#3b3f45]",
                       isActive && "border-[#8e9297] bg-[#42464d]",
                       isDisabled && "cursor-not-allowed opacity-35 hover:border-transparent",
