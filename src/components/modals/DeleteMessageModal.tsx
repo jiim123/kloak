@@ -140,7 +140,9 @@ export const DeleteMessageModal = ({
           <div className="space-y-5 overflow-y-auto px-6 py-4">
             <div className="space-y-2">
               <p className="text-sm leading-6 text-[#f3f4f7]">
-                Are you sure you want to delete this message? This action cannot be undone.
+                {isPoll
+                  ? "Are you sure you want to delete this poll? All votes will be lost and this action cannot be undone."
+                  : "Are you sure you want to delete this message? This action cannot be undone."}
               </p>
             </div>
 
