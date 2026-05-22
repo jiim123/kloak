@@ -2416,6 +2416,7 @@ export type Database = {
           system_channel_join_id: string | null
           system_channel_leave_id: string | null
           timezone: string
+          updated_at: string
         }
         Insert: {
           about?: string | null
@@ -2435,6 +2436,7 @@ export type Database = {
           system_channel_join_id?: string | null
           system_channel_leave_id?: string | null
           timezone?: string
+          updated_at?: string
         }
         Update: {
           about?: string | null
@@ -2454,6 +2456,7 @@ export type Database = {
           system_channel_join_id?: string | null
           system_channel_leave_id?: string | null
           timezone?: string
+          updated_at?: string
         }
         Relationships: [
           {
