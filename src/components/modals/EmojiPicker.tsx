@@ -260,7 +260,7 @@ export const EmojiPicker = ({
         key={key}
         type="button"
         className={cn(
-          "flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-[4px] transition-colors duration-100",
+          "flex h-11 w-11 sm:h-[28px] sm:w-[28px] shrink-0 items-center justify-center rounded-md sm:rounded-[4px] transition-colors duration-100",
           "hover:bg-[#3b3f45] focus:bg-[#3b3f45] focus:outline-none active:bg-[#454950]",
           options?.disabled && "pointer-events-none opacity-40",
           options?.className,
@@ -279,15 +279,16 @@ export const EmojiPicker = ({
         title={label}
       >
         {options?.url ? (
-          <img src={options.url} alt={label} className="h-[22px] w-[22px] object-contain" loading="lazy" />
+          <img src={options.url} alt={label} className="h-7 w-7 sm:h-[22px] sm:w-[22px] object-contain" loading="lazy" />
         ) : options?.textFallback ? (
-          <span className="block max-w-full truncate text-[9px] leading-none text-[#b9bbbe]">{options.textFallback}</span>
+          <span className="block max-w-full truncate text-[11px] sm:text-[9px] leading-none text-[#b9bbbe]">{options.textFallback}</span>
         ) : (
-          <FluentEmoji emoji={emoji} size={22} />
+          <FluentEmoji emoji={emoji} size={isMobile ? 28 : 22} />
         )}
       </button>
     );
   };
+
 
   const renderServerEmojiGrid = () => {
     if (!selectedServerForEmoji || !selectedServer) return null;
@@ -297,16 +298,16 @@ export const EmojiPicker = ({
 
     return (
       <div>
-        <div className="mb-1.5 px-0.5 text-[10px] font-semibold leading-none text-[#b9bbbe]">
+        <div className="mb-2 sm:mb-1.5 px-0.5 text-xs sm:text-[10px] font-semibold leading-none text-[#b9bbbe]">
           {selectedServer.name}
           {isDisabledSection && <span className="ml-1 text-[#8e9297]">- External disabled</span>}
         </div>
         {loadingServers.has(selectedServerForEmoji) ? (
           <div className="flex h-[120px] items-center justify-center text-center">
-            <p className="text-[11px] text-[#8e9297]">Loading emojis...</p>
+            <p className="text-sm sm:text-[11px] text-[#8e9297]">Loading emojis...</p>
           </div>
         ) : currentServerEmojis.length > 0 ? (
-          <div className={cn("grid grid-cols-9 gap-[1px]", isDisabledSection && "pointer-events-none opacity-50")}>
+          <div className={cn("grid grid-cols-7 gap-1 sm:grid-cols-9 sm:gap-[1px]", isDisabledSection && "pointer-events-none opacity-50")}>
             {currentServerEmojis.map((emoji) =>
               renderEmojiButton(`server-${emoji.id}`, `:${emoji.name}:`, {
                 label: `:${emoji.name}:`,
@@ -317,7 +318,7 @@ export const EmojiPicker = ({
           </div>
         ) : (
           <div className="flex h-[120px] items-center justify-center text-center">
-            <p className="text-[11px] font-medium text-[#8e9297]">No custom emojis</p>
+            <p className="text-sm sm:text-[11px] font-medium text-[#8e9297]">No custom emojis</p>
           </div>
         )}
       </div>
@@ -330,31 +331,31 @@ export const EmojiPicker = ({
 
       return (
         <div key={cat.key}>
-          <div className="mb-1.5 px-0.5 text-[10px] font-semibold leading-none text-[#b9bbbe]">
+          <div className="mb-2 sm:mb-1.5 px-0.5 text-xs sm:text-[10px] font-semibold leading-none text-[#b9bbbe]">
             {cat.key === "recent" ? "Frequently used" : cat.name}
           </div>
 
           {cat.emojis.length > 0 ? (
-            <div className="grid grid-cols-9 gap-[1px]">
+            <div className="grid grid-cols-7 gap-1 sm:grid-cols-9 sm:gap-[1px]">
               {cat.emojis
                 .map((emoji, index) => renderRecentOrNativeEmoji(cat.key, emoji, index))
                 .filter(Boolean)}
             </div>
           ) : (
             <div className="flex h-[34px] items-center">
-              <p className="px-0.5 text-[11px] font-medium text-[#8e9297]">No recently used emoji</p>
+              <p className="px-0.5 text-sm sm:text-[11px] font-medium text-[#8e9297]">No recently used emoji</p>
             </div>
           )}
 
           {cat.key === "recent" && selectedServer && (
             <div className="mt-2">
-              <div className="mb-1.5 px-0.5 text-[10px] font-semibold leading-none text-[#b9bbbe]">
+              <div className="mb-2 sm:mb-1.5 px-0.5 text-xs sm:text-[10px] font-semibold leading-none text-[#b9bbbe]">
                 {selectedServer.name}
               </div>
               {loadingServers.has(selectedServer.id) ? (
-                <p className="px-0.5 text-[11px] text-[#8e9297]">Loading emojis...</p>
+                <p className="px-0.5 text-sm sm:text-[11px] text-[#8e9297]">Loading emojis...</p>
               ) : currentServerEmojis.length > 0 ? (
-                <div className="grid grid-cols-9 gap-[1px]">
+                <div className="grid grid-cols-7 gap-1 sm:grid-cols-9 sm:gap-[1px]">
                   {currentServerEmojis.slice(0, 54).map((emoji) =>
                     renderEmojiButton(`server-inline-${emoji.id}`, `:${emoji.name}:`, {
                       label: `:${emoji.name}:`,
@@ -417,7 +418,7 @@ export const EmojiPicker = ({
     <div className="flex h-full min-h-0 flex-col bg-[#282b30] text-[#dcddde]">
       {!search.trim() && (
         <div className="border-b border-[#202225] bg-[#24272c] px-1.5 py-1">
-          <div ref={categoryScrollRef} className="flex h-[29px] items-center gap-[3px] overflow-x-auto scrollbar-hide">
+          <div ref={categoryScrollRef} className="flex h-11 sm:h-[29px] items-center gap-1 sm:gap-[3px] overflow-x-auto scrollbar-hide">
             {categories.map((cat) => {
               const Icon = CATEGORY_ICON_MAP[cat.key as keyof typeof CATEGORY_ICON_MAP] || Smile;
               const isActive = activeCategory === cat.key;
@@ -426,7 +427,7 @@ export const EmojiPicker = ({
                   key={cat.key}
                   type="button"
                   className={cn(
-                    "flex h-[23px] w-[24px] shrink-0 items-center justify-center rounded-[3px] text-[#8e9297] transition-colors",
+                    "flex h-10 w-10 sm:h-[23px] sm:w-[24px] shrink-0 items-center justify-center rounded-md sm:rounded-[3px] text-[#8e9297] transition-colors",
                     isActive && activeCategory !== "server"
                       ? "bg-[#36393f] text-[#f2f3f5]"
                       : "hover:bg-[#303339] hover:text-[#dcddde]",
@@ -437,13 +438,13 @@ export const EmojiPicker = ({
                   }}
                   title={cat.name}
                 >
-                  <Icon className="h-[18px] w-[18px]" strokeWidth={2.2} />
+                  <Icon className="h-6 w-6 sm:h-[18px] sm:w-[18px]" strokeWidth={2.2} />
                 </button>
               );
             })}
           </div>
           {servers.length > 0 && (
-            <div className="mt-1 flex h-[30px] items-center gap-[4px] overflow-x-auto scrollbar-hide">
+            <div className="mt-1 flex h-12 sm:h-[30px] items-center gap-1.5 sm:gap-[4px] overflow-x-auto scrollbar-hide">
               {servers.map((server) => {
                 const isExternal = server.id !== serverId;
                 const isDisabled = isExternal && !allowExternalEmojis;
@@ -454,7 +455,7 @@ export const EmojiPicker = ({
                     key={server.id}
                     type="button"
                     className={cn(
-                      "flex h-[28px] w-[28px] shrink-0 items-center justify-center overflow-hidden rounded-[5px] border border-transparent bg-[#36393f] text-[9px] font-semibold text-[#dcddde] transition-colors",
+                      "flex h-11 w-11 sm:h-[28px] sm:w-[28px] shrink-0 items-center justify-center overflow-hidden rounded-md sm:rounded-[5px] border border-transparent bg-[#36393f] text-xs sm:text-[9px] font-semibold text-[#dcddde] transition-colors",
                       "hover:border-[#555b64] hover:bg-[#3b3f45]",
                       isActive && "border-[#8e9297] bg-[#42464d]",
                       isDisabled && "cursor-not-allowed opacity-35 hover:border-transparent",
@@ -480,41 +481,42 @@ export const EmojiPicker = ({
         </div>
       )}
 
-      <div className="px-2 pb-1.5 pt-1.5">
+      <div className="px-3 pb-2 pt-2 sm:px-2 sm:pb-1.5 sm:pt-1.5">
         <div className="relative">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-[14px] w-[14px] -translate-y-1/2 text-[#7b8088]" />
+          <Search className="pointer-events-none absolute left-3 sm:left-2.5 top-1/2 h-5 w-5 sm:h-[14px] sm:w-[14px] -translate-y-1/2 text-[#7b8088]" />
           <input
             ref={searchInputRef}
             type="text"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search"
-            className="h-[28px] w-full rounded-full border border-[#22252a] bg-[#25282d] pl-8 pr-8 text-[11px] leading-none text-[#dcddde] outline-none placeholder:text-[#8e9297] focus:border-[#343940] focus:bg-[#24272c]"
+            className="h-11 sm:h-[28px] w-full rounded-full border border-[#22252a] bg-[#25282d] pl-10 pr-10 sm:pl-8 sm:pr-8 text-base sm:text-[11px] leading-none text-[#dcddde] outline-none placeholder:text-[#8e9297] focus:border-[#343940] focus:bg-[#24272c]"
           />
           {search && (
             <button
               type="button"
-              className="absolute right-1.5 top-1/2 flex h-[18px] w-[18px] -translate-y-1/2 items-center justify-center rounded-full text-[#8e9297] hover:text-[#dcddde]"
+              className="absolute right-2 sm:right-1.5 top-1/2 flex h-7 w-7 sm:h-[18px] sm:w-[18px] -translate-y-1/2 items-center justify-center rounded-full text-[#8e9297] hover:text-[#dcddde]"
               onClick={() => {
                 setSearch("");
                 searchInputRef.current?.focus();
               }}
             >
-              <X className="h-[14px] w-[14px]" />
+              <X className="h-4 w-4 sm:h-[14px] sm:w-[14px]" />
             </button>
           )}
         </div>
       </div>
 
+
       <ScrollArea className={isMobile ? "min-h-0 flex-1 overflow-y-auto" : "h-[224px]"}>
-        <div className="px-2 pb-1 pt-0.5">
+        <div className="px-3 pb-2 pt-1 sm:px-2 sm:pb-1 sm:pt-0.5">
           {search.trim() ? (
             filteredEmojis && filteredEmojis.length > 0 ? (
               <>
-                <div className="mb-1.5 px-0.5 text-[10px] font-semibold leading-none text-[#b9bbbe]">
+                <div className="mb-2 sm:mb-1.5 px-0.5 text-xs sm:text-[10px] font-semibold leading-none text-[#b9bbbe]">
                   Results for "{search.trim()}"
                 </div>
-                <div className="grid grid-cols-9 gap-[1px]">
+                <div className="grid grid-cols-7 gap-1 sm:grid-cols-9 sm:gap-[1px]">
                   {filteredEmojis.map((item, index) => {
                     if (item.type === "native") {
                       return renderEmojiButton(`search-native-${item.emoji}-${index}`, item.emoji);
@@ -533,7 +535,7 @@ export const EmojiPicker = ({
               </>
             ) : (
               <div className="flex h-[120px] items-center justify-center text-center">
-                <p className="text-[11px] font-medium text-[#8e9297]">No emoji found</p>
+                <p className="text-sm sm:text-[11px] font-medium text-[#8e9297]">No emoji found</p>
               </div>
             )
           ) : activeCategory === "server" ? (
@@ -544,22 +546,24 @@ export const EmojiPicker = ({
         </div>
       </ScrollArea>
 
-      <div className="flex h-[36px] shrink-0 items-center justify-between border-t border-[#202225] bg-[#333743] px-2">
+
+      <div className="flex h-14 sm:h-[36px] shrink-0 items-center justify-between border-t border-[#202225] bg-[#333743] px-3 sm:px-2">
         <div className="flex min-w-0 items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-[4px]">
+          <div className="flex h-10 w-10 sm:h-7 sm:w-7 items-center justify-center rounded-[4px]">
             {previewEmoji?.url ? (
-              <img src={previewEmoji.url} alt={previewEmoji.label} className="h-[26px] w-[26px] object-contain" />
+              <img src={previewEmoji.url} alt={previewEmoji.label} className="h-9 w-9 sm:h-[26px] sm:w-[26px] object-contain" />
             ) : previewEmoji?.native ? (
-              <FluentEmoji emoji={previewEmoji.native} size={24} />
+              <FluentEmoji emoji={previewEmoji.native} size={isMobile ? 32 : 24} />
             ) : (
-              <Smile className="h-4 w-4 text-[#b9bbbe]" />
+              <Smile className="h-6 w-6 sm:h-4 sm:w-4 text-[#b9bbbe]" />
             )}
           </div>
-          <span className="truncate text-[11px] font-medium text-[#b9bbbe]">
+          <span className="truncate text-sm sm:text-[11px] font-medium text-[#b9bbbe]">
             {previewEmoji?.label?.replace(/^:/, "").replace(/:$/, "") || "Select an emoji"}
           </span>
         </div>
       </div>
+
     </div>
   );
 
@@ -567,7 +571,7 @@ export const EmojiPicker = ({
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerTrigger asChild>{children}</DrawerTrigger>
-        <DrawerContent className="flex h-[70vh] max-h-[90vh] flex-col overflow-hidden rounded-t-[4px] border-0 bg-[#282b30] p-0">
+        <DrawerContent className="flex h-[78vh] max-h-[90vh] flex-col overflow-hidden rounded-t-[4px] border-0 bg-[#282b30] p-0">
           {pickerContent}
         </DrawerContent>
       </Drawer>
