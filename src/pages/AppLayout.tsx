@@ -305,14 +305,17 @@ const AppLayout = () => {
 
   useEffect(() => {
     if (!user?.id) return;
-    fetchFriends(user.id).finally(() => {
-      const serverId = useServerStore.getState().currentServer?.id;
-      // Avoid eagerly fetching the full member list on app load.
-      // Members can be large; load only when the members UI is actually open.
-      const ui = useUIStore.getState();
-      if (serverId && ui.isMemberSidebarOpen) useServerStore.getState().fetchMembers(serverId);
-    });
+    fetchFriends(user.id);
   }, [user?.id, fetchFriends]);
+
+  // Ensure members are loaded as soon as a server becomes active so that
+  // permission evaluation (which needs the current user's member record)
+  // works immediately, independent of the members sidebar being open.
+  useEffect(() => {
+    const serverId = currentServer?.id;
+    if (!serverId) return;
+    useServerStore.getState().fetchMembers(serverId);
+  }, [currentServer?.id]);
 
   // Listen for own membership changes (kicks/bans)
   useRealtimeOwnMembership();

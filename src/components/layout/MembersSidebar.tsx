@@ -27,7 +27,7 @@ import { useDMStore } from "@/stores/dmStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
-import { useRealtimeMembers } from "@/hooks/useRealtimeMembers";
+
 import { canModerateByRoles } from "@/lib/permissions";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import {
@@ -404,7 +404,6 @@ export const MembersSidebar = () => {
   const roles = useServerStore((s) => s.roles);
   const isMembersLoading = useServerStore((s) => s.isMembersLoading);
   const fetchMembers = useServerStore((s) => s.fetchMembers);
-  const fetchRolePermissions = useServerStore((s) => s.fetchRolePermissions);
   const assignRoleToMember = useServerStore((s) => s.assignRoleToMember);
   const removeRoleFromMember = useServerStore((s) => s.removeRoleFromMember);
 
@@ -473,15 +472,11 @@ export const MembersSidebar = () => {
     exitMassBanMode();
   }, [currentServer?.id, exitMassBanMode]);
 
-  // Subscribe to realtime member updates
-  useRealtimeMembers(currentServer?.id || null);
-
-  // Lazy-load members
+  // Refresh members when the sidebar opens (initial load happens at app level).
   useEffect(() => {
     if (!currentServer?.id) return;
-    if (!isMemberSidebarOpen && isMobile) return;
     fetchMembers(currentServer.id);
-  }, [currentServer?.id, isMemberSidebarOpen, isMobile, fetchMembers]);
+  }, [currentServer?.id, fetchMembers]);
 
   // Fetch total member count
   useEffect(() => {
