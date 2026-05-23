@@ -2022,8 +2022,10 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
           <DropdownMenu>
             <div
               className={cn(
-                "relative overflow-hidden transition-[height,opacity] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
-                isServerHeaderCondensed ? "h-0 opacity-0" : "h-32 opacity-100",
+                "relative h-32 overflow-hidden will-change-transform transition-[transform,opacity,margin] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                isServerHeaderCondensed
+                  ? "-translate-y-full opacity-0 -mb-32 pointer-events-none"
+                  : "translate-y-0 opacity-100 mb-0",
               )}
             >
               {serverBannerUrl ? (
