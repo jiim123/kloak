@@ -2022,7 +2022,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
           <DropdownMenu>
             <div
               className={cn(
-                "relative overflow-hidden transition-[height,opacity] duration-500 ease-out",
+                "relative overflow-hidden transition-[height,opacity] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
                 isServerHeaderCondensed ? "h-0 opacity-0" : "h-32 opacity-100",
               )}
             >
@@ -2043,7 +2043,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
             <DropdownMenuTrigger asChild>
               <button
                 className={cn(
-                  "group relative flex w-full items-center gap-3 overflow-hidden text-left transition-[height,background-color,padding,box-shadow] duration-500 active:scale-[0.995]",
+                  "group relative flex w-full items-center gap-3 overflow-hidden text-left transition-[height,background-color,padding,box-shadow] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] active:scale-[0.995]",
                   isServerHeaderCondensed
                     ? "h-14 px-3 bg-[hsl(var(--layout-channels))] hover:bg-foreground/[0.035]"
                     : "h-12 px-4 hover:bg-foreground/[0.03]",
@@ -2065,7 +2065,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
                 )}
                 <div
                   className={cn(
-                    "relative shrink-0 items-center justify-center overflow-hidden rounded-xl bg-secondary text-sm font-semibold text-foreground ring-1 ring-border/60 transition-[width,height,opacity,transform] duration-500",
+                    "relative shrink-0 items-center justify-center overflow-hidden rounded-xl bg-secondary text-sm font-semibold text-foreground ring-1 ring-border/60 transition-[width,height,opacity,transform] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
                     isServerHeaderCondensed ? "flex h-9 w-9 opacity-100 scale-100" : "h-0 w-0 opacity-0 scale-90",
                   )}
                 >
