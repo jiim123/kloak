@@ -439,7 +439,7 @@ const DraggableServerItem = memo(
                   >
                     {/* Indicator pill */}
                     <motion.span
-                      className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 bg-white rounded-r-full shadow-[0_0_10px_rgba(255,255,255,0.35)]"
+                      className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full shadow-[0_0_10px_hsl(var(--foreground)_/_0.35)]"
                       variants={pillVariants}
                       initial="hidden"
                       animate={pillState}
@@ -1309,7 +1309,7 @@ export const ServerSidebar = ({
 
       {/* Sticky Add Server button at bottom */}
       <div className="absolute bottom-0 left-0 right-0 px-3 pb-3 pt-2 bg-layout-sidebar z-10">
-        <div className="w-5 h-px bg-white/14 rounded-full shrink-0 mx-auto mb-2" />
+        <div className="w-5 h-px bg-border/60 rounded-full shrink-0 mx-auto mb-2" />
         <div className="flex flex-col items-center gap-2">
           <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
             <TooltipTrigger asChild>
@@ -1322,7 +1322,7 @@ export const ServerSidebar = ({
                 whileTap="tap"
               >
                 <motion.span
-                  className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 bg-white rounded-r-full shadow-[0_0_10px_rgba(255,255,255,0.35)]"
+                  className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full shadow-[0_0_10px_hsl(var(--foreground)_/_0.35)]"
                   variants={pillVariants}
                   initial="hidden"
                   animate={explorePillState}
@@ -1372,7 +1372,7 @@ export const ServerSidebar = ({
                 whileTap="tap"
               >
                 <motion.span
-                  className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 bg-white rounded-r-full shadow-[0_0_10px_rgba(255,255,255,0.35)]"
+                  className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full shadow-[0_0_10px_hsl(var(--foreground)_/_0.35)]"
                   variants={pillVariants}
                   initial="hidden"
                   animate={dmPillState}
@@ -1452,7 +1452,7 @@ export const ServerSidebar = ({
                 aria-pressed={isQuickAccessActive}
               >
                 <motion.span
-                  className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 bg-white rounded-r-full shadow-[0_0_10px_rgba(255,255,255,0.35)]"
+                  className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full shadow-[0_0_10px_hsl(var(--foreground)_/_0.35)]"
                   variants={pillVariants}
                   initial="hidden"
                   animate={quickAccessPillState}

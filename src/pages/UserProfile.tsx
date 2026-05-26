@@ -235,13 +235,13 @@ const formatInlineMarkdown = (text: string): React.ReactNode[] => {
       nodes.push(<del key={key}>{match[9]}</del>);
     } else if (match[10] !== undefined) {
       nodes.push(
-        <code key={key} className="rounded bg-black/30 px-1 py-0.5 text-[0.9em]">
+        <code key={key} className="rounded bg-muted/40 px-1 py-0.5 text-[0.9em]">
           {match[10]}
         </code>,
       );
     } else if (match[11] !== undefined) {
       nodes.push(
-        <span key={key} className="rounded bg-black/70 px-1 text-transparent select-none">
+        <span key={key} className="rounded bg-muted/80 px-1 text-transparent select-none">
           {match[11]}
         </span>,
       );
@@ -281,7 +281,7 @@ const ProfileMarkdown = ({ content }: { content: string }) => {
         index += 1;
       }
       blocks.push(
-        <pre key={key} className="my-3 overflow-x-auto rounded-[6px] bg-black/30 p-3 text-xs leading-5">
+        <pre key={key} className="my-3 overflow-x-auto rounded-[6px] bg-muted/40 p-3 text-xs leading-5">
           <code>{codeLines.join("\n")}</code>
         </pre>,
       );
@@ -564,7 +564,7 @@ const UserProfile = () => {
           document.execCommand(
             "insertHTML",
             false,
-            '<span data-profile-spoiler="true" class="rounded bg-black/70 px-1 text-transparent select-none">text</span>',
+            '<span data-profile-spoiler="true" class="rounded bg-muted/80 px-1 text-transparent select-none">text</span>',
           );
           break;
         default:
@@ -1049,7 +1049,7 @@ const UserProfile = () => {
                           }}
                           onInput={syncRichDraft}
                           onBlur={syncRichDraft}
-                          className="profile-rich-editor min-h-[160px] w-full px-4 py-3 text-[14px] leading-6 text-foreground outline-none [&_code]:rounded [&_code]:bg-black/30 [&_code]:px-1 [&_pre]:rounded [&_pre]:bg-black/30 [&_pre]:p-3"
+                          className="profile-rich-editor min-h-[160px] w-full px-4 py-3 text-[14px] leading-6 text-foreground outline-none [&_code]:rounded [&_code]:bg-muted/40 [&_code]:px-1 [&_pre]:rounded [&_pre]:bg-muted/40 [&_pre]:p-3"
                           role="textbox"
                           aria-multiline="true"
                           aria-label="Post body"
@@ -1076,7 +1076,7 @@ const UserProfile = () => {
                         </button>
                         <button
                           type="button"
-                          className="h-8 min-w-[72px] rounded-[4px] bg-primary px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                          className="h-8 min-w-[72px] rounded-[4px] bg-primary px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-60"
                           onClick={() => void handleCreatePost()}
                           disabled={!titleDraft.trim() || !draft.trim() || isPosting}
                         >
@@ -1308,7 +1308,7 @@ const UserProfile = () => {
                                             variant="ghost"
                                             onClick={() => void handleSaveCommentEdit(comment.id)}
                                             disabled={!commentEditDrafts[comment.id]?.trim() || pendingCommentActionId === comment.id}
-                                            className="h-8 min-w-[64px] rounded-[4px] bg-primary px-3 text-[13px] font-semibold text-foreground hover:bg-white hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                                            className="h-8 min-w-[64px] rounded-[4px] bg-primary px-3 text-[13px] font-semibold text-foreground hover:bg-foreground/90 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
                                           >
                                             Save
                                           </Button>
@@ -1364,7 +1364,7 @@ const UserProfile = () => {
                                 size="sm"
                                 onClick={() => void handleCreateComment(post.id)}
                                 disabled={!commentDrafts[post.id]?.trim() || pendingCommentPostId === post.id}
-                                className="h-9 min-w-[82px] rounded-[4px] bg-primary px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-white hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                                className="h-9 min-w-[82px] rounded-[4px] bg-primary px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-foreground/90 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
                               >
                                 Comment
                               </Button>

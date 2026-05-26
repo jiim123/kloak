@@ -221,7 +221,7 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
               size="sm"
               onClick={submitVote}
               disabled={!canVote}
-              className="h-8 rounded-[3px] bg-primary px-4 text-xs font-medium text-primary-foreground hover:bg-white disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
+              className="h-8 rounded-[3px] bg-primary px-4 text-xs font-medium text-primary-foreground hover:bg-foreground/90 disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
             >
               {isVoting ? "Submitting..." : hasVoted || isEditingResponse ? "Update" : "Submit"}
             </Button>
