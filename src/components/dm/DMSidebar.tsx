@@ -232,11 +232,13 @@ export const DMSidebar = () => {
                         <>
                           <AvatarWithDecoration user={conversation.other_user} className="w-8 h-8" freezeGifUntilHover />
                           {(() => {
-                            const presence = getEffectivePresence(
-                              (conversation.other_user?.status as UserStatus) || "offline",
-                              conversation.other_user?.last_seen,
-                              conversation.other_user?.id,
-                            );
+                            const otherId = conversation.other_user?.id;
+                            const cached = otherId ? getUserFromCache(otherId) : null;
+                            const status = ((cached?.status ?? conversation.other_user?.status) as UserStatus) || "offline";
+                            const lastSeen = cached?.last_seen ?? conversation.other_user?.last_seen;
+                            const presence = otherId && hasRecentRealtimePresence(otherId)
+                              ? { status, isStale: false, isOffline: status === "offline" }
+                              : getEffectivePresence(status, lastSeen, otherId);
                             return (
                               <div
                                 className={cn(
