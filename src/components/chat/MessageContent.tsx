@@ -1221,7 +1221,7 @@ export const MessageContent = ({
       )}
 
       {/* Image lightbox with all images for thumbnail navigation */}
-      <ImageLightbox imageUrl={lightboxImage} imageUrls={imageUrls} onClose={() => setLightboxImage(null)} />
+      <ImageLightbox imageUrl={lightboxImage} imageUrls={resolvedImageUrls} onClose={() => setLightboxImage(null)} />
 
       {/* Cross-server emoji info popover */}
       {emojiPopover && (
