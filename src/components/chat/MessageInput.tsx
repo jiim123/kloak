@@ -1154,6 +1154,7 @@ export const MessageInput = ({
             <MentionAutocomplete
               query={mentionQuery}
               position={{ top: 40, left: 0 }}
+              participants={isDM ? dmConfig?.participants : undefined}
               onSelect={(opt) => {
                 const before = content.slice(0, mentionStartIndex);
                 const after = content.slice(mentionStartIndex + mentionQuery.length + 1);
