@@ -481,7 +481,11 @@ export const useAuthStore = create<AuthState>()(
 
           // Always update local state immediately (UI responsiveness),
           // but for AUTO updates delay the server RPC.
-          set({ user: { ...user, status }, manualStatus: nextManualStatus });
+          const updatedUser = { ...user, status };
+          set({ user: updatedUser, manualStatus: nextManualStatus });
+          // Keep the centralized user cache in sync so every consumer that reads
+          // from useUserCacheStore reflects the change instantly.
+          useUserCacheStore.getState().upsertUser(updatedUser as any);
 
           if (source === "manual") {
             // Manual changes should go to server immediately and also cancel any pending auto update.

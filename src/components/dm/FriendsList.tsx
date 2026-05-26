@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import type { FriendWithUser, UserStatus } from "@/types";
 import { getEffectivePresence } from "@/lib/presence";
 import { hasRecentRealtimePresence } from "@/hooks/useRealtimeUsers";
+import { getUserFromCache, useUserCacheStore } from "@/stores/userCacheStore";
 import { useLocation } from "react-router-dom";
 import { openUserProfileModal } from "@/lib/userProfilePopover";
 import { useUIStore } from "@/stores/uiStore";
@@ -31,11 +32,14 @@ interface FriendsListProps {
 }
 
 const getFriendListPresence = (friend: FriendWithUser) => {
-  const status = (friend.status as UserStatus) || "offline";
+  // Prefer freshest cached snapshot (realtime patches always land in cache)
+  const cached = getUserFromCache(friend.id);
+  const status = ((cached?.status ?? friend.status) as UserStatus) || "offline";
+  const lastSeen = cached?.last_seen ?? friend.last_seen;
   if (hasRecentRealtimePresence(friend.id)) {
     return { status, isOffline: status === "offline" };
   }
-  return getEffectivePresence(status, friend.last_seen, friend.id);
+  return getEffectivePresence(status, lastSeen, friend.id);
 };
 
 export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
@@ -58,6 +62,9 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
   const { openConversation, setCurrentConversation } = useDMStore();
   const { openModal } = useUIStore();
   const checkBlockLimit = useRateLimit(10, 60_000);
+  // Re-render when realtime presence patches the user cache so the online/offline
+  // split stays in sync without waiting for the friend list to refetch.
+  useUserCacheStore((s) => s._version);
 
   const [activeTab, setActiveTab] = useState("online");
   const [addFriendInput, setAddFriendInput] = useState("");

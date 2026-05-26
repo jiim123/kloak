@@ -49,6 +49,7 @@ import { Button } from "@/components/ui/button";
 import type { ServerMember, CustomServerRole, UserStatus } from "@/types";
 import { getEffectivePresence } from "@/lib/presence";
 import { hasRecentRealtimePresence } from "@/hooks/useRealtimeUsers";
+
 import { readCachedMemberCount, persistMemberCount } from "@/lib/serverMemberCount";
 import { LEFT_ALIGNED_USER_PROFILE_POPOVER, openUserProfileModal } from "@/lib/userProfilePopover";
 import { getUserFromCache, useUserCacheStore } from "@/stores/userCacheStore";
@@ -129,11 +130,18 @@ const getMemberPresence = (member: ServerMember) => {
     return { status: "online" as UserStatus, isStale: false, isOffline: false };
   }
 
-  const status = (member.user?.status as UserStatus | undefined) ?? "offline";
-  if (status !== "offline" && hasRecentRealtimePresence(member.user_id)) {
-    return { status, isStale: false, isOffline: false };
+  // Prefer the latest user-cache snapshot — patched on every presence event —
+  // over the (possibly stale) member.user payload from the initial server fetch.
+  const cached = getUserFromCache(member.user_id);
+  const status = ((cached?.status ?? member.user?.status) as UserStatus | undefined) ?? "offline";
+  const lastSeen = cached?.last_seen ?? member.user?.last_seen;
+
+  // When the realtime presence channel has recent data for this user, trust
+  // its status verbatim regardless of value (including "offline" for Invisible).
+  if (hasRecentRealtimePresence(member.user_id)) {
+    return { status, isStale: false, isOffline: status === "offline" };
   }
-  const lastSeen = member.user?.last_seen;
+
   return getEffectivePresence(status, lastSeen, member.user_id);
 };
 
@@ -532,7 +540,7 @@ export const MembersSidebar = () => {
       const name = m.nickname || m.user?.display_name || m.user?.username || "";
       return name.toLowerCase().includes(q);
     });
-  }, [members, memberSearchQuery]);
+  }, [members, memberSearchQuery, userCacheVersion]);
 
   const hydratedOfflineMembers = useMemo(() => {
     return offlineMembers.map((member) => {

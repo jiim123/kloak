@@ -39,7 +39,7 @@ const flushMemberPatches = () => {
   if (patches.size === 0) return;
 
   useServerStore.setState((state) => {
-    if (!state.currentServer || state.members.length === 0) return {};
+    if (state.members.length === 0) return {};
     let changed = false;
     const members = state.members.map((m) => {
       const patch = patches.get(m.user_id);
@@ -98,7 +98,7 @@ const flushDMPatches = () => {
   if (patches.size === 0) return;
 
   useDMStore.setState((state) => {
-    if (!state.currentConversation && state.conversations.length === 0) return {};
+    if (state.conversations.length === 0 && !state.currentConversation) return {};
     let changed = false;
 
     const conversations = state.conversations.map((c) => {
@@ -321,106 +321,187 @@ export const useRealtimeUsers = () => {
       return;
     }
 
-    const channel = supabase.channel(GLOBAL_USERS_PRESENCE_TOPIC, {
-      config: { presence: { key: `${userId}:${tabIdRef.current}` } },
-    });
-    presenceChannelRef.current = channel;
     const presenceSigByUser = presenceSigByUserRef.current;
     const absenceStartedAtByUser = absenceStartedAtByUserRef.current;
 
-    const applyPresenceSnapshot = () => {
-      const nowMs = Date.now();
-      lastPresenceSnapshotAtRef.current = nowMs;
-      const targetIds = collectPresenceTargetUserIds();
-      if (targetIds.length === 0) return;
+    // Reconnect state — shared across channel instances for this auth session.
+    let activeChannel: ReturnType<typeof supabase.channel> | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let reconnectAttempts = 0;
+    let teardown: (() => void) | null = null;
+    let storeSubTimer: ReturnType<typeof setTimeout> | null = null;
+    let lastTargetIdsKey = collectPresenceTargetUserIds().slice().sort().join(',');
+    let lastTargetIdsSet = new Set(collectPresenceTargetUserIds());
 
-      const targetSet = new Set(targetIds);
-      const rawState = channel.presenceState() as Record<string, GlobalPresenceMeta[]>;
-      const latestByUser = new Map<string, GlobalPresenceMeta>();
-
-      Object.values(rawState).forEach((entries) => {
-        if (!Array.isArray(entries)) return;
-        entries.forEach((meta) => {
-          if (!meta || typeof meta.user_id !== 'string') return;
-          const prev = latestByUser.get(meta.user_id);
-          const prevTs = typeof prev?.ts === 'number' ? prev.ts : 0;
-          const nextTs = typeof meta.ts === 'number' ? meta.ts : 0;
-          if (!prev || nextTs >= prevTs) {
-            latestByUser.set(meta.user_id, meta);
-          }
-        });
-      });
-
-      for (const trackedUserId of Array.from(presenceSigByUser.keys())) {
-        if (!targetSet.has(trackedUserId)) {
-          presenceSigByUser.delete(trackedUserId);
-          absenceStartedAtByUser.delete(trackedUserId);
-          recentRealtimePresenceByUser.delete(trackedUserId);
+    const scheduleReconnect = () => {
+      if (reconnectTimer) return;
+      const delay = Math.min(10_000, 500 * 2 ** Math.min(reconnectAttempts, 5));
+      reconnectAttempts += 1;
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        // Drop the dead channel + sig cache so the next snapshot re-asserts
+        // every target's status from the fresh presence state.
+        try {
+          teardown?.();
+        } catch {
+          // ignore
         }
-      }
-
-      for (const trackedUserId of Array.from(absenceStartedAtByUser.keys())) {
-        if (!targetSet.has(trackedUserId)) {
-          absenceStartedAtByUser.delete(trackedUserId);
-        }
-      }
-
-    targetIds.forEach((targetId) => {
-        // Skip own user — usePresence hook manages our own status
-        if (targetId === userId) return;
-
-        const meta = latestByUser.get(targetId);
-        if (!meta) {
-          const absentSince = absenceStartedAtByUser.get(targetId);
-          if (typeof absentSince !== 'number') {
-            absenceStartedAtByUser.set(targetId, nowMs);
-            return;
-          }
-          if (nowMs - absentSince < PRESENCE_ABSENT_GRACE_MS) {
-            return;
-          }
-          const offlineSig = 'offline|absent';
-          if (presenceSigByUser.get(targetId) === offlineSig) return;
-          presenceSigByUser.set(targetId, offlineSig);
-          recentRealtimePresenceByUser.delete(targetId);
-          patchUserAcrossStores({ id: targetId, status: 'offline' });
-          return;
-        }
-
-        absenceStartedAtByUser.delete(targetId);
-        recentRealtimePresenceByUser.set(targetId, nowMs);
-        const status = toUserStatus(meta.status, 'online');
-        const signature = `${status}|${meta.last_seen ?? ''}|${meta.custom_status ?? ''}`;
-        if (presenceSigByUser.get(targetId) === signature) return;
-        presenceSigByUser.set(targetId, signature);
-        patchUserAcrossStores({
-          id: targetId,
-          status,
-          custom_status: meta.custom_status ?? null,
-          last_seen: meta.last_seen ?? null,
-        });
-      });
+        presenceSigByUser.clear();
+        absenceStartedAtByUser.clear();
+        recentRealtimePresenceByUser.clear();
+        setupChannel();
+      }, delay);
     };
 
-    applyPresenceRef.current = applyPresenceSnapshot;
+    const setupChannel = () => {
+      const channel = supabase.channel(GLOBAL_USERS_PRESENCE_TOPIC, {
+        config: { presence: { key: `${userId}:${tabIdRef.current}` } },
+      });
+      activeChannel = channel;
+      presenceChannelRef.current = channel;
+
+      const applyPresenceSnapshot = () => {
+        const nowMs = Date.now();
+        lastPresenceSnapshotAtRef.current = nowMs;
+        const targetIds = collectPresenceTargetUserIds();
+        if (targetIds.length === 0) return;
+
+        const targetSet = new Set(targetIds);
+        const rawState = channel.presenceState() as Record<string, GlobalPresenceMeta[]>;
+        const latestByUser = new Map<string, GlobalPresenceMeta>();
+
+        Object.values(rawState).forEach((entries) => {
+          if (!Array.isArray(entries)) return;
+          entries.forEach((meta) => {
+            if (!meta || typeof meta.user_id !== 'string') return;
+            const prev = latestByUser.get(meta.user_id);
+            const prevTs = typeof prev?.ts === 'number' ? prev.ts : 0;
+            const nextTs = typeof meta.ts === 'number' ? meta.ts : 0;
+            if (!prev || nextTs >= prevTs) {
+              latestByUser.set(meta.user_id, meta);
+            }
+          });
+        });
+
+        for (const trackedUserId of Array.from(presenceSigByUser.keys())) {
+          if (!targetSet.has(trackedUserId)) {
+            presenceSigByUser.delete(trackedUserId);
+            absenceStartedAtByUser.delete(trackedUserId);
+            recentRealtimePresenceByUser.delete(trackedUserId);
+          }
+        }
+
+        for (const trackedUserId of Array.from(absenceStartedAtByUser.keys())) {
+          if (!targetSet.has(trackedUserId)) {
+            absenceStartedAtByUser.delete(trackedUserId);
+          }
+        }
+
+        targetIds.forEach((targetId) => {
+          // Skip own user — usePresence hook manages our own status
+          if (targetId === userId) return;
+
+          const meta = latestByUser.get(targetId);
+          if (!meta) {
+            const absentSince = absenceStartedAtByUser.get(targetId);
+            if (typeof absentSince !== 'number') {
+              absenceStartedAtByUser.set(targetId, nowMs);
+              return;
+            }
+            if (nowMs - absentSince < PRESENCE_ABSENT_GRACE_MS) {
+              return;
+            }
+            const offlineSig = 'offline|absent';
+            if (presenceSigByUser.get(targetId) === offlineSig) return;
+            presenceSigByUser.set(targetId, offlineSig);
+            recentRealtimePresenceByUser.delete(targetId);
+            patchUserAcrossStores({ id: targetId, status: 'offline' });
+            return;
+          }
+
+          absenceStartedAtByUser.delete(targetId);
+          recentRealtimePresenceByUser.set(targetId, nowMs);
+          const status = toUserStatus(meta.status, 'online');
+          const signature = `${status}|${meta.last_seen ?? ''}|${meta.custom_status ?? ''}`;
+          if (presenceSigByUser.get(targetId) === signature) return;
+          presenceSigByUser.set(targetId, signature);
+          patchUserAcrossStores({
+            id: targetId,
+            status,
+            custom_status: meta.custom_status ?? null,
+            last_seen: meta.last_seen ?? null,
+          });
+        });
+      };
+
+      applyPresenceRef.current = applyPresenceSnapshot;
+
+      channel
+        .on('presence', { event: 'sync' }, applyPresenceSnapshot)
+        .on('presence', { event: 'join' }, applyPresenceSnapshot)
+        .on('presence', { event: 'leave' }, applyPresenceSnapshot)
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            presenceConnectedRef.current = true;
+            reconnectAttempts = 0;
+            const payload = buildOwnPresencePayload();
+            if (payload) {
+              void channel.track(payload).catch(() => undefined);
+            }
+            applyPresenceSnapshot();
+            void pollPresenceRef.current?.({ force: true, bypassCooldown: true });
+            return;
+          }
+
+          if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            presenceConnectedRef.current = false;
+            // Auto-recover: stale channel will never re-deliver presence events,
+            // so other users' status would freeze until a manual reload.
+            scheduleReconnect();
+          }
+        });
+
+      teardown = () => {
+        presenceConnectedRef.current = false;
+        if (presenceChannelRef.current === channel) {
+          presenceChannelRef.current = null;
+        }
+        if (applyPresenceRef.current === applyPresenceSnapshot) {
+          applyPresenceRef.current = null;
+        }
+        try {
+          void channel.untrack();
+          supabase.removeChannel(channel);
+        } catch {
+          // ignore cleanup errors
+        }
+        activeChannel = null;
+      };
+    };
 
     // Throttle store-subscription-driven presence snapshots to avoid hot-path re-runs
     // on every friend/DM store mutation (status updates, message caching, etc.)
-    // FIX: Track target user IDs to break the feedback loop where
-    // applyPresenceSnapshot → patchUserAcrossStores → store mutation → throttledApply → repeat
-    let storeSubTimer: ReturnType<typeof setTimeout> | null = null;
-    let lastTargetIdsKey = collectPresenceTargetUserIds().slice().sort().join(',');
     const throttledApply = () => {
       if (storeSubTimer) return;
       storeSubTimer = setTimeout(() => {
         storeSubTimer = null;
-        // Only reapply if the set of target users actually changed.
-        // Status/avatar patches don't change WHO is in the list, just their data.
         const currentIds = collectPresenceTargetUserIds();
         const currentKey = currentIds.slice().sort().join(',');
         if (currentKey === lastTargetIdsKey) return;
+
+        // For any newly-appearing target, drop its cached signature so the
+        // next snapshot re-applies the presence value over freshly-fetched
+        // (possibly stale "offline") rows from the server/friend/DM stores.
+        for (const id of currentIds) {
+          if (!lastTargetIdsSet.has(id)) {
+            presenceSigByUser.delete(id);
+            absenceStartedAtByUser.delete(id);
+          }
+        }
+
         lastTargetIdsKey = currentKey;
-        applyPresenceSnapshot();
+        lastTargetIdsSet = new Set(currentIds);
+        applyPresenceRef.current?.();
         void pollPresenceRef.current?.({ force: true, bypassCooldown: true });
       }, TARGET_CHANGE_APPLY_DEBOUNCE_MS);
     };
@@ -429,26 +510,31 @@ export const useRealtimeUsers = () => {
     const unsubServer = useServerStore.subscribe(throttledApply);
     const unsubUI = useUIStore.subscribe(throttledApply);
 
-    channel
-      .on('presence', { event: 'sync' }, applyPresenceSnapshot)
-      .on('presence', { event: 'join' }, applyPresenceSnapshot)
-      .on('presence', { event: 'leave' }, applyPresenceSnapshot)
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          presenceConnectedRef.current = true;
-          const payload = buildOwnPresencePayload();
-          if (payload) {
-            void channel.track(payload).catch(() => undefined);
-          }
-          applyPresenceSnapshot();
-          void pollPresenceRef.current?.({ force: true, bypassCooldown: true });
-          return;
+    // Heal the channel when the network/tab returns.
+    const handleConnectivity = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (!presenceConnectedRef.current) {
+        // Force an immediate reconnect (no exponential delay) on user-driven recovery.
+        if (reconnectTimer) {
+          clearTimeout(reconnectTimer);
+          reconnectTimer = null;
         }
+        reconnectAttempts = 0;
+        try {
+          teardown?.();
+        } catch {
+          // ignore
+        }
+        presenceSigByUser.clear();
+        absenceStartedAtByUser.clear();
+        recentRealtimePresenceByUser.clear();
+        setupChannel();
+      }
+    };
+    window.addEventListener('online', handleConnectivity);
+    document.addEventListener('visibilitychange', handleConnectivity);
 
-        if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          presenceConnectedRef.current = false;
-        }
-      });
+    setupChannel();
 
     return () => {
       unsubFriends();
@@ -456,24 +542,21 @@ export const useRealtimeUsers = () => {
       unsubServer();
       unsubUI();
       if (storeSubTimer) clearTimeout(storeSubTimer);
-      if (presenceChannelRef.current === channel) {
-        presenceChannelRef.current = null;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      window.removeEventListener('online', handleConnectivity);
+      document.removeEventListener('visibilitychange', handleConnectivity);
+      try {
+        teardown?.();
+      } catch {
+        // ignore
       }
-      if (applyPresenceRef.current === applyPresenceSnapshot) {
-        applyPresenceRef.current = null;
-      }
-      presenceConnectedRef.current = false;
       presenceSigByUser.clear();
       absenceStartedAtByUser.clear();
       recentRealtimePresenceByUser.clear();
-      try {
-        void channel.untrack();
-        supabase.removeChannel(channel);
-      } catch {
-        // ignore cleanup errors
-      }
     };
   }, [authUser?.id]);
+
+
 
   useEffect(() => {
     const channel = presenceChannelRef.current;
