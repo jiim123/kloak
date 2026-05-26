@@ -59,6 +59,7 @@ import { getUserFromCache, useUserCacheStore } from "@/stores/userCacheStore";
 // ─────────────────────────────────────────────────────────────────────────────
 
 const OFFLINE_PAGE_SIZE = 50;
+const OFFLINE_AUTO_HIDE_THRESHOLD = 1000;
 const EMPTY_ROLES: CustomServerRole[] = [];
 
 // FIX #1: Static style object — was inline `as React.CSSProperties` on every render
@@ -429,7 +430,8 @@ export const MembersSidebar = () => {
   const userCacheVersion = useUserCacheStore((s) => s._version);
 
   const [totalMemberCount, setTotalMemberCount] = useState<number | null>(null);
-  const [isOfflineExpanded, setIsOfflineExpanded] = useState(false);
+  const [isOfflineExpanded, setIsOfflineExpanded] = useState(true);
+  const userToggledOfflineRef = useRef(false);
   const [offlineMembers, setOfflineMembers] = useState<ServerMember[]>([]);
   const [offlineHasMore, setOfflineHasMore] = useState(false);
   const [offlineIsLoading, setOfflineIsLoading] = useState(false);
@@ -683,6 +685,7 @@ export const MembersSidebar = () => {
   );
 
   const handleToggleOfflineSection = useCallback(() => {
+    userToggledOfflineRef.current = true;
     setIsOfflineExpanded((prev) => {
       const nextExpanded = !prev;
       if (nextExpanded && !offlineLoadedOnceRef.current) {
@@ -691,6 +694,33 @@ export const MembersSidebar = () => {
       return nextExpanded;
     });
   }, [loadOfflineMembers]);
+
+  // Auto-collapse offline section on very large servers (>1000) to optimize display,
+  // unless the user has explicitly toggled it.
+  useEffect(() => {
+    if (userToggledOfflineRef.current) return;
+    if (totalMemberCount == null) return;
+    if (totalMemberCount > OFFLINE_AUTO_HIDE_THRESHOLD) {
+      setIsOfflineExpanded(false);
+    } else {
+      setIsOfflineExpanded(true);
+    }
+  }, [totalMemberCount]);
+
+  // Reset manual-toggle tracking when switching servers so per-server defaults apply.
+  useEffect(() => {
+    userToggledOfflineRef.current = false;
+  }, [currentServer?.id]);
+
+  // Auto-load the first page of offline members when the section is expanded
+  // by default (small/medium servers), so users that go offline appear without a click.
+  useEffect(() => {
+    if (!currentServer?.id || !user?.id) return;
+    if (!isOfflineExpanded) return;
+    if (offlineLoadedOnceRef.current) return;
+    if (totalMemberCount != null && totalMemberCount > OFFLINE_AUTO_HIDE_THRESHOLD) return;
+    void loadOfflineMembers({ reset: true });
+  }, [currentServer?.id, user?.id, isOfflineExpanded, totalMemberCount, loadOfflineMembers]);
 
   const confirmMassBan = useCallback(() => {
     if (massBanSelected.size === 0) return;
