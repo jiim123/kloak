@@ -175,7 +175,7 @@ export const InviteModal = () => {
                   <Button
                     size="icon"
                     onClick={handleCopy}
-                    className="h-12 w-12 flex-shrink-0 rounded-[3px] bg-primary text-primary-foreground hover:bg-white disabled:bg-[#454b55] disabled:text-muted-foreground"
+                    className="h-12 w-12 flex-shrink-0 rounded-[3px] bg-primary text-primary-foreground hover:bg-white disabled:bg-muted disabled:text-muted-foreground"
                     disabled={!displayCode}
                   >
                     {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
@@ -191,7 +191,7 @@ export const InviteModal = () => {
                   Copy Invite Link
                 </Button>
                 {!isAdmin && (
-                  <p className="text-xs leading-5 text-[#d7a0a0]">
+                  <p className="text-xs leading-5 text-destructive">
                     You need permission to manage invites before creating a new invite.
                   </p>
                 )}

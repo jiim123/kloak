@@ -357,12 +357,12 @@ export const ServerMembersPage = () => {
       <div className="mx-auto w-full max-w-6xl px-4 py-4 sm:px-6 sm:py-6">
           <div className="mb-3 flex min-h-11 items-center gap-3">
             <div className="relative w-[220px] shrink-0">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A5ABB7]" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search members"
-                className="h-8 w-full rounded-full border border-white/8 bg-card pl-9 pr-3 text-[13px] text-[#E8EAEE] outline-none placeholder:text-[#888E9A] focus:border-white/80"
+                className="h-8 w-full rounded-full border border-white/8 bg-card pl-9 pr-3 text-[13px] text-foreground outline-none placeholder:text-muted-foreground focus:border-white/80"
               />
             </div>
 
@@ -487,7 +487,7 @@ export const ServerMembersPage = () => {
 
       <div
         className={cn(
-          "grid h-8 shrink-0 items-center border-b border-black/15 px-4 text-[12px] font-medium text-[#BEC3CE]",
+          "grid h-8 shrink-0 items-center border-b border-black/15 px-4 text-[12px] font-medium text-muted-foreground",
           canUseBulkModeration
             ? "grid-cols-[24px_34px_minmax(214px,1.4fr)_minmax(120px,0.75fr)_minmax(120px,0.75fr)_minmax(180px,1.05fr)]"
             : "grid-cols-[34px_minmax(214px,1.4fr)_minmax(120px,0.75fr)_minmax(120px,0.75fr)_minmax(180px,1.05fr)]",
@@ -608,7 +608,7 @@ export const ServerMembersPage = () => {
                             </span>
                           ))}
                           {remaining > 0 && (
-                            <span className="inline-flex h-5 items-center rounded-full border border-white/20 px-1.5 text-[10px] text-[#C5CAD4]">
+                            <span className="inline-flex h-5 items-center rounded-full border border-white/20 px-1.5 text-[10px] text-muted-foreground">
                               +{remaining}
                             </span>
                           )}
@@ -641,7 +641,7 @@ export const ServerMembersPage = () => {
                         sideOffset={6}
                         className="w-56 rounded-[4px] border border-white/10 bg-[#2F323B] p-2 text-foreground shadow-xl"
                       >
-                        <div className="mb-2 px-1 text-[11px] font-semibold uppercase text-[#AEB4BF]">Roles</div>
+                        <div className="mb-2 px-1 text-[11px] font-semibold uppercase text-muted-foreground">Roles</div>
                         <div className="max-h-64 space-y-1 overflow-y-auto">
                           {assignableRoles.map((role) => {
                             const hasRole = (member.roles || []).some((memberRole) => memberRole.id === role.id);

@@ -133,7 +133,7 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
 
   if (!poll) {
     return (
-      <div className="max-w-[520px] rounded-[2px] border border-[#3a3d45] bg-[#24262d] p-4">
+      <div className="max-w-[520px] rounded-[2px] border border-[#3a3d45] bg-background p-4">
         <div className="text-sm text-muted-foreground">Loading poll...</div>
       </div>
     );
@@ -160,7 +160,7 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
               <div
                 key={idx}
                 className={`flex items-center justify-between gap-3 rounded-[2px] px-3 py-1.5 text-[12px] font-semibold leading-5 ${
-                  isUserVote ? "bg-[#5865f2] text-white" : "bg-[#1f2126] text-foreground"
+                  isUserVote ? "bg-[#5865f2] text-white" : "bg-background text-foreground"
                 }`}
               >
                 <div className="flex min-w-0 items-center gap-2">
@@ -221,7 +221,7 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
               size="sm"
               onClick={submitVote}
               disabled={!canVote}
-              className="h-8 rounded-[3px] bg-primary px-4 text-xs font-medium text-primary-foreground hover:bg-white disabled:bg-[#b5b8c0] disabled:text-[#626873] disabled:opacity-100"
+              className="h-8 rounded-[3px] bg-primary px-4 text-xs font-medium text-primary-foreground hover:bg-white disabled:bg-[#b5b8c0] disabled:text-muted-foreground disabled:opacity-100"
             >
               {isVoting ? "Submitting..." : hasVoted || isEditingResponse ? "Update" : "Submit"}
             </Button>
@@ -231,7 +231,7 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
               size="sm"
               onClick={handleViewResultsToggle}
               disabled={isClosed}
-              className="h-8 rounded-[3px] border-[#5a606c] bg-transparent px-4 text-xs font-medium text-[#d5d9e2] hover:bg-[#2d3038] hover:text-white disabled:border-[#4b505b] disabled:bg-transparent disabled:text-[#7f8692] disabled:opacity-100"
+              className="h-8 rounded-[3px] border-[#5a606c] bg-transparent px-4 text-xs font-medium text-foreground hover:bg-muted hover:text-white disabled:border-border disabled:bg-transparent disabled:text-muted-foreground disabled:opacity-100"
             >
               {showResultsOverride ? "Back to poll" : "View results"}
             </Button>

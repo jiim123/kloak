@@ -197,7 +197,7 @@ export const DeleteMessageModal = ({
               type="button"
               onClick={handleDelete}
               disabled={isDeleting}
-              className="h-9 rounded-[3px] bg-[#d32f2f] px-5 font-medium text-white hover:bg-[#b71c1c]"
+              className="h-9 rounded-[3px] bg-destructive px-5 font-medium text-white hover:bg-destructive"
             >
               {isDeleting ? (
                 <>

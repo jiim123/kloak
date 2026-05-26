@@ -148,7 +148,7 @@ export const JoinServerModal = () => {
                 setShowBannedModal(false);
                 handleClose();
               }}
-              className="h-9 rounded-[4px] border-border px-4 text-[13px] text-[#E2E4E9] hover:bg-muted"
+              className="h-9 rounded-[4px] border-border px-4 text-[13px] text-foreground hover:bg-muted"
             >
               Close
             </Button>
@@ -215,7 +215,7 @@ export const JoinServerModal = () => {
               <Button
                 type="submit"
                 disabled={isJoinDisabled}
-                className="h-9 rounded-[3px] bg-primary px-5 font-medium text-primary-foreground hover:bg-white disabled:bg-[#454b55] disabled:text-muted-foreground disabled:opacity-100"
+                className="h-9 rounded-[3px] bg-primary px-5 font-medium text-primary-foreground hover:bg-white disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Join Server

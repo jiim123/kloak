@@ -166,7 +166,7 @@ export const CreatePollModal = ({ open, onOpenChange, channelId }: CreatePollMod
                   variant="secondary"
                   onClick={addAnswer}
                   disabled={answers.length >= 4}
-                  className="h-8 rounded-[3px] border border-border bg-card px-3 text-xs font-medium text-[#e2e4e9] hover:bg-card disabled:bg-card disabled:text-[#7e8692]"
+                  className="h-8 rounded-[3px] border border-border bg-card px-3 text-xs font-medium text-foreground hover:bg-card disabled:bg-card disabled:text-muted-foreground"
                 >
                   Add answer
                 </Button>
@@ -226,7 +226,7 @@ export const CreatePollModal = ({ open, onOpenChange, channelId }: CreatePollMod
               type="button"
               onClick={submit}
               disabled={!canSubmit}
-              className="h-9 rounded-[3px] bg-primary px-5 font-medium text-primary-foreground hover:bg-white disabled:bg-[#454b55] disabled:text-muted-foreground disabled:opacity-100"
+              className="h-9 rounded-[3px] bg-primary px-5 font-medium text-primary-foreground hover:bg-white disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
             >
               Create poll
             </Button>

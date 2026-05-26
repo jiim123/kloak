@@ -304,7 +304,7 @@ export const CreateServerModal = () => {
                   </div>
 
                   <p className="mb-2 max-w-[280px] truncate pb-1 text-center text-[32px] font-semibold leading-[1.15] text-white">{createdServer.name}</p>
-                  <p className="mb-8 text-center text-[14px] text-[#d0d4db]">Your server is personalized and ready for you.</p>
+                  <p className="mb-8 text-center text-[14px] text-foreground">Your server is personalized and ready for you.</p>
 
                   <Button
                     type="button"
@@ -359,7 +359,7 @@ export const CreateServerModal = () => {
                             e.stopPropagation();
                             clearIcon();
                           }}
-                          className="absolute -top-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-[#1e1f22] text-muted-foreground shadow-md transition-colors hover:bg-[#2b2d31] hover:text-white"
+                          className="absolute -top-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-[#1e1f22] text-muted-foreground shadow-md transition-colors hover:bg-muted hover:text-white"
                           aria-label="Remove server icon"
                         >
                           <Trash2 className="h-3.5 w-3.5" />

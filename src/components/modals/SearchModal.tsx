@@ -186,7 +186,7 @@ export const SearchModal = () => {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute right-0 top-1/2 h-8 w-8 -translate-y-1/2 rounded-[3px] text-muted-foreground hover:bg-[#3b4049] hover:text-white"
+                    className="absolute right-0 top-1/2 h-8 w-8 -translate-y-1/2 rounded-[3px] text-muted-foreground hover:bg-muted hover:text-white"
                     onClick={() => setQuery('')}
                   >
                     <X className="h-4 w-4" />
@@ -231,7 +231,7 @@ export const SearchModal = () => {
                           onClick={() => handleJumpToMessage(result)}
                           className={cn(
                             "w-full border border-transparent px-3 py-3 text-left transition-colors",
-                            "hover:border-[#454b56] hover:bg-[#363b45]"
+                            "hover:border-border hover:bg-muted"
                           )}
                         >
                           <div className="flex items-start gap-3">
@@ -258,14 +258,14 @@ export const SearchModal = () => {
                                 {highlightContent(result.content)}
                               </p>
                             </div>
-                            <MessageSquare className="h-4 w-4 flex-shrink-0 text-[#8d94a0]" />
+                            <MessageSquare className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
                           </div>
                         </button>
                       ))}
                     </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
-                      <Search className="mb-3 h-12 w-12 text-[#666d78]" />
+                      <Search className="mb-3 h-12 w-12 text-muted-foreground" />
                       <p className="text-sm font-medium text-foreground">No results found</p>
                       <p className="mt-1 text-xs text-muted-foreground">Try different keywords or filters.</p>
                     </div>
@@ -288,7 +288,7 @@ export const SearchModal = () => {
               type="button"
               onClick={handleSearch}
               disabled={!query.trim() || isLoading}
-              className="h-9 rounded-[3px] bg-primary px-5 font-medium text-primary-foreground hover:bg-white disabled:bg-[#454b55] disabled:text-muted-foreground disabled:opacity-100"
+              className="h-9 rounded-[3px] bg-primary px-5 font-medium text-primary-foreground hover:bg-white disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
             >
               Search
             </Button>

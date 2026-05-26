@@ -68,7 +68,7 @@ const MEDIA_MODAL_CONTENT_CLASS =
 const MEDIA_MODAL_GHOST_BUTTON_CLASS =
   "h-9 rounded-[3px] px-4 text-muted-foreground hover:bg-transparent hover:text-white";
 const MEDIA_MODAL_PRIMARY_BUTTON_CLASS =
-  "h-9 rounded-[3px] bg-primary px-5 font-medium text-primary-foreground hover:bg-white disabled:bg-[#454b55] disabled:text-muted-foreground disabled:opacity-100";
+  "h-9 rounded-[3px] bg-primary px-5 font-medium text-primary-foreground hover:bg-white disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100";
 
 // ─── Security: extension blocklists ──────────────────────────────────────────
 
@@ -659,7 +659,7 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="absolute top-2 right-2 h-8 w-8 rounded-[3px] bg-[#252932]/90 text-foreground hover:bg-card hover:text-white"
+                      className="absolute top-2 right-2 h-8 w-8 rounded-[3px] bg-muted/90 text-foreground hover:bg-card hover:text-white"
                       onClick={() => {
                         setSelectedFile(null);
                         setFilePreview(null);

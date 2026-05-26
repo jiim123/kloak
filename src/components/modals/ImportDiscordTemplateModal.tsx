@@ -146,7 +146,7 @@ export const ImportDiscordTemplateModal = () => {
                   disabled={isLoading}
                 />
                 {form.formState.errors.templateUrl && (
-                  <p className="text-xs text-[#ff8a8a]">{form.formState.errors.templateUrl.message}</p>
+                  <p className="text-xs text-destructive">{form.formState.errors.templateUrl.message}</p>
                 )}
               </div>
 
