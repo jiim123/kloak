@@ -59,6 +59,8 @@ export interface DMInputConfig {
   otherUsername: string;
   replyingTo?: { id: string; sender?: { username?: string; display_name?: string | null }; content: string } | null;
   onCancelReply?: () => void;
+  /** Conversation participants (excluding self) used for @mention autocomplete. */
+  participants?: import("@/types").User[];
 }
 
 export interface ForumThreadInputConfig {
@@ -723,7 +725,7 @@ export const MessageInput = ({
       setIsSending(true);
       try {
         if (editingMessage.isDM) {
-          await dmEditMessage(editingMessage.id, user.id, trimmed);
+          await dmEditMessage(editingMessage.id, user.id, convertMentionsForSend(trimmed));
         } else {
           const finalContent = convertMentionsForSend(trimmed);
           await channelEditMessage(editingMessage.id, finalContent, user.id);
@@ -757,7 +759,7 @@ export const MessageInput = ({
     if ((!trimmedContent && !hasGifOrAttachments) || !user || isSending) return;
 
     setIsSending(true);
-    const contentToSend = isDM ? content.trim() : convertMentionsForSend(content.trim());
+    const contentToSend = convertMentionsForSend(content.trim());
 
     // Check mention permissions AFTER conversion (role mentions are now in <@&uuid> format)
     if (!isDM) {
@@ -1152,6 +1154,7 @@ export const MessageInput = ({
             <MentionAutocomplete
               query={mentionQuery}
               position={{ top: 40, left: 0 }}
+              participants={isDM ? dmConfig?.participants : undefined}
               onSelect={(opt) => {
                 const before = content.slice(0, mentionStartIndex);
                 const after = content.slice(mentionStartIndex + mentionQuery.length + 1);
@@ -1284,8 +1287,8 @@ export const MessageInput = ({
         setShowCreatePoll={isDM || isForum || !effectiveCanCreatePoll ? undefined : setShowCreatePoll}
         showEmojiPicker={showEmojiPicker}
         setShowEmojiPicker={setShowEmojiPicker}
-        showGifPicker={isDM || isForum ? undefined : showGifPicker}
-        setShowGifPicker={isDM || isForum ? undefined : setShowGifPicker}
+        showGifPicker={isForum ? undefined : showGifPicker}
+        setShowGifPicker={isForum ? undefined : setShowGifPicker}
         isSending={isSending}
         handleSubmit={handleSubmit}
         handleEmojiSelect={(emoji: string) => {
@@ -1315,7 +1318,7 @@ export const MessageInput = ({
             setContent((prev) => prev + emoji);
           }
         }}
-        handleGifSelect={isDM ? undefined : (url: string) => {
+        handleGifSelect={(url: string) => {
           setPendingAttachments((prev) => [...prev, { file: new File([], "gif"), preview: url, gifUrl: url }]);
         }}
         currentServer={isDM ? undefined : currentServer}

@@ -12,6 +12,7 @@ import { useScrollToMessage } from "@/hooks/useScrollToMessage";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MessageInput } from "@/components/chat/MessageInput";
 import { MessageItem, type DMActions } from "@/components/chat/MessageItem";
+import { MessageMapsProvider } from "@/components/chat/MessageMapsContext";
 import { normalizeDirectMessage } from "@/lib/dmNormalizer";
 import { DMHeader } from "./DMHeader";
 import { GroupChatHeader } from "./GroupChatHeader";
@@ -290,6 +291,14 @@ export const DMChatArea = () => {
     };
   }, [replyingTo]);
 
+  // Participants used for @mention autocomplete and mention rendering in DMs.
+  // 1:1: just the other user. Group: all other participants. Always exclude self.
+  const mentionParticipants = useMemo<User[]>(() => {
+    if (isGroup) return otherParticipants;
+    const other = currentConversation?.other_user;
+    return other ? [other] : [];
+  }, [isGroup, otherParticipants, currentConversation?.other_user]);
+
   if (!currentConversation) {
     return (
       <div className="h-full flex items-center justify-center bg-layout-members">
@@ -304,7 +313,9 @@ export const DMChatArea = () => {
   const isBlocked = isBlockedByMe || isBlockedByThem;
 
   return (
+    <MessageMapsProvider isDM participants={mentionParticipants}>
     <div ref={swipeRef} className="relative h-full flex flex-col bg-layout-members">
+
       {/* Header */}
       {isGroup ? (
         <GroupChatHeader conversation={currentConversation} participants={otherParticipants} />
@@ -402,9 +413,11 @@ export const DMChatArea = () => {
             otherUsername: isGroup ? getGroupDisplayName() : otherUser?.username || "user",
             replyingTo: dmInputReplyingTo,
             onCancelReply: () => setReplyingTo(null),
+            participants: mentionParticipants,
           }}
         />
       )}
     </div>
+    </MessageMapsProvider>
   );
 };
