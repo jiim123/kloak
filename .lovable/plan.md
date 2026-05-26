@@ -1,81 +1,34 @@
-# Plan — Make all themes apply consistently
+## Plan — Rename AMOLED → Dark, keep all three themes, verify theme coverage
 
-## Diagnosis
+### Scope
+Keep the three existing themes (Gray "Default", AMOLED, Light). Rename AMOLED's user-facing label to **"Dark"** everywhere it appears, and audit remaining components so the rename + theme switching applies cleanly across the whole app.
 
-The theme system in `src/stores/uiStore.ts` exposes three themes (**Default/Gray**, **AMOLED**, **Light**) and swaps CSS variables on `<html>` (`--background`, `--card`, `--foreground`, `--border`, `--menu`, etc.). Components that consume those tokens via Tailwind classes (`bg-card`, `text-foreground`, `border-border`) re-skin automatically.
+### Changes
 
-The reason some components don't change with the theme is that they use **hardcoded hex values** instead of semantic tokens — e.g. `bg-[#333842]`, `text-[#c4c8d0]`, `border-[#4a4f5a]`. Those values are locked to the dark palette and stay the same in Light/AMOLED.
+**1. `src/stores/uiStore.ts`** — rename the THEMES entry only (keep the `amoled` id to avoid breaking persisted user prefs):
+- `{ id: "amoled", name: "Dark", description: "Pure black theme for OLED displays" }`
+- Update the internal comment "Reset removed themes to AMOLED" → "Reset removed themes to Dark".
+- Leave `theme: "amoled"` default, `cycleTheme`, `toggleTheme`, and the `applyTheme` class logic untouched (they key off the id, not the label).
 
-A grep across `src/components` and `src/pages` finds **~339 hardcoded color literals across 24 files**.
+**2. `public/theme-init.js`** — accept `amoled` as a valid theme so the pre-paint script doesn't reset Dark-theme users to default:
+- Allow `default | amoled | light` in the validation check; remove the "removed themes" fallback comment.
 
-## Files to migrate
+**3. `src/index.css`** — no rename needed (selectors use `.amoled`), but verify the `.amoled` block is complete and no stray hardcoded greys leak through. No structural changes.
 
-Modals (the biggest offenders — fixed dark greys):
-- `src/components/modals/JoinServerModal.tsx`
-- `src/components/modals/CreateServerModal.tsx`
-- `src/components/modals/ImportDiscordTemplateModal.tsx`
-- `src/components/modals/SearchModal.tsx`
-- `src/components/modals/CreatePollModal.tsx`
-- `src/components/modals/ConfirmActionModal.tsx`
-- `src/components/modals/ExternalLinkWarningModal.tsx`
-- `src/components/modals/InviteModal.tsx`
-- `src/components/modals/DeleteMessageModal.tsx`
-- `src/components/modals/SetStatusModal.tsx`
+**4. Coverage audit (apply theme everywhere)** — repeat the previous semantic-token sweep on files not covered in the last pass. Targeted grep for `\[#`, `bg-white`, `bg-black`, `text-white`, `text-black`, and `rgb(` across:
+   - `src/components/layout/*` (ChatArea, ChannelSidebar, ServerSidebar, MembersSidebar, MobileHeader, MobileSidebar, NavigationMenu, LoggedInUserPanel, ServerOverviewView, AlphaNoticeBanner, VoiceConnectedBanner)
+   - `src/components/chat/*` (ChannelHeader, ChannelInfoModal, MessageList, MessageContent, MessageInput, FormatToolbar, GifPicker, CustomEmojiPopover, AttachmentPreviewBar, AudioPlayer, VideoPlayer, JumpToPresent, TypingIndicator, MentionAutocomplete, RoleMentionPopover, ChannelAutocomplete, CodeBlock)
+   - `src/components/dm/*` (DMChatArea, DMHeader, DMSidebar, FriendsList, GroupChatHeader, GroupSettingsModal, CreateGroupModal, UserSearchResults)
+   - `src/components/announcement/*`, `src/components/tasks/*`, `src/components/voice/*`, `src/components/settings/*`, `src/components/permissions/*`, `src/components/notifications/*`
+   - `src/components/home/*`, `src/components/landing/*` (skip marketing-only brand colors)
+   - `src/pages/AppLayout.tsx`, `src/pages/Auth.tsx`, `src/pages/DesktopAuth.tsx`, `src/pages/Join.tsx`, `src/pages/Index.tsx`
 
-Chat & content surfaces:
-- `src/components/chat/MessageItem.tsx`
-- `src/components/chat/PollMessage.tsx`
-- `src/components/chat/LinkPreview.tsx`
-- `src/components/chat/InviteLinkPreview.tsx`
-- `src/components/media/MediaChannelArea.tsx`
-- `src/components/calendar/CalendarChannelArea.tsx`
-- `src/components/members/ServerMembersPage.tsx`
+   Replace any remaining hardcoded greys/whites/blacks with the same semantic tokens used last pass (`bg-card`, `bg-popover`, `bg-muted`, `border-border`, `text-foreground`, `text-muted-foreground`, `text-destructive`, `bg-primary`, etc.), preserving opacity modifiers. Skip the previously-documented preserved cases: status dots, role color swatches, avatar deterministic fallbacks, brand-color link previews (Discord/Facebook/etc.), bot tag brand colors.
 
-UI primitives & misc:
-- `src/components/ui/bot-tag.tsx`
-- `src/components/StatusSelector.tsx`
-- `src/pages/AppLayout.tsx`
-- `src/pages/Invite.tsx`
-- `src/pages/UserProfile.tsx`
+**5. Smoke-check** — after changes, toggle Default → Dark → Light in Settings → Appearance and visually scan ChatArea, channel sidebar, member sidebar, DMs, settings pages, and modals to confirm chrome re-skins.
 
-## Token mapping
-
-Replace dark-grey hardcodes with the semantic tokens already defined in `src/index.css` for all three themes:
-
-| Hardcoded role | Semantic token (Tailwind class) |
-|---|---|
-| Surface panel (`#333842`, `#363941`, `#2f343d`) | `bg-card` / `bg-popover` |
-| Subtle surface (`#30353f`, `#2b3039`) | `bg-muted` / `bg-muted/30` |
-| Borders (`#4a4f5a`, `#42464F`, `#2c3139`) | `border-border` / `border-border/60` |
-| Primary text (`#f3f4f7`, `#f4f5f7`, `white`) | `text-foreground` / `text-card-foreground` |
-| Secondary text (`#c4c8d0`, `#b8bec8`, `#B2B5BE`) | `text-muted-foreground` |
-| Dim text (`#9ea4af`, `#767B85`) | `text-muted-foreground/70` |
-| Primary CTA (`#d7dbe3`, `#f0b800`) | `bg-primary text-primary-foreground` |
-| Destructive accents (`#fc6464`) | `text-destructive` |
-| Input underline `border-white/80` | `border-input` |
-
-## Intentionally preserved hardcodes (out of scope)
-
-These stay as fixed values because they don't represent UI chrome:
-- Status dots (`--kloak-online/idle/dnd/offline`) — already theme-aware via tokens, no change.
-- `RoleColorPicker.tsx` swatches — fixed brand color choices users pick.
-- `avatar-with-decoration.tsx` deterministic fallback colors for missing avatars.
-- `bot-tag.tsx` brand colors used only for the literal BOT badge (re-evaluated; primary swap only if it reads as chrome).
-
-## Approach
-
-1. Work file-by-file. For each file, run a focused grep for `\[#`, then surgically replace each literal with the right token from the table above, preserving opacity modifiers (e.g. `/60`, `/30`).
-2. Don't change layout, spacing, radii, animation, or component structure — only color classes.
-3. After each file, spot-check both Light and AMOLED themes against the existing Default theme by reading the changed sections; the build step will catch any broken classes.
-4. Skip files where the only hardcodes are the preserved cases above.
-
-## Verification
-
-- Run the project build to catch typos in token names.
-- Manually toggle through Default → Light → AMOLED in the Appearance tab and verify the previously-stuck modals/chat surfaces re-skin.
-
-## Out of scope
-
-- Adding new themes or new tokens to `index.css`.
-- Refactoring component structure or layout.
-- Removing the AMOLED theme (a separate decision — current memory note says only Default+Light are supported, but the dropdown still ships AMOLED; flag for the user separately).
+### Out of scope
+- Removing the Gray theme (user explicitly wants all three kept).
+- Changing the persisted theme id (`amoled`) — only the display name changes.
+- Touching the preserved brand/status colors documented in the prior plan.
+- Any non-color changes (layout, spacing, animation).

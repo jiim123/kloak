@@ -4,7 +4,7 @@ import { persist } from "zustand/middleware";
 // All available themes
 export const THEMES = [
   { id: "default", name: "Gray", description: "Original gray dark theme" },
-  { id: "amoled", name: "AMOLED", description: "Pure black theme for OLED displays" },
+  { id: "amoled", name: "Dark", description: "Pure black theme for OLED displays" },
   { id: "light", name: "Light", description: "Clean light theme" },
 ] as const;
 
@@ -407,7 +407,7 @@ export const useUIStore = create<UIState>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
-          // Reset removed themes to AMOLED
+          // Reset removed themes to Dark
           const validThemes = THEMES.map((t) => t.id) as readonly string[];
           if (!validThemes.includes(state.theme)) {
             state.theme = "amoled";
