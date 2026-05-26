@@ -1,5 +1,6 @@
 import { useMemo, useCallback, useEffect, useState, useRef } from "react";
 import { isSupabaseAttachmentUrl, resolveSignedUrl, getSignedAttachmentUrl } from "@/lib/signedUrl";
+import { getProxiedAssetUrl } from "@/lib/proxyAssetUrl";
 import { replaceNativeEmojisInElement } from "@/lib/fluentEmoji";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -358,7 +359,7 @@ export const parseTextContent = (
     const alignClass = align === "center" ? "mx-auto block" : align === "right" ? "ml-auto block" : "mr-auto block";
     if (isTrustedInlineImageUrl(url)) {
       const widthStyle = width !== "auto" ? `width="${escapeHtml(width)}"` : "";
-      return `<img src="${escapeHtml(url)}" alt="Image" ${widthStyle} class="${alignClass} max-w-full rounded-lg my-2 cursor-pointer hover:opacity-90" loading="lazy" data-image-url="${escapeHtml(url)}" data-align="${align}" data-loading-bg="true" style="min-height:40px;max-height:350px;background:rgb(24 24 24 / 40%)" />`;
+      return `<img src="data:image/gif;base64,R0lGODlhAQABAAAAACwAAAAAAQABAAA=" alt="Image" ${widthStyle} class="${alignClass} max-w-full rounded-lg my-2 cursor-pointer hover:opacity-90" loading="lazy" data-image-url="${escapeHtml(url)}" data-align="${align}" data-loading-bg="true" style="visibility:hidden;min-height:40px;max-height:350px;background:rgb(24 24 24 / 40%)" />`;
     }
     return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="${alignClass} message-link">View image</a>`;
   });
@@ -391,7 +392,7 @@ export const parseTextContent = (
       return escapeHtml(url); // Don't linkify unsafe URLs
     }
     if (isImageUrl(url)) {
-      return `<img src="${escapeHtml(url)}" alt="Image" class="block mr-auto max-w-full sm:max-w-[400px] max-h-[60vh] sm:max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90 object-contain" loading="lazy" data-image-url="${escapeHtml(url)}" data-loading-bg="true" style="min-height:40px;max-height:350px;background:rgb(24 24 24 / 40%)" />`;
+      return `<img src="data:image/gif;base64,R0lGODlhAQABAAAAACwAAAAAAQABAAA=" alt="Image" class="block mr-auto max-w-full sm:max-w-[400px] max-h-[60vh] sm:max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90 object-contain" loading="lazy" data-image-url="${escapeHtml(url)}" data-loading-bg="true" style="visibility:hidden;min-height:40px;max-height:350px;background:rgb(24 24 24 / 40%)" />`;
     }
     return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="message-link">${escapeHtml(url)}</a>`;
   });
@@ -788,21 +789,42 @@ export const MessageContent = ({
     const imgs = el.querySelectorAll<HTMLImageElement>("img[data-image-url]");
     imgs.forEach((img) => {
       const originalUrl = img.dataset.imageUrl;
-      if (!originalUrl || !isSupabaseAttachmentUrl(originalUrl)) return;
+      if (!originalUrl) return;
 
+      if (isSupabaseAttachmentUrl(originalUrl)) {
+        img.style.visibility = "hidden";
+        resolveSignedUrl(originalUrl).then((signedUrl) => {
+          if (cancelled || !signedUrl) return;
+          const preloadImg = new Image();
+          preloadImg.onload = () => {
+            if (cancelled) return;
+            img.src = signedUrl;
+            img.dataset.imageUrl = signedUrl;
+            img.style.visibility = "visible";
+          };
+          preloadImg.src = signedUrl;
+        });
+        return;
+      }
+
+      // External URL: route through signed proxy so the user's browser
+      // never contacts attacker-controlled origins directly. The original
+      // src was already replaced with a 1x1 transparent gif at render time.
       img.style.visibility = "hidden";
-
-      resolveSignedUrl(originalUrl).then((signedUrl) => {
-        if (cancelled || !signedUrl) return;
-
+      getProxiedAssetUrl(originalUrl).then((proxiedUrl) => {
+        if (cancelled || !proxiedUrl) return;
         const preloadImg = new Image();
         preloadImg.onload = () => {
           if (cancelled) return;
-          img.src = signedUrl;
-          img.dataset.imageUrl = signedUrl;
+          img.src = proxiedUrl;
+          img.dataset.imageUrl = proxiedUrl;
           img.style.visibility = "visible";
         };
-        preloadImg.src = signedUrl;
+        preloadImg.onerror = () => {
+          if (cancelled) return;
+          img.style.visibility = "visible";
+        };
+        preloadImg.src = proxiedUrl;
       });
     });
 
@@ -940,6 +962,29 @@ export const MessageContent = ({
   }, [hasUrlLikeContent, segments]);
 
   const imageUrls = useMemo(() => allUrls.filter((url) => isImageUrl(url)), [allUrls]);
+
+  // Resolve external image URLs to proxied versions so the lightbox (and its
+  // thumbnail nav) never fetches third-party origins directly.
+  const [resolvedImageUrls, setResolvedImageUrls] = useState<string[]>(imageUrls);
+  useEffect(() => {
+    let cancelled = false;
+    if (imageUrls.length === 0) {
+      setResolvedImageUrls([]);
+      return;
+    }
+    Promise.all(
+      imageUrls.map((u) =>
+        isSupabaseAttachmentUrl(u)
+          ? resolveSignedUrl(u).then((s) => s || u)
+          : getProxiedAssetUrl(u),
+      ),
+    ).then((resolved) => {
+      if (!cancelled) setResolvedImageUrls(resolved);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [imageUrls]);
 
   const inviteCodes = useMemo(() => {
     if (!shouldComputeInviteMetadata || allUrls.length === 0) return [];
@@ -1176,7 +1221,7 @@ export const MessageContent = ({
       )}
 
       {/* Image lightbox with all images for thumbnail navigation */}
-      <ImageLightbox imageUrl={lightboxImage} imageUrls={imageUrls} onClose={() => setLightboxImage(null)} />
+      <ImageLightbox imageUrl={lightboxImage} imageUrls={resolvedImageUrls} onClose={() => setLightboxImage(null)} />
 
       {/* Cross-server emoji info popover */}
       {emojiPopover && (
