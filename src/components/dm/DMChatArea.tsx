@@ -313,7 +313,9 @@ export const DMChatArea = () => {
   const isBlocked = isBlockedByMe || isBlockedByThem;
 
   return (
+    <MessageMapsProvider isDM participants={mentionParticipants}>
     <div ref={swipeRef} className="relative h-full flex flex-col bg-layout-members">
+
       {/* Header */}
       {isGroup ? (
         <GroupChatHeader conversation={currentConversation} participants={otherParticipants} />
