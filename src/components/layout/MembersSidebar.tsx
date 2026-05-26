@@ -540,7 +540,7 @@ export const MembersSidebar = () => {
       const name = m.nickname || m.user?.display_name || m.user?.username || "";
       return name.toLowerCase().includes(q);
     });
-  }, [members, memberSearchQuery]);
+  }, [members, memberSearchQuery, userCacheVersion]);
 
   const hydratedOfflineMembers = useMemo(() => {
     return offlineMembers.map((member) => {
