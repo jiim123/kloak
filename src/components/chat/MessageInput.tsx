@@ -651,9 +651,7 @@ export const MessageInput = ({
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(onStopTyping!, TYPING_STOP_DELAY);
     }
-    if (!isDM) {
-      detectAutocomplete(val, e.target.selectionStart);
-    }
+    detectAutocomplete(val, e.target.selectionStart);
     // Don't save draft while editing — draft is preserved in savedDraftRef
     if (!isEditMode) {
       const draftKey = isForum ? `forum-${targetId}` : isDM ? `dm-${targetId}` : targetId;
