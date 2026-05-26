@@ -622,6 +622,13 @@ export const MessageInput = ({
       setHasMentionOptions(false);
     }
 
+    // #channel autocomplete is server-only; skip in DMs.
+    if (isDM) {
+      setShowChannels(false);
+      setHasChannelOptions(false);
+      return;
+    }
+
     const hashIdx = textBefore.lastIndexOf("#");
     if (hashIdx !== -1 && !textBefore.slice(hashIdx).includes(" ")) {
       setChannelQuery(textBefore.slice(hashIdx + 1));
@@ -631,7 +638,7 @@ export const MessageInput = ({
       setShowChannels(false);
       setHasChannelOptions(false);
     }
-  }, []);
+  }, [isDM]);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     if (!isDM && !isForum && openChatNoticePopup()) return;
@@ -644,9 +651,7 @@ export const MessageInput = ({
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(onStopTyping!, TYPING_STOP_DELAY);
     }
-    if (!isDM) {
-      detectAutocomplete(val, e.target.selectionStart);
-    }
+    detectAutocomplete(val, e.target.selectionStart);
     // Don't save draft while editing — draft is preserved in savedDraftRef
     if (!isEditMode) {
       const draftKey = isForum ? `forum-${targetId}` : isDM ? `dm-${targetId}` : targetId;
@@ -1027,7 +1032,7 @@ export const MessageInput = ({
         }
       }
 
-      if (!isDM) {
+      {
         const isAutocompleteOpen = (showMentions && hasMentionOptions) || (showChannels && hasChannelOptions);
         const autocompleteKeys = ["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"];
         if (isAutocompleteOpen && autocompleteKeys.includes(e.key)) {
