@@ -152,7 +152,7 @@ export function MessageMapsProvider({
       currentUserId: userId,
       topEmojis,
     };
-  }, [members, channels, userId, isDM, topEmojis]);
+  }, [members, channels, userId, isDM, topEmojis, participants]);
 
   return (
     <MessageMapsContext.Provider value={value}>
