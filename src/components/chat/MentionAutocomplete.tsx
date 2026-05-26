@@ -44,6 +44,10 @@ export const MentionAutocomplete = ({
 
   useEffect(() => {
     let cancelled = false;
+    if (isDMMode) {
+      setCandidateUsers(participants || []);
+      return;
+    }
     const serverId = currentServer?.id;
     if (!serverId || !userId) {
       setCandidateUsers([]);
