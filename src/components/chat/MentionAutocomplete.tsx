@@ -95,7 +95,7 @@ export const MentionAutocomplete = ({
     return () => {
       cancelled = true;
     };
-  }, [currentServer?.id, userId, query, members]);
+  }, [currentServer?.id, userId, query, members, isDMMode, participants]);
 
   const blockedUserIds = useFriendStore((s) => s.visibilityBlockedUserIds);
 
