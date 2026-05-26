@@ -30,6 +30,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { secureUpload } from "@/lib/storageUpload";
+import { getProxiedAssetUrl, peekProxiedAssetUrl } from "@/lib/proxyAssetUrl";
 import { formatRelativeTime } from "@/lib/format";
 import {
   DropdownMenu,
@@ -826,6 +827,47 @@ const renderMediaDescriptionHtml = (content: string): string => {
   return html;
 };
 
+// Renders an <img> whose src is always routed through our signed asset
+// proxy. Prevents the user's browser from contacting attacker-controlled
+// origins directly (IP/UA/referrer leak). First-party URLs pass through
+// unchanged via peekProxiedAssetUrl.
+const ProxiedImg = ({
+  src,
+  alt,
+  className,
+  loading,
+}: {
+  src: string | null | undefined;
+  alt: string;
+  className?: string;
+  loading?: "lazy" | "eager";
+}) => {
+  const initial = peekProxiedAssetUrl(src || null);
+  const [resolved, setResolved] = useState<string | null>(initial);
+
+  useEffect(() => {
+    let cancelled = false;
+    const peek = peekProxiedAssetUrl(src || null);
+    if (peek) {
+      setResolved(peek);
+      return;
+    }
+    setResolved(null);
+    if (!src) return;
+    getProxiedAssetUrl(src).then((u) => {
+      if (!cancelled) setResolved(u);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [src]);
+
+  if (!resolved) {
+    return <div className={className} aria-label={alt} role="img" />;
+  }
+  return <img src={resolved} alt={alt} className={className} loading={loading} />;
+};
+
 const MediaCard = ({
   item,
   onClick,
@@ -849,7 +891,7 @@ const MediaCard = ({
       onClick={onClick}
     >
       <AspectRatio ratio={1}>
-        <img
+        <ProxiedImg
           src={thumbnailSrc || "/placeholder.svg"}
           alt={item.title || "Media"}
           className="object-cover w-full h-full transition-transform group-hover:scale-105"
@@ -976,7 +1018,7 @@ const MediaLightbox = ({ item, onClose }: { item: MediaItem; onClose: () => void
                 />
               </AspectRatio>
             ) : (
-              <img
+              <ProxiedImg
                 src={item.media_url}
                 alt={item.title || "Media"}
                 className="max-h-[75vh] w-auto mx-auto object-contain rounded-xl"
