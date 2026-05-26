@@ -839,10 +839,10 @@ export const MessageItem = memo(function MessageItem({
     startEditing({
       id: message.id,
       channelId: message.channel_id || (dmActions ? "" : ""),
-      content: message.content,
+      content: convertMentionsToReadable(message.content, usersMap, channelsMap),
       isDM: !!dmActions,
     });
-  }, [message.id, message.channel_id, message.content, dmActions, checkEditLimit]);
+  }, [message.id, message.channel_id, message.content, dmActions, checkEditLimit, usersMap, channelsMap]);
 
   // For DMs, channel_id won't exist — use conversation context
   // The channelId for DMs is set via the dmActions context in DMChatArea
