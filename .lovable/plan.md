@@ -1,52 +1,56 @@
-## Plan — Fix presence desynchronization
+## Plan — Stop IP leak when rendering media-channel items
 
-### Root causes
+### The leak
 
-After tracing `usePresence`, `useRealtimeUsers`, `lib/presence.ts`, and the consumers in `MembersSidebar`, `DMSidebar`, and `FriendsList`, three independent bugs cause the symptoms ("looks online but isn't" / "looks offline but is" / clears on navigation):
+In `src/components/media/MediaChannelArea.tsx`, items uploaded as **URL** (and YouTube thumbnails from `img.youtube.com`) end up rendered as `<img src={item.media_url}>` (line 980, lightbox) and `<img src={thumbnailSrc}>` (line 853, grid card). The browser then fetches the image **directly from the attacker-controlled origin**, exposing every viewer's real IP / `User-Agent` / referrer.
 
-**Bug 1 — Signature cache poisons future updates when stores are empty at apply-time.**
-`applyPresenceSnapshot` records a per-user `presenceSigByUser` signature after dispatching `patchUserAcrossStores`. But the batched store patches in `useRealtimeUsers.ts` (`flushMemberPatches`, `flushFriendPatches`, `flushDMPatches`) early-return when the relevant store has no `currentServer`, no `conversations`, or no friends. The signature still gets cached. When the user later navigates back to the server / opens a DM, members/conversations get fetched from the DB with stale `status='offline'` and the presence channel never re-patches them because the cached signature still matches the live presence state. Result: the member sits as "offline" until something forces a fresh signature (e.g. that user actually changes status, or you change page and a new fetch triggers a snapshot pass that crosses the absent-grace path).
+The crawler-side flow already proxies link-preview images through `supabase/functions/fetch-link-preview-asset/index.ts` using a signed-token URL (`{u, exp, sig}`), but that signed URL is only generated server-side inside `fetch-link-preview` and is never produced for media-channel items, so the client has no way to obtain one.
 
-**Bug 2 — Presence channel never reconnects after a drop.**
-The `subscribe()` callback in `useRealtimeUsers` only flips `presenceConnectedRef` to `false` on `CLOSED` / `CHANNEL_ERROR` / `TIMED_OUT` and never re-subscribes. While the underlying Realtime socket has its own reconnect, the presence-state on this channel resets after a disconnect, and our cached `presenceSigByUser` keeps blocking re-application even after the socket reconnects. So once the channel hiccups (which is common after long active sessions / lots of chat / network blips), other users freeze at their last-known status until the page reloads.
+File-uploads (Bunny CDN / Supabase Storage) are first-party and not affected. The leak only applies to:
+- `media_type === "image" | "gif"` items inserted via the **URL** tab (`item.media_url`).
+- `media_type === "youtube"` items, whose `item.thumbnail_url` always points to `img.youtube.com`.
 
-**Bug 3 — Consumer guards distrust the realtime channel when the cached row says `offline`.**
-`getMemberPresence` in `MembersSidebar.tsx` (line 132–134) guards `hasRecentRealtimePresence` with `status !== 'offline'`. If the cached row's `status` field is stale `'offline'` (typical right after a server-member fetch), the realtime presence is ignored and the heuristic in `getEffectivePresence` takes over. `getEffectivePresence` itself does the right thing only when `userId` is passed AND the cache hit is fresh, but the wrapper short-circuits before that path.
+### Fix overview
 
-A related concern: `serverStore` is refetched on server switch and overwrites realtime-patched member statuses; combined with bug 1, that's how a member can permanently appear offline until that user reconnects.
+Route every external media URL in the media-channel view through the existing signed proxy (`fetch-link-preview-asset`). Generate the signed URL on demand from a tiny new edge function so the HMAC secret stays server-side.
 
-### Fix plan
+### Steps
 
-**1. `src/hooks/useRealtimeUsers.ts`**
-   - Make `patchUserAcrossStores` always apply patches to all stores (drop the `state.members.length === 0` / `conversations.length === 0` early returns in `flushMemberPatches` / `flushDMPatches` / `flushFriendPatches` — keep the no-change short-circuit but stop skipping the whole flush). This way the userCacheStore stays the source of truth and the per-store stale data gets healed as soon as it arrives.
-   - Only record `presenceSigByUser[targetId] = signature` after a patch is actually dispatched, AND clear it for any user we *fail* to patch (so a future snapshot retries). Move the signature write below the `patchUserAcrossStores` call (already the order) but additionally reset it to `''` when the user enters/re-enters the target set so the next snapshot always re-asserts. Use a `freshTargetsRef` Set populated by `throttledApply` when `lastTargetIdsKey` changes — clear those users' signatures before calling `applyPresenceSnapshot`.
-   - Add presence-channel reconnect: on `CLOSED` / `CHANNEL_ERROR` / `TIMED_OUT`, schedule a `setTimeout` (exponential backoff capped at ~10s) that calls `supabase.removeChannel(channel)` and re-runs the subscription setup. On every reconnect, clear `presenceSigByUser` so all targets get a fresh patch from the new presence state, then re-`track` our own payload.
-   - Add a `window.addEventListener('online', ...)` and `visibilitychange → visible` handler that, when the presence channel is not in `joined` state, triggers the reconnect path (in addition to existing poll-on-visible).
-   - When the server members list refreshes (`useServerStore.subscribe` already runs `throttledApply`), force-clear `presenceSigByUser` for users that just appeared in the target set so their realtime presence is re-applied over the fresh DB rows.
+**1. New edge function `sign-asset-proxy`** (`supabase/functions/sign-asset-proxy/index.ts`)
+   - Accepts `POST { urls: string[] }` (cap at 24 URLs / request).
+   - Validates auth via the shared `resolveRequestUserId` helper already used by `fetch-link-preview-asset` (`_shared/edgeSecurity.ts`).
+   - For each URL:
+     - Reject non-`http(s)` and already-proxied URLs (return them unchanged).
+     - Reuse `isUrlSafe()` from the link-preview asset module so the same SSRF allow/deny rules apply.
+     - Build the signed proxy URL with HMAC of `${exp}:${targetUrl}` using `LINK_PREVIEW_PROXY_SECRET` (TTL 24h, matching the existing function).
+   - Returns `{ results: Record<originalUrl, proxiedUrl | null> }`.
+   - Strict 10 KB body limit, CORS via `corsHeaders` in the file, no `supabase/config.toml` changes (default `verify_jwt = false`, identity verified in code).
 
-**2. `src/components/layout/MembersSidebar.tsx`**
-   - Drop the `status !== 'offline'` guard in `getMemberPresence`. If `hasRecentRealtimePresence(member.user_id)` is true, trust the realtime row (status may have just flipped to `'online'`/`'idle'` but the cached row is the older offline). Read the latest status directly from `useUserCacheStore` for that id when realtime is fresh, falling back to `member.user?.status` only when there is no recent presence.
+**2. Client helper `src/lib/proxyAssetUrl.ts`**
+   - `getProxiedAssetUrl(url: string): Promise<string>` and `getProxiedAssetUrls(urls: string[]): Promise<Map<string,string>>`.
+   - In-memory cache keyed by original URL with ~22h TTL (under the 24h server TTL so we refresh before expiry).
+   - In-flight deduplication and small batching window (50 ms) so a grid renders one batch call.
+   - Skip URLs that are first-party (Supabase / Bunny CDN host); return them unchanged.
+   - Falls back to a 1×1 transparent data URI if signing fails, so we never accidentally render the raw external URL.
 
-**3. `src/components/dm/FriendsList.tsx` and `src/components/dm/DMSidebar.tsx`**
-   - Apply the same trust-the-channel rule: route presence display through `getEffectivePresence(status, lastSeen, userId)` only when `!hasRecentRealtimePresence(userId)`. When realtime is fresh, pull the status from `useUserCacheStore` (the single source of truth) so all three consumers stay consistent.
+**3. Wire `MediaChannelArea.tsx`**
+   - Replace the direct `<img src={thumbnailSrc}>` in `MediaCard` and `<img src={item.media_url}>` in `MediaLightbox` with a small wrapper that uses `getProxiedAssetUrl` (loading state = current `bg-muted` skeleton).
+   - For `media_type === "youtube"`, proxy `thumbnail_url` only. The YouTube embed iframe itself is left as-is (loading youtube.com inside an iframe is the documented behavior of any YouTube embed and out of scope for this fix — note this in code comment).
+   - File-uploaded items (Bunny / Supabase URLs) bypass the proxy via the host check, so existing behavior is unchanged.
 
-**4. `src/lib/presence.ts`**
-   - No behavior change required, but document the contract: when `userId` is provided AND `hasRecentRealtimePresence(userId)` is true, the function returns the status verbatim. Consumers must use this path.
-
-**5. `src/stores/authStore.ts`**
-   - In `updateStatus`, when the local user's status changes the new value is written to `set({ user: { ...user, status } })`. Also call `useUserCacheStore.getState().upsertUser(updatedUser)` so the global cache stays in sync (currently only `updateLastSeen` and `updateUser` do this — `updateStatus` does not, so a status change on your own account isn't reflected in any consumer that reads from `useUserCacheStore`). This is what makes "you" look stale to your own member row right after toggling.
+**4. Optional but recommended:** also proxy the same fields inside the message-channel image renderer (`MessageContent.tsx` lines 361 / 394) — same class of leak. Listed as out of scope for this ticket unless the user wants it included; flagged in the final response.
 
 ### Verification
 
-1. Open two browser sessions with two accounts that are friends and share a server.
-2. From A, send 20+ messages rapidly to B (the "talk too much" repro). Verify B's presence dot in A's DM sidebar, friends list, and member sidebar stays in sync, no flicker offline→online on navigation.
-3. From A, switch servers and come back. B's status should remain accurate without a page reload.
-4. Kill A's network for 30s (DevTools Offline) and restore. Verify presence channel re-subscribes (`Successfully subscribed` log returns), and B's presence stays correct.
-5. Close B's tab. Within ~35s (30s absent grace + snapshot tick) A should see B go offline; reopen B's tab and A should see B back online within a few seconds.
-6. Toggle DND / Invisible on B and verify A reflects it everywhere instantly.
+1. Send a media-channel item with `https://attacker.example/track.gif` via the URL tab — open DevTools Network and confirm the request goes to `…/functions/v1/fetch-link-preview-asset?...` and never to `attacker.example` from the browser.
+2. Same for YouTube items: confirm `img.youtube.com` is not requested from the browser; the thumbnail loads via the proxy.
+3. File-uploaded items still load from Bunny CDN directly (no behavior change).
+4. Click delete on a URL-uploaded item: confirm only the RPC fires and no request hits the external host.
+5. Confirm signed URL TTL: after >22h the helper refreshes silently before the server-side 24h expiry.
 
 ### Out of scope
 
-- Replacing the global `presence:users-global` channel with per-friend topics (would reduce egress but is a larger refactor).
-- Changing `update_user_last_seen` heartbeat cadence.
-- Touching voice presence (`useVoicePresenceWatchers`) — separate channel with its own loop.
+- Proxying message-attachment images in `MessageContent.tsx` (same fix is straightforward but separate surface).
+- YouTube iframe player IP exposure.
+- Pre-signing at insert time / storing proxy URLs in DB (TTL would force refresh anyway).
+- Changing the `fetch-link-preview-asset` proxy itself or its TTL.
