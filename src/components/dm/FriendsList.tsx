@@ -62,6 +62,9 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
   const { openConversation, setCurrentConversation } = useDMStore();
   const { openModal } = useUIStore();
   const checkBlockLimit = useRateLimit(10, 60_000);
+  // Re-render when realtime presence patches the user cache so the online/offline
+  // split stays in sync without waiting for the friend list to refetch.
+  useUserCacheStore((s) => s._version);
 
   const [activeTab, setActiveTab] = useState("online");
   const [addFriendInput, setAddFriendInput] = useState("");
