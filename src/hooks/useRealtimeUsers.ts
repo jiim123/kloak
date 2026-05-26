@@ -39,7 +39,7 @@ const flushMemberPatches = () => {
   if (patches.size === 0) return;
 
   useServerStore.setState((state) => {
-    if (!state.currentServer || state.members.length === 0) return {};
+    if (state.members.length === 0) return {};
     let changed = false;
     const members = state.members.map((m) => {
       const patch = patches.get(m.user_id);
