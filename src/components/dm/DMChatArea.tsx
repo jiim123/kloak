@@ -330,7 +330,7 @@ export const DMChatArea = () => {
           <div className="px-4 py-8 mb-4">
             <div className="flex items-center gap-4 mb-4">
               <div
-                className="w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-medium"
+                className="w-20 h-20 rounded-full flex items-center justify-center text-foreground text-3xl font-medium"
                 style={{ backgroundColor: otherUser?.banner_color || "#5865F2" }}
               >
                 {otherUser?.avatar_url ? (

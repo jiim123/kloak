@@ -929,7 +929,7 @@ export const MembersSidebar = () => {
                     isSelected ? "bg-destructive border-destructive" : "border-muted-foreground/40 bg-transparent",
                   )}
                 >
-                  {isSelected && <Check className="w-3 h-3 text-white" />}
+                  {isSelected && <Check className="w-3 h-3 text-foreground" />}
                 </div>
               </div>
             )}
@@ -1415,12 +1415,12 @@ export const MembersSidebar = () => {
       {/* Mass ban floating action bar */}
       {massBanMode && (
         <div className="absolute bottom-4 left-3 right-3 bg-destructive/95 backdrop-blur-sm rounded-xl p-3 flex items-center justify-between shadow-lg border border-destructive/50">
-          <span className="text-sm font-medium text-white">{massBanSelected.size} selected</span>
+          <span className="text-sm font-medium text-foreground">{massBanSelected.size} selected</span>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={exitMassBanMode}
-              className="px-3 py-1.5 text-xs font-medium text-white/80 hover:text-white rounded-lg hover:bg-foreground/10 transition-colors"
+              className="px-3 py-1.5 text-xs font-medium text-foreground/80 hover:text-foreground rounded-lg hover:bg-foreground/10 transition-colors"
             >
               Cancel
             </button>
@@ -1428,7 +1428,7 @@ export const MembersSidebar = () => {
               type="button"
               onClick={confirmMassBan}
               disabled={massBanSelected.size === 0}
-              className="px-3 py-1.5 text-xs font-medium bg-white text-destructive rounded-lg hover:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1.5 text-xs font-medium bg-foreground text-destructive rounded-lg hover:bg-foreground/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Ban {massBanSelected.size > 0 ? massBanSelected.size : ""}
             </button>
@@ -1443,7 +1443,7 @@ export const MembersSidebar = () => {
   if (isMobile) {
     return (
       <Drawer direction="right" open={isMemberSidebarOpen} onOpenChange={setMemberSidebarOpen} modal={false}>
-        {isMemberSidebarOpen && <div className="fixed inset-0 z-50 bg-black/80" onClick={handleCloseSidebar} />}
+        {isMemberSidebarOpen && <div className="fixed inset-0 z-50 bg-background/80" onClick={handleCloseSidebar} />}
         <DrawerContent className="p-1.5 w-[100vw] max-w-[100vw] bg-background">
           <DrawerHeader className="sr-only">
             <DrawerTitle>Members</DrawerTitle>

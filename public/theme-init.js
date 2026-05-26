@@ -4,17 +4,16 @@
     if (stored) {
       var parsed = JSON.parse(stored);
       var theme = parsed.state && parsed.state.theme;
-      if (theme && (theme === 'default' || theme === 'light')) {
+      if (theme && (theme === 'default' || theme === 'light' || theme === 'amoled')) {
         document.documentElement.className = theme;
         document.documentElement.setAttribute('data-theme', theme);
       } else {
-        // Reset any removed themes to default
-        document.documentElement.className = 'default';
-        document.documentElement.setAttribute('data-theme', 'default');
+        document.documentElement.className = 'amoled';
+        document.documentElement.setAttribute('data-theme', 'amoled');
       }
     }
   } catch (e) {
-    document.documentElement.className = 'default';
-    document.documentElement.setAttribute('data-theme', 'default');
+    document.documentElement.className = 'amoled';
+    document.documentElement.setAttribute('data-theme', 'amoled');
   }
 })();

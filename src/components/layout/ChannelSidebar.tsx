@@ -598,7 +598,7 @@ const SortableChannel = memo(({
         {channel.is_nsfw && !isUnread && mentionCount === 0 && !(channel.type === "voice" && voiceCount > 0) && !isSortingMode && (
           <span
             className={cn(
-              "absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[11px] font-sans font-medium rounded-full bg-kloak-dnd text-white border border-kloak-dnd/60 uppercase leading-none transition-opacity duration-150",
+              "absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[11px] font-sans font-medium rounded-full bg-kloak-dnd text-foreground border border-kloak-dnd/60 uppercase leading-none transition-opacity duration-150",
               showDesktopActions && "group-hover:opacity-0",
             )}
           >
@@ -634,7 +634,7 @@ const SortableChannel = memo(({
         {mentionCount > 0 && !isSortingMode && (
           <span
             className={cn(
-              "px-1.5 py-0.5 text-xs font-mono rounded-full bg-red-600 text-white flex-shrink-0 transition-opacity",
+              "px-1.5 py-0.5 text-xs font-mono rounded-full bg-red-600 text-foreground flex-shrink-0 transition-opacity",
               showDesktopActions && "group-hover:opacity-0",
             )}
           >
@@ -2112,7 +2112,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
 
               {canSeeServerSettings && (
                 <>
-                  <DropdownMenuSeparator className="mx-0 my-0 bg-white/10" />
+                  <DropdownMenuSeparator className="mx-0 my-0 bg-muted/40" />
 
                   {/* Server Settings */}
                   <DropdownMenuItem
@@ -2155,7 +2155,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
 
               {!isOwner && (
                 <>
-                  <DropdownMenuSeparator className="mx-0 my-0 bg-white/10" />
+                  <DropdownMenuSeparator className="mx-0 my-0 bg-muted/40" />
 
                   {/* Leave Server */}
                   <DropdownMenuItem

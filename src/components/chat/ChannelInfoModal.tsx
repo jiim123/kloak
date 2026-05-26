@@ -79,7 +79,7 @@ export const ChannelInfoModal = () => {
             </div>
           )}
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-muted/20 flex items-center justify-center shrink-0">
               <Icon className="w-4 h-4 text-muted-foreground" />
             </div>
             <DialogTitle className="text-foreground">{channel.name}</DialogTitle>

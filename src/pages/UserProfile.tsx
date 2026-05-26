@@ -235,13 +235,13 @@ const formatInlineMarkdown = (text: string): React.ReactNode[] => {
       nodes.push(<del key={key}>{match[9]}</del>);
     } else if (match[10] !== undefined) {
       nodes.push(
-        <code key={key} className="rounded bg-black/30 px-1 py-0.5 text-[0.9em]">
+        <code key={key} className="rounded bg-muted/40 px-1 py-0.5 text-[0.9em]">
           {match[10]}
         </code>,
       );
     } else if (match[11] !== undefined) {
       nodes.push(
-        <span key={key} className="rounded bg-black/70 px-1 text-transparent select-none">
+        <span key={key} className="rounded bg-muted/80 px-1 text-transparent select-none">
           {match[11]}
         </span>,
       );
@@ -281,7 +281,7 @@ const ProfileMarkdown = ({ content }: { content: string }) => {
         index += 1;
       }
       blocks.push(
-        <pre key={key} className="my-3 overflow-x-auto rounded-[6px] bg-black/30 p-3 text-xs leading-5">
+        <pre key={key} className="my-3 overflow-x-auto rounded-[6px] bg-muted/40 p-3 text-xs leading-5">
           <code>{codeLines.join("\n")}</code>
         </pre>,
       );
@@ -564,7 +564,7 @@ const UserProfile = () => {
           document.execCommand(
             "insertHTML",
             false,
-            '<span data-profile-spoiler="true" class="rounded bg-black/70 px-1 text-transparent select-none">text</span>',
+            '<span data-profile-spoiler="true" class="rounded bg-muted/80 px-1 text-transparent select-none">text</span>',
           );
           break;
         default:
@@ -863,11 +863,11 @@ const UserProfile = () => {
 
   return (
     <div className="h-full overflow-y-auto bg-layout-chat text-foreground">
-      <header className="sticky top-0 z-20 flex h-12 items-center gap-2.5 border-b border-border bg-card px-3 text-white shadow-sm">
+      <header className="sticky top-0 z-20 flex h-12 items-center gap-2.5 border-b border-border bg-card px-3 text-foreground shadow-sm">
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="flex h-8 w-8 items-center justify-center rounded-[4px] text-muted-foreground transition-colors hover:bg-white/10 hover:text-white"
+          className="flex h-8 w-8 items-center justify-center rounded-[4px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           aria-label="Back"
         >
           <ChevronLeft className="h-5 w-5" />
@@ -1018,7 +1018,7 @@ const UserProfile = () => {
                           value={titleDraft}
                           onChange={(event) => setTitleDraft(event.target.value.slice(0, POST_TITLE_MAX_LENGTH))}
                           placeholder="Post title"
-                          className="min-w-0 flex-1 bg-transparent text-[18px] font-normal leading-none text-white outline-none placeholder:text-muted-foreground"
+                          className="min-w-0 flex-1 bg-transparent text-[18px] font-normal leading-none text-foreground outline-none placeholder:text-muted-foreground"
                           maxLength={POST_TITLE_MAX_LENGTH}
                           autoFocus
                         />
@@ -1049,7 +1049,7 @@ const UserProfile = () => {
                           }}
                           onInput={syncRichDraft}
                           onBlur={syncRichDraft}
-                          className="profile-rich-editor min-h-[160px] w-full px-4 py-3 text-[14px] leading-6 text-foreground outline-none [&_code]:rounded [&_code]:bg-black/30 [&_code]:px-1 [&_pre]:rounded [&_pre]:bg-black/30 [&_pre]:p-3"
+                          className="profile-rich-editor min-h-[160px] w-full px-4 py-3 text-[14px] leading-6 text-foreground outline-none [&_code]:rounded [&_code]:bg-muted/40 [&_code]:px-1 [&_pre]:rounded [&_pre]:bg-muted/40 [&_pre]:p-3"
                           role="textbox"
                           aria-multiline="true"
                           aria-label="Post body"
@@ -1064,7 +1064,7 @@ const UserProfile = () => {
                       <div className="flex items-center gap-3">
                         <button
                           type="button"
-                          className="h-8 rounded-[4px] px-3 text-[13px] font-medium text-muted-foreground transition-colors hover:text-white disabled:opacity-50"
+                          className="h-8 rounded-[4px] px-3 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
                           onClick={() => {
                             setTitleDraft("");
                             setDraft("");
@@ -1076,7 +1076,7 @@ const UserProfile = () => {
                         </button>
                         <button
                           type="button"
-                          className="h-8 min-w-[72px] rounded-[4px] bg-primary px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                          className="h-8 min-w-[72px] rounded-[4px] bg-primary px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-60"
                           onClick={() => void handleCreatePost()}
                           disabled={!titleDraft.trim() || !draft.trim() || isPosting}
                         >
@@ -1122,7 +1122,7 @@ const UserProfile = () => {
                           </DropdownMenuItem>
                           {isSelf && (
                             <>
-                              <DropdownMenuSeparator className="mx-0 my-0 bg-white/10" />
+                              <DropdownMenuSeparator className="mx-0 my-0 bg-muted/40" />
                               <DropdownMenuItem
                                 onClick={() => void handleDeletePost(post.id)}
                                 className="rounded-none px-3 py-2 text-destructive focus:text-destructive"
@@ -1154,7 +1154,7 @@ const UserProfile = () => {
                                 disabled={pendingReactionKey === `${post.id}:${reaction.emoji}`}
                                 className={`inline-flex h-7 items-center gap-1 rounded-full border px-2 py-0 transition-colors duration-150 ${
                                   reaction.hasReacted
-                                    ? "border-border bg-muted text-white hover:bg-muted"
+                                    ? "border-border bg-muted text-foreground hover:bg-muted"
                                     : "border-border bg-muted text-foreground hover:bg-muted"
                                 }`}
                               >
@@ -1266,7 +1266,7 @@ const UserProfile = () => {
                                                 Edit
                                               </DropdownMenuItem>
                                             )}
-                                            {canEditComment && canDeleteComment && <DropdownMenuSeparator className="mx-0 my-0 bg-white/10" />}
+                                            {canEditComment && canDeleteComment && <DropdownMenuSeparator className="mx-0 my-0 bg-muted/40" />}
                                             {canDeleteComment && (
                                               <DropdownMenuItem
                                                 onClick={() => void handleDeleteComment(post.id, comment.id)}
@@ -1308,7 +1308,7 @@ const UserProfile = () => {
                                             variant="ghost"
                                             onClick={() => void handleSaveCommentEdit(comment.id)}
                                             disabled={!commentEditDrafts[comment.id]?.trim() || pendingCommentActionId === comment.id}
-                                            className="h-8 min-w-[64px] rounded-[4px] bg-primary px-3 text-[13px] font-semibold text-foreground hover:bg-white hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                                            className="h-8 min-w-[64px] rounded-[4px] bg-primary px-3 text-[13px] font-semibold text-foreground hover:bg-foreground/90 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
                                           >
                                             Save
                                           </Button>
@@ -1364,7 +1364,7 @@ const UserProfile = () => {
                                 size="sm"
                                 onClick={() => void handleCreateComment(post.id)}
                                 disabled={!commentDrafts[post.id]?.trim() || pendingCommentPostId === post.id}
-                                className="h-9 min-w-[82px] rounded-[4px] bg-primary px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-white hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                                className="h-9 min-w-[82px] rounded-[4px] bg-primary px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-foreground/90 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
                               >
                                 Comment
                               </Button>

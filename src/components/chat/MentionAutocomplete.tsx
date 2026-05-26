@@ -219,9 +219,9 @@ export const MentionAutocomplete = ({
   return (
     <div
       ref={containerRef}
-      className="w-full bg-white/5 border-b border-white/6 rounded-t-[14px] overflow-hidden"
+      className="w-full bg-muted/20 border-b border-border/50 rounded-t-[14px] overflow-hidden"
     >
-      <div className="px-3 py-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-white/6">
+      <div className="px-3 py-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/50">
         Mention
       </div>
       <div className="max-h-48 overflow-y-auto overscroll-contain p-1">
@@ -259,7 +259,7 @@ export const MentionAutocomplete = ({
             ) : option.type === "role" && option.role ? (
               <>
                 <div
-                  className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-white"
+                  className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-foreground"
                   style={option.role.color.startsWith("linear-gradient") ? { background: option.role.color } : { backgroundColor: option.role.color }}
                 >
                   @

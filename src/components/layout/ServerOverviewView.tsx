@@ -342,9 +342,9 @@ export const ServerOverviewView = () => {
                   </Avatar>
                 </div>
                 <div className="mx-auto mt-3 max-w-4xl">
-                  <h1 className="text-3xl font-semibold text-white truncate">{currentServer.name}</h1>
+                  <h1 className="text-3xl font-semibold text-foreground truncate">{currentServer.name}</h1>
                 </div>
-                <p className="mx-auto mt-1 max-w-3xl px-4 text-sm leading-6 text-white/80 line-clamp-2 sm:text-base">
+                <p className="mx-auto mt-1 max-w-3xl px-4 text-sm leading-6 text-foreground/80 line-clamp-2 sm:text-base">
                   {currentServer.about?.trim() || `Official ${currentServer.name}`}
                 </p>
               </div>
