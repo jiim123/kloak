@@ -158,9 +158,9 @@ export const DeleteMessageModal = ({
                 </div>
 
                 {isPoll ? (
-                  <p className="mt-3 line-clamp-3 text-sm italic text-[#cfd4de]">{pollLabel}</p>
+                  <p className="mt-3 line-clamp-3 text-sm italic text-muted-foreground">{pollLabel}</p>
                 ) : (caption || !hasImages) && (
-                  <p className="mt-3 line-clamp-3 text-sm text-[#cfd4de]">
+                  <p className="mt-3 line-clamp-3 text-sm text-muted-foreground">
                     {getMessagePreview(caption || displayContent, 200)}
                   </p>
                 )}

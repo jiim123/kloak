@@ -148,7 +148,7 @@ export const JoinServerModal = () => {
                 setShowBannedModal(false);
                 handleClose();
               }}
-              className="h-9 rounded-[4px] border-border px-4 text-[13px] text-[#E2E4E9] hover:bg-[#30333D]"
+              className="h-9 rounded-[4px] border-border px-4 text-[13px] text-[#E2E4E9] hover:bg-muted"
             >
               Close
             </Button>

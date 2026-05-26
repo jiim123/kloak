@@ -179,7 +179,7 @@ export const CreatePollModal = ({ open, onOpenChange, channelId }: CreatePollMod
                   id="poll-multi"
                   checked={allowMultiple}
                   onCheckedChange={(v) => setAllowMultiple(v === true)}
-                  className="mt-0.5 border-[#7d8591] data-[state=checked]:border-[#d7dbe3] data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                  className="mt-0.5 border-[#7d8591] data-[state=checked]:border-border data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                 />
                 <div className="space-y-1">
                   <Label htmlFor="poll-multi" className="text-sm font-medium leading-none text-foreground">

@@ -628,7 +628,7 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
                 className={`h-9 rounded-[3px] gap-2 ${
                   uploadType === "file"
                     ? "bg-muted text-foreground hover:bg-muted"
-                    : "text-muted-foreground hover:bg-[#3e434d] hover:text-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 <Upload className="w-4 h-4" />
@@ -641,7 +641,7 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
                 className={`h-9 rounded-[3px] gap-2 ${
                   uploadType === "url"
                     ? "bg-muted text-foreground hover:bg-muted"
-                    : "text-muted-foreground hover:bg-[#3e434d] hover:text-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 <Link2 className="w-4 h-4" />
@@ -670,7 +670,7 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
                   </div>
                 ) : (
                   <div
-                    className="cursor-pointer rounded-[4px] border border-dashed border-[#5a606b] bg-muted p-8 text-center transition-colors hover:border-[#d7dbe3]/70"
+                    className="cursor-pointer rounded-[4px] border border-dashed border-border bg-muted p-8 text-center transition-colors hover:border-border/70"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <ImageIcon className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
@@ -738,7 +738,7 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
                 onChange={(e) => setDescription(e.target.value)}
                 maxLength={500}
                 rows={3}
-                className="min-h-[84px] rounded-[3px] border border-border bg-muted text-sm text-foreground shadow-none placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-[#d7dbe3]/60 focus-visible:ring-offset-0"
+                className="min-h-[84px] rounded-[3px] border border-border bg-muted text-sm text-foreground shadow-none placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-primary/60 focus-visible:ring-offset-0"
               />
             </div>
 

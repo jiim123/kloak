@@ -184,7 +184,7 @@ export const InviteModal = () => {
                 <Button
                   variant="outline"
                   onClick={handleCopyLink}
-                  className="h-9 w-full rounded-[3px] border-border bg-transparent text-foreground hover:bg-[#3e434d] hover:text-white"
+                  className="h-9 w-full rounded-[3px] border-border bg-transparent text-foreground hover:bg-muted hover:text-white"
                   disabled={!inviteLink}
                 >
                   {linkCopied ? <Check className="mr-2 h-4 w-4" /> : <Link2 className="mr-2 h-4 w-4" />}

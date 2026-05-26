@@ -181,7 +181,7 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
             >
               <span
                 className={`h-3.5 w-3.5 shrink-0 rounded-full border transition-colors ${
-                  isSelected ? "border-[#d7dbe3] bg-primary" : "border-[#c3c7d1] bg-transparent"
+                  isSelected ? "border-border bg-primary" : "border-[#c3c7d1] bg-transparent"
                 }`}
               />
               <span>{opt}</span>
@@ -212,7 +212,7 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
               </button>
             )}
           </div>
-          {timeLabel && <div className="mt-3 text-[11px] text-[#8f97a3]">{timeLabel}</div>}
+          {timeLabel && <div className="mt-3 text-[11px] text-muted-foreground">{timeLabel}</div>}
         </div>
       ) : (
         <>
@@ -236,7 +236,7 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
               {showResultsOverride ? "Back to poll" : "View results"}
             </Button>
           </div>
-          {timeLabel && <div className="mt-3 text-[11px] text-[#8f97a3]">{timeLabel}</div>}
+          {timeLabel && <div className="mt-3 text-[11px] text-muted-foreground">{timeLabel}</div>}
         </>
       )}
     </div>

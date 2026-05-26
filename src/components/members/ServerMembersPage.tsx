@@ -587,8 +587,8 @@ export const ServerMembersPage = () => {
                   {member.user?.is_bot && <Bot className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
                 </div>
 
-                <div className="truncate text-[#E1E3E8]">{formatElapsed(member.joined_at)}</div>
-                <div className="truncate text-[#E1E3E8]">{formatElapsed(member.joined_at)}</div>
+                <div className="truncate text-foreground">{formatElapsed(member.joined_at)}</div>
+                <div className="truncate text-foreground">{formatElapsed(member.joined_at)}</div>
                 <div className="flex min-w-0 items-center gap-1.5">
                   {(() => {
                     const sortedRoles = [...(member.roles || [])].sort((a, b) => b.position - a.position);

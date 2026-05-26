@@ -863,7 +863,7 @@ const UserProfile = () => {
 
   return (
     <div className="h-full overflow-y-auto bg-layout-chat text-foreground">
-      <header className="sticky top-0 z-20 flex h-12 items-center gap-2.5 border-b border-[#23262f] bg-[#1C1E23] px-3 text-white shadow-sm">
+      <header className="sticky top-0 z-20 flex h-12 items-center gap-2.5 border-b border-[#23262f] bg-card px-3 text-white shadow-sm">
         <button
           type="button"
           onClick={() => navigate(-1)}
@@ -1007,7 +1007,7 @@ const UserProfile = () => {
                   >
                     <AvatarWithDecoration user={profileUser} className="h-9 w-9 shrink-0" />
                     <span className="mx-4 h-9 w-px bg-[#686d79]" />
-                    <span className="text-[18px] font-normal text-[#c3c7d0]">Write a Post</span>
+                    <span className="text-[18px] font-normal text-muted-foreground">Write a Post</span>
                   </button>
                 ) : (
                   <>
@@ -1027,7 +1027,7 @@ const UserProfile = () => {
                         </span>
                       </div>
 
-                      <div className="mt-3 border-y border-[#454955] px-0 py-0 text-muted-foreground format-toolbar" onMouseDown={(event) => event.preventDefault()}>
+                      <div className="mt-3 border-y border-border px-0 py-0 text-muted-foreground format-toolbar" onMouseDown={(event) => event.preventDefault()}>
                         <FormatToolbar
                           onFormat={handleComposerAction}
                           className="bg-transparent border-0 rounded-none px-0 py-1"
@@ -1036,7 +1036,7 @@ const UserProfile = () => {
                       </div>
 
                       <div className="relative min-h-[160px]">
-                        {!draft && <div className="pointer-events-none absolute left-4 top-3 text-[13px] text-[#a2a7b0]">What do you want to post?</div>}
+                        {!draft && <div className="pointer-events-none absolute left-4 top-3 text-[13px] text-muted-foreground">What do you want to post?</div>}
                         <div
                           ref={richBodyRef}
                           contentEditable
@@ -1159,7 +1159,7 @@ const UserProfile = () => {
                                 }`}
                               >
                                 <span>{reaction.emoji}</span>
-                                <span className={`text-[11px] leading-none text-[#d7dae2] ${reaction.hasReacted ? "font-semibold" : "font-normal"}`}>
+                                <span className={`text-[11px] leading-none text-foreground ${reaction.hasReacted ? "font-semibold" : "font-normal"}`}>
                                   {reaction.count}
                                 </span>
                               </button>

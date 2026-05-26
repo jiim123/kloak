@@ -185,7 +185,7 @@ const Invite = () => {
   };
 
   return (
-    <div className="relative flex min-h-screen flex-col overflow-hidden bg-[#30333d]">
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-muted">
       <Dialog
         open={showBannedModal}
         onOpenChange={(open) => {
@@ -235,9 +235,9 @@ const Invite = () => {
                 {server.inviter_username ? `Accept ${server.inviter_username}'s invite to join` : "Accept invite to join"}
               </p>
 
-              <Avatar className="mt-5 h-14 w-14 rounded-full bg-[#252832] ring-1 ring-black/25">
+              <Avatar className="mt-5 h-14 w-14 rounded-full bg-card ring-1 ring-black/25">
                 {server.icon_url ? <AvatarImage src={server.icon_url} alt={server.name} className="object-cover" /> : null}
-                <AvatarFallback className="rounded-full bg-[#242833] text-base font-bold text-white">
+                <AvatarFallback className="rounded-full bg-card text-base font-bold text-white">
                   {getServerInitials(server.name)}
                 </AvatarFallback>
               </Avatar>
@@ -245,14 +245,14 @@ const Invite = () => {
               <h1 className="mt-4 max-w-full truncate text-[24px] font-bold leading-tight text-white">{server.name}</h1>
 
               {typeof server.member_count === "number" && server.member_count >= 0 && (
-                <div className="mt-5 flex items-center justify-center gap-2 text-[13px] font-medium text-[#c8ccd4]">
+                <div className="mt-5 flex items-center justify-center gap-2 text-[13px] font-medium text-muted-foreground">
                   <Users className="h-4 w-4 text-white" />
                   <span>{server.member_count.toLocaleString()} members</span>
                 </div>
               )}
 
               {!!server.about && (
-                <p className="mt-5 max-w-[320px] text-[13px] leading-[18px] text-[#bfc3cb] line-clamp-3">{server.about}</p>
+                <p className="mt-5 max-w-[320px] text-[13px] leading-[18px] text-muted-foreground line-clamp-3">{server.about}</p>
               )}
 
               <div className="mt-8 w-full max-w-[270px]">
@@ -281,7 +281,7 @@ const Invite = () => {
                   <Button
                     variant="ghost"
                     onClick={() => navigate(authEntryPath)}
-                    className="mt-4 h-9 w-full rounded-[4px] text-[14px] text-[#aeb2bc] hover:bg-transparent hover:text-white"
+                    className="mt-4 h-9 w-full rounded-[4px] text-[14px] text-muted-foreground hover:bg-transparent hover:text-white"
                   >
                     Log in
                   </Button>
