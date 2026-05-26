@@ -12,6 +12,7 @@ import { useScrollToMessage } from "@/hooks/useScrollToMessage";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MessageInput } from "@/components/chat/MessageInput";
 import { MessageItem, type DMActions } from "@/components/chat/MessageItem";
+import { MessageMapsProvider } from "@/components/chat/MessageMapsContext";
 import { normalizeDirectMessage } from "@/lib/dmNormalizer";
 import { DMHeader } from "./DMHeader";
 import { GroupChatHeader } from "./GroupChatHeader";
