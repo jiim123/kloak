@@ -208,7 +208,7 @@ export const SearchModal = () => {
 
             {(hasSearched || isLoading) && (
               <div className="border border-border bg-muted">
-                <div className="border-b border-[#3a404a] px-4 py-3">
+                <div className="border-b border-border px-4 py-3">
                   <p className="text-sm font-medium leading-none text-foreground">
                     {isLoading
                       ? 'Searching messages...'

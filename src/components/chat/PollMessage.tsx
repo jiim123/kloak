@@ -133,14 +133,14 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
 
   if (!poll) {
     return (
-      <div className="max-w-[520px] rounded-[2px] border border-[#3a3d45] bg-background p-4">
+      <div className="max-w-[520px] rounded-[2px] border border-border bg-background p-4">
         <div className="text-sm text-muted-foreground">Loading poll...</div>
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-[520px] rounded-[2px] border border-[#3a3d45] bg-[rgb(43_45_49)] px-4 py-3 text-foreground">
+    <div className="w-full max-w-[520px] rounded-[2px] border border-border bg-[rgb(43_45_49)] px-4 py-3 text-foreground">
       <div className="text-[15px] font-semibold leading-5 text-foreground">{poll.question}</div>
       {showResults && (
         <div className="mt-1 text-[12px] text-muted-foreground">
@@ -181,7 +181,7 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
             >
               <span
                 className={`h-3.5 w-3.5 shrink-0 rounded-full border transition-colors ${
-                  isSelected ? "border-border bg-primary" : "border-[#c3c7d1] bg-transparent"
+                  isSelected ? "border-border bg-primary" : "border-border bg-transparent"
                 }`}
               />
               <span>{opt}</span>
@@ -221,7 +221,7 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
               size="sm"
               onClick={submitVote}
               disabled={!canVote}
-              className="h-8 rounded-[3px] bg-primary px-4 text-xs font-medium text-primary-foreground hover:bg-white disabled:bg-[#b5b8c0] disabled:text-muted-foreground disabled:opacity-100"
+              className="h-8 rounded-[3px] bg-primary px-4 text-xs font-medium text-primary-foreground hover:bg-white disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
             >
               {isVoting ? "Submitting..." : hasVoted || isEditingResponse ? "Update" : "Submit"}
             </Button>
@@ -231,7 +231,7 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
               size="sm"
               onClick={handleViewResultsToggle}
               disabled={isClosed}
-              className="h-8 rounded-[3px] border-[#5a606c] bg-transparent px-4 text-xs font-medium text-foreground hover:bg-muted hover:text-white disabled:border-border disabled:bg-transparent disabled:text-muted-foreground disabled:opacity-100"
+              className="h-8 rounded-[3px] border-border bg-transparent px-4 text-xs font-medium text-foreground hover:bg-muted hover:text-white disabled:border-border disabled:bg-transparent disabled:text-muted-foreground disabled:opacity-100"
             >
               {showResultsOverride ? "Back to poll" : "View results"}
             </Button>

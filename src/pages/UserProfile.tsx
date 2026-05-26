@@ -1003,15 +1003,15 @@ const UserProfile = () => {
                   <button
                     type="button"
                     onClick={() => setIsComposerOpen(true)}
-                    className="flex h-[50px] w-full items-center rounded-[4px] bg-[#4D4F58] px-4 text-left shadow-sm transition-colors hover:bg-[#555862]"
+                    className="flex h-[50px] w-full items-center rounded-[4px] bg-muted px-4 text-left shadow-sm transition-colors hover:bg-muted"
                   >
                     <AvatarWithDecoration user={profileUser} className="h-9 w-9 shrink-0" />
-                    <span className="mx-4 h-9 w-px bg-[#686d79]" />
+                    <span className="mx-4 h-9 w-px bg-muted" />
                     <span className="text-[18px] font-normal text-muted-foreground">Write a Post</span>
                   </button>
                 ) : (
                   <>
-                    <div className="overflow-hidden rounded-[4px] border border-white/5 bg-[#4f535f] shadow-sm">
+                    <div className="overflow-hidden rounded-[4px] border border-white/5 bg-muted shadow-sm">
                       <div className="flex items-center gap-3 px-3 pt-3">
                         <AvatarWithDecoration user={profileUser} className="h-8 w-8 shrink-0" />
                         <input
@@ -1154,7 +1154,7 @@ const UserProfile = () => {
                                 disabled={pendingReactionKey === `${post.id}:${reaction.emoji}`}
                                 className={`inline-flex h-7 items-center gap-1 rounded-full border px-2 py-0 transition-colors duration-150 ${
                                   reaction.hasReacted
-                                    ? "border-[#73716c] bg-[#5F5E5B] text-white hover:bg-[#6a6965]"
+                                    ? "border-border bg-muted text-white hover:bg-muted"
                                     : "border-border bg-muted text-foreground hover:bg-muted"
                                 }`}
                               >

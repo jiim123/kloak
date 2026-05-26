@@ -570,7 +570,7 @@ export const ServerMembersPage = () => {
                   <span
                     className={cn(
                       "absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-layout-members",
-                      isOnline ? "bg-[#3BA55D]" : "bg-[#747986]",
+                      isOnline ? "bg-[#3BA55D]" : "bg-muted-foreground",
                     )}
                   />
                 </div>
@@ -630,7 +630,7 @@ export const ServerMembersPage = () => {
                       <PopoverTrigger asChild>
                         <button
                           type="button"
-                          className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:border-[#D7D9DF] hover:text-white"
+                          className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:border-foreground hover:text-white"
                           aria-label={`Manage roles for ${getMemberName(member)}`}
                         >
                           <Plus className="h-3 w-3" />

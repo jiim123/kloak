@@ -359,7 +359,7 @@ export const CreateServerModal = () => {
                             e.stopPropagation();
                             clearIcon();
                           }}
-                          className="absolute -top-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-[#1e1f22] text-muted-foreground shadow-md transition-colors hover:bg-muted hover:text-white"
+                          className="absolute -top-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-muted text-muted-foreground shadow-md transition-colors hover:bg-muted hover:text-white"
                           aria-label="Remove server icon"
                         >
                           <Trash2 className="h-3.5 w-3.5" />

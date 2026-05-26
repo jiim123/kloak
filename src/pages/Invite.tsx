@@ -259,7 +259,7 @@ const Invite = () => {
                 {accountName && (
                   <div className="mb-8 text-left">
                     <div className="text-[12px] font-medium leading-tight text-foreground">You're logged in as</div>
-                    <div className="mt-1 flex h-7 items-center border-b border-[#d6d9df]/80">
+                    <div className="mt-1 flex h-7 items-center border-b border-input/80">
                       <span className="min-w-0 flex-1 truncate text-[15px] leading-none text-white">{accountName}</span>
                       <BadgeCheck className="h-4 w-4 shrink-0 text-[#23d160]" />
                     </div>
