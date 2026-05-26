@@ -98,7 +98,7 @@ const flushDMPatches = () => {
   if (patches.size === 0) return;
 
   useDMStore.setState((state) => {
-    if (!state.currentConversation && state.conversations.length === 0) return {};
+    if (state.conversations.length === 0 && !state.currentConversation) return {};
     let changed = false;
 
     const conversations = state.conversations.map((c) => {
