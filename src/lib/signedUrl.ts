@@ -177,6 +177,9 @@ export async function getSignedAttachmentUrl(filePath: string): Promise<string |
   const cached = getCached(filePath);
   if (cached) return cached;
 
+  // Skip permanently-missing paths to avoid re-firing edge-function errors
+  if (notFoundCache.has(filePath)) return null;
+
   // Deduplicate concurrent requests for the same path
   let pending = inflight.get(filePath);
   if (pending) return pending;
@@ -197,7 +200,16 @@ export async function getSignedAttachmentUrl(filePath: string): Promise<string |
       });
 
       if (!res.ok) {
-        console.warn("[signedUrl] Blob proxy failed for path:", filePath, res.status);
+        // Drain body to free the connection without surfacing the error.
+        try { await res.text(); } catch { /* ignore */ }
+        if (res.status === 404 || res.status === 410) {
+          if (notFoundCache.size >= NOT_FOUND_CACHE_MAX) {
+            // simple FIFO trim
+            const first = notFoundCache.values().next().value;
+            if (first) notFoundCache.delete(first);
+          }
+          notFoundCache.add(filePath);
+        }
         return null;
       }
 
@@ -205,8 +217,7 @@ export async function getSignedAttachmentUrl(filePath: string): Promise<string |
       const objectUrl = URL.createObjectURL(blob);
       setCache(filePath, objectUrl);
       return objectUrl;
-    } catch (err) {
-      console.warn("[signedUrl] Failed to fetch attachment:", filePath, err);
+    } catch {
       return null;
     }
   })();
