@@ -291,6 +291,14 @@ export const DMChatArea = () => {
     };
   }, [replyingTo]);
 
+  // Participants used for @mention autocomplete and mention rendering in DMs.
+  // 1:1: just the other user. Group: all other participants. Always exclude self.
+  const mentionParticipants = useMemo<User[]>(() => {
+    if (isGroup) return otherParticipants;
+    const other = currentConversation?.other_user;
+    return other ? [other] : [];
+  }, [isGroup, otherParticipants, currentConversation?.other_user]);
+
   if (!currentConversation) {
     return (
       <div className="h-full flex items-center justify-center bg-layout-members">
