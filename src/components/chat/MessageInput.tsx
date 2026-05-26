@@ -1286,8 +1286,8 @@ export const MessageInput = ({
         setShowCreatePoll={isDM || isForum || !effectiveCanCreatePoll ? undefined : setShowCreatePoll}
         showEmojiPicker={showEmojiPicker}
         setShowEmojiPicker={setShowEmojiPicker}
-        showGifPicker={isDM || isForum ? undefined : showGifPicker}
-        setShowGifPicker={isDM || isForum ? undefined : setShowGifPicker}
+        showGifPicker={isForum ? undefined : showGifPicker}
+        setShowGifPicker={isForum ? undefined : setShowGifPicker}
         isSending={isSending}
         handleSubmit={handleSubmit}
         handleEmojiSelect={(emoji: string) => {
@@ -1317,7 +1317,7 @@ export const MessageInput = ({
             setContent((prev) => prev + emoji);
           }
         }}
-        handleGifSelect={isDM ? undefined : (url: string) => {
+        handleGifSelect={(url: string) => {
           setPendingAttachments((prev) => [...prev, { file: new File([], "gif"), preview: url, gifUrl: url }]);
         }}
         currentServer={isDM ? undefined : currentServer}
