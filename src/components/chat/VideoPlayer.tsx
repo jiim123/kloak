@@ -6,6 +6,7 @@ interface VideoPlayerProps {
   src: string;
   fileName?: string;
   onError?: () => void;
+  onReady?: () => void;
 }
 
 function formatTime(seconds: number): string {
