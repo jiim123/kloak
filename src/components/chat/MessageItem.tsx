@@ -69,6 +69,7 @@ import { useMessageUser, fetchAndCacheUser, getUserFromCache, getOrFetchUser } f
 import { useMessageMaps } from "./MessageMapsContext";
 import { cn } from "@/lib/utils";
 import { useSignedUrl } from "@/hooks/useSignedUrl";
+import { useInView } from "@/hooks/useInView";
 import { getPollIdFromContent, isPollMessageContent, usePollLabel } from "@/lib/poll";
 import { usePollStore } from "@/stores/pollStore";
 import { canRevealGhostIdentityForUser } from "@/lib/ghostIdentity";
