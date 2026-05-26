@@ -22,6 +22,8 @@ import { useAuthStore } from "@/stores/authStore";
 import { useUnreadDMsContext } from "@/hooks/useUnreadDMsContext";
 import { formatCompactTime } from "@/lib/format";
 import { getEffectivePresence } from "@/lib/presence";
+import { hasRecentRealtimePresence } from "@/hooks/useRealtimeUsers";
+import { getUserFromCache, useUserCacheStore } from "@/stores/userCacheStore";
 import { ConversationItemSkeleton } from "@/components/ui/skeletons";
 import type { DMConversation, UserStatus, User } from "@/types";
 import { useRateLimit } from "@/hooks/useRateLimit";
