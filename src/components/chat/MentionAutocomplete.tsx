@@ -22,6 +22,8 @@ interface MentionAutocompleteProps {
   onClose: () => void;
   isAdmin?: boolean;
   onOptionsChange?: (hasOptions: boolean) => void;
+  /** When provided, autocomplete operates on these users instead of server members (DM/Group mode). */
+  participants?: User[];
 }
 
 export const MentionAutocomplete = ({
@@ -31,12 +33,14 @@ export const MentionAutocomplete = ({
   onClose,
   isAdmin = false,
   onOptionsChange,
+  participants,
 }: MentionAutocompleteProps) => {
   const { members, currentServer, roles } = useServerStore();
   const userId = useAuthStore((s) => s.user?.id);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [candidateUsers, setCandidateUsers] = useState<User[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
+  const isDMMode = !!participants;
 
   useEffect(() => {
     let cancelled = false;
