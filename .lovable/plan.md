@@ -1,56 +1,42 @@
-## Plan — Stop IP leak when rendering media-channel items
+## Goal
 
-### The leak
+Make the Delete Message modal friendlier:
+- Resolve `<@uuid>` mentions to `@displayname` and `<#uuid>` channel tags to `#channelname` in the preview (no UUIDs, no generic `@user` fallback when data is available).
+- Simplify the modal hierarchy to: title → confirmation sentence → message preview → Cancel / Delete Message buttons.
 
-In `src/components/media/MediaChannelArea.tsx`, items uploaded as **URL** (and YouTube thumbnails from `img.youtube.com`) end up rendered as `<img src={item.media_url}>` (line 980, lightbox) and `<img src={thumbnailSrc}>` (line 853, grid card). The browser then fetches the image **directly from the attacker-controlled origin**, exposing every viewer's real IP / `User-Agent` / referrer.
+## Changes
 
-The crawler-side flow already proxies link-preview images through `supabase/functions/fetch-link-preview-asset/index.ts` using a signed-token URL (`{u, exp, sig}`), but that signed URL is only generated server-side inside `fetch-link-preview` and is never produced for media-channel items, so the client has no way to obtain one.
+### `src/components/modals/DeleteMessageModal.tsx`
 
-File-uploads (Bunny CDN / Supabase Storage) are first-party and not affected. The leak only applies to:
-- `media_type === "image" | "gif"` items inserted via the **URL** tab (`item.media_url`).
-- `media_type === "youtube"` items, whose `item.thumbnail_url` always points to `img.youtube.com`.
+1. **Resolve mentions for the preview.** Pull `members` and `channels` from `useServerStore`, plus the DM/forum participant data already available via `useMessageUser`, and build:
+   - `usersMap: Map<userId, { username, display_name, nickname }>` from server members. For the message author (covers DM case where members list is empty), also seed the map with `displayUser`.
+   - `channelsMap: Map<channelId, { name }>` from server channels.
+   Pass both into `getMessagePreview(content, 200, usersMap)` and add a small wrapper that also calls `stripMarkdown(content, usersMap, channelsMap)` (since `getMessagePreview` doesn't currently accept a channels map — easiest fix: inline `stripMarkdown(...).slice(...)` here, or extend `getMessagePreview` to accept `channelsMap`). Preferred: extend `getMessagePreview` signature in `src/lib/message.ts` to accept an optional `channelsMap` and forward it to `stripMarkdown`.
 
-### Fix overview
+2. **Simplify modal layout.** Replace the current body with:
+   ```
+   <header>Delete Message</header>            // unchanged styling
+   <body>
+     <p>Are you sure you want to delete this message?</p>
+     <div class="preview">
+       {resolved caption text}
+       {image thumbnails grid, unchanged behavior}
+     </div>
+   </body>
+   <footer> Cancel | Delete Message </footer>  // unchanged
+   ```
+   Remove the "Selected message" label, the author name line, and the `@username` line. Preview container keeps the existing `border border-border bg-muted p-3` styling so it still reads as a quoted preview. Drop "This action cannot be undone." per the requested hierarchy (only the single confirmation sentence remains).
 
-Route every external media URL in the media-channel view through the existing signed proxy (`fetch-link-preview-asset`). Generate the signed URL on demand from a tiny new edge function so the HMAC secret stays server-side.
+3. **Poll variant** keeps existing copy ("Delete Poll" title, poll-specific sentence, `pollLabel` preview) but follows the same simplified hierarchy (no author block).
 
-### Steps
+4. **Empty preview guard.** If resolved caption is empty and there are no images (e.g. message was only a mention that resolved to nothing), fall back to showing the resolved text from `stripMarkdown(displayContent, usersMap, channelsMap)` so the preview is never blank when content exists.
 
-**1. New edge function `sign-asset-proxy`** (`supabase/functions/sign-asset-proxy/index.ts`)
-   - Accepts `POST { urls: string[] }` (cap at 24 URLs / request).
-   - Validates auth via the shared `resolveRequestUserId` helper already used by `fetch-link-preview-asset` (`_shared/edgeSecurity.ts`).
-   - For each URL:
-     - Reject non-`http(s)` and already-proxied URLs (return them unchanged).
-     - Reuse `isUrlSafe()` from the link-preview asset module so the same SSRF allow/deny rules apply.
-     - Build the signed proxy URL with HMAC of `${exp}:${targetUrl}` using `LINK_PREVIEW_PROXY_SECRET` (TTL 24h, matching the existing function).
-   - Returns `{ results: Record<originalUrl, proxiedUrl | null> }`.
-   - Strict 10 KB body limit, CORS via `corsHeaders` in the file, no `supabase/config.toml` changes (default `verify_jwt = false`, identity verified in code).
+### `src/lib/message.ts`
 
-**2. Client helper `src/lib/proxyAssetUrl.ts`**
-   - `getProxiedAssetUrl(url: string): Promise<string>` and `getProxiedAssetUrls(urls: string[]): Promise<Map<string,string>>`.
-   - In-memory cache keyed by original URL with ~22h TTL (under the 24h server TTL so we refresh before expiry).
-   - In-flight deduplication and small batching window (50 ms) so a grid renders one batch call.
-   - Skip URLs that are first-party (Supabase / Bunny CDN host); return them unchanged.
-   - Falls back to a 1×1 transparent data URI if signing fails, so we never accidentally render the raw external URL.
+- Extend `getMessagePreview` to accept an optional `channelsMap` parameter and pass it through to `stripMarkdown`. Backwards compatible (optional 4th arg).
 
-**3. Wire `MediaChannelArea.tsx`**
-   - Replace the direct `<img src={thumbnailSrc}>` in `MediaCard` and `<img src={item.media_url}>` in `MediaLightbox` with a small wrapper that uses `getProxiedAssetUrl` (loading state = current `bg-muted` skeleton).
-   - For `media_type === "youtube"`, proxy `thumbnail_url` only. The YouTube embed iframe itself is left as-is (loading youtube.com inside an iframe is the documented behavior of any YouTube embed and out of scope for this fix — note this in code comment).
-   - File-uploaded items (Bunny / Supabase URLs) bypass the proxy via the host check, so existing behavior is unchanged.
+## Out of scope
 
-**4. Optional but recommended:** also proxy the same fields inside the message-channel image renderer (`MessageContent.tsx` lines 361 / 394) — same class of leak. Listed as out of scope for this ticket unless the user wants it included; flagged in the final response.
-
-### Verification
-
-1. Send a media-channel item with `https://attacker.example/track.gif` via the URL tab — open DevTools Network and confirm the request goes to `…/functions/v1/fetch-link-preview-asset?...` and never to `attacker.example` from the browser.
-2. Same for YouTube items: confirm `img.youtube.com` is not requested from the browser; the thumbnail loads via the proxy.
-3. File-uploaded items still load from Bunny CDN directly (no behavior change).
-4. Click delete on a URL-uploaded item: confirm only the RPC fires and no request hits the external host.
-5. Confirm signed URL TTL: after >22h the helper refreshes silently before the server-side 24h expiry.
-
-### Out of scope
-
-- Proxying message-attachment images in `MessageContent.tsx` (same fix is straightforward but separate surface).
-- YouTube iframe player IP exposure.
-- Pre-signing at insert time / storing proxy URLs in DB (TTL would force refresh anyway).
-- Changing the `fetch-link-preview-asset` proxy itself or its TTL.
+- No changes to message rendering, edit flow, or any other modal.
+- No changes to delete logic, RPCs, or stores.
+- No restyle beyond removing the now-unused author header block inside the preview card.
