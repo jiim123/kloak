@@ -59,6 +59,8 @@ export interface DMInputConfig {
   otherUsername: string;
   replyingTo?: { id: string; sender?: { username?: string; display_name?: string | null }; content: string } | null;
   onCancelReply?: () => void;
+  /** Conversation participants (excluding self) used for @mention autocomplete. */
+  participants?: import("@/types").User[];
 }
 
 export interface ForumThreadInputConfig {
