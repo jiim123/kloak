@@ -817,6 +817,7 @@ export const MessageContent = ({
         preloadImg.onload = () => {
           if (cancelled) return;
           img.src = proxiedUrl;
+          img.dataset.imageUrl = proxiedUrl;
           img.style.visibility = "visible";
         };
         preloadImg.onerror = () => {
