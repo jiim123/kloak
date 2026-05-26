@@ -7,7 +7,7 @@
  * etc.). First-party URLs (Supabase / Bunny CDN) bypass the proxy.
  */
 
-import { supabase, getKeyHashAsync } from "@/integrations/supabase/client";
+import { getKeyHashAsync } from "@/integrations/supabase/client";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
