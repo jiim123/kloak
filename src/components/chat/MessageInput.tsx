@@ -622,6 +622,13 @@ export const MessageInput = ({
       setHasMentionOptions(false);
     }
 
+    // #channel autocomplete is server-only; skip in DMs.
+    if (isDM) {
+      setShowChannels(false);
+      setHasChannelOptions(false);
+      return;
+    }
+
     const hashIdx = textBefore.lastIndexOf("#");
     if (hashIdx !== -1 && !textBefore.slice(hashIdx).includes(" ")) {
       setChannelQuery(textBefore.slice(hashIdx + 1));
@@ -631,7 +638,7 @@ export const MessageInput = ({
       setShowChannels(false);
       setHasChannelOptions(false);
     }
-  }, []);
+  }, [isDM]);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     if (!isDM && !isForum && openChatNoticePopup()) return;
