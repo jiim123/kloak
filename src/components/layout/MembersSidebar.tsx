@@ -130,11 +130,18 @@ const getMemberPresence = (member: ServerMember) => {
     return { status: "online" as UserStatus, isStale: false, isOffline: false };
   }
 
-  const status = (member.user?.status as UserStatus | undefined) ?? "offline";
-  if (status !== "offline" && hasRecentRealtimePresence(member.user_id)) {
-    return { status, isStale: false, isOffline: false };
+  // Prefer the latest user-cache snapshot — patched on every presence event —
+  // over the (possibly stale) member.user payload from the initial server fetch.
+  const cached = getUserFromCache(member.user_id);
+  const status = ((cached?.status ?? member.user?.status) as UserStatus | undefined) ?? "offline";
+  const lastSeen = cached?.last_seen ?? member.user?.last_seen;
+
+  // When the realtime presence channel has recent data for this user, trust
+  // its status verbatim regardless of value (including "offline" for Invisible).
+  if (hasRecentRealtimePresence(member.user_id)) {
+    return { status, isStale: false, isOffline: status === "offline" };
   }
-  const lastSeen = member.user?.last_seen;
+
   return getEffectivePresence(status, lastSeen, member.user_id);
 };
 
