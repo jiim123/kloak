@@ -171,5 +171,4 @@ export async function getProxiedAssetUrl(url: string | null | undefined): Promis
   return enqueue(url);
 }
 
-// Suppress unused import warning if tree-shaken in some build modes.
-void supabase;
+
