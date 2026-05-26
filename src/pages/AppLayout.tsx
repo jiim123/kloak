@@ -952,8 +952,13 @@ const AppLayout = () => {
                             )}
                           </div>
 
-                          {!isDMView && !isProfileView && isMemberSidebarOpen && (
-                            <div className="w-[304px] shrink-0 overflow-hidden">
+                          {!isDMView && !isProfileView && (
+                            <div
+                              className={cn(
+                                "shrink-0 overflow-hidden transition-[width] duration-200",
+                                isMemberSidebarOpen ? "w-[304px]" : "w-0",
+                              )}
+                            >
                               <MembersSidebar />
                             </div>
                           )}
