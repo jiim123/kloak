@@ -148,7 +148,7 @@ export const MentionAutocomplete = ({
       });
 
     return result;
-  }, [candidateUsers, isAdmin, query, blockedUserIds, roles]);
+  }, [candidateUsers, isAdmin, query, blockedUserIds, roles, isDMMode]);
 
   // Keep selected option visible while navigating with keyboard.
   useEffect(() => {
