@@ -863,7 +863,7 @@ const UserProfile = () => {
 
   return (
     <div className="h-full overflow-y-auto bg-layout-chat text-foreground">
-      <header className="sticky top-0 z-20 flex h-12 items-center gap-2.5 border-b border-[#23262f] bg-card px-3 text-white shadow-sm">
+      <header className="sticky top-0 z-20 flex h-12 items-center gap-2.5 border-b border-border bg-card px-3 text-white shadow-sm">
         <button
           type="button"
           onClick={() => navigate(-1)}

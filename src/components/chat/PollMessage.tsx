@@ -140,7 +140,7 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
   }
 
   return (
-    <div className="w-full max-w-[520px] rounded-[2px] border border-border bg-[rgb(43_45_49)] px-4 py-3 text-foreground">
+    <div className="w-full max-w-[520px] rounded-[2px] border border-border bg-muted px-4 py-3 text-foreground">
       <div className="text-[15px] font-semibold leading-5 text-foreground">{poll.question}</div>
       {showResults && (
         <div className="mt-1 text-[12px] text-muted-foreground">

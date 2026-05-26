@@ -639,7 +639,7 @@ export const ServerMembersPage = () => {
                       <PopoverContent
                         align="end"
                         sideOffset={6}
-                        className="w-56 rounded-[4px] border border-white/10 bg-[#2F323B] p-2 text-foreground shadow-xl"
+                        className="w-56 rounded-[4px] border border-white/10 bg-popover p-2 text-foreground shadow-xl"
                       >
                         <div className="mb-2 px-1 text-[11px] font-semibold uppercase text-muted-foreground">Roles</div>
                         <div className="max-h-64 space-y-1 overflow-y-auto">
