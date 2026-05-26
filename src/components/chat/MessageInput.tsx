@@ -759,7 +759,7 @@ export const MessageInput = ({
     if ((!trimmedContent && !hasGifOrAttachments) || !user || isSending) return;
 
     setIsSending(true);
-    const contentToSend = isDM ? content.trim() : convertMentionsForSend(content.trim());
+    const contentToSend = convertMentionsForSend(content.trim());
 
     // Check mention permissions AFTER conversion (role mentions are now in <@&uuid> format)
     if (!isDM) {
