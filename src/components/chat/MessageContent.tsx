@@ -789,21 +789,41 @@ export const MessageContent = ({
     const imgs = el.querySelectorAll<HTMLImageElement>("img[data-image-url]");
     imgs.forEach((img) => {
       const originalUrl = img.dataset.imageUrl;
-      if (!originalUrl || !isSupabaseAttachmentUrl(originalUrl)) return;
+      if (!originalUrl) return;
 
+      if (isSupabaseAttachmentUrl(originalUrl)) {
+        img.style.visibility = "hidden";
+        resolveSignedUrl(originalUrl).then((signedUrl) => {
+          if (cancelled || !signedUrl) return;
+          const preloadImg = new Image();
+          preloadImg.onload = () => {
+            if (cancelled) return;
+            img.src = signedUrl;
+            img.dataset.imageUrl = signedUrl;
+            img.style.visibility = "visible";
+          };
+          preloadImg.src = signedUrl;
+        });
+        return;
+      }
+
+      // External URL: route through signed proxy so the user's browser
+      // never contacts attacker-controlled origins directly. The original
+      // src was already replaced with a 1x1 transparent gif at render time.
       img.style.visibility = "hidden";
-
-      resolveSignedUrl(originalUrl).then((signedUrl) => {
-        if (cancelled || !signedUrl) return;
-
+      getProxiedAssetUrl(originalUrl).then((proxiedUrl) => {
+        if (cancelled || !proxiedUrl) return;
         const preloadImg = new Image();
         preloadImg.onload = () => {
           if (cancelled) return;
-          img.src = signedUrl;
-          img.dataset.imageUrl = signedUrl;
+          img.src = proxiedUrl;
           img.style.visibility = "visible";
         };
-        preloadImg.src = signedUrl;
+        preloadImg.onerror = () => {
+          if (cancelled) return;
+          img.style.visibility = "visible";
+        };
+        preloadImg.src = proxiedUrl;
       });
     });
 
