@@ -430,7 +430,8 @@ export const MembersSidebar = () => {
   const userCacheVersion = useUserCacheStore((s) => s._version);
 
   const [totalMemberCount, setTotalMemberCount] = useState<number | null>(null);
-  const [isOfflineExpanded, setIsOfflineExpanded] = useState(false);
+  const [isOfflineExpanded, setIsOfflineExpanded] = useState(true);
+  const userToggledOfflineRef = useRef(false);
   const [offlineMembers, setOfflineMembers] = useState<ServerMember[]>([]);
   const [offlineHasMore, setOfflineHasMore] = useState(false);
   const [offlineIsLoading, setOfflineIsLoading] = useState(false);
