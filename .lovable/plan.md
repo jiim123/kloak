@@ -1,47 +1,46 @@
-## Audit findings
+## Problem
 
-**Presence does NOT get re-activated by toggling the member sidebar** — the realtime presence subscription (`useRealtimeUsers()`) is mounted once at `src/pages/AppLayout.tsx:300` and runs for the whole session regardless of sidebar visibility.
+When switching channels/servers, `MessageList` unmounts and remounts, so every `AttachmentItem` is a fresh DOM node. Even though `useSignedUrl` synchronously returns a cached blob URL via `_peekCache` (so the network request is not repeated), the newly-mounted `<img>` element still has to decode and paint, which causes the visible "flash of nothing → image pops in" flicker. For uncached images (cache miss, eviction past 300 entries, or first visit), the loader spinner appears and then snaps to the image — also janky.
 
-**However, the perceived bug is real and traceable:** on desktop, `MembersSidebar` is conditionally mounted in `AppLayout.tsx:955-959` (`{isMemberSidebarOpen && <MembersSidebar />}`). Every toggle fully unmounts and remounts the component, which:
-- Resets local state (`isOfflineExpanded`, `totalMemberCount`, `offlineMembers`, cursors).
-- Re-reads each member's presence from `userCacheStore` on first render — causing visible flicker / status dots changing color or re-appearing as the cache is consulted again.
-- Re-triggers the cached member-count fetch effect (line 490).
+There is no smooth placeholder-to-image transition today: the component swaps between a centered spinner block and the raw `<img>` with no fade, and the `<img>` itself has no background while decoding.
 
-That mount/unmount cycle is why users feel like presence is "activated" on every toggle.
+## Goal
+
+Render a stable, neutral "ghost" placeholder in the exact reserved dimensions for every media attachment, and fade the real media in on top of it once decoded. The placeholder must look identical whether the URL is cached or being fetched, so channel switches feel seamless.
 
 ## Changes
 
-### 1. Keep `MembersSidebar` mounted on desktop
-In `src/pages/AppLayout.tsx`, replace the conditional render with a permanently mounted container whose width collapses to 0 when closed:
+### 1. `src/components/chat/MessageItem.tsx` — `AttachmentItem`
 
-```tsx
-{!isDMView && !isProfileView && (
-  <div
-    className={cn(
-      "shrink-0 overflow-hidden transition-[width] duration-200",
-      isMemberSidebarOpen ? "w-[304px]" : "w-0"
-    )}
-  >
-    <MembersSidebar />
-  </div>
-)}
-```
+- Add a local `isLoaded` state per attachment (default `false`, reset when `signedUrl` changes).
+- Always render the reserved-size container (use existing `reservedStyle`) with a shimmer/ghost background using semantic tokens (`bg-muted/40` + a subtle `animate-pulse` shimmer overlay). This ghost is shown whenever `!signedUrl || !isLoaded`.
+- When `signedUrl` is available, render the `<img>` absolutely positioned inside the same container with `opacity-0 transition-opacity duration-200`, flipping to `opacity-100` on `onLoad`. Once `isLoaded`, drop the shimmer animation but keep the muted backdrop until the image fully covers it.
+- Use `img.decode()` (via a ref + `useEffect`) when the browser supports it to ensure the fade-in only triggers after the bitmap is decoded — eliminates the white frame on remount even when the blob URL is cached.
+- Apply the same pattern to the video branch by passing a `poster`/wrapper skeleton to `VideoPlayer` (or wrap it locally) so videos also get a ghost frame at reserved dimensions.
+- Remove the `Loader2` spinner branch — the ghost placeholder replaces it.
+- Keep the existing `reservedStyle` fallback (300×200) for images without known width/height so the layout never jumps.
 
-This preserves local state and presence rendering across toggles, eliminating the flicker.
+### 2. `src/components/chat/VideoPlayer.tsx` (minor)
 
-### 2. Offline section behavior in `src/components/layout/MembersSidebar.tsx`
+- Accept an optional `width`/`height` prop and apply it to the outer wrapper so the ghost reserved size matches when a video is rendered.
+- Add an internal `loadeddata` listener that fades the `<video>` in over the ghost background.
 
-- Add a constant `OFFLINE_AUTO_HIDE_THRESHOLD = 1000`.
-- Change default of `isOfflineExpanded` from `false` to `true`, so users that go offline automatically appear in the section without requiring a click.
-- Once `totalMemberCount` is known and `> 1000`, force collapse and skip auto-loading offline pages (display becomes opt-in via the existing chevron toggle). Implementation:
-  - Initialize `useState(true)`.
-  - Add a `useEffect` watching `totalMemberCount`: when it transitions above the threshold and the user hasn't manually interacted, set expanded to `false`.
-  - Track a `userManuallyToggledOfflineRef` so we don't override the user's explicit choice.
-- When expanded by default, trigger `loadOfflineMembers({ reset: true })` on first mount/server-change (gated by the same threshold).
+### 3. `src/components/chat/MessageContent.tsx` — inline image URLs (per memory `inline-media-rendering-standards`)
 
-### 3. No backend changes required
-The existing `get_server_members_offline_page_secure` RPC and pagination logic remain unchanged.
+- Apply the same ghost-fade treatment to the `<img>` tags rendered for inline image URLs so the behavior is consistent across attachment-bound and inline media.
+
+### 4. No backend, hook, or cache changes
+
+- `useSignedUrl` and `src/lib/signedUrl.ts` stay as-is; they already cache blob URLs for 30 minutes and dedupe in-flight requests. The flicker is purely a paint/decoding problem, fixed in the rendering layer.
+
+## Out of scope
+
+- Persisting `MessageList` across channel switches (bigger architectural change).
+- Increasing `MAX_CACHE_ENTRIES` beyond 300 — can revisit if eviction is observed in practice.
+- Audio attachments (no visual flicker concern).
 
 ## Files touched
-- `src/pages/AppLayout.tsx` — keep MembersSidebar mounted, collapse via width.
-- `src/components/layout/MembersSidebar.tsx` — default offline expanded, auto-collapse above 1000 members, auto-load offline page on mount when expanded.
+
+- `src/components/chat/MessageItem.tsx`
+- `src/components/chat/VideoPlayer.tsx`
+- `src/components/chat/MessageContent.tsx`

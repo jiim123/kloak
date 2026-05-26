@@ -6,6 +6,7 @@ interface VideoPlayerProps {
   src: string;
   fileName?: string;
   onError?: () => void;
+  onReady?: () => void;
 }
 
 function formatTime(seconds: number): string {
@@ -53,7 +54,7 @@ function useDraggableSlider(onChange: (ratio: number) => void) {
   return { ref, onMouseDown };
 }
 
-export const VideoPlayer = memo(function VideoPlayer({ src, fileName, onError }: VideoPlayerProps) {
+export const VideoPlayer = memo(function VideoPlayer({ src, fileName, onError, onReady }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -70,25 +71,34 @@ export const VideoPlayer = memo(function VideoPlayer({ src, fileName, onError }:
     if (!video) return;
 
     const onTimeUpdate = () => setCurrentTime(video.currentTime);
-    const onLoadedMetadata = () => setDuration(video.duration);
+    const onLoadedMetadata = () => { setDuration(video.duration); onReady?.(); };
+    const onLoadedData = () => onReady?.();
     const onEnded = () => { setIsPlaying(false); setShowControls(true); };
     const onPlay = () => setIsPlaying(true);
     const onPause = () => setIsPlaying(false);
 
     video.addEventListener("timeupdate", onTimeUpdate);
     video.addEventListener("loadedmetadata", onLoadedMetadata);
+    video.addEventListener("loadeddata", onLoadedData);
     video.addEventListener("ended", onEnded);
     video.addEventListener("play", onPlay);
     video.addEventListener("pause", onPause);
 
+    // If metadata already loaded by the time we attach (cached blob), fire immediately.
+    if (video.readyState >= 1) {
+      setDuration(video.duration || 0);
+      onReady?.();
+    }
+
     return () => {
       video.removeEventListener("timeupdate", onTimeUpdate);
       video.removeEventListener("loadedmetadata", onLoadedMetadata);
+      video.removeEventListener("loadeddata", onLoadedData);
       video.removeEventListener("ended", onEnded);
       video.removeEventListener("play", onPlay);
       video.removeEventListener("pause", onPause);
     };
-  }, [src]);
+  }, [src, onReady]);
 
   const scheduleHide = useCallback(() => {
     if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
