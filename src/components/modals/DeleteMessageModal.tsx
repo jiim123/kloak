@@ -123,12 +123,44 @@ export const DeleteMessageModal = ({
 
   const displayContent = messageContent || (message ? message.content : "");
   const displayUser = useMessageUser(message?.user_id);
+  const members = useServerStore((s) => s.members);
+  const channels = useServerStore((s) => s.channels);
+
+  const usersMap = useMemo(() => {
+    const map = new Map<string, { username: string; display_name?: string | null; nickname?: string | null }>();
+    for (const m of members) {
+      if (m.user) {
+        map.set(m.user_id, {
+          username: m.user.username,
+          display_name: m.user.display_name,
+          nickname: m.nickname,
+        });
+      }
+    }
+    if (message?.user_id && displayUser && !map.has(message.user_id)) {
+      map.set(message.user_id, {
+        username: displayUser.username,
+        display_name: displayUser.display_name,
+      });
+    }
+    return map;
+  }, [members, message?.user_id, displayUser]);
+
+  const channelsMap = useMemo(() => {
+    const map = new Map<string, { name: string }>();
+    for (const c of channels) map.set(c.id, { name: c.name });
+    return map;
+  }, [channels]);
+
   const isPoll = isPollMessageContent(displayContent);
   const pollId = isPoll ? getPollIdFromContent(displayContent) : null;
   const pollLabel = usePollLabel(pollId);
   const { images, caption } = isPoll ? { images: [] as string[], caption: "" } : parseContentImages(displayContent);
   const hasImages = images.length > 0;
-  const displayName = displayUser?.display_name || displayUser?.username || "Unknown";
+  const previewText = isPoll
+    ? pollLabel
+    : getMessagePreview(caption || displayContent, 200, usersMap, channelsMap);
+  const hasPreviewText = Boolean(previewText && previewText.trim().length > 0);
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -138,36 +170,23 @@ export const DeleteMessageModal = ({
             <div className="text-base font-medium leading-none tracking-tight">{isPoll ? "Delete Poll" : "Delete Message"}</div>
           </div>
 
-          <div className="space-y-5 overflow-y-auto px-6 py-4">
-            <div className="space-y-2">
-              <p className="text-sm leading-6 text-foreground">
-                {isPoll
-                  ? "Are you sure you want to delete this poll? All votes will be lost and this action cannot be undone."
-                  : "Are you sure you want to delete this message? This action cannot be undone."}
-              </p>
-            </div>
+          <div className="space-y-4 overflow-y-auto px-6 py-4">
+            <p className="text-sm leading-6 text-foreground">
+              {isPoll
+                ? "Are you sure you want to delete this poll?"
+                : "Are you sure you want to delete this message?"}
+            </p>
 
-            {(message || messageContent) && (
+            {(message || messageContent) && (hasPreviewText || hasImages) && (
               <div className="border border-border bg-muted p-3">
-                <p className="text-sm font-medium leading-none text-foreground">Selected message</p>
-
-                <div className="mt-2">
-                  <p className="text-sm text-foreground">{displayName}</p>
-                  {displayUser?.username && (
-                    <p className="mt-1 text-xs text-muted-foreground">@{displayUser.username}</p>
-                  )}
-                </div>
-
-                {isPoll ? (
-                  <p className="mt-3 line-clamp-3 text-sm italic text-muted-foreground">{pollLabel}</p>
-                ) : (caption || !hasImages) && (
-                  <p className="mt-3 line-clamp-3 text-sm text-muted-foreground">
-                    {getMessagePreview(caption || displayContent, 200)}
+                {hasPreviewText && (
+                  <p className={`line-clamp-3 text-sm ${isPoll ? "italic text-muted-foreground" : "text-foreground"}`}>
+                    {previewText}
                   </p>
                 )}
 
                 {hasImages ? (
-                  <div className="mt-3 flex flex-wrap gap-1.5">
+                  <div className={`${hasPreviewText ? "mt-3 " : ""}flex flex-wrap gap-1.5`}>
                     {images.slice(0, 4).map((url, i) => (
                       <div key={i} className="relative">
                         <ResolvedImage url={url} className="h-20 w-20 rounded-md object-cover" />
