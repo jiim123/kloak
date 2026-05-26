@@ -59,9 +59,16 @@ export function useMessageMaps(): MessageMapsContextValue {
  */
 export function MessageMapsProvider({
   isDM,
+  participants,
   children,
 }: {
   isDM?: boolean;
+  /** DM/Group participants used to build usersMap when isDM is true. */
+  participants?: Array<{
+    id: string;
+    username: string;
+    display_name?: string | null;
+  }>;
   children: React.ReactNode;
 }) {
   const members = useServerStore((s) => s.members);
