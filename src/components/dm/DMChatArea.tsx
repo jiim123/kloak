@@ -413,6 +413,7 @@ export const DMChatArea = () => {
             otherUsername: isGroup ? getGroupDisplayName() : otherUser?.username || "user",
             replyingTo: dmInputReplyingTo,
             onCancelReply: () => setReplyingTo(null),
+            participants: mentionParticipants,
           }}
         />
       )}
