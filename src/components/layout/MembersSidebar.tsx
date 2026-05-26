@@ -49,7 +49,7 @@ import { Button } from "@/components/ui/button";
 import type { ServerMember, CustomServerRole, UserStatus } from "@/types";
 import { getEffectivePresence } from "@/lib/presence";
 import { hasRecentRealtimePresence } from "@/hooks/useRealtimeUsers";
-import { getUserFromCache } from "@/stores/userCacheStore";
+
 import { readCachedMemberCount, persistMemberCount } from "@/lib/serverMemberCount";
 import { LEFT_ALIGNED_USER_PROFILE_POPOVER, openUserProfileModal } from "@/lib/userProfilePopover";
 import { getUserFromCache, useUserCacheStore } from "@/stores/userCacheStore";
