@@ -1032,7 +1032,7 @@ export const MessageInput = ({
         }
       }
 
-      if (!isDM) {
+      {
         const isAutocompleteOpen = (showMentions && hasMentionOptions) || (showChannels && hasChannelOptions);
         const autocompleteKeys = ["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"];
         if (isAutocompleteOpen && autocompleteKeys.includes(e.key)) {
