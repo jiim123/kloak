@@ -1018,7 +1018,7 @@ const MediaLightbox = ({ item, onClose }: { item: MediaItem; onClose: () => void
                 />
               </AspectRatio>
             ) : (
-              <img
+              <ProxiedImg
                 src={item.media_url}
                 alt={item.title || "Media"}
                 className="max-h-[75vh] w-auto mx-auto object-contain rounded-xl"
