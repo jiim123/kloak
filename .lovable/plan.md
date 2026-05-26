@@ -1,42 +1,23 @@
-## Goal
+## Problem
 
-Make the Delete Message modal friendlier:
-- Resolve `<@uuid>` mentions to `@displayname` and `<#uuid>` channel tags to `#channelname` in the preview (no UUIDs, no generic `@user` fallback when data is available).
-- Simplify the modal hierarchy to: title → confirmation sentence → message preview → Cancel / Delete Message buttons.
+When editing a message that contains `<@uuid>` mentions or `<#uuid>` channel tags, the raw UUID format is loaded into the edit textarea instead of the readable `@username` / `#channel-name` form.
 
-## Changes
+## Root cause
 
-### `src/components/modals/DeleteMessageModal.tsx`
+`handleStartEditing` in `src/components/chat/MessageItem.tsx` (line ~836) passes `message.content` directly into `editStore.startEditing(...)`, which `MessageInput.tsx` then loads verbatim into the textarea (line 443: `setContent(editingMessage!.content)`).
 
-1. **Resolve mentions for the preview.** Pull `members` and `channels` from `useServerStore`, plus the DM/forum participant data already available via `useMessageUser`, and build:
-   - `usersMap: Map<userId, { username, display_name, nickname }>` from server members. For the message author (covers DM case where members list is empty), also seed the map with `displayUser`.
-   - `channelsMap: Map<channelId, { name }>` from server channels.
-   Pass both into `getMessagePreview(content, 200, usersMap)` and add a small wrapper that also calls `stripMarkdown(content, usersMap, channelsMap)` (since `getMessagePreview` doesn't currently accept a channels map — easiest fix: inline `stripMarkdown(...).slice(...)` here, or extend `getMessagePreview` to accept `channelsMap`). Preferred: extend `getMessagePreview` signature in `src/lib/message.ts` to accept an optional `channelsMap` and forward it to `stripMarkdown`.
+The save path already calls `convertMentionsForSend(trimmed)` (line 728) which converts `@name`/`#name` back to `<@uuid>`/`<#uuid>`, so converting at start of edit is round-trip safe.
 
-2. **Simplify modal layout.** Replace the current body with:
-   ```
-   <header>Delete Message</header>            // unchanged styling
-   <body>
-     <p>Are you sure you want to delete this message?</p>
-     <div class="preview">
-       {resolved caption text}
-       {image thumbnails grid, unchanged behavior}
-     </div>
-   </body>
-   <footer> Cancel | Delete Message </footer>  // unchanged
-   ```
-   Remove the "Selected message" label, the author name line, and the `@username` line. Preview container keeps the existing `border border-border bg-muted p-3` styling so it still reads as a quoted preview. Drop "This action cannot be undone." per the requested hierarchy (only the single confirmation sentence remains).
+## Fix
 
-3. **Poll variant** keeps existing copy ("Delete Poll" title, poll-specific sentence, `pollLabel` preview) but follows the same simplified hierarchy (no author block).
+### `src/components/chat/MessageItem.tsx`
+In `handleStartEditing`, replace `content: message.content` with `content: convertMentionsToReadable(message.content, usersMap, channelsMap)`. `convertMentionsToReadable` is already imported (line 57) and `usersMap` / `channelsMap` are already in scope via `useMessageMaps()`.
 
-4. **Empty preview guard.** If resolved caption is empty and there are no images (e.g. message was only a mention that resolved to nothing), fall back to showing the resolved text from `stripMarkdown(displayContent, usersMap, channelsMap)` so the preview is never blank when content exists.
+Add `usersMap` and `channelsMap` to the `useCallback` dependency array.
 
-### `src/lib/message.ts`
-
-- Extend `getMessagePreview` to accept an optional `channelsMap` parameter and pass it through to `stripMarkdown`. Backwards compatible (optional 4th arg).
+That's the entire change — one file, ~3 lines.
 
 ## Out of scope
 
-- No changes to message rendering, edit flow, or any other modal.
-- No changes to delete logic, RPCs, or stores.
-- No restyle beyond removing the now-unused author header block inside the preview card.
+- DM edits: DMs have no server members/channels context, so mentions in DMs are unusual; the existing DM save path (`dmEditMessage(..., trimmed)`) doesn't run `convertMentionsForSend`, so converting the prefilled content there would break round-trip. No change for DM edits.
+- No changes to MessageInput, editStore, save logic, or other components.
