@@ -215,7 +215,13 @@ const AttachmentItem = memo(function AttachmentItem({
   onImageClick?: (url: string) => void;
   uploaderName?: string;
 }) {
-  const { url: signedUrl, refresh } = useSignedUrl(attachment.file_url, { withRefresh: true });
+  // Only fetch the signed blob URL once the attachment scrolls near the viewport.
+  // This prevents flooding the edge function with parallel requests on channel switch.
+  const [inViewRef, inView] = useInView<HTMLDivElement>({ rootMargin: "600px", once: true });
+  const { url: signedUrl, refresh } = useSignedUrl(
+    inView ? attachment.file_url : null,
+    { withRefresh: true },
+  );
   const isImage = attachment.file_type?.startsWith("image/");
   const isVideo = attachment.file_type?.startsWith("video/");
   const isAudio = attachment.file_type?.startsWith("audio/");
