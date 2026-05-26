@@ -725,7 +725,7 @@ export const MessageInput = ({
       setIsSending(true);
       try {
         if (editingMessage.isDM) {
-          await dmEditMessage(editingMessage.id, user.id, trimmed);
+          await dmEditMessage(editingMessage.id, user.id, convertMentionsForSend(trimmed));
         } else {
           const finalContent = convertMentionsForSend(trimmed);
           await channelEditMessage(editingMessage.id, finalContent, user.id);
