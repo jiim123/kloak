@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { useMessageStore } from "@/stores/messageStore";
 import { useAuthStore } from "@/stores/authStore";
+import { useServerStore } from "@/stores/serverStore";
 import { useMessageUser } from "@/stores/userCacheStore";
 import { getMessagePreview } from "@/lib/message";
 import { getSignedAttachmentUrl } from "@/lib/signedUrl";
