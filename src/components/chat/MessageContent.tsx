@@ -392,7 +392,7 @@ export const parseTextContent = (
       return escapeHtml(url); // Don't linkify unsafe URLs
     }
     if (isImageUrl(url)) {
-      return `<img src="${escapeHtml(url)}" alt="Image" class="block mr-auto max-w-full sm:max-w-[400px] max-h-[60vh] sm:max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90 object-contain" loading="lazy" data-image-url="${escapeHtml(url)}" data-loading-bg="true" style="min-height:40px;max-height:350px;background:rgb(24 24 24 / 40%)" />`;
+      return `<img src="data:image/gif;base64,R0lGODlhAQABAAAAACwAAAAAAQABAAA=" alt="Image" class="block mr-auto max-w-full sm:max-w-[400px] max-h-[60vh] sm:max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90 object-contain" loading="lazy" data-image-url="${escapeHtml(url)}" data-loading-bg="true" style="visibility:hidden;min-height:40px;max-height:350px;background:rgb(24 24 24 / 40%)" />`;
     }
     return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="message-link">${escapeHtml(url)}</a>`;
   });
