@@ -685,6 +685,7 @@ export const MembersSidebar = () => {
   );
 
   const handleToggleOfflineSection = useCallback(() => {
+    userToggledOfflineRef.current = true;
     setIsOfflineExpanded((prev) => {
       const nextExpanded = !prev;
       if (nextExpanded && !offlineLoadedOnceRef.current) {
@@ -693,6 +694,33 @@ export const MembersSidebar = () => {
       return nextExpanded;
     });
   }, [loadOfflineMembers]);
+
+  // Auto-collapse offline section on very large servers (>1000) to optimize display,
+  // unless the user has explicitly toggled it.
+  useEffect(() => {
+    if (userToggledOfflineRef.current) return;
+    if (totalMemberCount == null) return;
+    if (totalMemberCount > OFFLINE_AUTO_HIDE_THRESHOLD) {
+      setIsOfflineExpanded(false);
+    } else {
+      setIsOfflineExpanded(true);
+    }
+  }, [totalMemberCount]);
+
+  // Reset manual-toggle tracking when switching servers so per-server defaults apply.
+  useEffect(() => {
+    userToggledOfflineRef.current = false;
+  }, [currentServer?.id]);
+
+  // Auto-load the first page of offline members when the section is expanded
+  // by default (small/medium servers), so users that go offline appear without a click.
+  useEffect(() => {
+    if (!currentServer?.id || !user?.id) return;
+    if (!isOfflineExpanded) return;
+    if (offlineLoadedOnceRef.current) return;
+    if (totalMemberCount != null && totalMemberCount > OFFLINE_AUTO_HIDE_THRESHOLD) return;
+    void loadOfflineMembers({ reset: true });
+  }, [currentServer?.id, user?.id, isOfflineExpanded, totalMemberCount, loadOfflineMembers]);
 
   const confirmMassBan = useCallback(() => {
     if (massBanSelected.size === 0) return;
