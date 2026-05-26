@@ -221,8 +221,10 @@ const AttachmentItem = memo(function AttachmentItem({
 
   // Compute constrained dimensions to reserve space and prevent layout shift
   const reservedStyle = useMemo(() => {
-    if (!isImage || !attachment.width || !attachment.height) {
-      return isImage ? { width: 300, height: 200 } : undefined;
+    if ((!isImage && !isVideo) || !attachment.width || !attachment.height) {
+      if (isImage) return { width: 300, height: 200 };
+      if (isVideo) return { width: 400, height: 225 };
+      return undefined;
     }
     const maxW = 400;
     const maxH = 300;
@@ -237,72 +239,130 @@ const AttachmentItem = memo(function AttachmentItem({
       h = maxH;
     }
     return { width: w, height: h };
-  }, [isImage, attachment.width, attachment.height]);
+  }, [isImage, isVideo, attachment.width, attachment.height]);
 
-  // Show a compact loader while the signed URL resolves (don't return null —
-  // the attachment URL is already stripped from displayContent)
-  if (!signedUrl && (isImage || isVideo || isAudio)) {
+  // Fade-in state per media element — keeps a ghost placeholder visible until
+  // the bitmap is decoded so channel switches feel seamless even when the
+  // signed URL is cached and the <img> just remounted.
+  const [isLoaded, setIsLoaded] = useState(false);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    setIsLoaded(false);
+  }, [signedUrl]);
+
+  useEffect(() => {
+    const img = imgRef.current;
+    if (!img || !signedUrl) return;
+    // If the cached blob is already decoded by the browser, complete fires
+    // synchronously and we can flip to loaded immediately.
+    if (img.complete && img.naturalWidth > 0) {
+      if (typeof img.decode === "function") {
+        img.decode().then(() => setIsLoaded(true)).catch(() => setIsLoaded(true));
+      } else {
+        setIsLoaded(true);
+      }
+    }
+  }, [signedUrl]);
+
+  // Audio has no visual surface — render compact loader/player inline.
+  if (isAudio) {
+    if (!signedUrl) {
+      return (
+        <div className="flex items-center justify-center rounded-lg bg-muted/20 h-12 w-[280px]">
+          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+        </div>
+      );
+    }
     return (
-      <div
-        className="flex items-center justify-center rounded-lg bg-muted/20"
-        style={reservedStyle ? { width: reservedStyle.width, height: reservedStyle.height } : undefined}
-      >
-        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-      </div>
+      <AudioPlayer
+        src={signedUrl}
+        fileName={attachment.file_name}
+        fileSize={attachment.file_size}
+        onError={refresh}
+      />
     );
   }
 
-  return (
-    <div className={cn("relative", isVideo && "w-full max-w-[480px]")}>
-      {isImage ? (
+  if (isImage) {
+    return (
+      <div
+        className="relative rounded-lg overflow-hidden bg-muted/30"
+        style={reservedStyle ? { width: reservedStyle.width, height: reservedStyle.height } : undefined}
+      >
+        {/* Ghost placeholder — shown until the image decodes */}
         <div
-          className="rounded-lg overflow-hidden bg-muted/30"
-          style={reservedStyle ? { width: reservedStyle.width, height: reservedStyle.height } : undefined}
-        >
+          className={cn(
+            "absolute inset-0 bg-muted/40 transition-opacity duration-200",
+            isLoaded && signedUrl ? "opacity-0" : "opacity-100 animate-pulse",
+          )}
+          aria-hidden
+        />
+        {signedUrl && (
           <img
+            ref={imgRef}
             src={signedUrl}
             alt={attachment.file_name}
             width={reservedStyle?.width}
             height={reservedStyle?.height}
-            className="w-full h-full object-contain rounded-lg cursor-pointer hover:opacity-90"
+            className={cn(
+              "relative w-full h-full object-contain rounded-lg cursor-pointer hover:opacity-90 transition-opacity duration-200",
+              isLoaded ? "opacity-100" : "opacity-0",
+            )}
             decoding="async"
             loading="lazy"
-            onClick={() => signedUrl && onImageClick?.(signedUrl)}
-            onError={refresh}
+            onClick={() => onImageClick?.(signedUrl)}
+            onLoad={() => setIsLoaded(true)}
+            onError={() => { setIsLoaded(false); refresh(); }}
           />
-        </div>
-      ) : isVideo ? (
-        <VideoPlayer src={signedUrl!} fileName={attachment.file_name} onError={refresh} />
-      ) : isAudio ? (
-        <AudioPlayer
-          src={signedUrl!}
-          fileName={attachment.file_name}
-          fileSize={attachment.file_size}
-          onError={refresh}
+        )}
+      </div>
+    );
+  }
+
+  if (isVideo) {
+    return (
+      <div
+        className="relative rounded-2xl overflow-hidden bg-muted/30 w-full max-w-[480px]"
+        style={reservedStyle ? { aspectRatio: `${reservedStyle.width} / ${reservedStyle.height}` } : undefined}
+      >
+        <div
+          className={cn(
+            "absolute inset-0 bg-muted/40 transition-opacity duration-200 pointer-events-none z-10",
+            isLoaded && signedUrl ? "opacity-0" : "opacity-100 animate-pulse",
+          )}
+          aria-hidden
         />
-      ) : (
-        (() => {
-          const Icon = getFileIcon(attachment.file_type);
-          const sizeLabel = attachment.file_size
-            ? attachment.file_size >= 1024 * 1024
-              ? `${(attachment.file_size / (1024 * 1024)).toFixed(1)} MB`
-              : `${Math.round(attachment.file_size / 1024)} KB`
-            : null;
-          return (
-            <a
-              href={signedUrl ?? attachment.file_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 p-3 bg-secondary rounded-lg hover:bg-secondary/80 max-w-[400px] transition-colors"
-            >
-              <Icon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-              <span className="text-sm font-medium truncate">{attachment.file_name}</span>
-              {sizeLabel && <span className="text-xs text-muted-foreground flex-shrink-0">({sizeLabel})</span>}
-            </a>
-          );
-        })()
-      )}
-    </div>
+        {signedUrl && (
+          <VideoPlayer
+            src={signedUrl}
+            fileName={attachment.file_name}
+            onError={() => { setIsLoaded(false); refresh(); }}
+            onReady={() => setIsLoaded(true)}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // Generic file attachment
+  const Icon = getFileIcon(attachment.file_type);
+  const sizeLabel = attachment.file_size
+    ? attachment.file_size >= 1024 * 1024
+      ? `${(attachment.file_size / (1024 * 1024)).toFixed(1)} MB`
+      : `${Math.round(attachment.file_size / 1024)} KB`
+    : null;
+  return (
+    <a
+      href={signedUrl ?? attachment.file_url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-3 p-3 bg-secondary rounded-lg hover:bg-secondary/80 max-w-[400px] transition-colors"
+    >
+      <Icon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+      <span className="text-sm font-medium truncate">{attachment.file_name}</span>
+      {sizeLabel && <span className="text-xs text-muted-foreground flex-shrink-0">({sizeLabel})</span>}
+    </a>
   );
 });
 
