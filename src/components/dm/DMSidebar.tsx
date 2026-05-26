@@ -43,6 +43,8 @@ export const DMSidebar = () => {
     isLoading,
   } = useDMStore();
   const { getUnreadCount, markAsRead } = useUnreadDMsContext();
+  // Re-render when realtime presence patches the user cache so DM status dots update live.
+  useUserCacheStore((s) => s._version);
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const isFriendsRoute = location.pathname === "/app/friends";
