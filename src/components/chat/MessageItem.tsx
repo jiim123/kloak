@@ -274,26 +274,28 @@ const AttachmentItem = memo(function AttachmentItem({
 
   // Audio has no visual surface — render compact loader/player inline.
   if (isAudio) {
-    if (!signedUrl) {
-      return (
-        <div className="flex items-center justify-center rounded-lg bg-muted/20 h-12 w-[280px]">
-          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-        </div>
-      );
-    }
     return (
-      <AudioPlayer
-        src={signedUrl}
-        fileName={attachment.file_name}
-        fileSize={attachment.file_size}
-        onError={refresh}
-      />
+      <div ref={inViewRef}>
+        {!signedUrl ? (
+          <div className="flex items-center justify-center rounded-lg bg-muted/20 h-12 w-[280px]">
+            {inView && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+          </div>
+        ) : (
+          <AudioPlayer
+            src={signedUrl}
+            fileName={attachment.file_name}
+            fileSize={attachment.file_size}
+            onError={refresh}
+          />
+        )}
+      </div>
     );
   }
 
   if (isImage) {
     return (
       <div
+        ref={inViewRef}
         className="relative rounded-lg overflow-hidden bg-muted/30"
         style={reservedStyle ? { width: reservedStyle.width, height: reservedStyle.height } : undefined}
       >
@@ -330,6 +332,7 @@ const AttachmentItem = memo(function AttachmentItem({
   if (isVideo) {
     return (
       <div
+        ref={inViewRef}
         className="relative rounded-2xl overflow-hidden bg-muted/30 w-full max-w-[480px]"
         style={reservedStyle ? { aspectRatio: `${reservedStyle.width} / ${reservedStyle.height}` } : undefined}
       >
@@ -361,6 +364,7 @@ const AttachmentItem = memo(function AttachmentItem({
     : null;
   return (
     <a
+      ref={inViewRef as unknown as React.Ref<HTMLAnchorElement>}
       href={signedUrl ?? attachment.file_url}
       target="_blank"
       rel="noopener noreferrer"
