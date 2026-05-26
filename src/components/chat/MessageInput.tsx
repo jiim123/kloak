@@ -1047,7 +1047,7 @@ export const MessageInput = ({
 
       // Format shortcuts (all modes: channel, DM, forum, reply, edit, etc.)
       if (e.ctrlKey || e.metaKey) {
-        const formatMap: Record<string, string> = { b: "bold", i: "italic", u: "underline", c: "code", k: "codeblock", s: "spoiler" };
+        const formatMap: Record<string, string> = { b: "bold", i: "italic", u: "underline", k: "code", s: "spoiler" };
         const fmt = formatMap[e.key.toLowerCase()];
         if (fmt) {
           e.preventDefault();
