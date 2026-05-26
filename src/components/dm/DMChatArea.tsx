@@ -417,5 +417,6 @@ export const DMChatArea = () => {
         />
       )}
     </div>
+    </MessageMapsProvider>
   );
 };
