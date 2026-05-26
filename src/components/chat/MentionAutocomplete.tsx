@@ -104,7 +104,7 @@ export const MentionAutocomplete = ({
     const seen = new Set<string>();
     const blockedSet = new Set(blockedUserIds);
 
-    if (isAdmin) {
+    if (isAdmin && !isDMMode) {
       if ("everyone".includes(query.toLowerCase())) {
         result.push({ type: "everyone", label: "everyone", id: "everyone" });
       }
@@ -114,18 +114,20 @@ export const MentionAutocomplete = ({
     }
 
     const searchQuery = query.toLowerCase();
-    roles
-      .filter((role) => role.name !== "@everyone" && role.name.toLowerCase().includes(searchQuery))
-      .forEach((role) => {
-        if (!role.id || seen.has(role.id)) return;
-        seen.add(role.id);
-        result.push({
-          type: "role",
-          id: role.id,
-          label: role.name,
-          role,
+    if (!isDMMode) {
+      roles
+        .filter((role) => role.name !== "@everyone" && role.name.toLowerCase().includes(searchQuery))
+        .forEach((role) => {
+          if (!role.id || seen.has(role.id)) return;
+          seen.add(role.id);
+          result.push({
+            type: "role",
+            id: role.id,
+            label: role.name,
+            role,
+          });
         });
-      });
+    }
 
     candidateUsers
       .filter(
