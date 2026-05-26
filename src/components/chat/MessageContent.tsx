@@ -1,5 +1,6 @@
 import { useMemo, useCallback, useEffect, useState, useRef } from "react";
 import { isSupabaseAttachmentUrl, resolveSignedUrl, getSignedAttachmentUrl } from "@/lib/signedUrl";
+import { getProxiedAssetUrl } from "@/lib/proxyAssetUrl";
 import { replaceNativeEmojisInElement } from "@/lib/fluentEmoji";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
