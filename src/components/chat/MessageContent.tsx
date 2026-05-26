@@ -962,6 +962,29 @@ export const MessageContent = ({
 
   const imageUrls = useMemo(() => allUrls.filter((url) => isImageUrl(url)), [allUrls]);
 
+  // Resolve external image URLs to proxied versions so the lightbox (and its
+  // thumbnail nav) never fetches third-party origins directly.
+  const [resolvedImageUrls, setResolvedImageUrls] = useState<string[]>(imageUrls);
+  useEffect(() => {
+    let cancelled = false;
+    if (imageUrls.length === 0) {
+      setResolvedImageUrls([]);
+      return;
+    }
+    Promise.all(
+      imageUrls.map((u) =>
+        isSupabaseAttachmentUrl(u)
+          ? resolveSignedUrl(u).then((s) => s || u)
+          : getProxiedAssetUrl(u),
+      ),
+    ).then((resolved) => {
+      if (!cancelled) setResolvedImageUrls(resolved);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [imageUrls]);
+
   const inviteCodes = useMemo(() => {
     if (!shouldComputeInviteMetadata || allUrls.length === 0) return [];
     const codes = new Set<string>();
