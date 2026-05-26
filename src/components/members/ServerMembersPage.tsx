@@ -116,11 +116,11 @@ const MemberCheckbox = ({
   label: string;
   color?: string;
 }) => (
-  <label className="flex h-6 items-center gap-2 text-[12px] font-normal text-[#D7D9DF]">
+  <label className="flex h-6 items-center gap-2 text-[12px] font-normal text-foreground">
     <Checkbox
       checked={checked}
       onCheckedChange={(value) => onCheckedChange(value === true)}
-      className="h-3.5 w-3.5 rounded-none border-[#C2C6D0] bg-transparent data-[state=checked]:border-[#FFFFFF] data-[state=checked]:bg-[#FFFFFF] data-[state=checked]:text-[#2F323B]"
+      className="h-3.5 w-3.5 rounded-none border-border bg-transparent data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
     />
     <span className="truncate" style={color ? { color } : undefined}>
       {label}
@@ -353,7 +353,7 @@ export const ServerMembersPage = () => {
   }
 
   return (
-    <div className="h-full overflow-y-auto bg-layout-members text-[#D7D9DF]">
+    <div className="h-full overflow-y-auto bg-layout-members text-foreground">
       <div className="mx-auto w-full max-w-6xl px-4 py-4 sm:px-6 sm:py-6">
           <div className="mb-3 flex min-h-11 items-center gap-3">
             <div className="relative w-[220px] shrink-0">
@@ -362,12 +362,12 @@ export const ServerMembersPage = () => {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search members"
-                className="h-8 w-full rounded-full border border-white/8 bg-[#333641] pl-9 pr-3 text-[13px] text-[#E8EAEE] outline-none placeholder:text-[#888E9A] focus:border-white/80"
+                className="h-8 w-full rounded-full border border-white/8 bg-card pl-9 pr-3 text-[13px] text-[#E8EAEE] outline-none placeholder:text-[#888E9A] focus:border-white/80"
               />
             </div>
 
             {selectedMemberIds.size > 0 && (
-              <div className="flex min-h-8 flex-wrap items-center gap-2 rounded-full border border-white/10 bg-[#333641] px-3 py-1.5 text-[12px] text-[#D7D9DF]">
+              <div className="flex min-h-8 flex-wrap items-center gap-2 rounded-full border border-white/10 bg-card px-3 py-1.5 text-[12px] text-foreground">
                 <span className="font-medium text-white">{selectedMemberIds.size} selected</span>
                 {canKickMembers && (
                   <button
@@ -394,7 +394,7 @@ export const ServerMembersPage = () => {
                 <button
                   type="button"
                   onClick={clearSelection}
-                  className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[#B5BAC5] transition-colors hover:bg-white/8 hover:text-white"
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-white/8 hover:text-white"
                   aria-label="Clear selection"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -407,7 +407,7 @@ export const ServerMembersPage = () => {
                 <button
                   type="button"
                   className={cn(
-                    "ml-auto flex h-8 w-8 items-center justify-center rounded-[4px] text-[#B5BAC5] transition-colors hover:bg-white/8 hover:text-white",
+                    "ml-auto flex h-8 w-8 items-center justify-center rounded-[4px] text-muted-foreground transition-colors hover:bg-white/8 hover:text-white",
                     activeFilterCount > 0 && "text-white",
                   )}
                   aria-label="Filter members"
@@ -418,11 +418,11 @@ export const ServerMembersPage = () => {
               <PopoverContent
                 align="end"
                 sideOffset={8}
-                className="w-[660px] rounded-[4px] border border-white/10 bg-[#555965] p-3 text-[#D7D9DF] shadow-2xl"
+                className="w-[660px] rounded-[4px] border border-white/10 bg-card p-3 text-foreground shadow-2xl"
               >
                 <div className="grid grid-cols-4 gap-8">
               <div>
-                <div className="mb-2 text-[12px] font-semibold text-[#BFC4CF]">Roles</div>
+                <div className="mb-2 text-[12px] font-semibold text-muted-foreground">Roles</div>
                 <div className="space-y-1">
                   {filterRoleOptions.map((role) => (
                     <MemberCheckbox
@@ -437,7 +437,7 @@ export const ServerMembersPage = () => {
               </div>
 
               <div>
-                <div className="mb-2 text-[12px] font-semibold text-[#BFC4CF]">Last online</div>
+                <div className="mb-2 text-[12px] font-semibold text-muted-foreground">Last online</div>
                 <div className="space-y-1">
                   {LAST_ONLINE_OPTIONS.map((option) => (
                     <MemberCheckbox
@@ -451,7 +451,7 @@ export const ServerMembersPage = () => {
               </div>
 
               <div>
-                <div className="mb-2 text-[12px] font-semibold text-[#BFC4CF]">Joined</div>
+                <div className="mb-2 text-[12px] font-semibold text-muted-foreground">Joined</div>
                 <div className="space-y-1">
                   {JOINED_OPTIONS.map((option) => (
                     <MemberCheckbox
@@ -465,7 +465,7 @@ export const ServerMembersPage = () => {
               </div>
 
               <div>
-                <div className="mb-2 text-[12px] font-semibold text-[#BFC4CF]">User types</div>
+                <div className="mb-2 text-[12px] font-semibold text-muted-foreground">User types</div>
                 <div className="space-y-1">
                   <MemberCheckbox
                     checked={userTypeFilters.has("users")}
@@ -500,7 +500,7 @@ export const ServerMembersPage = () => {
               onCheckedChange={(value) => toggleSelectAllRendered(value === true)}
               disabled={selectableRenderedMembers.length === 0}
               aria-label="Select visible members"
-              className="h-3.5 w-3.5 rounded-none border-[#C2C6D0] bg-transparent data-[state=checked]:border-[#FFFFFF] data-[state=checked]:bg-[#FFFFFF] data-[state=checked]:text-[#2F323B]"
+              className="h-3.5 w-3.5 rounded-none border-border bg-transparent data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
             />
           </div>
         )}
@@ -521,9 +521,9 @@ export const ServerMembersPage = () => {
 
       <div>
         {isMembersLoading && members.length === 0 ? (
-          <div className="px-4 py-6 text-sm font-medium text-[#B5BAC5]">Loading members...</div>
+          <div className="px-4 py-6 text-sm font-medium text-muted-foreground">Loading members...</div>
         ) : visibleMembers.length === 0 ? (
-          <div className="px-4 py-6 text-sm font-medium text-[#B5BAC5]">No members found.</div>
+          <div className="px-4 py-6 text-sm font-medium text-muted-foreground">No members found.</div>
         ) : (
           renderedMembers.map((member) => {
             const primaryRole = [...(member.roles || [])].sort((a, b) => b.position - a.position)[0];
@@ -552,7 +552,7 @@ export const ServerMembersPage = () => {
                         onCheckedChange={(value) => toggleMemberSelection(member, value === true)}
                         disabled={!canSelect}
                         aria-label={`Select ${getMemberName(member)}`}
-                        className="h-3.5 w-3.5 rounded-none border-[#C2C6D0] bg-transparent data-[state=checked]:border-[#FFFFFF] data-[state=checked]:bg-[#FFFFFF] data-[state=checked]:text-[#2F323B]"
+                        className="h-3.5 w-3.5 rounded-none border-border bg-transparent data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                       />
                     </div>
                   );
@@ -584,7 +584,7 @@ export const ServerMembersPage = () => {
                       BOT
                     </span>
                   )}
-                  {member.user?.is_bot && <Bot className="h-3.5 w-3.5 shrink-0 text-[#B5BAC5]" />}
+                  {member.user?.is_bot && <Bot className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
                 </div>
 
                 <div className="truncate text-[#E1E3E8]">{formatElapsed(member.joined_at)}</div>
@@ -630,7 +630,7 @@ export const ServerMembersPage = () => {
                       <PopoverTrigger asChild>
                         <button
                           type="button"
-                          className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-[#8F96A3] text-[#B5BAC5] transition-colors hover:border-[#D7D9DF] hover:text-white"
+                          className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:border-[#D7D9DF] hover:text-white"
                           aria-label={`Manage roles for ${getMemberName(member)}`}
                         >
                           <Plus className="h-3 w-3" />
@@ -639,7 +639,7 @@ export const ServerMembersPage = () => {
                       <PopoverContent
                         align="end"
                         sideOffset={6}
-                        className="w-56 rounded-[4px] border border-white/10 bg-[#2F323B] p-2 text-[#D7D9DF] shadow-xl"
+                        className="w-56 rounded-[4px] border border-white/10 bg-[#2F323B] p-2 text-foreground shadow-xl"
                       >
                         <div className="mb-2 px-1 text-[11px] font-semibold uppercase text-[#AEB4BF]">Roles</div>
                         <div className="max-h-64 space-y-1 overflow-y-auto">
@@ -669,7 +669,7 @@ export const ServerMembersPage = () => {
             <button
               type="button"
               onClick={() => setMemberDisplayCount((count) => count + 50)}
-              className="text-xs font-normal text-[#BFC4CF] transition-colors hover:text-white"
+              className="text-xs font-normal text-muted-foreground transition-colors hover:text-white"
             >
               Show more ({visibleMembers.length - memberDisplayCount} remaining)
             </button>

@@ -11,7 +11,7 @@ import { getPollIdFromContent, isPollMessageContent, usePollLabel } from "@/lib/
 import type { Message } from "@/types";
 
 const MODAL_CONTENT_CLASS =
-  "max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-[#4a4f5a] bg-[#333842] p-0 text-[#f4f5f7] shadow-2xl sm:max-w-[448px]";
+  "max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-border bg-card p-0 text-foreground shadow-2xl sm:max-w-[448px]";
 
 interface DeleteMessageModalProps {
   message?: Message | null;
@@ -133,13 +133,13 @@ export const DeleteMessageModal = ({
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className={MODAL_CONTENT_CLASS} hideCloseButton>
         <div className="flex max-h-[82vh] flex-col overflow-hidden">
-          <div className="border-b border-[#2b3039] bg-[#2f343d] px-5 py-3">
+          <div className="border-b border-border bg-muted px-5 py-3">
             <div className="text-base font-medium leading-none tracking-tight">{isPoll ? "Delete Poll" : "Delete Message"}</div>
           </div>
 
           <div className="space-y-5 overflow-y-auto px-6 py-4">
             <div className="space-y-2">
-              <p className="text-sm leading-6 text-[#f3f4f7]">
+              <p className="text-sm leading-6 text-foreground">
                 {isPoll
                   ? "Are you sure you want to delete this poll? All votes will be lost and this action cannot be undone."
                   : "Are you sure you want to delete this message? This action cannot be undone."}
@@ -147,13 +147,13 @@ export const DeleteMessageModal = ({
             </div>
 
             {(message || messageContent) && (
-              <div className="border border-[#4a4f5a] bg-[#2f343d] p-3">
-                <p className="text-sm font-medium leading-none text-[#f3f4f7]">Selected message</p>
+              <div className="border border-border bg-muted p-3">
+                <p className="text-sm font-medium leading-none text-foreground">Selected message</p>
 
                 <div className="mt-2">
-                  <p className="text-sm text-[#d7dbe3]">{displayName}</p>
+                  <p className="text-sm text-foreground">{displayName}</p>
                   {displayUser?.username && (
-                    <p className="mt-1 text-xs text-[#9ea4af]">@{displayUser.username}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">@{displayUser.username}</p>
                   )}
                 </div>
 
@@ -173,7 +173,7 @@ export const DeleteMessageModal = ({
                       </div>
                     ))}
                     {images.length > 4 && (
-                      <div className="flex h-20 w-20 items-center justify-center rounded-md bg-[#3a404b] text-xs text-[#b8bec8]">
+                      <div className="flex h-20 w-20 items-center justify-center rounded-md bg-card text-xs text-muted-foreground">
                         +{images.length - 4} more
                       </div>
                     )}
@@ -183,13 +183,13 @@ export const DeleteMessageModal = ({
             )}
           </div>
 
-          <div className="flex items-center justify-end gap-3 border-t border-[#2c3139] bg-[#30353f] px-5 py-3">
+          <div className="flex items-center justify-end gap-3 border-t border-border bg-card px-5 py-3">
             <Button
               type="button"
               variant="ghost"
               onClick={handleClose}
               disabled={isDeleting}
-              className="h-9 rounded-[3px] px-4 text-[#b9bec8] hover:bg-transparent hover:text-white"
+              className="h-9 rounded-[3px] px-4 text-muted-foreground hover:bg-transparent hover:text-white"
             >
               Cancel
             </Button>

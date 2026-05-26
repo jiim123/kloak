@@ -117,7 +117,7 @@ export const JoinServerModal = () => {
   };
 
   const modalContentClass =
-    "max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-[#4a4f5a] bg-[#333842] p-0 text-[#f4f5f7] shadow-2xl sm:max-w-[448px]";
+    "max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-border bg-card p-0 text-foreground shadow-2xl sm:max-w-[448px]";
 
   return (
     <>
@@ -138,7 +138,7 @@ export const JoinServerModal = () => {
             </div>
             <div className="space-y-1 text-center">
               <p className="text-[17px] font-medium leading-6 text-white">Unable to join server</p>
-              <p className="max-w-[300px] text-[13px] leading-5 text-[#B2B5BE]">
+              <p className="max-w-[300px] text-[13px] leading-5 text-muted-foreground">
                 You have been banned from this server.
               </p>
             </div>
@@ -148,7 +148,7 @@ export const JoinServerModal = () => {
                 setShowBannedModal(false);
                 handleClose();
               }}
-              className="h-9 rounded-[4px] border-[#42464F] px-4 text-[13px] text-[#E2E4E9] hover:bg-[#30333D]"
+              className="h-9 rounded-[4px] border-border px-4 text-[13px] text-[#E2E4E9] hover:bg-[#30333D]"
             >
               Close
             </Button>
@@ -160,7 +160,7 @@ export const JoinServerModal = () => {
       <Dialog open={isOpen && !showBannedModal} onOpenChange={(open) => !open && handleClose()}>
         <DialogContent className={modalContentClass}>
           <form onSubmit={handleSubmit(onSubmit)} className="flex max-h-[82vh] flex-col overflow-hidden">
-            <div className="border-b border-[#2b3039] bg-[#2f343d] px-5 py-3">
+            <div className="border-b border-border bg-muted px-5 py-3">
               <div className="text-base font-medium leading-none tracking-tight">
                 Join by invite
               </div>
@@ -172,11 +172,11 @@ export const JoinServerModal = () => {
                 <div className="flex items-center justify-between gap-3">
                   <Label
                     htmlFor="inviteCode"
-                    className="text-xs font-medium uppercase tracking-wide text-[#c4c8d0]"
+                    className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
                   >
                     Invite code
                   </Label>
-                  <span className="font-mono text-xs text-[#9ea4af]">{inviteCode.length}/8</span>
+                  <span className="font-mono text-xs text-muted-foreground">{inviteCode.length}/8</span>
                 </div>
                 <div className="relative mt-2">
                   <Input
@@ -184,7 +184,7 @@ export const JoinServerModal = () => {
                     placeholder="ABC12XYZ"
                     {...register("inviteCode")}
                     onChange={handleInviteChange}
-                    className={`h-12 rounded-none border-0 border-b border-white/80 bg-transparent px-0 pr-8 text-center font-mono text-lg font-medium uppercase tracking-[0.28em] text-[#f3f4f7] shadow-none outline-none placeholder:text-[#767B85] focus-visible:ring-0 focus-visible:ring-offset-0 ${
+                    className={`h-12 rounded-none border-0 border-b border-white/80 bg-transparent px-0 pr-8 text-center font-mono text-lg font-medium uppercase tracking-[0.28em] text-foreground shadow-none outline-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 ${
                       inviteError ? "border-red-300 focus-visible:border-red-300" : ""
                     }`}
                     autoFocus
@@ -199,23 +199,23 @@ export const JoinServerModal = () => {
                 {inviteError ? (
                   <p className="mt-2 text-xs leading-5 text-red-300">{inviteError}</p>
                 ) : (
-                  <p className="mt-2 text-xs leading-5 text-[#b8bec8]">
+                  <p className="mt-2 text-xs leading-5 text-muted-foreground">
                     Invite codes use letters and numbers only.
                   </p>
                 )}
               </div>
 
-              <div className="border border-[#4a4f5a] bg-[#2f343d] p-3">
-                <p className="text-sm font-medium leading-none text-[#f3f4f7]">Example invite</p>
-                <p className="mt-2 font-mono text-xs leading-5 tracking-[0.18em] text-[#c4c8d0]">ABC12XYZ</p>
+              <div className="border border-border bg-muted p-3">
+                <p className="text-sm font-medium leading-none text-foreground">Example invite</p>
+                <p className="mt-2 font-mono text-xs leading-5 tracking-[0.18em] text-muted-foreground">ABC12XYZ</p>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 border-t border-[#2c3139] bg-[#30353f] px-5 py-3">
+            <div className="flex items-center justify-end gap-3 border-t border-border bg-card px-5 py-3">
               <Button
                 type="submit"
                 disabled={isJoinDisabled}
-                className="h-9 rounded-[3px] bg-[#d7dbe3] px-5 font-medium text-[#363b44] hover:bg-white disabled:bg-[#454b55] disabled:text-[#858b96] disabled:opacity-100"
+                className="h-9 rounded-[3px] bg-primary px-5 font-medium text-primary-foreground hover:bg-white disabled:bg-[#454b55] disabled:text-muted-foreground disabled:opacity-100"
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Join Server

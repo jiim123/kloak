@@ -64,11 +64,11 @@ const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime", "vide
 const MAX_IMAGE_SIZE = 3 * 1024 * 1024;
 const MAX_VIDEO_SIZE = 10 * 1024 * 1024;
 const MEDIA_MODAL_CONTENT_CLASS =
-  "max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-[#4a4f5a] bg-[#333842] p-0 text-[#f4f5f7] shadow-2xl sm:max-w-[520px]";
+  "max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-border bg-card p-0 text-foreground shadow-2xl sm:max-w-[520px]";
 const MEDIA_MODAL_GHOST_BUTTON_CLASS =
-  "h-9 rounded-[3px] px-4 text-[#b9bec8] hover:bg-transparent hover:text-white";
+  "h-9 rounded-[3px] px-4 text-muted-foreground hover:bg-transparent hover:text-white";
 const MEDIA_MODAL_PRIMARY_BUTTON_CLASS =
-  "h-9 rounded-[3px] bg-[#d7dbe3] px-5 font-medium text-[#363b44] hover:bg-white disabled:bg-[#454b55] disabled:text-[#858b96] disabled:opacity-100";
+  "h-9 rounded-[3px] bg-primary px-5 font-medium text-primary-foreground hover:bg-white disabled:bg-[#454b55] disabled:text-muted-foreground disabled:opacity-100";
 
 // ─── Security: extension blocklists ──────────────────────────────────────────
 
@@ -614,8 +614,8 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
       >
         <DialogContent className={MEDIA_MODAL_CONTENT_CLASS}>
           <div className="flex max-h-[82vh] flex-col overflow-hidden">
-            <div className="border-b border-[#2b3039] bg-[#2f343d] px-5 py-3">
-              <DialogTitle className="text-base font-medium leading-none tracking-tight text-[#f4f5f7]">
+            <div className="border-b border-border bg-muted px-5 py-3">
+              <DialogTitle className="text-base font-medium leading-none tracking-tight text-foreground">
                 Add media
               </DialogTitle>
             </div>
@@ -627,8 +627,8 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
                 onClick={() => setUploadType("file")}
                 className={`h-9 rounded-[3px] gap-2 ${
                   uploadType === "file"
-                    ? "bg-[#4a5046] text-[#f4f5f7] hover:bg-[#4a5046]"
-                    : "text-[#b9bec8] hover:bg-[#3e434d] hover:text-[#f4f5f7]"
+                    ? "bg-muted text-foreground hover:bg-muted"
+                    : "text-muted-foreground hover:bg-[#3e434d] hover:text-foreground"
                 }`}
               >
                 <Upload className="w-4 h-4" />
@@ -640,8 +640,8 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
                 onClick={() => setUploadType("url")}
                 className={`h-9 rounded-[3px] gap-2 ${
                   uploadType === "url"
-                    ? "bg-[#4a5046] text-[#f4f5f7] hover:bg-[#4a5046]"
-                    : "text-[#b9bec8] hover:bg-[#3e434d] hover:text-[#f4f5f7]"
+                    ? "bg-muted text-foreground hover:bg-muted"
+                    : "text-muted-foreground hover:bg-[#3e434d] hover:text-foreground"
                 }`}
               >
                 <Link2 className="w-4 h-4" />
@@ -652,14 +652,14 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
             {uploadType === "file" ? (
               <div className="space-y-4">
                 {filePreview ? (
-                  <div className="relative overflow-hidden rounded-[4px] border border-[#4a4f5a] bg-[#2f343d]">
+                  <div className="relative overflow-hidden rounded-[4px] border border-border bg-muted">
                     <AspectRatio ratio={16 / 9}>
                       <img src={filePreview} alt="Preview" className="object-contain w-full h-full" />
                     </AspectRatio>
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="absolute top-2 right-2 h-8 w-8 rounded-[3px] bg-[#252932]/90 text-[#d7dbe3] hover:bg-[#30353f] hover:text-white"
+                      className="absolute top-2 right-2 h-8 w-8 rounded-[3px] bg-[#252932]/90 text-foreground hover:bg-card hover:text-white"
                       onClick={() => {
                         setSelectedFile(null);
                         setFilePreview(null);
@@ -670,13 +670,13 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
                   </div>
                 ) : (
                   <div
-                    className="cursor-pointer rounded-[4px] border border-dashed border-[#5a606b] bg-[#2f343d] p-8 text-center transition-colors hover:border-[#d7dbe3]/70"
+                    className="cursor-pointer rounded-[4px] border border-dashed border-[#5a606b] bg-muted p-8 text-center transition-colors hover:border-[#d7dbe3]/70"
                     onClick={() => fileInputRef.current?.click()}
                   >
-                    <ImageIcon className="mx-auto mb-3 h-10 w-10 text-[#9ea4af]" />
-                    <p className="text-sm text-[#f3f4f7]">Click to select or drag and drop</p>
-                    <p className="mt-1 text-xs text-[#b8bec8]">Images up to 3MB - Videos up to 10MB</p>
-                    <p className="mt-1 text-xs text-[#858b96]">
+                    <ImageIcon className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
+                    <p className="text-sm text-foreground">Click to select or drag and drop</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Images up to 3MB - Videos up to 10MB</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
                       Allowed: jpg, jpeg, png, gif, webp, mp4, webm, mov, avi
                     </p>
                   </div>
@@ -691,18 +691,18 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
               </div>
             ) : (
               <div className="space-y-2">
-                <Label className="text-xs font-medium uppercase tracking-wide text-[#c4c8d0]">
+                <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   YouTube URL or image link
                 </Label>
                 <Input
                   placeholder="https://youtube.com/watch?v=... or https://example.com/image.jpg"
                   value={urlInput}
                   onChange={(e) => handleUrlChange(e.target.value)}
-                  className="h-10 rounded-none border-0 border-b border-white/80 bg-transparent px-0 text-sm text-[#f3f4f7] shadow-none outline-none placeholder:text-[#767B85] focus-visible:ring-0 focus-visible:ring-offset-0"
+                  className="h-10 rounded-none border-0 border-b border-white/80 bg-transparent px-0 text-sm text-foreground shadow-none outline-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
                 />
-                <p className="text-xs text-[#b8bec8]">Accepted image types: jpg, jpeg, png, gif, webp</p>
+                <p className="text-xs text-muted-foreground">Accepted image types: jpg, jpeg, png, gif, webp</p>
                 {extractYouTubeId(urlInput) && (
-                  <div className="overflow-hidden rounded-[4px] border border-[#4a4f5a] bg-[#2f343d]">
+                  <div className="overflow-hidden rounded-[4px] border border-border bg-muted">
                     <AspectRatio ratio={16 / 9}>
                       <img
                         src={`https://img.youtube.com/vi/${extractYouTubeId(urlInput)}/maxresdefault.jpg`}
@@ -721,30 +721,30 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
             )}
 
             <div className="space-y-2">
-              <Label className="text-xs font-medium uppercase tracking-wide text-[#c4c8d0]">Title (optional)</Label>
+              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Title (optional)</Label>
               <Input
                 placeholder="Give your media a title..."
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 maxLength={100}
-                className="h-10 rounded-none border-0 border-b border-white/80 bg-transparent px-0 text-sm text-[#f3f4f7] shadow-none outline-none placeholder:text-[#767B85] focus-visible:ring-0 focus-visible:ring-offset-0"
+                className="h-10 rounded-none border-0 border-b border-white/80 bg-transparent px-0 text-sm text-foreground shadow-none outline-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs font-medium uppercase tracking-wide text-[#c4c8d0]">Description (optional)</Label>
+              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Description (optional)</Label>
               <Textarea
                 placeholder="Add a description..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 maxLength={500}
                 rows={3}
-                className="min-h-[84px] rounded-[3px] border border-[#4a4f5a] bg-[#2f343d] text-sm text-[#f3f4f7] shadow-none placeholder:text-[#767B85] focus-visible:ring-1 focus-visible:ring-[#d7dbe3]/60 focus-visible:ring-offset-0"
+                className="min-h-[84px] rounded-[3px] border border-border bg-muted text-sm text-foreground shadow-none placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-[#d7dbe3]/60 focus-visible:ring-offset-0"
               />
             </div>
 
             </div>
 
-            <div className="flex items-center justify-end gap-3 border-t border-[#2c3139] bg-[#30353f] px-5 py-3">
+            <div className="flex items-center justify-end gap-3 border-t border-border bg-card px-5 py-3">
               <Button
                 type="button"
                 variant="ghost"

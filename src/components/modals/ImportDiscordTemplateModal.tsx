@@ -97,9 +97,9 @@ export const ImportDiscordTemplateModal = () => {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-[#4a4f5a] bg-[#333842] p-0 text-[#f4f5f7] shadow-2xl sm:max-w-[448px]">
+      <DialogContent className="max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-border bg-card p-0 text-foreground shadow-2xl sm:max-w-[448px]">
         <div className="flex max-h-[82vh] flex-col overflow-hidden">
-          <div className="border-b border-[#2b3039] bg-[#2f343d] px-5 py-3">
+          <div className="border-b border-border bg-muted px-5 py-3">
             <div className="text-base font-medium leading-none tracking-tight">Import Discord Template</div>
           </div>
           {importResult?.success ? (
@@ -109,16 +109,16 @@ export const ImportDiscordTemplateModal = () => {
                 <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-emerald-400" />
                 <div className="flex-1">
                   <p className="font-medium text-emerald-300">Import successful</p>
-                  <p className="mt-1 text-sm leading-5 text-[#c4c8d0]">
+                  <p className="mt-1 text-sm leading-5 text-muted-foreground">
                     {importResult.imported?.categories || 0} categories, {importResult.imported?.channels || 0} channels, and {importResult.imported?.roles || 0} roles imported.
                   </p>
                 </div>
               </div>
             </div>
-            <div className="flex items-center justify-end border-t border-[#2c3139] bg-[#30353f] px-5 py-3">
+            <div className="flex items-center justify-end border-t border-border bg-card px-5 py-3">
               <Button
                 onClick={handleClose}
-                className="h-9 rounded-[3px] bg-[#d7dbe3] px-5 font-medium text-[#363b44] hover:bg-white"
+                className="h-9 rounded-[3px] bg-primary px-5 font-medium text-primary-foreground hover:bg-white"
               >
                 Close
               </Button>
@@ -127,19 +127,19 @@ export const ImportDiscordTemplateModal = () => {
           ) : (
             <form onSubmit={form.handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col overflow-hidden">
               <div className="space-y-5 overflow-y-auto px-6 py-4">
-                <p className="text-sm leading-5 text-[#c4c8d0]">
+                <p className="text-sm leading-5 text-muted-foreground">
                   Import categories, channels, and roles from a Discord server template.
                 </p>
               {/* Template URL Input */}
               <div className="space-y-2">
-                <Label htmlFor="templateUrl" className="text-xs font-medium uppercase tracking-wide text-[#c4c8d0]">
+                <Label htmlFor="templateUrl" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Discord Template URL
                 </Label>
                 <Input
                   id="templateUrl"
                   placeholder="https://discord.new/..."
                   {...form.register("templateUrl")}
-                  className={`mt-2 h-9 rounded-none border-0 border-b border-white/80 bg-transparent px-0 text-sm text-[#f3f4f7] shadow-none outline-none placeholder:text-[#858b96] focus-visible:ring-0 focus-visible:ring-offset-0 ${
+                  className={`mt-2 h-9 rounded-none border-0 border-b border-white/80 bg-transparent px-0 text-sm text-foreground shadow-none outline-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 ${
                     form.formState.errors.templateUrl ? "border-destructive" : ""
                   }`}
                   autoFocus
@@ -151,11 +151,11 @@ export const ImportDiscordTemplateModal = () => {
               </div>
 
               {/* Info Box */}
-              <div className="rounded-[3px] border border-[#4a4f5a] bg-[#2f343d] p-3">
-                <p className="text-xs text-[#c4c8d0]">
-                  <span className="font-medium text-[#f3f4f7]">How to get a template:</span>
+              <div className="rounded-[3px] border border-border bg-muted p-3">
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">How to get a template:</span>
                 </p>
-                <ol className="mt-2 list-inside list-decimal space-y-1 text-xs leading-5 text-[#c4c8d0]">
+                <ol className="mt-2 list-inside list-decimal space-y-1 text-xs leading-5 text-muted-foreground">
                   <li>Open your Discord server settings</li>
                   <li>Go to Server Template</li>
                   <li>Create a template and copy the link</li>
@@ -169,27 +169,27 @@ export const ImportDiscordTemplateModal = () => {
                   <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-destructive" />
                   <div className="flex-1">
                     <p className="font-medium text-destructive-foreground">Import failed</p>
-                    <p className="mt-1 text-sm leading-5 text-[#c4c8d0]">{importResult.error}</p>
+                    <p className="mt-1 text-sm leading-5 text-muted-foreground">{importResult.error}</p>
                   </div>
                 </div>
               )}
               </div>
 
               {/* Actions */}
-              <div className="flex items-center justify-end gap-3 border-t border-[#2c3139] bg-[#30353f] px-5 py-3">
+              <div className="flex items-center justify-end gap-3 border-t border-border bg-card px-5 py-3">
                 <Button
                   type="button"
                   variant="ghost"
                   onClick={handleClose}
                   disabled={isLoading}
-                  className="h-9 rounded-[3px] px-4 text-[#b9bec8] hover:bg-transparent hover:text-white"
+                  className="h-9 rounded-[3px] px-4 text-muted-foreground hover:bg-transparent hover:text-white"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="h-9 rounded-[3px] bg-[#d7dbe3] px-5 font-medium text-[#363b44] hover:bg-white"
+                  className="h-9 rounded-[3px] bg-primary px-5 font-medium text-primary-foreground hover:bg-white"
                 >
                   {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Import Template
