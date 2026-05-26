@@ -59,6 +59,7 @@ import { getUserFromCache, useUserCacheStore } from "@/stores/userCacheStore";
 // ─────────────────────────────────────────────────────────────────────────────
 
 const OFFLINE_PAGE_SIZE = 50;
+const OFFLINE_AUTO_HIDE_THRESHOLD = 1000;
 const EMPTY_ROLES: CustomServerRole[] = [];
 
 // FIX #1: Static style object — was inline `as React.CSSProperties` on every render
