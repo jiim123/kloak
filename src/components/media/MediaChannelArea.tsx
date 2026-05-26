@@ -891,7 +891,7 @@ const MediaCard = ({
       onClick={onClick}
     >
       <AspectRatio ratio={1}>
-        <img
+        <ProxiedImg
           src={thumbnailSrc || "/placeholder.svg"}
           alt={item.title || "Media"}
           className="object-cover w-full h-full transition-transform group-hover:scale-105"
