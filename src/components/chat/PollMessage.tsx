@@ -160,7 +160,7 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
               <div
                 key={idx}
                 className={`flex items-center justify-between gap-3 rounded-[2px] px-3 py-1.5 text-[12px] font-semibold leading-5 ${
-                  isUserVote ? "bg-[#5865f2] text-foreground" : "bg-background text-foreground"
+                  isUserVote ? "bg-primary text-primary-foreground" : "bg-background text-foreground"
                 }`}
               >
                 <div className="flex min-w-0 items-center gap-2">
