@@ -36,7 +36,7 @@ export const PersistentEmbedContainer = () => {
                 className="absolute top-2 right-2 p-1 rounded bg-black/50 hover:bg-black/70 transition-colors z-10"
                 title="Close embed"
               >
-                <X className="w-4 h-4 text-white" />
+                <X className="w-4 h-4 text-foreground" />
               </button>
             </div>,
             placeholder,

@@ -214,13 +214,13 @@ const Invite = () => {
         {isLoading ? (
           <div className="w-full max-w-[810px] rounded-[4px] bg-card p-10 shadow-[0_20px_70px_rgba(0,0,0,0.35)]">
             <div className="flex flex-col items-center justify-center gap-3 py-10">
-              <Loader2 className="h-6 w-6 animate-spin text-white" />
+              <Loader2 className="h-6 w-6 animate-spin text-foreground" />
               <p className="text-sm text-muted-foreground">Loading invite...</p>
             </div>
           </div>
         ) : !server ? (
           <div className="w-full max-w-md rounded-[4px] bg-card p-10 text-center shadow-[0_20px_70px_rgba(0,0,0,0.35)]">
-            <h1 className="text-2xl font-semibold text-white">Invite not found</h1>
+            <h1 className="text-2xl font-semibold text-foreground">Invite not found</h1>
             <p className="mt-2 text-sm text-muted-foreground">This invite may be invalid or revoked.</p>
             <div className="mt-8">
               <Button variant="outline" onClick={() => navigate("/")}>
@@ -237,16 +237,16 @@ const Invite = () => {
 
               <Avatar className="mt-5 h-14 w-14 rounded-full bg-card ring-1 ring-black/25">
                 {server.icon_url ? <AvatarImage src={server.icon_url} alt={server.name} className="object-cover" /> : null}
-                <AvatarFallback className="rounded-full bg-card text-base font-bold text-white">
+                <AvatarFallback className="rounded-full bg-card text-base font-bold text-foreground">
                   {getServerInitials(server.name)}
                 </AvatarFallback>
               </Avatar>
 
-              <h1 className="mt-4 max-w-full truncate text-[24px] font-bold leading-tight text-white">{server.name}</h1>
+              <h1 className="mt-4 max-w-full truncate text-[24px] font-bold leading-tight text-foreground">{server.name}</h1>
 
               {typeof server.member_count === "number" && server.member_count >= 0 && (
                 <div className="mt-5 flex items-center justify-center gap-2 text-[13px] font-medium text-muted-foreground">
-                  <Users className="h-4 w-4 text-white" />
+                  <Users className="h-4 w-4 text-foreground" />
                   <span>{server.member_count.toLocaleString()} members</span>
                 </div>
               )}
@@ -260,7 +260,7 @@ const Invite = () => {
                   <div className="mb-8 text-left">
                     <div className="text-[12px] font-medium leading-tight text-foreground">You're logged in as</div>
                     <div className="mt-1 flex h-7 items-center border-b border-input/80">
-                      <span className="min-w-0 flex-1 truncate text-[15px] leading-none text-white">{accountName}</span>
+                      <span className="min-w-0 flex-1 truncate text-[15px] leading-none text-foreground">{accountName}</span>
                       <BadgeCheck className="h-4 w-4 shrink-0 text-[#23d160]" />
                     </div>
                   </div>
@@ -281,7 +281,7 @@ const Invite = () => {
                   <Button
                     variant="ghost"
                     onClick={() => navigate(authEntryPath)}
-                    className="mt-4 h-9 w-full rounded-[4px] text-[14px] text-muted-foreground hover:bg-transparent hover:text-white"
+                    className="mt-4 h-9 w-full rounded-[4px] text-[14px] text-muted-foreground hover:bg-transparent hover:text-foreground"
                   >
                     Log in
                   </Button>

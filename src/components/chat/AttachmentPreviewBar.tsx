@@ -66,7 +66,7 @@ export const AttachmentPreviewBar = memo(({ attachments, onRemove, onAddMore, di
 
               {/* Hover filename overlay */}
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent pt-4 pb-1 px-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none hidden sm:block">
-                <p className="text-[10px] text-white truncate text-center leading-tight">
+                <p className="text-[10px] text-foreground truncate text-center leading-tight">
                   {att.file.name}
                 </p>
               </div>

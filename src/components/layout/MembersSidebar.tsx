@@ -929,7 +929,7 @@ export const MembersSidebar = () => {
                     isSelected ? "bg-destructive border-destructive" : "border-muted-foreground/40 bg-transparent",
                   )}
                 >
-                  {isSelected && <Check className="w-3 h-3 text-white" />}
+                  {isSelected && <Check className="w-3 h-3 text-foreground" />}
                 </div>
               </div>
             )}
@@ -1415,12 +1415,12 @@ export const MembersSidebar = () => {
       {/* Mass ban floating action bar */}
       {massBanMode && (
         <div className="absolute bottom-4 left-3 right-3 bg-destructive/95 backdrop-blur-sm rounded-xl p-3 flex items-center justify-between shadow-lg border border-destructive/50">
-          <span className="text-sm font-medium text-white">{massBanSelected.size} selected</span>
+          <span className="text-sm font-medium text-foreground">{massBanSelected.size} selected</span>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={exitMassBanMode}
-              className="px-3 py-1.5 text-xs font-medium text-white/80 hover:text-white rounded-lg hover:bg-foreground/10 transition-colors"
+              className="px-3 py-1.5 text-xs font-medium text-foreground/80 hover:text-foreground rounded-lg hover:bg-foreground/10 transition-colors"
             >
               Cancel
             </button>

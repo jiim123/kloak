@@ -121,9 +121,9 @@ export const ChannelAutocomplete = ({ query, position, onSelect, onClose, onOpti
   return (
     <div
       ref={containerRef}
-      className="w-full bg-white/5 border-b border-white/6 rounded-t-[14px] overflow-hidden"
+      className="w-full bg-muted/20 border-b border-border/50 rounded-t-[14px] overflow-hidden"
     >
-      <div className="px-3 py-1.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wider border-b border-white/6">
+      <div className="px-3 py-1.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wider border-b border-border/50">
         Channels
       </div>
       <div className="max-h-48 overflow-y-auto overscroll-contain p-1">

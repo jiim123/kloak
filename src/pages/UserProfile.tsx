@@ -863,11 +863,11 @@ const UserProfile = () => {
 
   return (
     <div className="h-full overflow-y-auto bg-layout-chat text-foreground">
-      <header className="sticky top-0 z-20 flex h-12 items-center gap-2.5 border-b border-border bg-card px-3 text-white shadow-sm">
+      <header className="sticky top-0 z-20 flex h-12 items-center gap-2.5 border-b border-border bg-card px-3 text-foreground shadow-sm">
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="flex h-8 w-8 items-center justify-center rounded-[4px] text-muted-foreground transition-colors hover:bg-white/10 hover:text-white"
+          className="flex h-8 w-8 items-center justify-center rounded-[4px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           aria-label="Back"
         >
           <ChevronLeft className="h-5 w-5" />
@@ -1018,7 +1018,7 @@ const UserProfile = () => {
                           value={titleDraft}
                           onChange={(event) => setTitleDraft(event.target.value.slice(0, POST_TITLE_MAX_LENGTH))}
                           placeholder="Post title"
-                          className="min-w-0 flex-1 bg-transparent text-[18px] font-normal leading-none text-white outline-none placeholder:text-muted-foreground"
+                          className="min-w-0 flex-1 bg-transparent text-[18px] font-normal leading-none text-foreground outline-none placeholder:text-muted-foreground"
                           maxLength={POST_TITLE_MAX_LENGTH}
                           autoFocus
                         />
@@ -1064,7 +1064,7 @@ const UserProfile = () => {
                       <div className="flex items-center gap-3">
                         <button
                           type="button"
-                          className="h-8 rounded-[4px] px-3 text-[13px] font-medium text-muted-foreground transition-colors hover:text-white disabled:opacity-50"
+                          className="h-8 rounded-[4px] px-3 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
                           onClick={() => {
                             setTitleDraft("");
                             setDraft("");
@@ -1122,7 +1122,7 @@ const UserProfile = () => {
                           </DropdownMenuItem>
                           {isSelf && (
                             <>
-                              <DropdownMenuSeparator className="mx-0 my-0 bg-white/10" />
+                              <DropdownMenuSeparator className="mx-0 my-0 bg-muted/40" />
                               <DropdownMenuItem
                                 onClick={() => void handleDeletePost(post.id)}
                                 className="rounded-none px-3 py-2 text-destructive focus:text-destructive"
@@ -1154,7 +1154,7 @@ const UserProfile = () => {
                                 disabled={pendingReactionKey === `${post.id}:${reaction.emoji}`}
                                 className={`inline-flex h-7 items-center gap-1 rounded-full border px-2 py-0 transition-colors duration-150 ${
                                   reaction.hasReacted
-                                    ? "border-border bg-muted text-white hover:bg-muted"
+                                    ? "border-border bg-muted text-foreground hover:bg-muted"
                                     : "border-border bg-muted text-foreground hover:bg-muted"
                                 }`}
                               >
@@ -1266,7 +1266,7 @@ const UserProfile = () => {
                                                 Edit
                                               </DropdownMenuItem>
                                             )}
-                                            {canEditComment && canDeleteComment && <DropdownMenuSeparator className="mx-0 my-0 bg-white/10" />}
+                                            {canEditComment && canDeleteComment && <DropdownMenuSeparator className="mx-0 my-0 bg-muted/40" />}
                                             {canDeleteComment && (
                                               <DropdownMenuItem
                                                 onClick={() => void handleDeleteComment(post.id, comment.id)}

@@ -160,14 +160,14 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
               <div
                 key={idx}
                 className={`flex items-center justify-between gap-3 rounded-[2px] px-3 py-1.5 text-[12px] font-semibold leading-5 ${
-                  isUserVote ? "bg-[#5865f2] text-white" : "bg-background text-foreground"
+                  isUserVote ? "bg-[#5865f2] text-foreground" : "bg-background text-foreground"
                 }`}
               >
                 <div className="flex min-w-0 items-center gap-2">
                   <span className="truncate">{opt}</span>
-                  {isUserVote && <Check className="h-3.5 w-3.5 shrink-0 text-white" strokeWidth={3} />}
+                  {isUserVote && <Check className="h-3.5 w-3.5 shrink-0 text-foreground" strokeWidth={3} />}
                 </div>
-                <span className={isUserVote ? "text-white" : "text-foreground"}>{pct}%</span>
+                <span className={isUserVote ? "text-foreground" : "text-foreground"}>{pct}%</span>
               </div>
             );
           }
@@ -197,7 +197,7 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
               <button
                 type="button"
                 onClick={handleEditResponse}
-                className="text-[13px] font-semibold text-muted-foreground transition-colors hover:text-white"
+                className="text-[13px] font-semibold text-muted-foreground transition-colors hover:text-foreground"
               >
                 Edit response
               </button>
@@ -206,7 +206,7 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
               <button
                 type="button"
                 onClick={handleViewResultsToggle}
-                className="text-[13px] font-semibold text-muted-foreground transition-colors hover:text-white"
+                className="text-[13px] font-semibold text-muted-foreground transition-colors hover:text-foreground"
               >
                 Back to poll
               </button>
@@ -231,7 +231,7 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
               size="sm"
               onClick={handleViewResultsToggle}
               disabled={isClosed}
-              className="h-8 rounded-[3px] border-border bg-transparent px-4 text-xs font-medium text-foreground hover:bg-muted hover:text-white disabled:border-border disabled:bg-transparent disabled:text-muted-foreground disabled:opacity-100"
+              className="h-8 rounded-[3px] border-border bg-transparent px-4 text-xs font-medium text-foreground hover:bg-muted hover:text-foreground disabled:border-border disabled:bg-transparent disabled:text-muted-foreground disabled:opacity-100"
             >
               {showResultsOverride ? "Back to poll" : "View results"}
             </Button>

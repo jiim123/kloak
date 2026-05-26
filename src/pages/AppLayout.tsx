@@ -771,13 +771,13 @@ const AppLayout = () => {
                               {user?.avatar_url ? (
                                 <img src={user.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover" />
                               ) : (
-                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#5865F2] text-[12px] font-bold text-white">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#5865F2] text-[12px] font-bold text-foreground">
                                   {(user?.display_name || user?.username || "U").slice(0, 2).toUpperCase()}
                                 </div>
                               )}
                               <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-layout-sidebar bg-[#23A55A]" />
                             </div>
-                            <div className="min-w-0 flex-1 truncate text-[14px] font-semibold text-white">
+                            <div className="min-w-0 flex-1 truncate text-[14px] font-semibold text-foreground">
                               {user?.display_name || user?.username || "Profile"}
                             </div>
                             <button

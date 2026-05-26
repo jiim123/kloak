@@ -300,7 +300,7 @@ const HorizontalFolderItem = ({
                     whileHover="hover"
                     whileTap="tap"
                     transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                    className="w-10 h-10 flex items-center justify-center text-white relative"
+                    className="w-10 h-10 flex items-center justify-center text-foreground relative"
                     style={{ backgroundColor: folder.color }}
                   >
                     <Folder className="w-5 h-5" />
