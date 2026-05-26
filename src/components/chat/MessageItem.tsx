@@ -1371,7 +1371,7 @@ export const MessageItem = memo(function MessageItem({
                                   onClick={handleKickUser}
                                   className="text-orange-400 focus:text-orange-400"
                                 >
-                                  <UserX className="w-4 h-4 text-[#fc6464]" />
+                                  <UserX className="w-4 h-4 text-destructive" />
                                   Kick {displayName}
                                 </ContextMenuItem>
                               )}
@@ -1380,7 +1380,7 @@ export const MessageItem = memo(function MessageItem({
                                   onClick={handleBanUser}
                                   className="text-destructive focus:text-destructive"
                                 >
-                                  <Ban className="w-4 h-4 text-[#fc6464]" />
+                                  <Ban className="w-4 h-4 text-destructive" />
                                   Ban {displayName}
                                 </ContextMenuItem>
                               )}
@@ -1698,7 +1698,7 @@ export const MessageItem = memo(function MessageItem({
                       aria-label="Delete"
                       title="Delete"
                     >
-                      <Trash2 className="w-4 h-4 text-[#fc6464]" />
+                      <Trash2 className="w-4 h-4 text-destructive" />
                     </button>
                   )}
 
@@ -1822,13 +1822,13 @@ export const MessageItem = memo(function MessageItem({
                 <ContextMenuSeparator />
                 {canKickUser && (
                   <ContextMenuItem onClick={handleKickUser}>
-                    <UserX className="w-4 h-4 text-[#fc6464]" />
+                    <UserX className="w-4 h-4 text-destructive" />
                     Kick {displayName}
                   </ContextMenuItem>
                 )}
                 {canBanUser && (
                   <ContextMenuItem onClick={handleBanUser}>
-                    <Ban className="w-4 h-4 text-[#fc6464]" />
+                    <Ban className="w-4 h-4 text-destructive" />
                     Ban {displayName}
                   </ContextMenuItem>
                 )}

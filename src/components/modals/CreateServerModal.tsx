@@ -41,12 +41,12 @@ type CreateServerForm = z.infer<typeof createServerSchema>;
 type ModalView = "choose" | "create";
 
 const CreateServerBackdrop = () => {
-  const iconClass = "absolute h-7 w-7 text-[#a7adb9]/70 animate-[create-server-icon-float_18s_linear_infinite]";
+  const iconClass = "absolute h-7 w-7 text-muted-foreground/70 animate-[create-server-icon-float_18s_linear_infinite]";
 
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none absolute inset-0 overflow-hidden bg-[#202329]"
+      className="pointer-events-none absolute inset-0 overflow-hidden bg-background"
     >
       <Sparkles className={`${iconClass} left-[17%] top-[25%] rotate-[-8deg]`} strokeWidth={1.4} />
       <IceCream className={`${iconClass} left-[42%] top-[4%] rotate-[-5deg] [animation-delay:-7s]`} strokeWidth={1.4} />
@@ -210,7 +210,7 @@ export const CreateServerModal = () => {
       <DialogContent
         className={
           view === "create"
-            ? "!left-0 !top-0 !h-screen !w-screen !max-w-none !translate-x-0 !translate-y-0 overflow-hidden border-0 bg-transparent p-0 shadow-none sm:rounded-none [&>button]:right-5 [&>button]:top-5 [&>button]:text-[#a7adb9] [&>button:hover]:text-white"
+            ? "!left-0 !top-0 !h-screen !w-screen !max-w-none !translate-x-0 !translate-y-0 overflow-hidden border-0 bg-transparent p-0 shadow-none sm:rounded-none [&>button]:right-5 [&>button]:top-5 [&>button]:text-muted-foreground [&>button:hover]:text-white"
             : "!left-0 !right-0 !top-auto !bottom-0 !w-full !max-w-none !translate-x-0 !translate-y-0 max-h-[85vh] overflow-hidden rounded-t-2xl rounded-b-none border-border/50 bg-background/95 p-0 backdrop-blur-xl data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-left-0 data-[state=open]:slide-in-from-top-0 data-[state=closed]:slide-out-to-left-0 data-[state=closed]:slide-out-to-top-0 data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100 sm:!left-[50%] sm:!right-auto sm:!top-[50%] sm:!bottom-auto sm:!w-full sm:!max-w-xl sm:!translate-x-[-50%] sm:!translate-y-[-50%] sm:max-h-[90vh] sm:rounded-2xl"
         }
       >
@@ -282,7 +282,7 @@ export const CreateServerModal = () => {
             <CreateServerBackdrop />
             <form
               onSubmit={createForm.handleSubmit(onCreateSubmit)}
-              className="relative z-10 w-full max-w-[400px] rounded-[5px] border border-white/[0.03] bg-[#363941] px-8 pb-8 pt-7 shadow-[0_18px_40px_rgba(0,0,0,0.35)] sm:px-10"
+              className="relative z-10 w-full max-w-[400px] rounded-[5px] border border-white/[0.03] bg-card px-8 pb-8 pt-7 shadow-[0_18px_40px_rgba(0,0,0,0.35)] sm:px-10"
             >
               {isLoading ? (
                 <div className="flex min-h-[320px] w-full flex-col items-center justify-center gap-4">
@@ -295,7 +295,7 @@ export const CreateServerModal = () => {
                     <p className="text-[28px] font-semibold leading-none text-white">Nice work!</p>
                   </div>
 
-                  <div className="mb-4 flex h-[72px] w-[72px] items-center justify-center overflow-hidden rounded-[12px] bg-[#202329] text-[30px] font-semibold text-white">
+                  <div className="mb-4 flex h-[72px] w-[72px] items-center justify-center overflow-hidden rounded-[12px] bg-background text-[30px] font-semibold text-white">
                     {createdServer.icon_url ? (
                       <img src={createdServer.icon_url} alt={createdServer.name} className="h-full w-full object-cover" />
                     ) : (
@@ -304,12 +304,12 @@ export const CreateServerModal = () => {
                   </div>
 
                   <p className="mb-2 max-w-[280px] truncate pb-1 text-center text-[32px] font-semibold leading-[1.15] text-white">{createdServer.name}</p>
-                  <p className="mb-8 text-center text-[14px] text-[#d0d4db]">Your server is personalized and ready for you.</p>
+                  <p className="mb-8 text-center text-[14px] text-foreground">Your server is personalized and ready for you.</p>
 
                   <Button
                     type="button"
                     onClick={handleEnterCreatedServer}
-                    className="h-[34px] w-full max-w-[235px] rounded-[3px] bg-[#f0b800] text-[13px] font-medium text-[#1e1f22] hover:bg-[#ffca1a]"
+                    className="h-[34px] w-full max-w-[235px] rounded-[3px] bg-primary text-[13px] font-medium text-primary-foreground hover:bg-primary"
                   >
                     Let&apos;s go
                   </Button>
@@ -322,7 +322,7 @@ export const CreateServerModal = () => {
                         Personalize your server
                       </DialogTitle>
                     </div>
-                    <DialogDescription className="mx-auto mt-2 max-w-[310px] text-center text-[12px] font-normal leading-[16px] text-[#f2f3f5]">
+                    <DialogDescription className="mx-auto mt-2 max-w-[310px] text-center text-[12px] font-normal leading-[16px] text-foreground">
                       Your server is where everyone gets to chat. Give it an avatar and name. You can always change it later.
                     </DialogDescription>
                   </DialogHeader>
@@ -332,7 +332,7 @@ export const CreateServerModal = () => {
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="relative flex h-[74px] w-[74px] flex-col items-center justify-center gap-1 overflow-hidden rounded-[12px] border-2 border-dashed border-[#b5bac1] bg-transparent text-[#b5bac1] transition-colors hover:border-white hover:text-white"
+                        className="relative flex h-[74px] w-[74px] flex-col items-center justify-center gap-1 overflow-hidden rounded-[12px] border-2 border-dashed border-input bg-transparent text-muted-foreground transition-colors hover:border-white hover:text-white"
                         aria-label="Upload server icon"
                       >
                         {iconPreview ? (
@@ -347,7 +347,7 @@ export const CreateServerModal = () => {
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="absolute -bottom-3 -right-3 flex h-8 w-8 items-center justify-center rounded-full bg-[#f0b800] text-[#1e1f22] shadow-[0_3px_8px_rgba(0,0,0,0.35)] transition-colors hover:bg-[#ffca1a]"
+                        className="absolute -bottom-3 -right-3 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_3px_8px_rgba(0,0,0,0.35)] transition-colors hover:bg-primary"
                         aria-label="Choose server icon"
                       >
                         <Plus className="h-4 w-4" strokeWidth={3} />
@@ -359,7 +359,7 @@ export const CreateServerModal = () => {
                             e.stopPropagation();
                             clearIcon();
                           }}
-                          className="absolute -top-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-[#1e1f22] text-[#b5bac1] shadow-md transition-colors hover:bg-[#2b2d31] hover:text-white"
+                          className="absolute -top-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-muted text-muted-foreground shadow-md transition-colors hover:bg-muted hover:text-white"
                           aria-label="Remove server icon"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -369,14 +369,14 @@ export const CreateServerModal = () => {
                   </div>
 
                   <div className="mx-auto mb-8 w-full max-w-[235px] space-y-1 text-center">
-                    <Label htmlFor="name" className="block text-center text-[12px] font-normal leading-4 text-[#b5bac1]">
+                    <Label htmlFor="name" className="block text-center text-[12px] font-normal leading-4 text-muted-foreground">
                       Enter your server name
                     </Label>
                     <Input
                       id="name"
                       aria-label="Enter your server name"
                       {...createForm.register("name")}
-                      className="mx-auto h-8 rounded-none border-0 border-b border-[#b5bac1]/75 bg-transparent px-0 text-center text-[15px] font-normal text-white shadow-none outline-none ring-0 placeholder:text-[#b5bac1] focus-visible:border-white focus-visible:ring-0 focus-visible:ring-offset-0"
+                      className="mx-auto h-8 rounded-none border-0 border-b border-input/75 bg-transparent px-0 text-center text-[15px] font-normal text-white shadow-none outline-none ring-0 placeholder:text-muted-foreground focus-visible:border-white focus-visible:ring-0 focus-visible:ring-offset-0"
                       autoFocus
                       maxLength={50}
                     />
@@ -391,8 +391,8 @@ export const CreateServerModal = () => {
                       disabled={!canContinue}
                       className={`h-[28px] w-full rounded-[3px] text-[12px] font-normal disabled:opacity-100 ${
                         canContinue
-                          ? "bg-[#f0b800] text-[#1e1f22] hover:bg-[#ffca1a]"
-                          : "bg-[#d7d9df] text-[#4e5058]/70"
+                          ? "bg-primary text-primary-foreground hover:bg-primary"
+                          : "bg-primary text-primary-foreground/70"
                       }`}
                     >
                       Continue
@@ -401,7 +401,7 @@ export const CreateServerModal = () => {
                       type="button"
                       variant="ghost"
                       onClick={handleClose}
-                      className="h-6 rounded-[3px] px-3 text-[12px] font-normal text-[#b5bac1] hover:bg-transparent hover:text-white"
+                      className="h-6 rounded-[3px] px-3 text-[12px] font-normal text-muted-foreground hover:bg-transparent hover:text-white"
                     >
                       Cancel
                     </Button>

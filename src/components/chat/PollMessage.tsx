@@ -133,17 +133,17 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
 
   if (!poll) {
     return (
-      <div className="max-w-[520px] rounded-[2px] border border-[#3a3d45] bg-[#24262d] p-4">
-        <div className="text-sm text-[#9ea4af]">Loading poll...</div>
+      <div className="max-w-[520px] rounded-[2px] border border-border bg-background p-4">
+        <div className="text-sm text-muted-foreground">Loading poll...</div>
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-[520px] rounded-[2px] border border-[#3a3d45] bg-[rgb(43_45_49)] px-4 py-3 text-[#f2f3f5]">
-      <div className="text-[15px] font-semibold leading-5 text-[#f2f3f5]">{poll.question}</div>
+    <div className="w-full max-w-[520px] rounded-[2px] border border-border bg-muted px-4 py-3 text-foreground">
+      <div className="text-[15px] font-semibold leading-5 text-foreground">{poll.question}</div>
       {showResults && (
-        <div className="mt-1 text-[12px] text-[#a7adb8]">
+        <div className="mt-1 text-[12px] text-muted-foreground">
           {totalVotes} response{totalVotes === 1 ? "" : "s"}
         </div>
       )}
@@ -160,14 +160,14 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
               <div
                 key={idx}
                 className={`flex items-center justify-between gap-3 rounded-[2px] px-3 py-1.5 text-[12px] font-semibold leading-5 ${
-                  isUserVote ? "bg-[#5865f2] text-white" : "bg-[#1f2126] text-[#f2f3f5]"
+                  isUserVote ? "bg-[#5865f2] text-white" : "bg-background text-foreground"
                 }`}
               >
                 <div className="flex min-w-0 items-center gap-2">
                   <span className="truncate">{opt}</span>
                   {isUserVote && <Check className="h-3.5 w-3.5 shrink-0 text-white" strokeWidth={3} />}
                 </div>
-                <span className={isUserVote ? "text-white" : "text-[#f2f3f5]"}>{pct}%</span>
+                <span className={isUserVote ? "text-white" : "text-foreground"}>{pct}%</span>
               </div>
             );
           }
@@ -177,11 +177,11 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
               key={idx}
               type="button"
               onClick={() => toggle(idx)}
-              className="flex w-full items-center gap-2.5 text-left text-sm text-[#f2f3f5]"
+              className="flex w-full items-center gap-2.5 text-left text-sm text-foreground"
             >
               <span
                 className={`h-3.5 w-3.5 shrink-0 rounded-full border transition-colors ${
-                  isSelected ? "border-[#d7dbe3] bg-[#d7dbe3]" : "border-[#c3c7d1] bg-transparent"
+                  isSelected ? "border-border bg-primary" : "border-border bg-transparent"
                 }`}
               />
               <span>{opt}</span>
@@ -197,7 +197,7 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
               <button
                 type="button"
                 onClick={handleEditResponse}
-                className="text-[13px] font-semibold text-[#a7adb8] transition-colors hover:text-white"
+                className="text-[13px] font-semibold text-muted-foreground transition-colors hover:text-white"
               >
                 Edit response
               </button>
@@ -206,13 +206,13 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
               <button
                 type="button"
                 onClick={handleViewResultsToggle}
-                className="text-[13px] font-semibold text-[#a7adb8] transition-colors hover:text-white"
+                className="text-[13px] font-semibold text-muted-foreground transition-colors hover:text-white"
               >
                 Back to poll
               </button>
             )}
           </div>
-          {timeLabel && <div className="mt-3 text-[11px] text-[#8f97a3]">{timeLabel}</div>}
+          {timeLabel && <div className="mt-3 text-[11px] text-muted-foreground">{timeLabel}</div>}
         </div>
       ) : (
         <>
@@ -221,7 +221,7 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
               size="sm"
               onClick={submitVote}
               disabled={!canVote}
-              className="h-8 rounded-[3px] bg-[#d7dbe3] px-4 text-xs font-medium text-[#363b44] hover:bg-white disabled:bg-[#b5b8c0] disabled:text-[#626873] disabled:opacity-100"
+              className="h-8 rounded-[3px] bg-primary px-4 text-xs font-medium text-primary-foreground hover:bg-white disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
             >
               {isVoting ? "Submitting..." : hasVoted || isEditingResponse ? "Update" : "Submit"}
             </Button>
@@ -231,12 +231,12 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
               size="sm"
               onClick={handleViewResultsToggle}
               disabled={isClosed}
-              className="h-8 rounded-[3px] border-[#5a606c] bg-transparent px-4 text-xs font-medium text-[#d5d9e2] hover:bg-[#2d3038] hover:text-white disabled:border-[#4b505b] disabled:bg-transparent disabled:text-[#7f8692] disabled:opacity-100"
+              className="h-8 rounded-[3px] border-border bg-transparent px-4 text-xs font-medium text-foreground hover:bg-muted hover:text-white disabled:border-border disabled:bg-transparent disabled:text-muted-foreground disabled:opacity-100"
             >
               {showResultsOverride ? "Back to poll" : "View results"}
             </Button>
           </div>
-          {timeLabel && <div className="mt-3 text-[11px] text-[#8f97a3]">{timeLabel}</div>}
+          {timeLabel && <div className="mt-3 text-[11px] text-muted-foreground">{timeLabel}</div>}
         </>
       )}
     </div>

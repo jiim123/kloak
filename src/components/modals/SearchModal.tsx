@@ -154,9 +154,9 @@ export const SearchModal = () => {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && closeModal()}>
-      <DialogContent className="max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-[#4a4f5a] bg-[#333842] p-0 text-[#f4f5f7] shadow-2xl sm:max-w-[640px]">
+      <DialogContent className="max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-border bg-card p-0 text-foreground shadow-2xl sm:max-w-[640px]">
         <div className="flex max-h-[82vh] flex-col overflow-hidden">
-          <div className="border-b border-[#2b3039] bg-[#2f343d] px-5 py-3">
+          <div className="border-b border-border bg-muted px-5 py-3">
             <div className="text-base font-medium leading-none tracking-tight">Search messages</div>
           </div>
 
@@ -165,28 +165,28 @@ export const SearchModal = () => {
               <div className="flex items-center justify-between gap-3">
                 <Label
                   htmlFor="message-search"
-                  className="text-xs font-medium uppercase tracking-wide text-[#c4c8d0]"
+                  className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
                 >
                   Search query
                 </Label>
-                <span className="text-xs text-[#9ea4af]">Use `from:` or `in:` filters</span>
+                <span className="text-xs text-muted-foreground">Use `from:` or `in:` filters</span>
               </div>
               <div className="relative mt-2">
-                <Search className="pointer-events-none absolute left-0 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9ea4af]" />
+                <Search className="pointer-events-none absolute left-0 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="message-search"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Search messages... (from:user in:channel)"
-                  className="h-12 rounded-none border-0 border-b border-white/80 bg-transparent pl-7 pr-10 text-sm text-[#f3f4f7] shadow-none outline-none placeholder:text-[#767b85] focus-visible:ring-0 focus-visible:ring-offset-0"
+                  className="h-12 rounded-none border-0 border-b border-white/80 bg-transparent pl-7 pr-10 text-sm text-foreground shadow-none outline-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
                   autoFocus
                 />
                 {query && (
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute right-0 top-1/2 h-8 w-8 -translate-y-1/2 rounded-[3px] text-[#b8bec8] hover:bg-[#3b4049] hover:text-white"
+                    className="absolute right-0 top-1/2 h-8 w-8 -translate-y-1/2 rounded-[3px] text-muted-foreground hover:bg-muted hover:text-white"
                     onClick={() => setQuery('')}
                   >
                     <X className="h-4 w-4" />
@@ -196,20 +196,20 @@ export const SearchModal = () => {
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="border border-[#4a4f5a] bg-[#2f343d] p-3">
-                <p className="text-sm font-medium leading-none text-[#f3f4f7]">Filter by author</p>
-                <p className="mt-2 font-mono text-xs leading-5 tracking-[0.08em] text-[#c4c8d0]">from:username</p>
+              <div className="border border-border bg-muted p-3">
+                <p className="text-sm font-medium leading-none text-foreground">Filter by author</p>
+                <p className="mt-2 font-mono text-xs leading-5 tracking-[0.08em] text-muted-foreground">from:username</p>
               </div>
-              <div className="border border-[#4a4f5a] bg-[#2f343d] p-3">
-                <p className="text-sm font-medium leading-none text-[#f3f4f7]">Filter by channel</p>
-                <p className="mt-2 font-mono text-xs leading-5 tracking-[0.08em] text-[#c4c8d0]">in:channel</p>
+              <div className="border border-border bg-muted p-3">
+                <p className="text-sm font-medium leading-none text-foreground">Filter by channel</p>
+                <p className="mt-2 font-mono text-xs leading-5 tracking-[0.08em] text-muted-foreground">in:channel</p>
               </div>
             </div>
 
             {(hasSearched || isLoading) && (
-              <div className="border border-[#4a4f5a] bg-[#2f343d]">
-                <div className="border-b border-[#3a404a] px-4 py-3">
-                  <p className="text-sm font-medium leading-none text-[#f3f4f7]">
+              <div className="border border-border bg-muted">
+                <div className="border-b border-border px-4 py-3">
+                  <p className="text-sm font-medium leading-none text-foreground">
                     {isLoading
                       ? 'Searching messages...'
                       : results.length > 0
@@ -221,7 +221,7 @@ export const SearchModal = () => {
                 <ScrollArea className="h-[360px]">
                   {isLoading ? (
                     <div className="flex items-center justify-center py-12">
-                      <Loader2 className="h-8 w-8 animate-spin text-[#9ea4af]" />
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                     </div>
                   ) : results.length > 0 ? (
                     <div className="p-2">
@@ -231,7 +231,7 @@ export const SearchModal = () => {
                           onClick={() => handleJumpToMessage(result)}
                           className={cn(
                             "w-full border border-transparent px-3 py-3 text-left transition-colors",
-                            "hover:border-[#454b56] hover:bg-[#363b45]"
+                            "hover:border-border hover:bg-muted"
                           )}
                         >
                           <div className="flex items-start gap-3">
@@ -243,31 +243,31 @@ export const SearchModal = () => {
                             </Avatar>
                             <div className="min-w-0 flex-1">
                               <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-                                <span className="text-sm font-medium text-[#f3f4f7]">
+                                <span className="text-sm font-medium text-foreground">
                                   {result.user?.display_name || result.user?.username}
                                 </span>
-                                <span className="flex items-center gap-1 text-xs text-[#b8bec8]">
+                                <span className="flex items-center gap-1 text-xs text-muted-foreground">
                                   <Hash className="h-3 w-3" />
                                   {result.channel?.name}
                                 </span>
-                                <span className="text-xs text-[#9ea4af]">
+                                <span className="text-xs text-muted-foreground">
                                   {format(new Date(result.created_at), 'MMM d, yyyy')}
                                 </span>
                               </div>
-                              <p className="line-clamp-2 text-sm text-[#c4c8d0]">
+                              <p className="line-clamp-2 text-sm text-muted-foreground">
                                 {highlightContent(result.content)}
                               </p>
                             </div>
-                            <MessageSquare className="h-4 w-4 flex-shrink-0 text-[#8d94a0]" />
+                            <MessageSquare className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
                           </div>
                         </button>
                       ))}
                     </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
-                      <Search className="mb-3 h-12 w-12 text-[#666d78]" />
-                      <p className="text-sm font-medium text-[#f3f4f7]">No results found</p>
-                      <p className="mt-1 text-xs text-[#9ea4af]">Try different keywords or filters.</p>
+                      <Search className="mb-3 h-12 w-12 text-muted-foreground" />
+                      <p className="text-sm font-medium text-foreground">No results found</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Try different keywords or filters.</p>
                     </div>
                   )}
                 </ScrollArea>
@@ -275,12 +275,12 @@ export const SearchModal = () => {
             )}
           </div>
 
-          <div className="flex items-center justify-end gap-3 border-t border-[#2c3139] bg-[#30353f] px-5 py-3">
+          <div className="flex items-center justify-end gap-3 border-t border-border bg-card px-5 py-3">
             <Button
               type="button"
               variant="ghost"
               onClick={closeModal}
-              className="h-9 rounded-[3px] px-4 text-[#b9bec8] hover:bg-transparent hover:text-white"
+              className="h-9 rounded-[3px] px-4 text-muted-foreground hover:bg-transparent hover:text-white"
             >
               Cancel
             </Button>
@@ -288,7 +288,7 @@ export const SearchModal = () => {
               type="button"
               onClick={handleSearch}
               disabled={!query.trim() || isLoading}
-              className="h-9 rounded-[3px] bg-[#d7dbe3] px-5 font-medium text-[#363b44] hover:bg-white disabled:bg-[#454b55] disabled:text-[#858b96] disabled:opacity-100"
+              className="h-9 rounded-[3px] bg-primary px-5 font-medium text-primary-foreground hover:bg-white disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
             >
               Search
             </Button>

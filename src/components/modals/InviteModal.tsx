@@ -111,9 +111,9 @@ export const InviteModal = () => {
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-        <DialogContent className="max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-[#4a4f5a] bg-[#333842] p-0 text-[#f4f5f7] shadow-2xl sm:max-w-[448px]">
+        <DialogContent className="max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-border bg-card p-0 text-foreground shadow-2xl sm:max-w-[448px]">
           <div className="flex max-h-[82vh] flex-col overflow-hidden">
-            <div className="border-b border-[#2b3039] bg-[#2f343d] px-5 py-3">
+            <div className="border-b border-border bg-muted px-5 py-3">
               <div className="text-base font-medium leading-none tracking-tight">
                 Invite people
               </div>
@@ -121,17 +121,17 @@ export const InviteModal = () => {
 
             <div className="space-y-5 overflow-y-auto px-6 py-4">
               <div className="space-y-3">
-                <Label className="text-xs font-medium uppercase tracking-wide text-[#c4c8d0]">
+                <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Invite settings
                 </Label>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
-                    <Label className="text-xs font-medium uppercase tracking-wide text-[#9ea4af]">Expires after</Label>
+                    <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Expires after</Label>
                     <Select value={expiresIn} onValueChange={setExpiresIn}>
-                      <SelectTrigger className="mt-2 h-9 rounded-none border-0 border-b border-white/70 bg-transparent px-0 text-sm text-[#f3f4f7] shadow-none focus:ring-0 focus:ring-offset-0">
+                      <SelectTrigger className="mt-2 h-9 rounded-none border-0 border-b border-white/70 bg-transparent px-0 text-sm text-foreground shadow-none focus:ring-0 focus:ring-offset-0">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="border-[#4a4f5a] bg-[#333842] text-[#f4f5f7]">
+                      <SelectContent className="border-border bg-card text-foreground">
                         <SelectItem value="never">Never</SelectItem>
                         <SelectItem value="30m">30 minutes</SelectItem>
                         <SelectItem value="1h">1 hour</SelectItem>
@@ -143,12 +143,12 @@ export const InviteModal = () => {
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-xs font-medium uppercase tracking-wide text-[#9ea4af]">Max uses</Label>
+                    <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Max uses</Label>
                     <Select value={maxUses} onValueChange={setMaxUses}>
-                      <SelectTrigger className="mt-2 h-9 rounded-none border-0 border-b border-white/70 bg-transparent px-0 text-sm text-[#f3f4f7] shadow-none focus:ring-0 focus:ring-offset-0">
+                      <SelectTrigger className="mt-2 h-9 rounded-none border-0 border-b border-white/70 bg-transparent px-0 text-sm text-foreground shadow-none focus:ring-0 focus:ring-offset-0">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="border-[#4a4f5a] bg-[#333842] text-[#f4f5f7]">
+                      <SelectContent className="border-border bg-card text-foreground">
                         <SelectItem value="unlimited">Unlimited</SelectItem>
                         <SelectItem value="1">1</SelectItem>
                         <SelectItem value="5">5</SelectItem>
@@ -163,19 +163,19 @@ export const InviteModal = () => {
               </div>
 
               <div className="space-y-3">
-                <Label className="text-xs font-medium uppercase tracking-wide text-[#c4c8d0]">
+                <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Invite code
                 </Label>
                 <div className="flex items-center gap-3">
-                  <div className="flex h-12 flex-1 items-center justify-center border border-[#4a4f5a] bg-[#2f343d] px-3">
-                    <span className="font-mono text-lg font-medium tracking-[0.25em] text-[#f3f4f7]">
+                  <div className="flex h-12 flex-1 items-center justify-center border border-border bg-muted px-3">
+                    <span className="font-mono text-lg font-medium tracking-[0.25em] text-foreground">
                       {displayCode || "--------"}
                     </span>
                   </div>
                   <Button
                     size="icon"
                     onClick={handleCopy}
-                    className="h-12 w-12 flex-shrink-0 rounded-[3px] bg-[#d7dbe3] text-[#363b44] hover:bg-white disabled:bg-[#454b55] disabled:text-[#858b96]"
+                    className="h-12 w-12 flex-shrink-0 rounded-[3px] bg-primary text-primary-foreground hover:bg-white disabled:bg-muted disabled:text-muted-foreground"
                     disabled={!displayCode}
                   >
                     {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
@@ -184,24 +184,24 @@ export const InviteModal = () => {
                 <Button
                   variant="outline"
                   onClick={handleCopyLink}
-                  className="h-9 w-full rounded-[3px] border-[#4a4f5a] bg-transparent text-[#d7dbe3] hover:bg-[#3e434d] hover:text-white"
+                  className="h-9 w-full rounded-[3px] border-border bg-transparent text-foreground hover:bg-muted hover:text-white"
                   disabled={!inviteLink}
                 >
                   {linkCopied ? <Check className="mr-2 h-4 w-4" /> : <Link2 className="mr-2 h-4 w-4" />}
                   Copy Invite Link
                 </Button>
                 {!isAdmin && (
-                  <p className="text-xs leading-5 text-[#d7a0a0]">
+                  <p className="text-xs leading-5 text-destructive">
                     You need permission to manage invites before creating a new invite.
                   </p>
                 )}
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 border-t border-[#2c3139] bg-[#30353f] px-5 py-3">
+            <div className="flex items-center justify-end gap-3 border-t border-border bg-card px-5 py-3">
               <Button
                 onClick={handleGenerateInvite}
-                className="h-9 rounded-[3px] bg-[#d7dbe3] px-5 font-medium text-[#363b44] hover:bg-white"
+                className="h-9 rounded-[3px] bg-primary px-5 font-medium text-primary-foreground hover:bg-white"
                 disabled={!isAdmin || isGenerating || !server || !user}
               >
                 {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

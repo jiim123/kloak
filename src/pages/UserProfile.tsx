@@ -863,16 +863,16 @@ const UserProfile = () => {
 
   return (
     <div className="h-full overflow-y-auto bg-layout-chat text-foreground">
-      <header className="sticky top-0 z-20 flex h-12 items-center gap-2.5 border-b border-[#23262f] bg-[#1C1E23] px-3 text-white shadow-sm">
+      <header className="sticky top-0 z-20 flex h-12 items-center gap-2.5 border-b border-border bg-card px-3 text-white shadow-sm">
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="flex h-8 w-8 items-center justify-center rounded-[4px] text-[#c7ccd6] transition-colors hover:bg-white/10 hover:text-white"
+          className="flex h-8 w-8 items-center justify-center rounded-[4px] text-muted-foreground transition-colors hover:bg-white/10 hover:text-white"
           aria-label="Back"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
-        <svg className="h-[20px] w-[20px] shrink-0 text-[#c7ccd6]" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <svg className="h-[20px] w-[20px] shrink-0 text-muted-foreground" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path
             d="M12.12 12.78C12.05 12.77 11.96 12.77 11.88 12.78C10.12 12.72 8.71997 11.28 8.71997 9.50998C8.71997 7.69998 10.18 6.22998 12 6.22998C13.81 6.22998 15.28 7.69998 15.28 9.50998C15.27 11.28 13.88 12.72 12.12 12.78Z"
             stroke="currentColor"
@@ -1003,31 +1003,31 @@ const UserProfile = () => {
                   <button
                     type="button"
                     onClick={() => setIsComposerOpen(true)}
-                    className="flex h-[50px] w-full items-center rounded-[4px] bg-[#4D4F58] px-4 text-left shadow-sm transition-colors hover:bg-[#555862]"
+                    className="flex h-[50px] w-full items-center rounded-[4px] bg-muted px-4 text-left shadow-sm transition-colors hover:bg-muted"
                   >
                     <AvatarWithDecoration user={profileUser} className="h-9 w-9 shrink-0" />
-                    <span className="mx-4 h-9 w-px bg-[#686d79]" />
-                    <span className="text-[18px] font-normal text-[#c3c7d0]">Write a Post</span>
+                    <span className="mx-4 h-9 w-px bg-muted" />
+                    <span className="text-[18px] font-normal text-muted-foreground">Write a Post</span>
                   </button>
                 ) : (
                   <>
-                    <div className="overflow-hidden rounded-[4px] border border-white/5 bg-[#4f535f] shadow-sm">
+                    <div className="overflow-hidden rounded-[4px] border border-white/5 bg-muted shadow-sm">
                       <div className="flex items-center gap-3 px-3 pt-3">
                         <AvatarWithDecoration user={profileUser} className="h-8 w-8 shrink-0" />
                         <input
                           value={titleDraft}
                           onChange={(event) => setTitleDraft(event.target.value.slice(0, POST_TITLE_MAX_LENGTH))}
                           placeholder="Post title"
-                          className="min-w-0 flex-1 bg-transparent text-[18px] font-normal leading-none text-white outline-none placeholder:text-[#c0c5ce]"
+                          className="min-w-0 flex-1 bg-transparent text-[18px] font-normal leading-none text-white outline-none placeholder:text-muted-foreground"
                           maxLength={POST_TITLE_MAX_LENGTH}
                           autoFocus
                         />
-                        <span className="shrink-0 text-[11px] tabular-nums text-[#c0c5ce]">
+                        <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
                           {titleDraft.length}/{POST_TITLE_MAX_LENGTH}
                         </span>
                       </div>
 
-                      <div className="mt-3 border-y border-[#454955] px-0 py-0 text-[#c0c5ce] format-toolbar" onMouseDown={(event) => event.preventDefault()}>
+                      <div className="mt-3 border-y border-border px-0 py-0 text-muted-foreground format-toolbar" onMouseDown={(event) => event.preventDefault()}>
                         <FormatToolbar
                           onFormat={handleComposerAction}
                           className="bg-transparent border-0 rounded-none px-0 py-1"
@@ -1036,7 +1036,7 @@ const UserProfile = () => {
                       </div>
 
                       <div className="relative min-h-[160px]">
-                        {!draft && <div className="pointer-events-none absolute left-4 top-3 text-[13px] text-[#a2a7b0]">What do you want to post?</div>}
+                        {!draft && <div className="pointer-events-none absolute left-4 top-3 text-[13px] text-muted-foreground">What do you want to post?</div>}
                         <div
                           ref={richBodyRef}
                           contentEditable
@@ -1049,7 +1049,7 @@ const UserProfile = () => {
                           }}
                           onInput={syncRichDraft}
                           onBlur={syncRichDraft}
-                          className="profile-rich-editor min-h-[160px] w-full px-4 py-3 text-[14px] leading-6 text-[#f2f3f5] outline-none [&_code]:rounded [&_code]:bg-black/30 [&_code]:px-1 [&_pre]:rounded [&_pre]:bg-black/30 [&_pre]:p-3"
+                          className="profile-rich-editor min-h-[160px] w-full px-4 py-3 text-[14px] leading-6 text-foreground outline-none [&_code]:rounded [&_code]:bg-black/30 [&_code]:px-1 [&_pre]:rounded [&_pre]:bg-black/30 [&_pre]:p-3"
                           role="textbox"
                           aria-multiline="true"
                           aria-label="Post body"
@@ -1058,13 +1058,13 @@ const UserProfile = () => {
                     </div>
 
                     <div className="mt-3 flex items-center justify-between gap-3">
-                      <span className="text-[11px] tabular-nums text-[#c0c5ce]">
+                      <span className="text-[11px] tabular-nums text-muted-foreground">
                         {draft.length}/{POST_MAX_LENGTH} characters
                       </span>
                       <div className="flex items-center gap-3">
                         <button
                           type="button"
-                          className="h-8 rounded-[4px] px-3 text-[13px] font-medium text-[#b9bec8] transition-colors hover:text-white disabled:opacity-50"
+                          className="h-8 rounded-[4px] px-3 text-[13px] font-medium text-muted-foreground transition-colors hover:text-white disabled:opacity-50"
                           onClick={() => {
                             setTitleDraft("");
                             setDraft("");
@@ -1076,7 +1076,7 @@ const UserProfile = () => {
                         </button>
                         <button
                           type="button"
-                          className="h-8 min-w-[72px] rounded-[4px] bg-[#d7d9df] px-4 text-[13px] font-semibold text-[#2f3136] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                          className="h-8 min-w-[72px] rounded-[4px] bg-primary px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
                           onClick={() => void handleCreatePost()}
                           disabled={!titleDraft.trim() || !draft.trim() || isPosting}
                         >
@@ -1115,7 +1115,7 @@ const UserProfile = () => {
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="min-w-[160px] overflow-hidden rounded-md bg-[#4E505C] p-0">
+                        <DropdownMenuContent align="end" className="min-w-[160px] overflow-hidden rounded-md bg-card p-0">
                           <DropdownMenuItem onClick={() => void handleSharePost(post)} className="rounded-none px-3 py-2">
                             <Share2 className="mr-2 h-4 w-4 shrink-0" />
                             Share
@@ -1154,12 +1154,12 @@ const UserProfile = () => {
                                 disabled={pendingReactionKey === `${post.id}:${reaction.emoji}`}
                                 className={`inline-flex h-7 items-center gap-1 rounded-full border px-2 py-0 transition-colors duration-150 ${
                                   reaction.hasReacted
-                                    ? "border-[#73716c] bg-[#5F5E5B] text-white hover:bg-[#6a6965]"
-                                    : "border-[#5f626d] bg-[#50504f4a] text-[#d8dbe2] hover:bg-[#5a5a585e]"
+                                    ? "border-border bg-muted text-white hover:bg-muted"
+                                    : "border-border bg-muted text-foreground hover:bg-muted"
                                 }`}
                               >
                                 <span>{reaction.emoji}</span>
-                                <span className={`text-[11px] leading-none text-[#d7dae2] ${reaction.hasReacted ? "font-semibold" : "font-normal"}`}>
+                                <span className={`text-[11px] leading-none text-foreground ${reaction.hasReacted ? "font-semibold" : "font-normal"}`}>
                                   {reaction.count}
                                 </span>
                               </button>
@@ -1198,7 +1198,7 @@ const UserProfile = () => {
                             type="button"
                             onClick={() => void handleToggleReaction(post.id, emoji)}
                             disabled={pendingReactionKey === `${post.id}:${emoji}`}
-                            className="inline-flex h-7 items-center gap-1 rounded-full border border-[#5f626d] bg-[#50504f4a] px-2 py-0 text-[#d8dbe2] opacity-70 transition-colors duration-150 hover:bg-[#5a5a585e] hover:opacity-100"
+                            className="inline-flex h-7 items-center gap-1 rounded-full border border-border bg-muted px-2 py-0 text-foreground opacity-70 transition-colors duration-150 hover:bg-muted hover:opacity-100"
                             aria-label={`React with ${emoji}`}
                           >
                             {emoji}
@@ -1256,7 +1256,7 @@ const UserProfile = () => {
                                               <MoreVertical className="h-3.5 w-3.5" />
                                             </Button>
                                           </DropdownMenuTrigger>
-                                          <DropdownMenuContent align="end" className="min-w-[150px] overflow-hidden rounded-md bg-[#4E505C] p-0">
+                                          <DropdownMenuContent align="end" className="min-w-[150px] overflow-hidden rounded-md bg-card p-0">
                                             {canEditComment && (
                                               <DropdownMenuItem
                                                 onClick={() => handleStartEditComment(comment)}
@@ -1308,7 +1308,7 @@ const UserProfile = () => {
                                             variant="ghost"
                                             onClick={() => void handleSaveCommentEdit(comment.id)}
                                             disabled={!commentEditDrafts[comment.id]?.trim() || pendingCommentActionId === comment.id}
-                                            className="h-8 min-w-[64px] rounded-[4px] bg-[#d7d9df] px-3 text-[13px] font-semibold text-[#2f3136] hover:bg-white hover:text-[#2f3136] disabled:cursor-not-allowed disabled:opacity-60"
+                                            className="h-8 min-w-[64px] rounded-[4px] bg-primary px-3 text-[13px] font-semibold text-foreground hover:bg-white hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
                                           >
                                             Save
                                           </Button>
@@ -1364,7 +1364,7 @@ const UserProfile = () => {
                                 size="sm"
                                 onClick={() => void handleCreateComment(post.id)}
                                 disabled={!commentDrafts[post.id]?.trim() || pendingCommentPostId === post.id}
-                                className="h-9 min-w-[82px] rounded-[4px] bg-[#d7d9df] px-4 text-[13px] font-semibold text-[#2f3136] transition-colors hover:bg-white hover:text-[#2f3136] disabled:cursor-not-allowed disabled:opacity-60"
+                                className="h-9 min-w-[82px] rounded-[4px] bg-primary px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-white hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
                               >
                                 Comment
                               </Button>

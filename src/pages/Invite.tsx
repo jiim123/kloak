@@ -185,7 +185,7 @@ const Invite = () => {
   };
 
   return (
-    <div className="relative flex min-h-screen flex-col overflow-hidden bg-[#30333d]">
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-muted">
       <Dialog
         open={showBannedModal}
         onOpenChange={(open) => {
@@ -212,16 +212,16 @@ const Invite = () => {
 
       <main className="flex flex-1 items-center justify-center p-4 sm:p-6 lg:p-8">
         {isLoading ? (
-          <div className="w-full max-w-[810px] rounded-[4px] bg-[#363944] p-10 shadow-[0_20px_70px_rgba(0,0,0,0.35)]">
+          <div className="w-full max-w-[810px] rounded-[4px] bg-card p-10 shadow-[0_20px_70px_rgba(0,0,0,0.35)]">
             <div className="flex flex-col items-center justify-center gap-3 py-10">
               <Loader2 className="h-6 w-6 animate-spin text-white" />
-              <p className="text-sm text-[#c5c8d0]">Loading invite...</p>
+              <p className="text-sm text-muted-foreground">Loading invite...</p>
             </div>
           </div>
         ) : !server ? (
-          <div className="w-full max-w-md rounded-[4px] bg-[#363944] p-10 text-center shadow-[0_20px_70px_rgba(0,0,0,0.35)]">
+          <div className="w-full max-w-md rounded-[4px] bg-card p-10 text-center shadow-[0_20px_70px_rgba(0,0,0,0.35)]">
             <h1 className="text-2xl font-semibold text-white">Invite not found</h1>
-            <p className="mt-2 text-sm text-[#c5c8d0]">This invite may be invalid or revoked.</p>
+            <p className="mt-2 text-sm text-muted-foreground">This invite may be invalid or revoked.</p>
             <div className="mt-8">
               <Button variant="outline" onClick={() => navigate("/")}>
                 Go Home
@@ -229,15 +229,15 @@ const Invite = () => {
             </div>
           </div>
         ) : (
-          <div className="invite-page-card grid grid-cols-1 overflow-hidden rounded-[4px] bg-[#363944] shadow-[0_20px_70px_rgba(0,0,0,0.35)]">
+          <div className="invite-page-card grid grid-cols-1 overflow-hidden rounded-[4px] bg-card shadow-[0_20px_70px_rgba(0,0,0,0.35)]">
             <section className="flex min-h-[418px] flex-col items-center justify-center px-6 py-8 text-center sm:px-12">
-              <p className="text-[15px] font-normal leading-tight text-[#f2f3f5]">
+              <p className="text-[15px] font-normal leading-tight text-foreground">
                 {server.inviter_username ? `Accept ${server.inviter_username}'s invite to join` : "Accept invite to join"}
               </p>
 
-              <Avatar className="mt-5 h-14 w-14 rounded-full bg-[#252832] ring-1 ring-black/25">
+              <Avatar className="mt-5 h-14 w-14 rounded-full bg-card ring-1 ring-black/25">
                 {server.icon_url ? <AvatarImage src={server.icon_url} alt={server.name} className="object-cover" /> : null}
-                <AvatarFallback className="rounded-full bg-[#242833] text-base font-bold text-white">
+                <AvatarFallback className="rounded-full bg-card text-base font-bold text-white">
                   {getServerInitials(server.name)}
                 </AvatarFallback>
               </Avatar>
@@ -245,21 +245,21 @@ const Invite = () => {
               <h1 className="mt-4 max-w-full truncate text-[24px] font-bold leading-tight text-white">{server.name}</h1>
 
               {typeof server.member_count === "number" && server.member_count >= 0 && (
-                <div className="mt-5 flex items-center justify-center gap-2 text-[13px] font-medium text-[#c8ccd4]">
+                <div className="mt-5 flex items-center justify-center gap-2 text-[13px] font-medium text-muted-foreground">
                   <Users className="h-4 w-4 text-white" />
                   <span>{server.member_count.toLocaleString()} members</span>
                 </div>
               )}
 
               {!!server.about && (
-                <p className="mt-5 max-w-[320px] text-[13px] leading-[18px] text-[#bfc3cb] line-clamp-3">{server.about}</p>
+                <p className="mt-5 max-w-[320px] text-[13px] leading-[18px] text-muted-foreground line-clamp-3">{server.about}</p>
               )}
 
               <div className="mt-8 w-full max-w-[270px]">
                 {accountName && (
                   <div className="mb-8 text-left">
-                    <div className="text-[12px] font-medium leading-tight text-[#f2f3f5]">You're logged in as</div>
-                    <div className="mt-1 flex h-7 items-center border-b border-[#d6d9df]/80">
+                    <div className="text-[12px] font-medium leading-tight text-foreground">You're logged in as</div>
+                    <div className="mt-1 flex h-7 items-center border-b border-input/80">
                       <span className="min-w-0 flex-1 truncate text-[15px] leading-none text-white">{accountName}</span>
                       <BadgeCheck className="h-4 w-4 shrink-0 text-[#23d160]" />
                     </div>
@@ -281,7 +281,7 @@ const Invite = () => {
                   <Button
                     variant="ghost"
                     onClick={() => navigate(authEntryPath)}
-                    className="mt-4 h-9 w-full rounded-[4px] text-[14px] text-[#aeb2bc] hover:bg-transparent hover:text-white"
+                    className="mt-4 h-9 w-full rounded-[4px] text-[14px] text-muted-foreground hover:bg-transparent hover:text-white"
                   >
                     Log in
                   </Button>
@@ -289,7 +289,7 @@ const Invite = () => {
               </div>
             </section>
 
-            <section className="relative hidden min-h-[418px] overflow-hidden bg-[#262933] md:block">
+            <section className="relative hidden min-h-[418px] overflow-hidden bg-card md:block">
               {server.banner_url ? (
                 <img src={server.banner_url} alt="" className="absolute inset-0 h-full w-full object-cover" />
               ) : (
@@ -298,7 +298,7 @@ const Invite = () => {
                     <Icon
                       key={`${Icon.displayName ?? Icon.name}-${index}`}
                       className={cn(
-                        "h-11 w-11 stroke-[1.6] text-[#d6d9df]",
+                        "h-11 w-11 stroke-[1.6] text-foreground",
                         index % 3 === 0 && "rotate-12",
                         index % 4 === 0 && "-rotate-12",
                       )}
@@ -307,7 +307,7 @@ const Invite = () => {
                 </div>
               )}
 
-              <div className="absolute inset-0 bg-[#262933]/35" />
+              <div className="absolute inset-0 bg-card/35" />
             </section>
           </div>
         )}
