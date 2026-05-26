@@ -30,6 +30,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { secureUpload } from "@/lib/storageUpload";
+import { getProxiedAssetUrl, peekProxiedAssetUrl } from "@/lib/proxyAssetUrl";
 import { formatRelativeTime } from "@/lib/format";
 import {
   DropdownMenu,
