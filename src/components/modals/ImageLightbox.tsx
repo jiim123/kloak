@@ -390,11 +390,18 @@ export const ImageLightbox = ({ imageUrl, imageUrls = [], onClose }: ImageLightb
               <div className="w-px h-6 bg-white/20 mx-1" />
               <button
                 onClick={handleDownload}
-                className="p-2.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-white"
+                disabled={downloadState === 'downloading'}
+                className="p-2.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-white disabled:opacity-70 disabled:cursor-wait"
                 aria-label="Download image"
                 title="Download"
               >
-                <Download className="w-5 h-5" />
+                {downloadState === 'downloading' ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : downloadState === 'done' ? (
+                  <Check className="w-5 h-5" />
+                ) : (
+                  <Download className="w-5 h-5" />
+                )}
               </button>
               <button
                 onClick={onClose}
