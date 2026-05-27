@@ -179,10 +179,13 @@ async function insertAttachmentsWithRetry(
     file_name: string;
     file_type: string | null;
     file_size: number | null;
+    width?: number | null;
+    height?: number | null;
+    placeholder?: string | null;
   }>,
 ): Promise<void> {
   for (let attempt = 0; attempt <= ATTACHMENT_INSERT_RETRY_DELAYS_MS.length; attempt += 1) {
-    const { error } = await supabase.from(table).insert(attachments);
+    const { error } = await supabase.from(table as any).insert(attachments as any);
     if (!error) return;
     if (!isRetryableAttachmentInsertError(error) || attempt >= ATTACHMENT_INSERT_RETRY_DELAYS_MS.length) {
       throw error;
