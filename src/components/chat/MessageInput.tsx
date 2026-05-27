@@ -155,14 +155,15 @@ const GifPickerIcon = ({ className }: { className?: string }) => (
 
 async function waitForAttachmentReady(storagePath: string): Promise<boolean> {
   for (let attempt = 0; attempt <= ATTACHMENT_READY_RETRY_DELAYS_MS.length; attempt += 1) {
-    const signedUrl = await getSignedAttachmentUrl(storagePath);
-    if (signedUrl) return true;
+    const exists = await checkAttachmentExists(storagePath);
+    if (exists) return true;
     if (attempt < ATTACHMENT_READY_RETRY_DELAYS_MS.length) {
       await sleep(ATTACHMENT_READY_RETRY_DELAYS_MS[attempt]);
     }
   }
   return false;
 }
+
 
 function isRetryableAttachmentInsertError(error: unknown): boolean {
   const code = typeof error === "object" && error && "code" in error ? String((error as { code?: unknown }).code ?? "") : "";
