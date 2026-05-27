@@ -73,6 +73,7 @@ import { useSignedUrl } from "@/hooks/useSignedUrl";
 import { useInView } from "@/hooks/useInView";
 import { useBlurhash } from "@/hooks/useBlurhash";
 import { markAttachmentDecoded, wasAttachmentDecoded } from "@/lib/attachmentLru";
+import { FileAttachmentCard } from "@/components/chat/FileAttachmentCard";
 import { getPollIdFromContent, isPollMessageContent, usePollLabel } from "@/lib/poll";
 import { usePollStore } from "@/stores/pollStore";
 import { canRevealGhostIdentityForUser } from "@/lib/ghostIdentity";
@@ -408,25 +409,7 @@ const AttachmentItem = memo(function AttachmentItem({
   }
 
   // Generic file attachment
-  const Icon = getFileIcon(attachment.file_type);
-  const sizeLabel = attachment.file_size
-    ? attachment.file_size >= 1024 * 1024
-      ? `${(attachment.file_size / (1024 * 1024)).toFixed(1)} MB`
-      : `${Math.round(attachment.file_size / 1024)} KB`
-    : null;
-  return (
-    <a
-      ref={inViewRef as unknown as React.Ref<HTMLAnchorElement>}
-      href={signedUrl ?? attachment.file_url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="flex items-center gap-3 p-3 bg-secondary rounded-lg hover:bg-secondary/80 max-w-[400px] transition-colors"
-    >
-      <Icon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-      <span className="text-sm font-medium truncate">{attachment.file_name}</span>
-      {sizeLabel && <span className="text-xs text-muted-foreground flex-shrink-0">({sizeLabel})</span>}
-    </a>
-  );
+  return <FileAttachmentCard ref={inViewRef as unknown as React.Ref<HTMLDivElement>} attachment={attachment} />;
 });
 
 export const MessageItem = memo(function MessageItem({
