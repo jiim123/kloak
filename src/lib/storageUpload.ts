@@ -1,5 +1,5 @@
 import { getKeyHashAsync } from "@/integrations/supabase/client";
-import { getSignedAttachmentUrl } from "@/lib/signedUrl";
+
 import { uploadFile as bunnyUpload, deleteFile as bunnyDelete, getCdnUrl } from "@/lib/bunny-upload";
 
 async function requireKeyHash(): Promise<string> {
