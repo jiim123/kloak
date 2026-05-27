@@ -1612,33 +1612,48 @@ export type Database = {
       }
       message_attachments: {
         Row: {
+          enriched_at: string | null
           file_name: string
           file_size: number | null
           file_type: string | null
           file_url: string
           height: number | null
           id: string
+          is_spoiler: boolean
+          is_voice_message: boolean
           message_id: string
+          placeholder: string | null
+          waveform: Json | null
           width: number | null
         }
         Insert: {
+          enriched_at?: string | null
           file_name: string
           file_size?: number | null
           file_type?: string | null
           file_url: string
           height?: number | null
           id?: string
+          is_spoiler?: boolean
+          is_voice_message?: boolean
           message_id: string
+          placeholder?: string | null
+          waveform?: Json | null
           width?: number | null
         }
         Update: {
+          enriched_at?: string | null
           file_name?: string
           file_size?: number | null
           file_type?: string | null
           file_url?: string
           height?: number | null
           id?: string
+          is_spoiler?: boolean
+          is_voice_message?: boolean
           message_id?: string
+          placeholder?: string | null
+          waveform?: Json | null
           width?: number | null
         }
         Relationships: [

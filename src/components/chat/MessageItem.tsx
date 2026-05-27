@@ -70,6 +70,8 @@ import { useMessageMaps } from "./MessageMapsContext";
 import { cn } from "@/lib/utils";
 import { useSignedUrl } from "@/hooks/useSignedUrl";
 import { useInView } from "@/hooks/useInView";
+import { useBlurhash } from "@/hooks/useBlurhash";
+import { markAttachmentDecoded, wasAttachmentDecoded } from "@/lib/attachmentLru";
 import { getPollIdFromContent, isPollMessageContent, usePollLabel } from "@/lib/poll";
 import { usePollStore } from "@/stores/pollStore";
 import { canRevealGhostIdentityForUser } from "@/lib/ghostIdentity";
@@ -211,15 +213,24 @@ const AttachmentItem = memo(function AttachmentItem({
     file_size?: number;
     width?: number | null;
     height?: number | null;
+    placeholder?: string | null;
+    is_spoiler?: boolean | null;
+    is_voice_message?: boolean | null;
   };
   onImageClick?: (url: string) => void;
   uploaderName?: string;
 }) {
   // Only fetch the signed blob URL once the attachment scrolls near the viewport.
-  // This prevents flooding the edge function with parallel requests on channel switch.
-  const [inViewRef, inView] = useInView<HTMLDivElement>({ rootMargin: "600px", once: true });
+  // 200px keeps off-screen rows as BlurHash-only, which matters a lot in long
+  // channels. Was 600px historically to mask flicker — BlurHash now covers that.
+  const [inViewRef, inView] = useInView<HTMLDivElement>({ rootMargin: "200px", once: true });
+  const blurhashUrl = useBlurhash(attachment.id, attachment.placeholder ?? null);
+  const isSpoiler = !!attachment.is_spoiler;
+  const [revealed, setRevealed] = useState(!isSpoiler);
+  // Spoiler attachments don't fetch until clicked.
+  const shouldFetch = inView && revealed;
   const { url: signedUrl, refresh } = useSignedUrl(
-    inView ? attachment.file_url : null,
+    shouldFetch ? attachment.file_url : null,
     { withRefresh: true },
   );
   const isImage = attachment.file_type?.startsWith("image/");
@@ -248,29 +259,35 @@ const AttachmentItem = memo(function AttachmentItem({
     return { width: w, height: h };
   }, [isImage, isVideo, attachment.width, attachment.height]);
 
-  // Fade-in state per media element — keeps a ghost placeholder visible until
-  // the bitmap is decoded so channel switches feel seamless even when the
-  // signed URL is cached and the <img> just remounted.
-  const [isLoaded, setIsLoaded] = useState(false);
+  // Fade-in state per media element. Decoded LRU lets a re-mount skip the
+  // ghost entirely when the bitmap is already in the browser's cache.
+  const [isLoaded, setIsLoaded] = useState(() => wasAttachmentDecoded(attachment.id));
   const imgRef = useRef<HTMLImageElement | null>(null);
 
   useEffect(() => {
-    setIsLoaded(false);
-  }, [signedUrl]);
+    if (!wasAttachmentDecoded(attachment.id)) {
+      setIsLoaded(false);
+    }
+  }, [signedUrl, attachment.id]);
 
   useEffect(() => {
     const img = imgRef.current;
     if (!img || !signedUrl) return;
-    // If the cached blob is already decoded by the browser, complete fires
-    // synchronously and we can flip to loaded immediately.
     if (img.complete && img.naturalWidth > 0) {
       if (typeof img.decode === "function") {
-        img.decode().then(() => setIsLoaded(true)).catch(() => setIsLoaded(true));
+        img.decode().then(() => {
+          setIsLoaded(true);
+          markAttachmentDecoded(attachment.id);
+        }).catch(() => {
+          setIsLoaded(true);
+          markAttachmentDecoded(attachment.id);
+        });
       } else {
         setIsLoaded(true);
+        markAttachmentDecoded(attachment.id);
       }
     }
-  }, [signedUrl]);
+  }, [signedUrl, attachment.id]);
 
   // Audio has no visual surface — render compact loader/player inline.
   if (isAudio) {
@@ -293,20 +310,41 @@ const AttachmentItem = memo(function AttachmentItem({
   }
 
   if (isImage) {
+    const placeholderBg = blurhashUrl
+      ? { backgroundImage: `url(${blurhashUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+      : undefined;
     return (
       <div
         ref={inViewRef}
         className="relative rounded-lg overflow-hidden bg-muted/30"
         style={reservedStyle ? { width: reservedStyle.width, height: reservedStyle.height } : undefined}
       >
-        {/* Ghost placeholder — shown until the image decodes */}
+        {/* BlurHash placeholder (or muted gray when no hash yet) */}
         <div
           className={cn(
-            "absolute inset-0 bg-muted/40 transition-opacity duration-200",
-            isLoaded && signedUrl ? "opacity-0" : "opacity-100 animate-pulse",
+            "absolute inset-0 transition-opacity duration-200",
+            blurhashUrl ? "" : "bg-muted/40",
+            isLoaded && signedUrl ? "opacity-0" : "opacity-100",
+            !blurhashUrl && !(isLoaded && signedUrl) && "animate-pulse",
+            isSpoiler && !revealed && "scale-110",
           )}
+          style={{
+            ...placeholderBg,
+            ...(isSpoiler && !revealed ? { filter: "blur(20px)" } : undefined),
+          }}
           aria-hidden
         />
+        {isSpoiler && !revealed && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setRevealed(true); }}
+            className="absolute inset-0 z-10 flex items-center justify-center"
+          >
+            <span className="rounded-full bg-background/80 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-foreground shadow-sm">
+              Spoiler
+            </span>
+          </button>
+        )}
         {signedUrl && (
           <img
             ref={imgRef}
@@ -321,7 +359,7 @@ const AttachmentItem = memo(function AttachmentItem({
             decoding="async"
             loading="lazy"
             onClick={() => onImageClick?.(signedUrl)}
-            onLoad={() => setIsLoaded(true)}
+            onLoad={() => { setIsLoaded(true); markAttachmentDecoded(attachment.id); }}
             onError={() => { setIsLoaded(false); refresh(); }}
           />
         )}

@@ -179,10 +179,13 @@ async function insertAttachmentsWithRetry(
     file_name: string;
     file_type: string | null;
     file_size: number | null;
+    width?: number | null;
+    height?: number | null;
+    placeholder?: string | null;
   }>,
 ): Promise<void> {
   for (let attempt = 0; attempt <= ATTACHMENT_INSERT_RETRY_DELAYS_MS.length; attempt += 1) {
-    const { error } = await supabase.from(table).insert(attachments);
+    const { error } = await supabase.from(table as any).insert(attachments as any);
     if (!error) return;
     if (!isRetryableAttachmentInsertError(error) || attempt >= ATTACHMENT_INSERT_RETRY_DELAYS_MS.length) {
       throw error;
@@ -859,12 +862,23 @@ export const MessageInput = ({
 
         void (async () => {
           try {
+            const enrichments = new Map<string, import("@/lib/attachmentEnrich").ImageEnrichment | null>();
             if (preparedAttachments.some((attachment) => attachment.storagePath)) {
+              const { enrichImageFile } = await import("@/lib/attachmentEnrich");
               for (const attachment of preparedAttachments) {
                 if (!attachment.storagePath) continue;
                 let fileToUpload = attachment.pending.file;
                 if (fileToUpload.type.startsWith("image/")) {
                   fileToUpload = await compressAttachmentImage(fileToUpload);
+                }
+                // Compute BlurHash + dimensions from the post-compression file
+                // so the placeholder matches the bytes we actually store.
+                if (fileToUpload.type.startsWith("image/")) {
+                  try {
+                    enrichments.set(attachment.storagePath, await enrichImageFile(fileToUpload));
+                  } catch {
+                    enrichments.set(attachment.storagePath, null);
+                  }
                 }
                 await secureUpload("attachments", attachment.storagePath, fileToUpload, {
                   contentType: fileToUpload.type,
@@ -881,13 +895,19 @@ export const MessageInput = ({
 
             const persistedAttachments = preparedAttachments
               .filter((_, i) => attachmentReadiness[i])
-              .map((attachment, i) => ({
-                message_id: sentMessage.id,
-                file_url: attachment.contentUrl,
-                file_name: attachment.optimisticAttachment.file_name || `attachment-${i + 1}`,
-                file_type: attachment.optimisticAttachment.file_type || null,
-                file_size: attachment.optimisticAttachment.file_size || null,
-              }))
+              .map((attachment, i) => {
+                const enrichment = attachment.storagePath ? enrichments.get(attachment.storagePath) ?? null : null;
+                return {
+                  message_id: sentMessage.id,
+                  file_url: attachment.contentUrl,
+                  file_name: attachment.optimisticAttachment.file_name || `attachment-${i + 1}`,
+                  file_type: attachment.optimisticAttachment.file_type || null,
+                  file_size: attachment.optimisticAttachment.file_size || null,
+                  width: enrichment?.width ?? attachment.optimisticAttachment.width ?? null,
+                  height: enrichment?.height ?? attachment.optimisticAttachment.height ?? null,
+                  placeholder: enrichment?.placeholder || null,
+                };
+              })
               .filter((attachment) => !!attachment.file_url);
 
             if (persistedAttachments.length === 0) return;
