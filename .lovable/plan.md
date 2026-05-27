@@ -1,31 +1,36 @@
-## Root cause
+# Fix MessageItem flicker on members sidebar toggle
 
-`AttachmentItem` calls `useSignedUrl(attachment.file_url, …)` on mount, which kicks off the Edge Function blob fetch for **every** attachment in the channel at once — even ones 50 screens below the viewport. The `<img loading="lazy">` attribute does not help because the blob is downloaded by our own fetch, not the browser's image loader, so by the time the user scrolls, the network is saturated and the visible images flicker through their decode cycle.
+## Root cause
+In `src/pages/AppLayout.tsx` (lines ~957-960), the desktop members sidebar uses `transition-[width] duration-200` and toggles between `w-[304px]` and `w-0`. Because the panel sits in the same flex row as the chat area, animating its width forces the chat column to grow/shrink by 1px every frame. Inside `src/components/chat/MessageItem.tsx` the message body wrapper (lines 1140-1141: `overflow-hidden`, `max-w-[90%] sm:max-w-none`) is intrinsically sized by that column, so long-text messages re-wrap on every animation frame — that is the perceived "flicker." Short messages don't reflow, which is why only long ones jitter.
 
 ## Fix
+Replace the width animation with a layout that does not change the chat column width while the panel moves:
 
-Gate the signed-URL fetch (and the `<img>`/`<video>` mount) behind an `IntersectionObserver`. Each `AttachmentItem` reserves its space immediately with the existing ghost placeholder, but only requests its blob once the wrapper enters (or is within ~600px of) the scroll viewport. Once loaded, it stays loaded so scrolling back up doesn't re-fetch.
+1. **`src/pages/AppLayout.tsx`** — the desktop members sidebar container (around line 957):
+   - Always reserve a fixed-width slot (`w-[304px]` when open, `w-0` when closed) but apply the change **without a CSS transition** so the chat column snaps once instead of reflowing 12 frames in a row.
+   - Wrap the inner `MembersSidebar` in a child that is always `w-[304px]` and uses `transition-transform duration-200` to slide in/out (`translate-x-0` ↔ `translate-x-full`), with `overflow-hidden` on the outer slot to clip it.
+   - Net effect: the sidebar still appears to animate, but the chat column width changes in a single layout step so message text wraps exactly once.
 
-### Changes
+   Pseudocode:
+   ```tsx
+   <div className={cn("shrink-0 overflow-hidden", isMemberSidebarOpen ? "w-[304px]" : "w-0")}>
+     <div
+       className={cn(
+         "h-full w-[304px] transition-transform duration-200 ease-out",
+         isMemberSidebarOpen ? "translate-x-0" : "translate-x-full"
+       )}
+     >
+       <MembersSidebar ... />
+     </div>
+   </div>
+   ```
 
-1. **`src/hooks/useInView.ts`** (new, ~25 lines)
-   - Tiny hook: `const [ref, inView] = useInView({ rootMargin: '600px', once: true })`.
-   - Uses a single `IntersectionObserver` per element, disconnects after first intersect when `once`.
+2. No changes needed in `MessageItem.tsx`. Its wrapping behavior is correct; it only looked wrong because it was being asked to reflow every frame.
 
-2. **`src/components/chat/MessageItem.tsx` — `AttachmentItem`**
-   - Wrap the existing reserved-size container with a ref tied to `useInView`.
-   - Pass `inView ? attachment.file_url : null` into `useSignedUrl` so the fetch is deferred until the user is about to see it.
-   - Ghost placeholder stays exactly as it is today; it now also covers the "not yet requested" state, which is what the user perceives as flicker.
-   - Keep the `_peekCache` synchronous read in `useSignedUrl`, so already-cached attachments (e.g. recently viewed) reveal instantly without waiting for intersection.
+## Out of scope
+- Touching the mobile members drawer (it uses a Sheet and isn't affected).
+- Refactoring `MessageItem` layout or its `max-w-[90%]` rule.
+- Channel sidebar toggle (uses a different mechanism; report separately if it also jitters).
 
-3. **No backend / hook signature changes** beyond accepting a nullable input (already supported by `useSignedUrl`).
-
-### Out of scope
-
-- Full message-list virtualization (bigger refactor; not needed to fix the flicker).
-- Changes to inline image rendering in `MessageContent.tsx` — those already use `loading="lazy"` on raw URLs and don't go through our blob proxy.
-
-### Files touched
-
-- `src/hooks/useInView.ts` (new)
-- `src/components/chat/MessageItem.tsx`
+## Files touched
+- `src/pages/AppLayout.tsx` (single container around the desktop `MembersSidebar`)
