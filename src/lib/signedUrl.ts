@@ -20,6 +20,7 @@ import { getKeyHashAsync } from "@/integrations/supabase/client";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+const PRIVATE_BUNNY_ATTACHMENT_HOST = "kloakcdn.b-cdn.net";
 
 const OBJECT_URL_EXPIRY = 1800; // 30 minutes (matches original signed URL TTL)
 const CACHE_REFRESH_BUFFER = 300; // Refresh 5 min before expiry
@@ -162,6 +163,29 @@ export function extractStoragePath(url: string): string | null {
   try {
     const pattern = /\/storage\/v1\/object\/(?:public|sign)\/attachments\/(.+?)(?:\?|$)/;
     const match = url.match(pattern);
+    return match ? decodeURIComponent(match[1]) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function isPrivateBunnyAttachmentUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return (
+      parsed.host.toLowerCase() === PRIVATE_BUNNY_ATTACHMENT_HOST &&
+      parsed.pathname.startsWith("/attachments/")
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function extractPrivateAttachmentPath(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.host.toLowerCase() !== PRIVATE_BUNNY_ATTACHMENT_HOST) return null;
+    const match = parsed.pathname.match(/^\/attachments\/(.+)$/);
     return match ? decodeURIComponent(match[1]) : null;
   } catch {
     return null;
@@ -353,10 +377,13 @@ export async function resolveSignedUrls(
       pathToOriginal.set(path, url);
       continue;
     }
-    // Private Bunny attachment URLs should not be prewarmed here. They are not
-    // directly fetchable by the browser and can create noisy/sign-bunny-url
-    // churn when a fresh attachment has not propagated yet.
-    if (/^https?:\/\/kloakcdn\.b-cdn\.net\/attachments\//i.test(url)) {
+    if (isPrivateBunnyAttachmentUrl(url)) {
+      const path = extractPrivateAttachmentPath(url);
+      if (!path) {
+        results.set(url, url);
+        continue;
+      }
+      pathToOriginal.set(path, url);
       continue;
     }
     if (!isSupabaseAttachmentUrl(url)) {
