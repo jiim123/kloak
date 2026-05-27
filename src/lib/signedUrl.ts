@@ -93,6 +93,8 @@ export function invalidateCacheEntry(filePath: string): void {
     safeRevoke(entry.url);
     urlCache.delete(filePath);
   }
+  // Also drop any negative-cache record so a manual refresh truly retries.
+  notFoundCache.delete(filePath);
 }
 
 function setCache(filePath: string, objectUrl: string) {
@@ -113,10 +115,13 @@ function setCache(filePath: string, objectUrl: string) {
 
 const inflight = new Map<string, Promise<string | null>>();
 
-// Negative cache: paths that returned 404/non-ok. Avoids re-hitting the edge
-// function (and re-triggering runtime-error overlays) for permanently missing files.
-const notFoundCache = new Set<string>();
+// Negative cache: paths that returned 404/non-ok multiple times. Avoids
+// re-hitting the edge function for permanently missing files, but tolerates
+// the first few misses so fresh uploads (where the row exists before the
+// CDN object has propagated) can still recover via refresh().
+const notFoundCache = new Map<string, number>();
 const NOT_FOUND_CACHE_MAX = 500;
+const NOT_FOUND_THRESHOLD = 4; // require 4 consecutive misses before giving up
 
 // ---------------------------------------------------------------------------
 // Path helpers (kept for backward compatibility with legacy Supabase URLs in DB)
@@ -177,8 +182,10 @@ export async function getSignedAttachmentUrl(filePath: string): Promise<string |
   const cached = getCached(filePath);
   if (cached) return cached;
 
-  // Skip permanently-missing paths to avoid re-firing edge-function errors
-  if (notFoundCache.has(filePath)) return null;
+  // Skip paths that have repeatedly returned 404. We only honor the negative
+  // cache once the failure count crosses NOT_FOUND_THRESHOLD; this lets fresh
+  // uploads recover when the CDN object lands a few seconds after the row.
+  if ((notFoundCache.get(filePath) ?? 0) >= NOT_FOUND_THRESHOLD) return null;
 
   // Deduplicate concurrent requests for the same path
   let pending = inflight.get(filePath);
@@ -205,13 +212,16 @@ export async function getSignedAttachmentUrl(filePath: string): Promise<string |
         if (res.status === 404 || res.status === 410) {
           if (notFoundCache.size >= NOT_FOUND_CACHE_MAX) {
             // simple FIFO trim
-            const first = notFoundCache.values().next().value;
+            const first = notFoundCache.keys().next().value;
             if (first) notFoundCache.delete(first);
           }
-          notFoundCache.add(filePath);
+          notFoundCache.set(filePath, (notFoundCache.get(filePath) ?? 0) + 1);
         }
         return null;
       }
+
+      // Success — clear any prior miss count so future refreshes are fast.
+      notFoundCache.delete(filePath);
 
       const blob = await res.blob();
       const objectUrl = URL.createObjectURL(blob);

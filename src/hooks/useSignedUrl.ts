@@ -116,7 +116,7 @@ export function useSignedUrl(
   }, [fileUrl]);
 
   const refresh = useCallback(() => {
-    if (retriedRef.current || !fileUrl) return;
+    if (!fileUrl) return;
     retriedRef.current = true;
 
     const ATTACHMENT_PREFIX = "kloak-attachment://";

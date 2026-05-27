@@ -1,4 +1,4 @@
-import { forwardRef, useState, useCallback } from "react";
+import { forwardRef, useState, useCallback, useEffect } from "react";
 import { Download, Loader2, Check } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -23,6 +23,30 @@ export const FileAttachmentCard = forwardRef<HTMLDivElement, FileAttachmentCardP
     const { Icon, label } = getFileMeta(attachment.file_name, attachment.file_type);
     const sizeLabel = formatFileSize(attachment.file_size);
     const [state, setState] = useState<DownloadState>("idle");
+
+    // Optimistic attachments use a `temp-att-` id and reference a path that
+    // may not yet be on the CDN. Poll refresh() until the signed URL resolves.
+    const isOptimistic = attachment.id.startsWith("temp-att-");
+    useEffect(() => {
+      if (signedUrl) return;
+      let cancelled = false;
+      let attempts = 0;
+      const tick = () => {
+        if (cancelled) return;
+        attempts += 1;
+        refresh();
+        // Stop polling after ~30s; the negative cache will short-circuit anyway.
+        if (attempts < 15) {
+          timer = setTimeout(tick, 2000);
+        }
+      };
+      let timer = setTimeout(tick, isOptimistic ? 1500 : 1000);
+      return () => {
+        cancelled = true;
+        clearTimeout(timer);
+      };
+    }, [signedUrl, refresh, isOptimistic]);
+
 
     const handleDownload = useCallback(async () => {
       if (state === "downloading") return;
@@ -86,14 +110,18 @@ export const FileAttachmentCard = forwardRef<HTMLDivElement, FileAttachmentCardP
           disabled={state === "downloading" || !signedUrl}
           aria-label={
             !signedUrl
-              ? `Preparing ${attachment.file_name}`
+              ? isOptimistic
+                ? `Uploading ${attachment.file_name}`
+                : `Preparing ${attachment.file_name}`
               : state === "downloading"
                 ? `Downloading ${attachment.file_name}`
                 : `Download ${attachment.file_name}`
           }
           title={
             !signedUrl
-              ? "Preparing file…"
+              ? isOptimistic
+                ? "Uploading…"
+                : "Preparing file…"
               : state === "downloading"
                 ? "Downloading…"
                 : state === "done"
