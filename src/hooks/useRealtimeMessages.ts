@@ -511,6 +511,21 @@ export const useRealtimeMessages = (channelId: string | null) => {
         .on(
           'postgres_changes',
           {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'message_attachments',
+          },
+          (payload) => {
+            try {
+              mergeAttachmentIntoMessage(payload.new as MessageAttachmentRealtimeRow);
+            } catch (error) {
+              console.error('[Realtime] Error processing message attachment update:', error);
+            }
+          },
+        )
+        .on(
+          'postgres_changes',
+          {
             event: 'DELETE',
             schema: 'public',
             table: 'message_attachments',
