@@ -492,16 +492,19 @@ export const MessageItem = memo(function MessageItem({
     [message.is_own, user?.id, message.user_id],
   );
 
-  // Strip attachment URLs from content to avoid duplicate rendering with AttachmentItem
+  // Strip attachment URLs from content to avoid duplicate rendering with
+  // AttachmentItem — and to avoid the raw-URL fallback when an attachment row
+  // never lands (failed insert, mid-flight reload). We always run the regex
+  // strips, not just when message.attachments is populated.
   const displayContent = useMemo(() => {
-    if (!message.attachments || message.attachments.length === 0) return message.content;
-    let cleaned = message.content;
-    for (const att of message.attachments) {
-      if (att.file_url) {
-        cleaned = cleaned.replace(att.file_url, "").trim();
+    let cleaned = message.content ?? "";
+    if (message.attachments && message.attachments.length > 0) {
+      for (const att of message.attachments) {
+        if (att.file_url) {
+          cleaned = cleaned.replace(att.file_url, "").trim();
+        }
       }
     }
-    // Also strip any Supabase signed attachment URLs and kloak-attachment:// references
     cleaned = cleaned
       .replace(/https?:\/\/[^\s]*supabase\.co\/storage\/v1\/object\/sign\/attachments\/[^\s]*/g, "")
       .trim();
