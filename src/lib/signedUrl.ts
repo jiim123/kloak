@@ -113,10 +113,13 @@ function setCache(filePath: string, objectUrl: string) {
 
 const inflight = new Map<string, Promise<string | null>>();
 
-// Negative cache: paths that returned 404/non-ok. Avoids re-hitting the edge
-// function (and re-triggering runtime-error overlays) for permanently missing files.
-const notFoundCache = new Set<string>();
+// Negative cache: paths that returned 404/non-ok multiple times. Avoids
+// re-hitting the edge function for permanently missing files, but tolerates
+// the first few misses so fresh uploads (where the row exists before the
+// CDN object has propagated) can still recover via refresh().
+const notFoundCache = new Map<string, number>();
 const NOT_FOUND_CACHE_MAX = 500;
+const NOT_FOUND_THRESHOLD = 4; // require 4 consecutive misses before giving up
 
 // ---------------------------------------------------------------------------
 // Path helpers (kept for backward compatibility with legacy Supabase URLs in DB)
