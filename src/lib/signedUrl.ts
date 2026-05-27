@@ -344,10 +344,19 @@ export async function resolveSignedUrls(
   const pathToOriginal = new Map<string, string>();
 
   for (const url of fullUrls) {
+    if (!url || url.startsWith("blob:") || url.startsWith("data:")) {
+      continue;
+    }
     // Handle kloak-attachment:// stable references
     if (url.startsWith(ATTACHMENT_PREFIX)) {
       const path = url.slice(ATTACHMENT_PREFIX.length);
       pathToOriginal.set(path, url);
+      continue;
+    }
+    // Private Bunny attachment URLs should not be prewarmed here. They are not
+    // directly fetchable by the browser and can create noisy/sign-bunny-url
+    // churn when a fresh attachment has not propagated yet.
+    if (/^https?:\/\/kloakcdn\.b-cdn\.net\/attachments\//i.test(url)) {
       continue;
     }
     if (!isSupabaseAttachmentUrl(url)) {
