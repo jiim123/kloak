@@ -1741,18 +1741,41 @@ export const MessageItem = memo(function MessageItem({
                     )}
 
                     {/* Attachments - skip for system messages */}
-                    {!message.is_system_message && message.attachments && message.attachments.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-2 w-full">
-                        {message.attachments.map((attachment) => (
-                          <AttachmentItem
-                            key={attachment.id}
-                            attachment={attachment}
-                            onImageClick={setAttachmentLightboxUrl}
-                            uploaderName={displayName}
-                          />
-                        ))}
-                      </div>
-                    )}
+                    {!message.is_system_message && message.attachments && message.attachments.length > 0 && (() => {
+                      const images = message.attachments.filter((a) => a.file_type?.startsWith("image/") && !a.is_spoiler);
+                      const others = message.attachments.filter((a) => !(a.file_type?.startsWith("image/") && !a.is_spoiler));
+                      const useGallery = images.length >= 2 && images.length <= 4;
+                      return (
+                        <div className="flex flex-col gap-2 mt-2 w-full">
+                          {useGallery && (
+                            <AttachmentGallery
+                              attachments={images}
+                              renderCell={(a) => (
+                                <AttachmentItem
+                                  attachment={a}
+                                  onImageClick={setAttachmentLightboxUrl}
+                                  uploaderName={displayName}
+                                  layout="fill"
+                                />
+                              )}
+                            />
+                          )}
+                          {(!useGallery || others.length > 0) && (
+                            <div className="flex flex-wrap gap-2 w-full">
+                              {(useGallery ? others : message.attachments).map((attachment) => (
+                                <AttachmentItem
+                                  key={attachment.id}
+                                  attachment={attachment}
+                                  onImageClick={setAttachmentLightboxUrl}
+                                  uploaderName={displayName}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
                   </>
                 )}
               </div>
