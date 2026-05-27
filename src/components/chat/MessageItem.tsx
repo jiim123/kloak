@@ -70,6 +70,8 @@ import { useMessageMaps } from "./MessageMapsContext";
 import { cn } from "@/lib/utils";
 import { useSignedUrl } from "@/hooks/useSignedUrl";
 import { useInView } from "@/hooks/useInView";
+import { useBlurhash } from "@/hooks/useBlurhash";
+import { markAttachmentDecoded, wasAttachmentDecoded } from "@/lib/attachmentLru";
 import { getPollIdFromContent, isPollMessageContent, usePollLabel } from "@/lib/poll";
 import { usePollStore } from "@/stores/pollStore";
 import { canRevealGhostIdentityForUser } from "@/lib/ghostIdentity";
