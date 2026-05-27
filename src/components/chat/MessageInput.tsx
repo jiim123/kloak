@@ -43,7 +43,7 @@ import { canRevealGhostIdentityForUser } from "@/lib/ghostIdentity";
 import { encodeCustomEmojisForTransport } from "@/lib/globalEmojiResolver";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
 import { useServerEmojis } from "@/hooks/useServerEmojis";
-import { getSignedAttachmentUrl } from "@/lib/signedUrl";
+import { getSignedAttachmentUrl, checkAttachmentExists } from "@/lib/signedUrl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -155,14 +155,15 @@ const GifPickerIcon = ({ className }: { className?: string }) => (
 
 async function waitForAttachmentReady(storagePath: string): Promise<boolean> {
   for (let attempt = 0; attempt <= ATTACHMENT_READY_RETRY_DELAYS_MS.length; attempt += 1) {
-    const signedUrl = await getSignedAttachmentUrl(storagePath);
-    if (signedUrl) return true;
+    const exists = await checkAttachmentExists(storagePath);
+    if (exists) return true;
     if (attempt < ATTACHMENT_READY_RETRY_DELAYS_MS.length) {
       await sleep(ATTACHMENT_READY_RETRY_DELAYS_MS[attempt]);
     }
   }
   return false;
 }
+
 
 function isRetryableAttachmentInsertError(error: unknown): boolean {
   const code = typeof error === "object" && error && "code" in error ? String((error as { code?: unknown }).code ?? "") : "";
