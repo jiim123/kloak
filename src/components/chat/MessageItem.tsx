@@ -316,11 +316,20 @@ const AttachmentItem = memo(function AttachmentItem({
     const placeholderBg = blurhashUrl
       ? { backgroundImage: `url(${blurhashUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
       : undefined;
+    const isFill = layout === "fill";
+    const containerStyle = isFill
+      ? undefined
+      : reservedStyle
+        ? { width: reservedStyle.width, height: reservedStyle.height }
+        : undefined;
     return (
       <div
         ref={inViewRef}
-        className="relative rounded-lg overflow-hidden bg-muted/30"
-        style={reservedStyle ? { width: reservedStyle.width, height: reservedStyle.height } : undefined}
+        className={cn(
+          "relative rounded-lg overflow-hidden bg-muted/30",
+          isFill && "w-full h-full",
+        )}
+        style={containerStyle}
       >
         {/* BlurHash placeholder (or muted gray when no hash yet) */}
         <div
@@ -353,10 +362,11 @@ const AttachmentItem = memo(function AttachmentItem({
             ref={imgRef}
             src={signedUrl}
             alt={attachment.file_name}
-            width={reservedStyle?.width}
-            height={reservedStyle?.height}
+            width={isFill ? undefined : reservedStyle?.width}
+            height={isFill ? undefined : reservedStyle?.height}
             className={cn(
-              "relative w-full h-full object-contain rounded-lg cursor-pointer hover:opacity-90 transition-opacity duration-200",
+              "relative w-full h-full rounded-lg cursor-pointer hover:opacity-90 transition-opacity duration-200",
+              isFill ? "object-cover" : "object-contain",
               isLoaded ? "opacity-100" : "opacity-0",
             )}
             decoding="async"
