@@ -5,7 +5,6 @@ import { useFriendStore } from '@/stores/friendStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useServerStore } from '@/stores/serverStore';
 import { useUserCacheStore } from '@/stores/userCacheStore';
-import { resolveSignedUrls, isSupabaseAttachmentUrl } from '@/lib/signedUrl';
 import type { Message, MessageAttachment, MessageReply } from '@/types';
 import { getUserFromCache, getOrFetchUser } from '@/stores/userCacheStore';
 import type { User } from '@/types';
