@@ -52,11 +52,12 @@ export async function secureUpload(
     ? result.url
     : getCdnUrl(bucket, result.path);
 
-  // Pre-warm the blob proxy cache for attachment uploads so the sender sees
-  // their own image instantly without waiting for the hook to resolve.
-  if (bucket === "attachments" && result.path) {
-    getSignedAttachmentUrl(result.path).catch(() => {});
-  }
+  // Note: we intentionally do NOT pre-warm the blob proxy here. Pulling a
+  // freshly-uploaded (potentially large) file back through the proxy made
+  // attachment finalization slow and could cause statement timeouts on the
+  // subsequent insert. Readiness is now verified via a HEAD-only exists check
+  // in waitForAttachmentReady().
+
 
   return { publicUrl, path: result.path };
 }
