@@ -216,15 +216,20 @@ export const ImageLightbox = ({ imageUrl, imageUrls = [], onClose }: ImageLightb
     }
   }, [scale, onClose]);
 
-  // Download image
+  // Download image via fetch -> blob -> object URL to bypass cross-origin restrictions
+  // and force a direct file download without opening a new tab.
   const handleDownload = useCallback(async () => {
     if (!currentImage) return;
-    
+
     try {
       const response = await fetch(currentImage);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
+      a.style.display = 'none';
       a.href = url;
       // Extract filename from URL or use default
       const urlParts = currentImage.split('/');
@@ -235,8 +240,7 @@ export const ImageLightbox = ({ imageUrl, imageUrls = [], onClose }: ImageLightb
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      // Fallback: open in new tab
-      window.open(currentImage, '_blank');
+      console.error('Failed to download image:', error);
     }
   }, [currentImage]);
 
