@@ -2,7 +2,6 @@ import { useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useDMStore, registerDMChannel, unregisterDMChannel } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
-import { resolveSignedUrls, isSupabaseAttachmentUrl } from '@/lib/signedUrl';
 import type { DirectMessage, DMAttachment } from '@/types';
 import { getOrFetchUser, useUserCacheStore } from '@/stores/userCacheStore';
 
