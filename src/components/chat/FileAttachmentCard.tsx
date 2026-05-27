@@ -84,15 +84,31 @@ export const FileAttachmentCard = forwardRef<HTMLDivElement, FileAttachmentCardP
           type="button"
           onClick={handleDownload}
           disabled={state === "downloading" || !signedUrl}
-          aria-label={`Download ${attachment.file_name}`}
+          aria-label={
+            !signedUrl
+              ? `Preparing ${attachment.file_name}`
+              : state === "downloading"
+                ? `Downloading ${attachment.file_name}`
+                : `Download ${attachment.file_name}`
+          }
+          title={
+            !signedUrl
+              ? "Preparing file…"
+              : state === "downloading"
+                ? "Downloading…"
+                : state === "done"
+                  ? "Downloaded"
+                  : "Download"
+          }
           className={cn(
             "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md",
             "text-muted-foreground hover:text-foreground hover:bg-muted",
-            "transition-colors disabled:cursor-wait disabled:opacity-50",
+            "transition-colors disabled:hover:bg-transparent disabled:hover:text-muted-foreground",
+            !signedUrl || state === "downloading" ? "cursor-progress" : "cursor-pointer",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           )}
         >
-          {state === "downloading" ? (
+          {!signedUrl || state === "downloading" ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : state === "done" ? (
             <Check className="h-4 w-4" />
