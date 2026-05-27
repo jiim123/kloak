@@ -110,14 +110,18 @@ export const FileAttachmentCard = forwardRef<HTMLDivElement, FileAttachmentCardP
           disabled={state === "downloading" || !signedUrl}
           aria-label={
             !signedUrl
-              ? `Preparing ${attachment.file_name}`
+              ? isOptimistic
+                ? `Uploading ${attachment.file_name}`
+                : `Preparing ${attachment.file_name}`
               : state === "downloading"
                 ? `Downloading ${attachment.file_name}`
                 : `Download ${attachment.file_name}`
           }
           title={
             !signedUrl
-              ? "Preparing file…"
+              ? isOptimistic
+                ? "Uploading…"
+                : "Preparing file…"
               : state === "downloading"
                 ? "Downloading…"
                 : state === "done"
