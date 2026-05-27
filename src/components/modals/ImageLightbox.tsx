@@ -16,6 +16,7 @@ export const ImageLightbox = ({ imageUrl, imageUrls = [], onClose }: ImageLightb
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [resetKey, setResetKey] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [downloadState, setDownloadState] = useState<'idle' | 'downloading' | 'done'>('idle');
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
