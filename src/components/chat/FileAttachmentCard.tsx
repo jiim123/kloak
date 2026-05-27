@@ -1,4 +1,4 @@
-import { forwardRef, useState, useCallback, useEffect } from "react";
+import { forwardRef, useState, useCallback } from "react";
 import { Download, Loader2, Check } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
