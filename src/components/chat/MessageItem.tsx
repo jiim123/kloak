@@ -204,6 +204,7 @@ const AttachmentItem = memo(function AttachmentItem({
   attachment,
   onImageClick,
   uploaderName,
+  layout = "natural",
 }: {
   attachment: {
     id: string;
@@ -219,6 +220,8 @@ const AttachmentItem = memo(function AttachmentItem({
   };
   onImageClick?: (url: string) => void;
   uploaderName?: string;
+  /** "natural" uses intrinsic aspect & max 400x300; "fill" stretches to container (gallery cells). */
+  layout?: "natural" | "fill";
 }) {
   // Only fetch the signed blob URL once the attachment scrolls near the viewport.
   // 200px keeps off-screen rows as BlurHash-only, which matters a lot in long
