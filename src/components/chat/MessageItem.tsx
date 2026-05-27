@@ -53,6 +53,7 @@ import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { canModerateByRoles } from "@/lib/permissions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MessageContent } from "./MessageContent";
+import { AttachmentGallery } from "./AttachmentGallery";
 import { PollMessage } from "./PollMessage";
 import { isImageOnlyMessage, convertMentionsToReadable } from "@/lib/message";
 import { ReplyPreview } from "./MessageContent";
