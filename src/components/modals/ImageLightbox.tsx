@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, useDragControls, PanInfo } from 'framer-motion';
-import { X, Download, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { X, Download, ZoomIn, ZoomOut, RotateCcw, Loader2, Check } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 interface ImageLightboxProps {
