@@ -180,8 +180,10 @@ export async function getSignedAttachmentUrl(filePath: string): Promise<string |
   const cached = getCached(filePath);
   if (cached) return cached;
 
-  // Skip permanently-missing paths to avoid re-firing edge-function errors
-  if (notFoundCache.has(filePath)) return null;
+  // Skip paths that have repeatedly returned 404. We only honor the negative
+  // cache once the failure count crosses NOT_FOUND_THRESHOLD; this lets fresh
+  // uploads recover when the CDN object lands a few seconds after the row.
+  if ((notFoundCache.get(filePath) ?? 0) >= NOT_FOUND_THRESHOLD) return null;
 
   // Deduplicate concurrent requests for the same path
   let pending = inflight.get(filePath);
@@ -208,13 +210,16 @@ export async function getSignedAttachmentUrl(filePath: string): Promise<string |
         if (res.status === 404 || res.status === 410) {
           if (notFoundCache.size >= NOT_FOUND_CACHE_MAX) {
             // simple FIFO trim
-            const first = notFoundCache.values().next().value;
+            const first = notFoundCache.keys().next().value;
             if (first) notFoundCache.delete(first);
           }
-          notFoundCache.add(filePath);
+          notFoundCache.set(filePath, (notFoundCache.get(filePath) ?? 0) + 1);
         }
         return null;
       }
+
+      // Success — clear any prior miss count so future refreshes are fast.
+      notFoundCache.delete(filePath);
 
       const blob = await res.blob();
       const objectUrl = URL.createObjectURL(blob);
