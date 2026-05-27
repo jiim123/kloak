@@ -53,6 +53,7 @@ import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { canModerateByRoles } from "@/lib/permissions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MessageContent } from "./MessageContent";
+import { AttachmentGallery } from "./AttachmentGallery";
 import { PollMessage } from "./PollMessage";
 import { isImageOnlyMessage, convertMentionsToReadable } from "@/lib/message";
 import { ReplyPreview } from "./MessageContent";
@@ -204,6 +205,7 @@ const AttachmentItem = memo(function AttachmentItem({
   attachment,
   onImageClick,
   uploaderName,
+  layout = "natural",
 }: {
   attachment: {
     id: string;
@@ -219,6 +221,8 @@ const AttachmentItem = memo(function AttachmentItem({
   };
   onImageClick?: (url: string) => void;
   uploaderName?: string;
+  /** "natural" uses intrinsic aspect & max 400x300; "fill" stretches to container (gallery cells). */
+  layout?: "natural" | "fill";
 }) {
   // Only fetch the signed blob URL once the attachment scrolls near the viewport.
   // 200px keeps off-screen rows as BlurHash-only, which matters a lot in long
@@ -313,11 +317,20 @@ const AttachmentItem = memo(function AttachmentItem({
     const placeholderBg = blurhashUrl
       ? { backgroundImage: `url(${blurhashUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
       : undefined;
+    const isFill = layout === "fill";
+    const containerStyle = isFill
+      ? undefined
+      : reservedStyle
+        ? { width: reservedStyle.width, height: reservedStyle.height }
+        : undefined;
     return (
       <div
         ref={inViewRef}
-        className="relative rounded-lg overflow-hidden bg-muted/30"
-        style={reservedStyle ? { width: reservedStyle.width, height: reservedStyle.height } : undefined}
+        className={cn(
+          "relative rounded-lg overflow-hidden bg-muted/30",
+          isFill && "w-full h-full",
+        )}
+        style={containerStyle}
       >
         {/* BlurHash placeholder (or muted gray when no hash yet) */}
         <div
@@ -350,10 +363,11 @@ const AttachmentItem = memo(function AttachmentItem({
             ref={imgRef}
             src={signedUrl}
             alt={attachment.file_name}
-            width={reservedStyle?.width}
-            height={reservedStyle?.height}
+            width={isFill ? undefined : reservedStyle?.width}
+            height={isFill ? undefined : reservedStyle?.height}
             className={cn(
-              "relative w-full h-full object-contain rounded-lg cursor-pointer hover:opacity-90 transition-opacity duration-200",
+              "relative w-full h-full rounded-lg cursor-pointer hover:opacity-90 transition-opacity duration-200",
+              isFill ? "object-cover" : "object-contain",
               isLoaded ? "opacity-100" : "opacity-0",
             )}
             decoding="async"
@@ -1727,18 +1741,41 @@ export const MessageItem = memo(function MessageItem({
                     )}
 
                     {/* Attachments - skip for system messages */}
-                    {!message.is_system_message && message.attachments && message.attachments.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-2 w-full">
-                        {message.attachments.map((attachment) => (
-                          <AttachmentItem
-                            key={attachment.id}
-                            attachment={attachment}
-                            onImageClick={setAttachmentLightboxUrl}
-                            uploaderName={displayName}
-                          />
-                        ))}
-                      </div>
-                    )}
+                    {!message.is_system_message && message.attachments && message.attachments.length > 0 && (() => {
+                      const images = message.attachments.filter((a) => a.file_type?.startsWith("image/") && !a.is_spoiler);
+                      const others = message.attachments.filter((a) => !(a.file_type?.startsWith("image/") && !a.is_spoiler));
+                      const useGallery = images.length >= 2 && images.length <= 4;
+                      return (
+                        <div className="flex flex-col gap-2 mt-2 w-full">
+                          {useGallery && (
+                            <AttachmentGallery
+                              attachments={images}
+                              renderCell={(a) => (
+                                <AttachmentItem
+                                  attachment={a}
+                                  onImageClick={setAttachmentLightboxUrl}
+                                  uploaderName={displayName}
+                                  layout="fill"
+                                />
+                              )}
+                            />
+                          )}
+                          {(!useGallery || others.length > 0) && (
+                            <div className="flex flex-wrap gap-2 w-full">
+                              {(useGallery ? others : message.attachments).map((attachment) => (
+                                <AttachmentItem
+                                  key={attachment.id}
+                                  attachment={attachment}
+                                  onImageClick={setAttachmentLightboxUrl}
+                                  uploaderName={displayName}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
                   </>
                 )}
               </div>
