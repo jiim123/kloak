@@ -841,18 +841,13 @@ export const MessageInput = ({
         await forumConfigRef.current!.onSend(finalContent, replyToId);
       } else {
         const preparedAttachments = prepareAttachmentsForMessage(pendingAttachments);
-        // Only inline image/GIF URLs into the message body — those are the ones
-        // that need a content-side fallback so markdown image rendering works.
-        // For generic files we rely solely on the message_attachments row so a
-        // failed insert doesn't leave a raw kloak-attachment:// URL on screen.
-        const inlineUrls = preparedAttachments
-          .filter((a) => {
-            const t = a.optimisticAttachment.file_type ?? "";
-            return t.startsWith("image/");
-          })
-          .map((attachment) => attachment.contentUrl);
-        if (inlineUrls.length > 0) {
-          const urlBlock = inlineUrls.join("\n");
+        // Inline every attachment URL so the message body is never empty (the
+        // send_message RPC rejects empty content). MessageItem unconditionally
+        // strips kloak-attachment:// / signed-URL refs, so these never reach
+        // the rendered output even if the attachments row never lands.
+        const attachmentUrls = preparedAttachments.map((attachment) => attachment.contentUrl);
+        if (attachmentUrls.length > 0) {
+          const urlBlock = attachmentUrls.join("\n");
           finalContent = finalContent ? `${finalContent}\n${urlBlock}` : urlBlock;
         }
 
