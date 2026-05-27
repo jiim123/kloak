@@ -177,11 +177,22 @@ export const VideoPlayer = memo(function VideoPlayer({ src, fileName, onError, o
       onMouseMove={scheduleHide}
       onMouseLeave={() => { if (isPlaying) setShowControls(false); }}
     >
-      <div className="relative w-full" style={{ aspectRatio: '16/9' }}>
+      <div
+        className="relative w-full"
+        style={{ aspectRatio: '16/9' }}
+        onPointerEnter={() => {
+          const v = videoRef.current;
+          if (v && v.preload === "none") v.preload = "metadata";
+        }}
+        onTouchStart={() => {
+          const v = videoRef.current;
+          if (v && v.preload === "none") v.preload = "metadata";
+        }}
+      >
         <video
           ref={videoRef}
           src={src}
-          preload="metadata"
+          preload="none"
           className="absolute inset-0 w-full h-full object-contain block"
           onClick={togglePlay}
           onError={onError}
