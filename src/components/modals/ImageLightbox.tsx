@@ -221,30 +221,64 @@ export const ImageLightbox = ({ imageUrl, imageUrls = [], onClose }: ImageLightb
   // Download image via fetch -> blob -> object URL to bypass cross-origin restrictions
   // and force a direct file download without opening a new tab.
   const handleDownload = useCallback(async () => {
-    if (!currentImage) return;
+    if (!currentImage || downloadState === 'downloading') return;
 
-    try {
-      const response = await fetch(currentImage);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      const blob = await response.blob();
+    setDownloadState('downloading');
+
+    const urlParts = currentImage.split('/');
+    const fileName = urlParts[urlParts.length - 1].split('?')[0] || 'image.png';
+
+    const triggerBlobDownload = (blob: Blob) => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.style.display = 'none';
       a.href = url;
-      // Extract filename from URL or use default
-      const urlParts = currentImage.split('/');
-      const fileName = urlParts[urlParts.length - 1].split('?')[0] || 'image.png';
       a.download = fileName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
+    };
+
+    try {
+      // Try CORS fetch first
+      const response = await fetch(currentImage, { mode: 'cors', cache: 'no-store' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const blob = await response.blob();
+      triggerBlobDownload(blob);
+      setDownloadState('done');
+      setTimeout(() => setDownloadState('idle'), 1500);
     } catch (error) {
-      console.error('Failed to download image:', error);
+      console.error('Direct fetch failed, trying canvas fallback:', error);
+      // Canvas fallback for cross-origin images without CORS headers
+      try {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        const loaded = new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve();
+          img.onerror = () => reject(new Error('Image load failed'));
+        });
+        img.src = currentImage;
+        await loaded;
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('No canvas context');
+        ctx.drawImage(img, 0, 0);
+        const blob: Blob = await new Promise((resolve, reject) =>
+          canvas.toBlob(b => (b ? resolve(b) : reject(new Error('toBlob failed'))), 'image/png')
+        );
+        triggerBlobDownload(blob);
+        setDownloadState('done');
+        setTimeout(() => setDownloadState('idle'), 1500);
+      } catch (fallbackError) {
+        console.error('Download failed:', fallbackError);
+        toast.error('Download failed. The image source blocks direct downloads.');
+        setDownloadState('idle');
+      }
     }
-  }, [currentImage]);
+  }, [currentImage, downloadState]);
 
   // Zoom controls
   const handleZoomIn = useCallback(() => {
