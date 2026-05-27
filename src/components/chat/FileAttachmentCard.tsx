@@ -19,33 +19,18 @@ type DownloadState = "idle" | "downloading" | "done";
 
 export const FileAttachmentCard = forwardRef<HTMLDivElement, FileAttachmentCardProps>(
   function FileAttachmentCard({ attachment }, ref) {
-    const { url: signedUrl, refresh } = useSignedUrl(attachment.file_url, { withRefresh: true });
+    // Optimistic attachments use a `temp-att-` id and reference a storage path
+    // that does NOT exist on the CDN yet. Skip signed-URL resolution entirely
+    // for these — once the persisted attachment row lands (replacing the
+    // optimistic one), useSignedUrl will resolve cleanly without spam.
+    const isOptimistic = attachment.id.startsWith("temp-att-");
+    const { url: signedUrl, refresh } = useSignedUrl(
+      isOptimistic ? null : attachment.file_url,
+      { withRefresh: true },
+    );
     const { Icon, label } = getFileMeta(attachment.file_name, attachment.file_type);
     const sizeLabel = formatFileSize(attachment.file_size);
     const [state, setState] = useState<DownloadState>("idle");
-
-    // Optimistic attachments use a `temp-att-` id and reference a path that
-    // may not yet be on the CDN. Poll refresh() until the signed URL resolves.
-    const isOptimistic = attachment.id.startsWith("temp-att-");
-    useEffect(() => {
-      if (signedUrl) return;
-      let cancelled = false;
-      let attempts = 0;
-      const tick = () => {
-        if (cancelled) return;
-        attempts += 1;
-        refresh();
-        // Stop polling after ~30s; the negative cache will short-circuit anyway.
-        if (attempts < 15) {
-          timer = setTimeout(tick, 2000);
-        }
-      };
-      let timer = setTimeout(tick, isOptimistic ? 1500 : 1000);
-      return () => {
-        cancelled = true;
-        clearTimeout(timer);
-      };
-    }, [signedUrl, refresh, isOptimistic]);
 
 
     const handleDownload = useCallback(async () => {

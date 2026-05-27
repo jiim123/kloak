@@ -232,12 +232,24 @@ const AttachmentItem = memo(function AttachmentItem({
   const blurhashUrl = useBlurhash(attachment.id, attachment.placeholder ?? null);
   const isSpoiler = !!attachment.is_spoiler;
   const [revealed, setRevealed] = useState(!isSpoiler);
+  // Optimistic attachments carry a local blob: preview URL (for images) or
+  // an empty preview (for non-image files). They never need signed-URL
+  // resolution — calling sign-bunny-url before the upload finalizes is what
+  // produces the 404 spam during attach/send.
+  const isOptimistic = attachment.id.startsWith("temp-att-");
+  const localPreviewUrl =
+    isOptimistic &&
+    typeof attachment.file_url === "string" &&
+    (attachment.file_url.startsWith("blob:") || attachment.file_url.startsWith("data:"))
+      ? attachment.file_url
+      : null;
   // Spoiler attachments don't fetch until clicked.
-  const shouldFetch = inView && revealed;
-  const { url: signedUrl, refresh } = useSignedUrl(
+  const shouldFetch = inView && revealed && !isOptimistic;
+  const { url: signedUrlRaw, refresh } = useSignedUrl(
     shouldFetch ? attachment.file_url : null,
     { withRefresh: true },
   );
+  const signedUrl = signedUrlRaw ?? localPreviewUrl;
   const isImage = attachment.file_type?.startsWith("image/");
   const isVideo = attachment.file_type?.startsWith("video/");
   const isAudio = attachment.file_type?.startsWith("audio/");
