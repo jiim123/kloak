@@ -93,6 +93,8 @@ export function invalidateCacheEntry(filePath: string): void {
     safeRevoke(entry.url);
     urlCache.delete(filePath);
   }
+  // Also drop any negative-cache record so a manual refresh truly retries.
+  notFoundCache.delete(filePath);
 }
 
 function setCache(filePath: string, objectUrl: string) {
