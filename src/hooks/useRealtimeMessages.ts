@@ -5,7 +5,6 @@ import { useFriendStore } from '@/stores/friendStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useServerStore } from '@/stores/serverStore';
 import { useUserCacheStore } from '@/stores/userCacheStore';
-import { resolveSignedUrls, isSupabaseAttachmentUrl } from '@/lib/signedUrl';
 import type { Message, MessageAttachment, MessageReply } from '@/types';
 import { getUserFromCache, getOrFetchUser } from '@/stores/userCacheStore';
 import type { User } from '@/types';
@@ -449,16 +448,6 @@ export const useRealtimeMessages = (channelId: string | null) => {
                 }
                 
                 useMessageStore.getState().addMessage(message);
-
-                // Pre-warm signed URL cache for any attachment URLs embedded in content
-                // so MessageContent resolves them from cache instantly.
-                const urlMatches = (newMsg.content || '').match(/https?:\/\/[^\s<>"]+/g);
-                if (urlMatches) {
-                  const attachmentUrls = urlMatches.filter(isSupabaseAttachmentUrl);
-                  if (attachmentUrls.length > 0) {
-                    resolveSignedUrls(attachmentUrls).catch(() => {});
-                  }
-                }
 
                 // Hydrate author info into cache asynchronously (no UI delay).
                 if (revealIdentity && !cachedUser && localUser?.id !== newMsg.user_id) {

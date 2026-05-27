@@ -43,7 +43,7 @@ import { canRevealGhostIdentityForUser } from "@/lib/ghostIdentity";
 import { encodeCustomEmojisForTransport } from "@/lib/globalEmojiResolver";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
 import { useServerEmojis } from "@/hooks/useServerEmojis";
-import { getSignedAttachmentUrl, checkAttachmentExists } from "@/lib/signedUrl";
+import { checkAttachmentExists } from "@/lib/signedUrl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
