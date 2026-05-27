@@ -241,6 +241,46 @@ export async function getSignedAttachmentUrl(filePath: string): Promise<string |
 }
 
 // ---------------------------------------------------------------------------
+// Lightweight existence check (HEAD-only; no blob download)
+// ---------------------------------------------------------------------------
+
+/**
+ * Check whether an attachment exists on the CDN without downloading it.
+ * Used for post-upload readiness polling so the client doesn't re-pull
+ * large media files through the proxy.
+ */
+export async function checkAttachmentExists(filePath: string): Promise<boolean> {
+  // If we already have a cached object URL, it definitely exists.
+  if (getCached(filePath)) return true;
+
+  try {
+    const keyHash = await getKeyHashAsync();
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${ANON_KEY}`,
+    };
+    if (keyHash) headers["x-key-hash"] = keyHash;
+
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/sign-bunny-url`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ bucket: "attachments", path: filePath, mode: "exists" }),
+    });
+
+    if (!res.ok) {
+      try { await res.text(); } catch { /* ignore */ }
+      return false;
+    }
+    const data = await res.json().catch(() => null) as { exists?: boolean } | null;
+    return Boolean(data?.exists);
+  } catch {
+    return false;
+  }
+}
+
+
+
+// ---------------------------------------------------------------------------
 // Batch URLs
 // ---------------------------------------------------------------------------
 
