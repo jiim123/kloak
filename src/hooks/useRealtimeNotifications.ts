@@ -6,7 +6,6 @@ import { useUIStore } from '@/stores/uiStore';
 import type { Notification, NotificationType as DBNotificationType } from '@/types';
 import { isTauri } from '@/lib/tauriRuntime';
 import { playNotificationSound, type NotificationType as SoundNotificationType } from './useNotificationSound';
-import { acquireChannel, subscribeChannel, releaseChannel, isChannelSubscribed } from '@/lib/sharedChannel';
 
 const isNotificationTypeEnabled = (type: DBNotificationType): boolean => {
   const state = useUIStore.getState();
@@ -58,7 +57,7 @@ export const useRealtimeNotifications = (userId: string | null) => {
     if (!userId) return;
     isSubscribedRef.current = false;
 
-    const topic = `user:${userId}`;
+    const topic = `user-notifications:${userId}:${crypto.randomUUID()}`;
 
     // Delay initial fetch until auth key hash is available.
     const initFetch = async () => {
@@ -85,7 +84,7 @@ export const useRealtimeNotifications = (userId: string | null) => {
       void showDesktopNotification(notification);
     };
 
-    const channel = acquireChannel(topic);
+    const channel = supabase.channel(topic);
     channel.on(
       'broadcast',
       { event: 'notifications' },
@@ -149,14 +148,19 @@ export const useRealtimeNotifications = (userId: string | null) => {
       },
     );
 
-    subscribeChannel(topic);
+    channel.subscribe((status, err) => {
+      if (status === 'SUBSCRIBED') {
+        isSubscribedRef.current = true;
+        return;
+      }
 
-    // Track subscription status via the shared channel manager
-    const checkSubscribed = () => {
-      isSubscribedRef.current = isChannelSubscribed(topic);
-    };
-    const subCheckInterval = window.setInterval(checkSubscribed, 5000);
-    checkSubscribed();
+      if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        isSubscribedRef.current = false;
+        if (err) {
+          console.warn(`[NotificationsRealtime] ${topic} error:`, err);
+        }
+      }
+    });
 
     const pollInterval = window.setInterval(async () => {
       if (isSubscribedRef.current) return;
@@ -185,8 +189,7 @@ export const useRealtimeNotifications = (userId: string | null) => {
     return () => {
       isSubscribedRef.current = false;
       window.clearInterval(pollInterval);
-      window.clearInterval(subCheckInterval);
-      releaseChannel(topic);
+      supabase.removeChannel(channel);
     };
   }, [userId]);
 };

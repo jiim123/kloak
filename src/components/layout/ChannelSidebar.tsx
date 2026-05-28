@@ -23,7 +23,6 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -2084,7 +2083,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
                         {currentServer.name}
                       </h2>
                       {resolvedServerVerified && (
-                        <CheckCircle2 className="h-4 w-4 shrink-0 fill-sky-400 text-[hsl(223_7%_20%)]" />
+                        <img src="/verified.svg" alt="Verified server" className="h-3.5 w-3.5 shrink-0" />
                       )}
                     </div>
                   </div>

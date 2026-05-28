@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, ChevronRight, Loader2, Search, Users } from 'lucide-react';
+import { ChevronRight, Loader2, Search, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
@@ -235,7 +235,7 @@ const ExploreServersOriginal = () => {
           <div className="flex min-h-[128px] flex-col items-center px-4 pb-4 pt-9 text-center">
             <div className="flex max-w-full items-center justify-center gap-1.5">
               <span className="truncate text-[15px] font-semibold leading-5 text-foreground">{server.name}</span>
-              {server.is_verified && <CheckCircle2 className="h-4 w-4 shrink-0 fill-sky-400 text-card" />}
+              {server.is_verified && <img src="/verified.svg" alt="Verified server" className="h-4 w-4 shrink-0" />}
             </div>
 
             <p className="mt-2 line-clamp-3 min-h-[48px] text-[11px] leading-4 text-muted-foreground">

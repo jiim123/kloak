@@ -342,7 +342,12 @@ export const ServerOverviewView = () => {
                   </Avatar>
                 </div>
                 <div className="mx-auto mt-3 max-w-4xl">
-                  <h1 className="text-3xl font-semibold text-foreground truncate">{currentServer.name}</h1>
+                  <div className="flex min-w-0 items-center justify-center gap-2">
+                    <h1 className="truncate text-3xl font-semibold text-foreground">{currentServer.name}</h1>
+                    {currentServer.is_verified && (
+                      <img src="/verified.svg" alt="Verified server" className="h-5 w-5 shrink-0" />
+                    )}
+                  </div>
                 </div>
                 <p className="mx-auto mt-1 max-w-3xl px-4 text-sm leading-6 text-foreground/80 line-clamp-2 sm:text-base">
                   {currentServer.about?.trim() || `Official ${currentServer.name}`}

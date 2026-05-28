@@ -206,6 +206,13 @@ const ServerIconVisual = memo(({ server }: { server: ServerWithMembership }) => 
           18+
         </span>
       )}
+      {server.is_verified && (
+        <img
+          src="/verified.svg"
+          alt="Verified server"
+          className="absolute -right-1 -top-1 h-4 w-4 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]"
+        />
+      )}
     </div>
   );
 });
@@ -482,6 +489,14 @@ const DraggableServerItem = memo(
                         )}
                       </div>
                     </motion.div>
+
+                    {server.is_verified && (
+                      <img
+                        src="/verified.svg"
+                        alt="Verified server"
+                        className="absolute -right-1 -top-1 h-4 w-4 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]"
+                      />
+                    )}
 
                     {/* Mention badge */}
                     <AnimatePresence>

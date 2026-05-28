@@ -858,6 +858,11 @@ export const MessageInput = ({
           optimisticAttachments: preparedAttachments.map((attachment) => attachment.optimisticAttachment),
         });
         if (!sentMessage) return;
+        if ((sentMessage as any)._mass_mentions_queued) {
+          const queuedTypes = ((sentMessage as any)._queued_mention_types as string[] | undefined) ?? [];
+          const label = queuedTypes.length > 0 ? queuedTypes.map((type) => `@${type}`).join(", ") : "server mentions";
+          toast.info(`${label} notifications are being delivered.`);
+        }
 
         const draftKey = isForum ? `forum-${targetId}` : isDM ? `dm-${targetId}` : targetId;
         setContent("");
