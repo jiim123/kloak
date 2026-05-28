@@ -24,7 +24,7 @@ const inviteDetailsCache = new Map<string, { data: InviteDetails | null; cachedA
 const inviteDetailsInFlight = new Map<string, Promise<InviteDetails | null>>();
 
 const inviteCardClass =
-  "mt-2 w-full max-w-[360px] overflow-hidden rounded-[4px] border border-[#2F3137] bg-gradient-to-br from-[#353944] to-[#1f212763]";
+  "mt-2 w-full max-w-[360px] overflow-hidden rounded-[10px] border border-[#2B2F36] bg-[#111318] shadow-[0_8px_24px_rgba(0,0,0,0.24)]";
 
 const getInviteDetailsCached = async (code: string): Promise<InviteDetails | null> => {
   const now = Date.now();
@@ -131,17 +131,19 @@ export const InviteLinkPreview = ({ inviteCode }: { inviteCode: string }) => {
   if (isLoading) {
     return (
       <div className={inviteCardClass}>
-        <div className="flex items-start gap-2.5 p-2.5 pb-2">
+        <div className="flex items-center gap-3 p-4">
+          <div className="h-12 w-12 shrink-0 rounded-full bg-white/10" />
           <div className="min-w-0 flex-1">
-            <div className="h-3 w-44 rounded bg-white/15" />
-            <div className="mt-2 h-2.5 w-36 rounded bg-white/10" />
-            <div className="mt-1.5 h-2.5 w-24 rounded bg-white/10" />
+            <div className="h-4 w-44 rounded bg-white/15" />
+            <div className="mt-2 h-3 w-24 rounded bg-white/10" />
           </div>
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black/20">
-            <Loader2 className="h-4 w-4 animate-spin text-[#f5c400]" />
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/5">
+            <Loader2 className="h-4 w-4 animate-spin text-white/70" />
           </div>
         </div>
-        <div className="mx-2.5 mb-2.5 h-5 rounded-[3px] bg-[#f5c400]/70" />
+        <div className="border-t border-[#2B2F36] px-4 py-3.5">
+          <div className="h-9 rounded-[6px] bg-[#4F46E5]/70" />
+        </div>
       </div>
     );
   }
@@ -149,13 +151,13 @@ export const InviteLinkPreview = ({ inviteCode }: { inviteCode: string }) => {
   if (!invite) {
     return (
       <div className={inviteCardClass}>
-        <div className="p-2.5">
-          <div className="text-[12px] font-semibold leading-tight text-white">Invalid invite</div>
-          <div className="mt-1 text-[11px] leading-tight text-[#cfc6b8]">This invite may be invalid or revoked.</div>
+        <div className="p-4">
+          <div className="text-[16px] font-bold leading-tight text-white">Invalid invite</div>
+          <div className="mt-1 text-[13px] leading-tight text-[#AEB4C0]">This invite may be invalid or revoked.</div>
           <Button
             variant="ghost"
             disabled
-            className="mt-2 h-5 w-full rounded-[3px] bg-[#f5c400]/60 px-2 text-[10px] font-semibold text-[#312719] hover:bg-[#f5c400]/60"
+            className="mt-4 h-9 w-full rounded-[6px] bg-[#44547A]/60 px-3 text-[14px] font-medium text-white hover:bg-[#44547A]/60"
           >
             Invite Unavailable
           </Button>
@@ -166,39 +168,44 @@ export const InviteLinkPreview = ({ inviteCode }: { inviteCode: string }) => {
 
   const memberCountText =
     typeof invite.member_count === "number" && invite.member_count >= 0
-      ? `${invite.member_count.toLocaleString()} members`
+      ? `${invite.member_count.toLocaleString()} Members`
       : null;
   const title = invite.name;
 
   return (
     <div className={inviteCardClass}>
-      <div className="flex items-center gap-2.5 p-2.5 pb-1.5">
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-[13px] font-semibold leading-[16px] text-white">{title}</div>
-          <p className="mt-1.5 line-clamp-2 text-[11px] font-medium leading-[13px] text-[#ddd4c6]">
-            {invite.about || "You've been invited to join this server."}
-          </p>
-          {memberCountText && (
-            <div className="mt-2 text-[10px] font-medium leading-none text-[#b7aa99]">{memberCountText}</div>
-          )}
-        </div>
-
-        <Avatar className="h-12 w-12 shrink-0 rounded-full bg-[#272119]">
-          <AvatarImage src={invite.icon_url || undefined} className="rounded-full" />
-          <AvatarFallback className="rounded-full bg-[#231e18] text-[12px] font-bold text-[#f5c400]">
+      <div className="flex items-center gap-3 p-4">
+        <Avatar className="h-12 w-12 shrink-0 rounded-full bg-[#252832]">
+          <AvatarImage src={invite.icon_url || undefined} className="rounded-full object-cover" />
+          <AvatarFallback className="rounded-full bg-[#252832] text-[14px] font-bold text-white">
             {getServerInitials(invite.name)}
           </AvatarFallback>
         </Avatar>
+
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[16px] font-bold leading-[20px] text-white">{title}</div>
+          {memberCountText && (
+            <div className="mt-1.5 flex items-center gap-1.5 text-[13px] font-medium leading-none text-[#AEB4C0]">
+              <span className="h-2 w-2 rounded-full bg-[#7B8493]" aria-hidden="true" />
+              <span>{memberCountText}</span>
+            </div>
+          )}
+          {invite.about && (
+            <p className="mt-2 line-clamp-2 text-[12px] font-normal leading-[16px] text-[#AEB4C0]">
+              {invite.about}
+            </p>
+          )}
+        </div>
       </div>
 
-      <div className="px-2.5 pb-2.5">
+      <div className="border-t border-[#2B2F36] px-4 py-3.5">
         <Button
           onClick={handleJoin}
           disabled={isJoining}
-          className="mt-1.5 h-4 w-full rounded-[3px] bg-white px-1.5 !text-[13px] sm:!text-[13px] font-bold leading-none text-[#2f2618] shadow-none hover:bg-[#f3f4f6] disabled:bg-white/70 disabled:text-[#2f2618]/70"
+          className="h-9 w-full rounded-[6px] bg-[#44547A] px-3 !text-[14px] font-medium leading-none text-white shadow-none hover:bg-[#4F5F8A] disabled:bg-[#44547A]/70 disabled:text-white/70"
         >
-          {isJoining && <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />}
-          {isAlreadyMember ? "Open Server" : "Accept Invite"}
+          {isJoining && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {isAlreadyMember ? "Open Server" : "Join Community"}
         </Button>
       </div>
     </div>

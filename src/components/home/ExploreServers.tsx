@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, Loader2, Search, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -199,16 +199,24 @@ const ExploreServersOriginal = () => {
     void handleJoin(server);
   };
 
+  const handleCardKeyDown = (event: KeyboardEvent<HTMLDivElement>, server: ExploreServer) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    handleCardClick(server);
+  };
+
   const renderCommunityCard = (server: ExploreServer, compact = false) => {
     const joined = myServerIds.has(server.id);
 
     return (
       <LazyCardMount key={server.id}>
-        <button
-          type="button"
+        <div
+          role="button"
+          tabIndex={0}
           onClick={() => handleCardClick(server)}
+          onKeyDown={(event) => handleCardKeyDown(event, server)}
           className={cn(
-            "group relative block h-full w-full overflow-hidden rounded-lg bg-card text-left",
+            "group relative block h-full w-full cursor-pointer overflow-hidden rounded-lg bg-card text-left",
             "border border-border/60 transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70",
             compact ? "min-h-[206px]" : "min-h-[226px]",
           )}
@@ -260,7 +268,7 @@ const ExploreServersOriginal = () => {
               </Button>
             </div>
           </div>
-        </button>
+        </div>
       </LazyCardMount>
     );
   };
