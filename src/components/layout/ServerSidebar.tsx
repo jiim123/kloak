@@ -636,6 +636,7 @@ export const ServerSidebar = ({
   const [activeDragServerId, setActiveDragServerId] = useState<string | null>(null);
   const [isFolderStateLoaded, setIsFolderStateLoaded] = useState(false);
   const [orderedServerIds, setOrderedServerIds] = useState<string[]>([]);
+  const lastSavedFolderStateRef = useRef<string | null>(null);
 
   const totalHomeBadge = totalDMUnread;
   const isExploreActive = location.pathname === "/app/explore";
@@ -677,11 +678,15 @@ export const ServerSidebar = ({
         if (data && typeof data === "object") {
           const sanitized = sanitizeFolderState(data as Partial<ServerFolderState>);
           setFolderState(sanitized);
+          lastSavedFolderStateRef.current = JSON.stringify(sanitized);
           try {
             localStorage.setItem(SERVER_FOLDERS_STORAGE_KEY, JSON.stringify(sanitized));
           } catch {
             /* ignore */
           }
+        }
+        if (!lastSavedFolderStateRef.current) {
+          lastSavedFolderStateRef.current = JSON.stringify(folderStateRef.current);
         }
 
         setIsFolderStateLoaded(true);
@@ -703,9 +708,11 @@ export const ServerSidebar = ({
 
   useEffect(() => {
     if (!isFolderStateLoaded || !user?.id) return;
+    const serialized = JSON.stringify(folderState);
+    if (serialized === lastSavedFolderStateRef.current) return;
 
     try {
-      localStorage.setItem(SERVER_FOLDERS_STORAGE_KEY, JSON.stringify(folderState));
+      localStorage.setItem(SERVER_FOLDERS_STORAGE_KEY, serialized);
     } catch {
       /* ignore */
     }
@@ -717,6 +724,7 @@ export const ServerSidebar = ({
           _folder_data: folderStateRef.current,
         });
         if (error) console.error("Failed to save folder state to database:", error);
+        else lastSavedFolderStateRef.current = JSON.stringify(folderStateRef.current);
       } catch (err) {
         console.error("Error saving folder state:", err);
       }

@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
 import { useUserCacheStore, bulkSetUsersInCache, fetchAndCacheUser } from "@/stores/userCacheStore";
 import { resolveSignedUrls, isSupabaseAttachmentUrl } from "@/lib/signedUrl";
+import { fetchUsersPresence } from "@/lib/presenceBatch";
 import type { DMConversation, DirectMessage, User, ReactionGroup } from "@/types";
 
 /** Registry of active DM broadcast channels keyed by conversationId */
@@ -164,15 +165,8 @@ const hydrateConversationPresence = async (
   }
 
   try {
-    const { data, error } = await supabase.rpc("get_users_presence_secure", {
-      _user_id: userId,
-      _target_user_ids: targetUserIds,
-    });
-
-    if (error) throw error;
-
     const presenceByUserId = new Map<string, PresenceSnapshotRow>();
-    for (const row of Array.isArray(data) ? (data as PresenceSnapshotRow[]) : []) {
+    for (const row of await fetchUsersPresence(userId, targetUserIds)) {
       presenceByUserId.set(row.id, row);
     }
 

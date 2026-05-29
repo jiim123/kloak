@@ -262,7 +262,7 @@ export const ChatArea = ({ showHeader = true }: ChatAreaProps) => {
 
   // Load custom emoji map for pinned message rendering
   useEffect(() => {
-    if (!serverId) {
+    if (!serverId || pinnedMessages.length === 0) {
       setCustomEmojiMap({});
       return;
     }
@@ -287,7 +287,7 @@ export const ChatArea = ({ showHeader = true }: ChatAreaProps) => {
     return () => {
       cancelled = true;
     };
-  }, [serverId]);
+  }, [serverId, pinnedMessages.length]);
 
   // Stable swipe callbacks
   const handleSwipeRight = useCallback(() => setMobileSidebarOpen(true), [setMobileSidebarOpen]);
