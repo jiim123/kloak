@@ -1133,6 +1133,8 @@ interface ChannelSidebarProps {
 }
 
 export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
+  const HEADER_CONDENSE_SCROLL_TOP = 20;
+  const HEADER_CONDENSE_MIN_OVERFLOW = 140;
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuthStore();
@@ -1166,6 +1168,8 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
   const [isServerHeaderCondensed, setIsServerHeaderCondensed] = useState(false);
   const [channelSearchQuery, setChannelSearchQuery] = useState("");
   const [resolvedServerVerified, setResolvedServerVerified] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
+  const channelListRef = useRef<HTMLDivElement | null>(null);
   const deferredChannelSearchQuery = useDeferredValue(channelSearchQuery);
   const normalizedChannelSearchQuery = deferredChannelSearchQuery.trim().toLowerCase();
   const isSearchingChannels = normalizedChannelSearchQuery.length > 0;
@@ -1275,7 +1279,6 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
   const canSeeServerSettings = canManageChannels || canManageServer || canManageRoles;
 
   const channelSettings = useChannelSettingsStore((s) => s.settings);
-  const [showHidden, setShowHidden] = useState(false);
 
   const { uncategorizedChannels, sortedCategories, hiddenChannels } = useMemo(() => {
     const safeChannels = (channels || []).filter((channel) => !channel.linked_voice_channel_id);
@@ -1404,14 +1407,36 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
     setChannelSearchQuery("");
   }, [currentServer?.id]);
 
+  const syncServerHeaderCondensed = useCallback((node: HTMLDivElement | null) => {
+    if (!node) {
+      setIsServerHeaderCondensed(false);
+      return;
+    }
+
+    const overflow = node.scrollHeight - node.clientHeight;
+    const shouldCondense = overflow > HEADER_CONDENSE_MIN_OVERFLOW && node.scrollTop > HEADER_CONDENSE_SCROLL_TOP;
+    setIsServerHeaderCondensed((prev) => (prev === shouldCondense ? prev : shouldCondense));
+  }, []);
+
   const handleChannelSearchChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     setChannelSearchQuery(event.target.value);
   }, []);
 
   const handleChannelListScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
-    const shouldCondense = event.currentTarget.scrollTop > 20;
-    setIsServerHeaderCondensed((prev) => (prev === shouldCondense ? prev : shouldCondense));
-  }, []);
+    syncServerHeaderCondensed(event.currentTarget);
+  }, [syncServerHeaderCondensed]);
+
+  useEffect(() => {
+    syncServerHeaderCondensed(channelListRef.current);
+  }, [
+    channels,
+    categories,
+    collapsedCategories,
+    channelSearchQuery,
+    currentServer?.id,
+    showHidden,
+    syncServerHeaderCondensed,
+  ]);
 
   const toggleCategory = useCallback((categoryId: string) => {
     setCollapsedCategories((prev) => {
@@ -2214,6 +2239,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
           {isMobile ? (
             <>
               <div
+                ref={channelListRef}
                 className={cn(
                   "flex-1 overflow-y-auto px-1 pt-2 pb-5 channel-sidebar-scroll",
                   isSortingMode && "bg-foreground/[0.03] border-2 border-dashed border-border/50 rounded-xl mx-1 my-1",
@@ -2264,6 +2290,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
           <ContextMenu>
             <ContextMenuTrigger asChild disabled={isSortingMode}>
               <div
+                ref={channelListRef}
                 className={cn(
                   "flex-1 overflow-y-auto px-1 pt-2 pb-5 channel-sidebar-scroll",
                   isSortingMode && "bg-foreground/[0.03] border-2 border-dashed border-border/50 rounded-xl mx-1 my-1",
