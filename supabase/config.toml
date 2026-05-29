@@ -48,5 +48,8 @@ verify_jwt = false
 [functions.send-join-application]
 verify_jwt = false
 
+[functions.register-push-token]
+verify_jwt = false
+
 [functions.cleanup-attachments]
 verify_jwt = false

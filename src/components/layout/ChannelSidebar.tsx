@@ -1791,11 +1791,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
     );
   }
 
-  const serverBannerUrl = currentServer.banner_url
-    ? currentServer.banner_url.includes("blob:")
-      ? currentServer.banner_url
-      : `${currentServer.banner_url}${currentServer.banner_url.includes("?") ? "&" : "?"}cb=${encodeURIComponent(currentServer.banner_url.split("/").pop()?.split("?")[0] ?? "")}`
-    : null;
+  const serverBannerUrl = currentServer.banner_url ?? null;
   const serverInitial = currentServer.name.trim().charAt(0).toUpperCase() || "#";
 
   // Shared channel list rendering (used by both mobile and desktop)

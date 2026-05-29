@@ -702,8 +702,8 @@ const AppLayout = () => {
                 {/* Alpha notice banner - mobile */}
                 <AlphaNoticeBanner />
 
-                {/* Mobile header - hide when in DM conversation (DMHeader handles it) */}
-                {!(isDMView && currentConversation) && <MobileHeader isDMView={isDMView} />}
+                {/* Mobile header */}
+                <MobileHeader isDMView={isDMView} />
 
                 {/* Mobile layout */}
                 <div className="flex-1 overflow-hidden bg-layout-chat relative w-full">

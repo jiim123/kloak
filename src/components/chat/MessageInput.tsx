@@ -189,7 +189,7 @@ async function insertAttachmentsWithRetry(
   }
 }
 
-// Memoized action bar (two-row layout: textarea on top, actions on bottom)
+// Memoized composer row: actions, textarea, emoji, send.
 const ActionBar = memo(
   ({
     showCreatePoll,
@@ -218,8 +218,8 @@ const ActionBar = memo(
 
     // Larger touch targets on mobile (≥44px), more compact on desktop.
     const iconBtnClass = isMobile
-      ? "flex h-11 w-11 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground transition-colors disabled:cursor-not-allowed disabled:opacity-40"
-      : "flex h-10 w-10 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground transition-colors disabled:cursor-not-allowed disabled:opacity-40";
+      ? "flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/5 hover:text-foreground transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+      : "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/5 hover:text-foreground transition-colors disabled:cursor-not-allowed disabled:opacity-40";
     const menuItemClass =
       "min-h-[36px] cursor-pointer gap-2.5 px-3 py-2 text-[13px] font-semibold text-popover-foreground focus:bg-secondary/70 hover:bg-secondary/70";
 
@@ -227,147 +227,148 @@ const ActionBar = memo(
     const sendBtnSize = isMobile ? "h-10 w-10" : "h-9 w-9";
 
     return (
-      <div className="flex flex-col">
-        {/* Row 1: textarea grows freely without affecting the action row */}
-        <div className="flex min-w-0 items-start px-3 pt-1 sm:px-3.5">
+      <div className="flex min-w-0 items-end gap-1 px-1.5 py-1 sm:py-1.5">
+        <div className="flex shrink-0 items-center">
+          <DropdownMenu open={isActionsMenuOpen} onOpenChange={setIsActionsMenuOpen}>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                disabled={!canSendMessage}
+                className={`flex ${plusBtnSize} items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground hover:bg-foreground/5 disabled:cursor-not-allowed disabled:opacity-40`}
+                aria-label="Open message actions"
+              >
+                <Plus className="h-5 w-5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              side="top"
+              sideOffset={8}
+              className="w-[292px] rounded-md border border-border/80 bg-popover p-0 shadow-[0_10px_28px_rgba(0,0,0,0.5)]"
+            >
+              {onAttachClick && (
+                <DropdownMenuItem
+                  disabled={!canSendMessage}
+                  onSelect={onAttachClick}
+                  className={menuItemClass}
+                >
+                  <Paperclip className="h-4 w-4 text-muted-foreground" />
+                  <span>Media or file</span>
+                </DropdownMenuItem>
+              )}
+
+              {setShowGifPicker && (
+                <DropdownMenuItem
+                  disabled={!canSendMessage}
+                  onSelect={() => {
+                    setShowGifPicker(true);
+                    setIsActionsMenuOpen(false);
+                  }}
+                  className={menuItemClass}
+                >
+                  <GifPickerIcon className="h-4 w-4 text-muted-foreground" />
+                  <span>GIF</span>
+                </DropdownMenuItem>
+              )}
+
+              {setShowCreatePoll && (
+                <DropdownMenuItem
+                  disabled={!canSendMessage}
+                  onSelect={() => setShowCreatePoll(true)}
+                  className={`${menuItemClass} items-start`}
+                >
+                  <SquareChartGantt className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                  <span className="flex flex-col leading-tight">
+                    <span>Poll</span>
+                    <span className="mt-0.5 text-[13px] font-medium text-muted-foreground">
+                      A single or multiple-choice question.
+                    </span>
+                  </span>
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {setShowGifPicker && (
+            <GifPicker
+              open={showGifPicker}
+              onOpenChange={setShowGifPicker}
+              onSelect={onGifSelect}
+              anchor={<span className="h-0 w-0" aria-hidden="true" />}
+            />
+          )}
+        </div>
+
+        <div className="min-w-0 flex-1 self-stretch px-1">
           {textareaNode}
         </div>
 
-        {/* Row 2: fixed-height action row */}
-        <div className="flex items-center gap-1 px-1.5 pb-1 sm:pb-1.5">
-          <div className="flex items-center">
-            <DropdownMenu open={isActionsMenuOpen} onOpenChange={setIsActionsMenuOpen}>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  disabled={!canSendMessage}
-                  className={`flex ${plusBtnSize} items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground hover:bg-foreground/5 disabled:cursor-not-allowed disabled:opacity-40`}
-                  aria-label="Open message actions"
-                >
-                  <Plus className="h-5 w-5" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="start"
-                side="top"
-                sideOffset={8}
-                className="w-[292px] rounded-md border border-border/80 bg-popover p-0 shadow-[0_10px_28px_rgba(0,0,0,0.5)]"
-              >
-                {onAttachClick && (
-                  <DropdownMenuItem
-                    disabled={!canSendMessage}
-                    onSelect={onAttachClick}
-                    className={menuItemClass}
-                  >
-                    <Paperclip className="h-4 w-4 text-muted-foreground" />
-                    <span>Media or file</span>
-                  </DropdownMenuItem>
-                )}
-
-                {setShowCreatePoll && (
-                  <DropdownMenuItem
-                    disabled={!canSendMessage}
-                    onSelect={() => setShowCreatePoll(true)}
-                    className={`${menuItemClass} items-start`}
-                  >
-                    <SquareChartGantt className="mt-0.5 h-4 w-4 text-muted-foreground" />
-                    <span className="flex flex-col leading-tight">
-                      <span>Poll</span>
-                      <span className="mt-0.5 text-[13px] font-medium text-muted-foreground">
-                        A single or multiple-choice question.
-                      </span>
-                    </span>
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
-          <div className="ml-auto flex shrink-0 items-center">
-            {setShowGifPicker && (
-              <GifPicker
-                open={showGifPicker}
-                onOpenChange={setShowGifPicker}
-                onSelect={onGifSelect}
-              >
-                <button
-                  type="button"
-                  className={iconBtnClass}
-                  onMouseDown={(e) => e.preventDefault()}
-                  aria-label="Open GIF picker"
-                >
-                  <GifPickerIcon className="w-[22px] h-[22px]" />
-                </button>
-              </GifPicker>
-            )}
-
-            <EmojiPicker
-              open={showEmojiPicker}
-              onOpenChange={setShowEmojiPicker}
-              onEmojiSelect={onEmojiSelect}
-              serverId={currentServer?.id}
-              allowExternalEmojis={allowExternalEmojis}
+        <div className="flex shrink-0 items-center">
+          <EmojiPicker
+            open={showEmojiPicker}
+            onOpenChange={setShowEmojiPicker}
+            onEmojiSelect={onEmojiSelect}
+            serverId={currentServer?.id}
+            allowExternalEmojis={allowExternalEmojis}
+          >
+            <button
+              type="button"
+              className={iconBtnClass}
+              onMouseDown={(e) => e.preventDefault()}
+              aria-label="Open emoji picker"
             >
-              <button
-                type="button"
-                className={iconBtnClass}
-                onMouseDown={(e) => e.preventDefault()}
-                aria-label="Open emoji picker"
-              >
-                <Smile className="w-5 h-5" />
-              </button>
-            </EmojiPicker>
+              <Smile className="w-5 h-5" />
+            </button>
+          </EmojiPicker>
 
-            <AnimatePresence>
-              {showCharacterWarning && (
+          <AnimatePresence>
+            {showCharacterWarning && (
+              <motion.span
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.15, ease: "easeOut" }}
+                className={`mx-1 text-[13px] font-sans ${content.length > MAX_LENGTH - 50 ? "text-destructive" : "text-muted-foreground"}`}
+              >
+                {MAX_LENGTH - content.length}
+              </motion.span>
+            )}
+          </AnimatePresence>
+          <button
+            onClick={onSubmit}
+            disabled={!canSend}
+            aria-label="Send message"
+            className={`ml-1 flex ${sendBtnSize} items-center justify-center rounded-full transition-all duration-200 ${
+              canSend
+                ? "bg-foreground/10 text-foreground hover:bg-foreground/16 active:scale-95"
+                : "bg-foreground/5 text-muted-foreground/50 cursor-not-allowed"
+            }`}
+          >
+            <AnimatePresence mode="wait">
+              {isSending ? (
                 <motion.span
-                  initial={{ opacity: 0, scale: 0.8 }}
+                  key="loader"
+                  initial={{ opacity: 0, scale: 0.5 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ duration: 0.15, ease: "easeOut" }}
-                  className={`mx-1 text-[13px] font-sans ${content.length > MAX_LENGTH - 50 ? "text-destructive" : "text-muted-foreground"}`}
+                  exit={{ opacity: 0, scale: 0.5 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="flex items-center justify-center"
                 >
-                  {MAX_LENGTH - content.length}
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                </motion.span>
+              ) : (
+                <motion.span
+                  key="send"
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.5 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="flex items-center justify-center"
+                >
+                  <Send className="w-4 h-4" />
                 </motion.span>
               )}
             </AnimatePresence>
-            <button
-              onClick={onSubmit}
-              disabled={!canSend}
-              aria-label="Send message"
-              className={`ml-1 flex ${sendBtnSize} items-center justify-center rounded-full transition-all duration-200 ${
-                canSend
-                  ? "bg-foreground/10 text-foreground hover:bg-foreground/16 active:scale-95"
-                  : "bg-foreground/5 text-muted-foreground/50 cursor-not-allowed"
-              }`}
-            >
-              <AnimatePresence mode="wait">
-                {isSending ? (
-                  <motion.span
-                    key="loader"
-                    initial={{ opacity: 0, scale: 0.5 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.5 }}
-                    transition={{ duration: 0.2, ease: "easeOut" }}
-                    className="flex items-center justify-center"
-                  >
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  </motion.span>
-                ) : (
-                  <motion.span
-                    key="send"
-                    initial={{ opacity: 0, scale: 0.5 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.5 }}
-                    transition={{ duration: 0.2, ease: "easeOut" }}
-                    className="flex items-center justify-center"
-                  >
-                    <Send className="w-4 h-4" />
-                  </motion.span>
-                )}
-              </AnimatePresence>
-            </button>
-          </div>
+          </button>
         </div>
       </div>
     );

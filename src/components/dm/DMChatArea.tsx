@@ -305,15 +305,17 @@ export const DMChatArea = () => {
 
   return (
     <div ref={swipeRef} className="relative h-full flex flex-col bg-layout-members">
-      {/* Header */}
-      {isGroup ? (
-        <GroupChatHeader conversation={currentConversation} participants={otherParticipants} />
-      ) : (
-        <DMHeader otherUser={otherUser} />
-      )}
+      {/* Desktop header; mobile uses the global app header from AppLayout. */}
+      <div className="hidden md:block">
+        {isGroup ? (
+          <GroupChatHeader conversation={currentConversation} participants={otherParticipants} />
+        ) : (
+          <DMHeader otherUser={otherUser} />
+        )}
+      </div>
 
       {/* Messages container */}
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto pr-4" onScroll={handleScroll}>
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto" onScroll={handleScroll}>
         {/* Start of conversation */}
         {isGroup ? (
           <div className="px-4 py-8 mb-4">
@@ -345,10 +347,6 @@ export const DMChatArea = () => {
               </div>
             </div>
             <h2 className="text-2xl font-medium text-foreground">{otherUser?.display_name || otherUser?.username}</h2>
-            <p className="text-muted-foreground">
-              This is the beginning of your direct message history with{" "}
-              <span className="font-medium">@{otherUser?.username}</span>.
-            </p>
           </div>
         )}
 

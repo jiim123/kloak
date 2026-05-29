@@ -1459,14 +1459,8 @@ export const ServerSettingsModal = () => {
     );
   }
 
-  const bustCache = (url: string | null | undefined): string | null => {
-    if (!url) return null;
-    if (url.startsWith("blob:")) return url;
-    const sep = url.includes("?") ? "&" : "?";
-    return `${url}${sep}cb=${encodeURIComponent(url.split("/").pop()?.split("?")[0] ?? Date.now())}`;
-  };
-  const displayIconUrl = iconRemoved ? null : iconPreview || bustCache(server.icon_url);
-  const displayBannerUrl = bannerRemoved ? null : bannerPreview || bustCache(server.banner_url);
+  const displayIconUrl = iconRemoved ? null : iconPreview || server.icon_url;
+  const displayBannerUrl = bannerRemoved ? null : bannerPreview || server.banner_url;
 
   return (
     <>

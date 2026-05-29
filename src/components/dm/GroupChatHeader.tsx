@@ -71,7 +71,7 @@ export const GroupChatHeader = ({ conversation, participants }: GroupChatHeaderP
   return (
     <>
       <div className="w-full bg-card rounded-[10px] border border-border/50 sticky top-0 z-40" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center justify-between py-3 pl-4 pr-2">
           {/* Left side - Back button (mobile) + Group info */}
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <button

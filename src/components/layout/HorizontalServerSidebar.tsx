@@ -6,7 +6,7 @@ import {
   FolderPlus,
   Plus,
   Settings,
-  Home,
+  MessageSquare,
   ChevronDown,
   Trash2,
   Edit2,
@@ -157,13 +157,6 @@ const serverItemVariants = {
   }),
 };
 
-const bustCache = (url: string | null | undefined): string | null => {
-  if (!url) return null;
-  if (url.startsWith("blob:")) return url;
-  const sep = url.includes("?") ? "&" : "?";
-  return `${url}${sep}cb=${encodeURIComponent(url.split("/").pop()?.split("?")[0] ?? "")}`;
-};
-
 const ServerIconVisual = ({
   server,
   getServerColor,
@@ -183,7 +176,7 @@ const ServerIconVisual = ({
       {server.icon_url ? (
         <Avatar className="w-10 h-10 border-0 rounded-[4px]">
           <AvatarImage
-            src={bustCache(server.icon_url) ?? undefined}
+            src={server.icon_url ?? undefined}
             alt={server.name}
             className="object-cover rounded-[4px]"
           />
@@ -367,7 +360,7 @@ const HorizontalFolderItem = ({
                         {server.icon_url ? (
                           <Avatar className="w-8 h-8 border-0 rounded-[4px]">
                             <AvatarImage
-                              src={bustCache(server.icon_url) ?? undefined}
+                              src={server.icon_url ?? undefined}
                               alt={server.name}
                               className="object-cover rounded-[4px]"
                             />
@@ -572,7 +565,7 @@ const HorizontalSortableServerItem = forwardRef<
                     {server.icon_url ? (
                       <Avatar className="w-10 h-10 border-0 rounded-[4px]">
                         <AvatarImage
-                          src={bustCache(server.icon_url) ?? undefined}
+                          src={server.icon_url ?? undefined}
                           alt={server.name}
                           className="object-cover rounded-[4px]"
                         />
@@ -1199,7 +1192,7 @@ export const HorizontalServerSidebar = () => {
                           : "bg-secondary hover:bg-primary/20 hover:text-neutral-200",
                       )}
                     >
-                      <Home className="w-4 h-4" />
+                      <MessageSquare className="w-5 h-5" />
                     </motion.div>
                     {/* Unread / pending badge */}
                     <AnimatePresence>
