@@ -483,7 +483,7 @@ const PERMISSION_VALUE_OPTIONS = [
     value: true,
     label: "Allow",
     Icon: Check,
-    activeClass: "border-emerald-500 bg-emerald-500 text-white shadow-sm",
+    activeClass: "border-emerald-500 bg-emerald-500 text-foreground shadow-sm",
     inactiveClass: "text-muted-foreground hover:border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-500",
   },
 ] as const;

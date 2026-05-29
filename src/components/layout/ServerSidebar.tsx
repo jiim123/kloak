@@ -199,13 +199,20 @@ const ServerIconVisual = memo(({ server }: { server: ServerWithMembership }) => 
             <AvatarFallback className={getServerColor(server.name)}>{getServerInitials(server.name)}</AvatarFallback>
           </Avatar>
         ) : (
-          <span className="text-sm font-bold text-white">{getServerInitials(server.name)}</span>
+          <span className="text-sm font-bold text-foreground">{getServerInitials(server.name)}</span>
         )}
       </div>
       {server.is_nsfw && (
         <span className="absolute -bottom-0.5 -right-0.5 px-1 py-px text-[8px] font-bold leading-none rounded bg-destructive text-destructive-foreground uppercase tracking-wide">
           18+
         </span>
+      )}
+      {server.is_verified && (
+        <img
+          src="/verified.svg"
+          alt="Verified server"
+          className="absolute -right-1 -top-1 h-4 w-4 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]"
+        />
       )}
     </div>
   );
@@ -274,11 +281,11 @@ const FolderItem = memo(
                   whileHover="hover"
                   whileTap="tap"
                   transition={iconSpringTransition}
-                  className="w-10 h-10 rounded-[12px] flex items-center justify-center text-white relative border border-white/10 shadow-[0_8px_20px_rgba(0,0,0,0.28)]"
+                  className="w-10 h-10 rounded-[12px] flex items-center justify-center text-foreground relative border border-border/60 shadow-[0_8px_20px_rgba(0,0,0,0.28)]"
                   style={{ backgroundColor: folder.color }}
                 >
                   <Folder className="w-[18px] h-[18px]" />
-                  <span className="absolute top-1 right-1 text-white/90">
+                  <span className="absolute top-1 right-1 text-foreground/90">
                     {folder.isCollapsed ? (
                       <ChevronRight className="w-3 h-3" />
                     ) : (
@@ -440,7 +447,7 @@ const DraggableServerItem = memo(
                   >
                     {/* Indicator pill */}
                     <motion.span
-                      className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 bg-white rounded-r-full shadow-[0_0_10px_rgba(255,255,255,0.35)]"
+                      className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full shadow-[0_0_10px_hsl(var(--foreground)_/_0.35)]"
                       variants={pillVariants}
                       initial="hidden"
                       animate={pillState}
@@ -483,6 +490,14 @@ const DraggableServerItem = memo(
                         )}
                       </div>
                     </motion.div>
+
+                    {server.is_verified && (
+                      <img
+                        src="/verified.svg"
+                        alt="Verified server"
+                        className="absolute -right-1 -top-1 h-4 w-4 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]"
+                      />
+                    )}
 
                     {/* Mention badge */}
                     <AnimatePresence>
@@ -552,7 +567,7 @@ const LoadingSkeleton = memo(() => (
     {[0, 1, 2].map((i) => (
       <motion.div
         key={i}
-        className="w-11 h-11 rounded-[12px] bg-white/10"
+        className="w-11 h-11 rounded-[12px] bg-muted/40"
         animate={{ opacity: [0.5, 1, 0.5] }}
         transition={{ repeat: Infinity, duration: 1.5, delay: i * 0.2 }}
       />
@@ -1310,7 +1325,7 @@ export const ServerSidebar = ({
 
       {/* Sticky Add Server button at bottom */}
       <div className="absolute bottom-0 left-0 right-0 px-3 pb-3 pt-2 bg-layout-sidebar z-10">
-        <div className="w-5 h-px bg-white/14 rounded-full shrink-0 mx-auto mb-2" />
+        <div className="w-5 h-px bg-border/60 rounded-full shrink-0 mx-auto mb-2" />
         <div className="flex flex-col items-center gap-2">
           <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
             <TooltipTrigger asChild>
@@ -1323,7 +1338,7 @@ export const ServerSidebar = ({
                 whileTap="tap"
               >
                 <motion.span
-                  className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 bg-white rounded-r-full shadow-[0_0_10px_rgba(255,255,255,0.35)]"
+                  className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full shadow-[0_0_10px_hsl(var(--foreground)_/_0.35)]"
                   variants={pillVariants}
                   initial="hidden"
                   animate={explorePillState}
@@ -1373,7 +1388,7 @@ export const ServerSidebar = ({
                 whileTap="tap"
               >
                 <motion.span
-                  className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 bg-white rounded-r-full shadow-[0_0_10px_rgba(255,255,255,0.35)]"
+                  className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full shadow-[0_0_10px_hsl(var(--foreground)_/_0.35)]"
                   variants={pillVariants}
                   initial="hidden"
                   animate={dmPillState}
@@ -1436,7 +1451,7 @@ export const ServerSidebar = ({
                 aria-pressed={isQuickAccessActive}
               >
                 <motion.span
-                  className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 bg-white rounded-r-full shadow-[0_0_10px_rgba(255,255,255,0.35)]"
+                  className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full shadow-[0_0_10px_hsl(var(--foreground)_/_0.35)]"
                   variants={pillVariants}
                   initial="hidden"
                   animate={quickAccessPillState}

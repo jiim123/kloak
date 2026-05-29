@@ -12,6 +12,7 @@ import { useScrollToMessage } from "@/hooks/useScrollToMessage";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MessageInput } from "@/components/chat/MessageInput";
 import { MessageItem, type DMActions } from "@/components/chat/MessageItem";
+import { MessageMapsProvider } from "@/components/chat/MessageMapsContext";
 import { normalizeDirectMessage } from "@/lib/dmNormalizer";
 import { DMHeader } from "./DMHeader";
 import { GroupChatHeader } from "./GroupChatHeader";
@@ -290,6 +291,14 @@ export const DMChatArea = () => {
     };
   }, [replyingTo]);
 
+  // Participants used for @mention autocomplete and mention rendering in DMs.
+  // 1:1: just the other user. Group: all other participants. Always exclude self.
+  const mentionParticipants = useMemo<User[]>(() => {
+    if (isGroup) return otherParticipants;
+    const other = currentConversation?.other_user;
+    return other ? [other] : [];
+  }, [isGroup, otherParticipants, currentConversation?.other_user]);
+
   if (!currentConversation) {
     return (
       <div className="h-full flex items-center justify-center bg-layout-members">
@@ -304,6 +313,7 @@ export const DMChatArea = () => {
   const isBlocked = isBlockedByMe || isBlockedByThem;
 
   return (
+    <MessageMapsProvider isDM participants={mentionParticipants}>
     <div ref={swipeRef} className="relative h-full flex flex-col bg-layout-members">
       {/* Desktop header; mobile uses the global app header from AppLayout. */}
       <div className="hidden md:block">
@@ -332,7 +342,7 @@ export const DMChatArea = () => {
           <div className="px-4 py-8 mb-4">
             <div className="flex items-center gap-4 mb-4">
               <div
-                className="w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-medium"
+                className="w-20 h-20 rounded-full flex items-center justify-center text-foreground text-3xl font-medium"
                 style={{ backgroundColor: otherUser?.banner_color || "#5865F2" }}
               >
                 {otherUser?.avatar_url ? (
@@ -400,9 +410,11 @@ export const DMChatArea = () => {
             otherUsername: isGroup ? getGroupDisplayName() : otherUser?.username || "user",
             replyingTo: dmInputReplyingTo,
             onCancelReply: () => setReplyingTo(null),
+            participants: mentionParticipants,
           }}
         />
       )}
     </div>
+    </MessageMapsProvider>
   );
 };

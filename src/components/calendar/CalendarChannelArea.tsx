@@ -1187,7 +1187,7 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="h-9 min-w-[82px] rounded-[4px] bg-[#d7d9df] px-4 text-[13px] font-semibold text-[#2f3136] transition-colors hover:bg-white hover:text-[#2f3136] disabled:cursor-not-allowed disabled:opacity-60"
+                        className="h-9 min-w-[82px] rounded-[4px] bg-primary px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-white hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
                         disabled={!eventReply.trim() || isPostingEventReply}
                         onClick={() => void handlePostEventComment()}
                         aria-label="Comment"

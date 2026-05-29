@@ -59,9 +59,16 @@ export function useMessageMaps(): MessageMapsContextValue {
  */
 export function MessageMapsProvider({
   isDM,
+  participants,
   children,
 }: {
   isDM?: boolean;
+  /** DM/Group participants used to build usersMap when isDM is true. */
+  participants?: Array<{
+    id: string;
+    username: string;
+    display_name?: string | null;
+  }>;
   children: React.ReactNode;
 }) {
   const members = useServerStore((s) => s.members);
@@ -73,10 +80,23 @@ export function MessageMapsProvider({
 
   const value = useMemo<MessageMapsContextValue>(() => {
     if (isDM) {
+      const usersMap = new Map<string, UserInfo>();
+      const memberNameById = new Map<string, string>();
+      for (const p of participants || []) {
+        usersMap.set(p.id, {
+          username: p.username,
+          display_name: p.display_name ?? null,
+          nickname: null,
+        });
+        memberNameById.set(p.id, p.display_name || p.username || p.id);
+      }
+      if (userId) {
+        memberNameById.set(userId, "You");
+      }
       return {
-        usersMap: EMPTY_USERS_MAP,
+        usersMap: usersMap.size > 0 ? usersMap : EMPTY_USERS_MAP,
         channelsMap: EMPTY_CHANNELS_MAP,
-        memberNameById: EMPTY_MEMBER_NAME_MAP,
+        memberNameById: memberNameById.size > 0 ? memberNameById : EMPTY_MEMBER_NAME_MAP,
         messageMemberByUserId: EMPTY_MEMBER_BY_USER_ID_MAP,
         membersList: EMPTY_MEMBERS_LIST,
         currentUserId: userId,
@@ -132,7 +152,7 @@ export function MessageMapsProvider({
       currentUserId: userId,
       topEmojis,
     };
-  }, [members, channels, userId, isDM, topEmojis]);
+  }, [members, channels, userId, isDM, topEmojis, participants]);
 
   return (
     <MessageMapsContext.Provider value={value}>

@@ -49,6 +49,7 @@ import { Button } from "@/components/ui/button";
 import type { ServerMember, CustomServerRole, UserStatus } from "@/types";
 import { getEffectivePresence } from "@/lib/presence";
 import { hasRecentRealtimePresence } from "@/hooks/useRealtimeUsers";
+
 import { readCachedMemberCount, persistMemberCount } from "@/lib/serverMemberCount";
 import { LEFT_ALIGNED_USER_PROFILE_POPOVER, openUserProfileModal } from "@/lib/userProfilePopover";
 import { getUserFromCache, useUserCacheStore } from "@/stores/userCacheStore";
@@ -58,6 +59,7 @@ import { getUserFromCache, useUserCacheStore } from "@/stores/userCacheStore";
 // ─────────────────────────────────────────────────────────────────────────────
 
 const OFFLINE_PAGE_SIZE = 50;
+const OFFLINE_AUTO_HIDE_THRESHOLD = 1000;
 const EMPTY_ROLES: CustomServerRole[] = [];
 
 // FIX #1: Static style object — was inline `as React.CSSProperties` on every render
@@ -129,11 +131,18 @@ const getMemberPresence = (member: ServerMember) => {
     return { status: "online" as UserStatus, isStale: false, isOffline: false };
   }
 
-  const status = (member.user?.status as UserStatus | undefined) ?? "offline";
-  if (status !== "offline" && hasRecentRealtimePresence(member.user_id)) {
-    return { status, isStale: false, isOffline: false };
+  // Prefer the latest user-cache snapshot — patched on every presence event —
+  // over the (possibly stale) member.user payload from the initial server fetch.
+  const cached = getUserFromCache(member.user_id);
+  const status = ((cached?.status ?? member.user?.status) as UserStatus | undefined) ?? "offline";
+  const lastSeen = cached?.last_seen ?? member.user?.last_seen;
+
+  // When the realtime presence channel has recent data for this user, trust
+  // its status verbatim regardless of value (including "offline" for Invisible).
+  if (hasRecentRealtimePresence(member.user_id)) {
+    return { status, isStale: false, isOffline: status === "offline" };
   }
-  const lastSeen = member.user?.last_seen;
+
   return getEffectivePresence(status, lastSeen, member.user_id);
 };
 
@@ -421,7 +430,8 @@ export const MembersSidebar = () => {
   const userCacheVersion = useUserCacheStore((s) => s._version);
 
   const [totalMemberCount, setTotalMemberCount] = useState<number | null>(null);
-  const [isOfflineExpanded, setIsOfflineExpanded] = useState(false);
+  const [isOfflineExpanded, setIsOfflineExpanded] = useState(true);
+  const userToggledOfflineRef = useRef(false);
   const [offlineMembers, setOfflineMembers] = useState<ServerMember[]>([]);
   const [offlineHasMore, setOfflineHasMore] = useState(false);
   const [offlineIsLoading, setOfflineIsLoading] = useState(false);
@@ -532,7 +542,7 @@ export const MembersSidebar = () => {
       const name = m.nickname || m.user?.display_name || m.user?.username || "";
       return name.toLowerCase().includes(q);
     });
-  }, [members, memberSearchQuery]);
+  }, [members, memberSearchQuery, userCacheVersion]);
 
   const hydratedOfflineMembers = useMemo(() => {
     return offlineMembers.map((member) => {
@@ -675,6 +685,7 @@ export const MembersSidebar = () => {
   );
 
   const handleToggleOfflineSection = useCallback(() => {
+    userToggledOfflineRef.current = true;
     setIsOfflineExpanded((prev) => {
       const nextExpanded = !prev;
       if (nextExpanded && !offlineLoadedOnceRef.current) {
@@ -683,6 +694,33 @@ export const MembersSidebar = () => {
       return nextExpanded;
     });
   }, [loadOfflineMembers]);
+
+  // Auto-collapse offline section on very large servers (>1000) to optimize display,
+  // unless the user has explicitly toggled it.
+  useEffect(() => {
+    if (userToggledOfflineRef.current) return;
+    if (totalMemberCount == null) return;
+    if (totalMemberCount > OFFLINE_AUTO_HIDE_THRESHOLD) {
+      setIsOfflineExpanded(false);
+    } else {
+      setIsOfflineExpanded(true);
+    }
+  }, [totalMemberCount]);
+
+  // Reset manual-toggle tracking when switching servers so per-server defaults apply.
+  useEffect(() => {
+    userToggledOfflineRef.current = false;
+  }, [currentServer?.id]);
+
+  // Auto-load the first page of offline members when the section is expanded
+  // by default (small/medium servers), so users that go offline appear without a click.
+  useEffect(() => {
+    if (!currentServer?.id || !user?.id) return;
+    if (!isOfflineExpanded) return;
+    if (offlineLoadedOnceRef.current) return;
+    if (totalMemberCount != null && totalMemberCount > OFFLINE_AUTO_HIDE_THRESHOLD) return;
+    void loadOfflineMembers({ reset: true });
+  }, [currentServer?.id, user?.id, isOfflineExpanded, totalMemberCount, loadOfflineMembers]);
 
   const confirmMassBan = useCallback(() => {
     if (massBanSelected.size === 0) return;
@@ -929,7 +967,7 @@ export const MembersSidebar = () => {
                     isSelected ? "bg-destructive border-destructive" : "border-muted-foreground/40 bg-transparent",
                   )}
                 >
-                  {isSelected && <Check className="w-3 h-3 text-white" />}
+                  {isSelected && <Check className="w-3 h-3 text-foreground" />}
                 </div>
               </div>
             )}
@@ -1246,10 +1284,7 @@ export const MembersSidebar = () => {
     [renderMemberListRow],
   );
 
-  // Show skeleton while loading
-  if (isMembersLoading && members.length === 0) {
-    return <MembersSidebarSkeleton />;
-  }
+  const isLoadingSkeleton = isMembersLoading && members.length === 0;
 
   const sidebarContent = (
     <div
@@ -1418,12 +1453,12 @@ export const MembersSidebar = () => {
       {/* Mass ban floating action bar */}
       {massBanMode && (
         <div className="absolute bottom-4 left-3 right-3 bg-destructive/95 backdrop-blur-sm rounded-xl p-3 flex items-center justify-between shadow-lg border border-destructive/50">
-          <span className="text-sm font-medium text-white">{massBanSelected.size} selected</span>
+          <span className="text-sm font-medium text-foreground">{massBanSelected.size} selected</span>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={exitMassBanMode}
-              className="px-3 py-1.5 text-xs font-medium text-white/80 hover:text-white rounded-lg hover:bg-foreground/10 transition-colors"
+              className="px-3 py-1.5 text-xs font-medium text-foreground/80 hover:text-foreground rounded-lg hover:bg-foreground/10 transition-colors"
             >
               Cancel
             </button>
@@ -1431,7 +1466,7 @@ export const MembersSidebar = () => {
               type="button"
               onClick={confirmMassBan}
               disabled={massBanSelected.size === 0}
-              className="px-3 py-1.5 text-xs font-medium bg-white text-destructive rounded-lg hover:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1.5 text-xs font-medium bg-foreground text-destructive rounded-lg hover:bg-foreground/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Ban {massBanSelected.size > 0 ? massBanSelected.size : ""}
             </button>
@@ -1441,19 +1476,21 @@ export const MembersSidebar = () => {
     </div>
   );
 
+  const body = isLoadingSkeleton ? <MembersSidebarSkeleton /> : sidebarContent;
+
   if (isMobile) {
     return (
       <Drawer direction="right" open={isMemberSidebarOpen} onOpenChange={setMemberSidebarOpen} modal={false}>
-        {isMemberSidebarOpen && <div className="fixed inset-0 z-50 bg-black/80" onClick={handleCloseSidebar} />}
+        {isMemberSidebarOpen && <div className="fixed inset-0 z-50 bg-background/80" onClick={handleCloseSidebar} />}
         <DrawerContent className="p-1.5 w-[100vw] max-w-[100vw] bg-background">
           <DrawerHeader className="sr-only">
             <DrawerTitle>Members</DrawerTitle>
           </DrawerHeader>
-          <div className="h-full overflow-hidden">{sidebarContent}</div>
+          <div className="h-full overflow-hidden">{body}</div>
         </DrawerContent>
       </Drawer>
     );
   }
 
-  return sidebarContent;
+  return body;
 };

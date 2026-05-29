@@ -255,9 +255,10 @@ export const stripMarkdown = (
 export const getMessagePreview = (
   content: string,
   maxLength = 100,
-  usersMap?: Map<string, { username: string; display_name?: string | null; nickname?: string | null }>
+  usersMap?: Map<string, { username: string; display_name?: string | null; nickname?: string | null }>,
+  channelsMap?: Map<string, { name: string }>
 ): string => {
-  const stripped = stripMarkdown(content, usersMap);
+  const stripped = stripMarkdown(content, usersMap, channelsMap);
   if (stripped.length <= maxLength) return stripped;
   return stripped.slice(0, maxLength - 3) + '...'
 };

@@ -217,8 +217,8 @@ function GifPickerContent({
                       className="w-full h-full object-cover"
                       loading="lazy"
                     />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 transition-colors group-hover:bg-black/50">
-                      <span className="text-base sm:text-sm font-semibold capitalize text-white drop-shadow-md">
+                    <div className="absolute inset-0 flex items-center justify-center bg-muted/50 transition-colors group-hover:bg-muted/70">
+                      <span className="text-base sm:text-sm font-semibold capitalize text-foreground drop-shadow-md">
                         {cat.category}
                       </span>
                     </div>

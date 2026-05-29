@@ -22,6 +22,8 @@ interface MentionAutocompleteProps {
   onClose: () => void;
   isAdmin?: boolean;
   onOptionsChange?: (hasOptions: boolean) => void;
+  /** When provided, autocomplete operates on these users instead of server members (DM/Group mode). */
+  participants?: User[];
 }
 
 export const MentionAutocomplete = ({
@@ -31,15 +33,21 @@ export const MentionAutocomplete = ({
   onClose,
   isAdmin = false,
   onOptionsChange,
+  participants,
 }: MentionAutocompleteProps) => {
   const { members, currentServer, roles } = useServerStore();
   const userId = useAuthStore((s) => s.user?.id);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [candidateUsers, setCandidateUsers] = useState<User[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
+  const isDMMode = !!participants;
 
   useEffect(() => {
     let cancelled = false;
+    if (isDMMode) {
+      setCandidateUsers(participants || []);
+      return;
+    }
     const serverId = currentServer?.id;
     if (!serverId || !userId) {
       setCandidateUsers([]);
@@ -87,7 +95,7 @@ export const MentionAutocomplete = ({
     return () => {
       cancelled = true;
     };
-  }, [currentServer?.id, userId, query, members]);
+  }, [currentServer?.id, userId, query, members, isDMMode, participants]);
 
   const blockedUserIds = useFriendStore((s) => s.visibilityBlockedUserIds);
 
@@ -96,7 +104,7 @@ export const MentionAutocomplete = ({
     const seen = new Set<string>();
     const blockedSet = new Set(blockedUserIds);
 
-    if (isAdmin) {
+    if (isAdmin && !isDMMode) {
       if ("everyone".includes(query.toLowerCase())) {
         result.push({ type: "everyone", label: "everyone", id: "everyone" });
       }
@@ -106,18 +114,20 @@ export const MentionAutocomplete = ({
     }
 
     const searchQuery = query.toLowerCase();
-    roles
-      .filter((role) => role.name !== "@everyone" && role.name.toLowerCase().includes(searchQuery))
-      .forEach((role) => {
-        if (!role.id || seen.has(role.id)) return;
-        seen.add(role.id);
-        result.push({
-          type: "role",
-          id: role.id,
-          label: role.name,
-          role,
+    if (!isDMMode) {
+      roles
+        .filter((role) => role.name !== "@everyone" && role.name.toLowerCase().includes(searchQuery))
+        .forEach((role) => {
+          if (!role.id || seen.has(role.id)) return;
+          seen.add(role.id);
+          result.push({
+            type: "role",
+            id: role.id,
+            label: role.name,
+            role,
+          });
         });
-      });
+    }
 
     candidateUsers
       .filter(
@@ -138,7 +148,7 @@ export const MentionAutocomplete = ({
       });
 
     return result;
-  }, [candidateUsers, isAdmin, query, blockedUserIds, roles]);
+  }, [candidateUsers, isAdmin, query, blockedUserIds, roles, isDMMode]);
 
   // Keep selected option visible while navigating with keyboard.
   useEffect(() => {
@@ -219,9 +229,9 @@ export const MentionAutocomplete = ({
   return (
     <div
       ref={containerRef}
-      className="w-full bg-white/5 border-b border-white/6 rounded-t-[14px] overflow-hidden"
+      className="w-full bg-muted/20 border-b border-border/50 rounded-t-[14px] overflow-hidden"
     >
-      <div className="px-3 py-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-white/6">
+      <div className="px-3 py-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/50">
         Mention
       </div>
       <div className="max-h-48 overflow-y-auto overscroll-contain p-1">
@@ -259,7 +269,7 @@ export const MentionAutocomplete = ({
             ) : option.type === "role" && option.role ? (
               <>
                 <div
-                  className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-white"
+                  className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-foreground"
                   style={option.role.color.startsWith("linear-gradient") ? { background: option.role.color } : { backgroundColor: option.role.color }}
                 >
                   @

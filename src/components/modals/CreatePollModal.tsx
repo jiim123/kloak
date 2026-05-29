@@ -98,13 +98,13 @@ export const CreatePollModal = ({ open, onOpenChange, channelId }: CreatePollMod
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
         hideCloseButton
-        className="max-h-[90vh] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-[4px] border border-[#4a4f5a] bg-[#333842] p-0 text-[#f4f5f7] shadow-2xl sm:max-w-[448px]"
+        className="max-h-[90vh] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-[4px] border border-border bg-card p-0 text-foreground shadow-2xl sm:max-w-[448px]"
       >
         <div className="flex max-h-[82vh] flex-col overflow-hidden">
-          <div className="border-b border-[#2b3039] bg-[#2f343d] px-5 py-3">
+          <div className="border-b border-border bg-muted px-5 py-3">
             <div>
               <div className="text-base font-medium leading-none tracking-tight">Create poll</div>
-              <p className="mt-1 text-xs leading-5 text-[#b8bec8]">Ask a question and let people vote.</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">Ask a question and let people vote.</p>
             </div>
           </div>
 
@@ -113,11 +113,11 @@ export const CreatePollModal = ({ open, onOpenChange, channelId }: CreatePollMod
               <div className="flex items-center justify-between gap-3">
                 <Label
                   htmlFor="poll-question"
-                  className="text-xs font-medium uppercase tracking-wide text-[#c4c8d0]"
+                  className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
                 >
                   Question
                 </Label>
-                <span className="text-xs text-[#9ea4af]">{question.length}/300</span>
+                <span className="text-xs text-muted-foreground">{question.length}/300</span>
               </div>
               <Input
                 id="poll-question"
@@ -125,16 +125,16 @@ export const CreatePollModal = ({ open, onOpenChange, channelId }: CreatePollMod
                 onChange={(e) => setQuestion(e.target.value)}
                 placeholder="Which coffee is better?"
                 maxLength={300}
-                className="mt-2 h-9 rounded-none border-0 border-b border-white/80 bg-transparent px-0 text-sm text-[#f3f4f7] shadow-none outline-none placeholder:text-[#767B85] focus-visible:ring-0 focus-visible:ring-offset-0"
+                className="mt-2 h-9 rounded-none border-0 border-b border-white/80 bg-transparent px-0 text-sm text-foreground shadow-none outline-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
               />
             </div>
 
             <div>
               <div className="flex items-center justify-between gap-3">
-                <Label className="text-xs font-medium uppercase tracking-wide text-[#c4c8d0]">
+                <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Answers
                 </Label>
-                <span className="text-xs text-[#9ea4af]">{answers.length}/4</span>
+                <span className="text-xs text-muted-foreground">{answers.length}/4</span>
               </div>
               <div className="mt-3 space-y-3">
                 {answers.map((ans, idx) => (
@@ -144,14 +144,14 @@ export const CreatePollModal = ({ open, onOpenChange, channelId }: CreatePollMod
                       onChange={(e) => setAnswerAt(idx, e.target.value)}
                       placeholder={`Answer ${idx + 1}`}
                       maxLength={100}
-                      className="h-9 rounded-none border-0 border-b border-white/80 bg-transparent px-0 text-sm text-[#f3f4f7] shadow-none outline-none placeholder:text-[#767B85] focus-visible:ring-0 focus-visible:ring-offset-0"
+                      className="h-9 rounded-none border-0 border-b border-white/80 bg-transparent px-0 text-sm text-foreground shadow-none outline-none placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                     {answers.length > 2 && (
                       <Button
                         type="button"
                         variant="ghost"
                         onClick={() => removeAnswer(idx)}
-                        className="h-8 rounded-[3px] px-2 text-[#b9bec8] hover:bg-[#3a404a] hover:text-white"
+                        className="h-8 rounded-[3px] px-2 text-muted-foreground hover:bg-card hover:text-white"
                       >
                         Remove
                       </Button>
@@ -160,50 +160,50 @@ export const CreatePollModal = ({ open, onOpenChange, channelId }: CreatePollMod
                 ))}
               </div>
               <div className="mt-3 flex items-center justify-between gap-3">
-                <p className="text-xs leading-5 text-[#b8bec8]">Add between 2 and 4 answers.</p>
+                <p className="text-xs leading-5 text-muted-foreground">Add between 2 and 4 answers.</p>
                 <Button
                   type="button"
                   variant="secondary"
                   onClick={addAnswer}
                   disabled={answers.length >= 4}
-                  className="h-8 rounded-[3px] border border-[#4a4f5a] bg-[#3a404a] px-3 text-xs font-medium text-[#e2e4e9] hover:bg-[#434a55] disabled:bg-[#3a404a] disabled:text-[#7e8692]"
+                  className="h-8 rounded-[3px] border border-border bg-card px-3 text-xs font-medium text-foreground hover:bg-card disabled:bg-card disabled:text-muted-foreground"
                 >
                   Add answer
                 </Button>
               </div>
             </div>
 
-            <div className="border border-[#4a4f5a] bg-[#2f343d] p-3">
+            <div className="border border-border bg-muted p-3">
               <div className="flex items-start gap-3">
                 <Checkbox
                   id="poll-multi"
                   checked={allowMultiple}
                   onCheckedChange={(v) => setAllowMultiple(v === true)}
-                  className="mt-0.5 border-[#7d8591] data-[state=checked]:border-[#d7dbe3] data-[state=checked]:bg-[#d7dbe3] data-[state=checked]:text-[#363b44]"
+                  className="mt-0.5 border-border data-[state=checked]:border-border data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                 />
                 <div className="space-y-1">
-                  <Label htmlFor="poll-multi" className="text-sm font-medium leading-none text-[#f3f4f7]">
+                  <Label htmlFor="poll-multi" className="text-sm font-medium leading-none text-foreground">
                     Multiple votes allowed
                   </Label>
-                  <p className="text-xs leading-5 text-[#b8bec8]">Let voters choose more than one answer.</p>
+                  <p className="text-xs leading-5 text-muted-foreground">Let voters choose more than one answer.</p>
                 </div>
               </div>
             </div>
 
             <div>
-              <Label className="text-xs font-medium uppercase tracking-wide text-[#c4c8d0]">
+              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Poll end time
               </Label>
               <Select value={String(durationSeconds)} onValueChange={(v) => setDurationSeconds(Number(v))}>
-                <SelectTrigger className="mt-2 h-9 rounded-[3px] border-[#4a4f5a] bg-[#2f343d] text-[#f3f4f7] focus:ring-0 focus:ring-offset-0">
+                <SelectTrigger className="mt-2 h-9 rounded-[3px] border-border bg-muted text-foreground focus:ring-0 focus:ring-offset-0">
                   <SelectValue placeholder="Select duration" />
                 </SelectTrigger>
-                <SelectContent className="border-[#4a4f5a] bg-[#333842] text-[#f3f4f7]">
+                <SelectContent className="border-border bg-card text-foreground">
                   {DURATION_PRESETS.map((p) => (
                     <SelectItem
                       key={p.seconds}
                       value={String(p.seconds)}
-                      className="text-[#f3f4f7] data-[highlighted]:bg-[#434a55] data-[highlighted]:text-white focus:bg-[#434a55] focus:text-white"
+                      className="text-foreground data-[highlighted]:bg-card data-[highlighted]:text-white focus:bg-card focus:text-white"
                     >
                       {p.label}
                     </SelectItem>
@@ -213,12 +213,12 @@ export const CreatePollModal = ({ open, onOpenChange, channelId }: CreatePollMod
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 border-t border-[#2c3139] bg-[#30353f] px-5 py-3">
+          <div className="flex items-center justify-end gap-3 border-t border-border bg-card px-5 py-3">
             <Button
               type="button"
               variant="ghost"
               onClick={() => handleClose(false)}
-              className="h-9 rounded-[3px] px-4 text-[#b9bec8] hover:bg-transparent hover:text-white"
+              className="h-9 rounded-[3px] px-4 text-muted-foreground hover:bg-transparent hover:text-white"
             >
               Cancel
             </Button>
@@ -226,7 +226,7 @@ export const CreatePollModal = ({ open, onOpenChange, channelId }: CreatePollMod
               type="button"
               onClick={submit}
               disabled={!canSubmit}
-              className="h-9 rounded-[3px] bg-[#d7dbe3] px-5 font-medium text-[#363b44] hover:bg-white disabled:bg-[#454b55] disabled:text-[#858b96] disabled:opacity-100"
+              className="h-9 rounded-[3px] bg-primary px-5 font-medium text-primary-foreground hover:bg-white disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
             >
               Create poll
             </Button>

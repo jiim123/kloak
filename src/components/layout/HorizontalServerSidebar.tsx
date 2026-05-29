@@ -127,6 +127,13 @@ const createId = () => {
   return `folder-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
+const bustCache = (url: string | null | undefined): string | null => {
+  if (!url) return null;
+  if (url.startsWith("blob:")) return url;
+  const sep = url.includes("?") ? "&" : "?";
+  return `${url}${sep}cb=${encodeURIComponent(url.split("/").pop()?.split("?")[0] ?? "")}`;
+};
+
 // Horizontal pill variants - animate width instead of height
 const pillVariants = {
   hidden: { width: 0, opacity: 0 },
@@ -167,25 +174,34 @@ const ServerIconVisual = ({
   getServerInitials: (name: string) => string;
 }) => {
   return (
-    <div
-      className={cn(
-        "w-10 h-10 overflow-hidden rounded-[4px] flex items-center justify-center",
-        !server.icon_url && getServerColor(server.name),
-      )}
-    >
-      {server.icon_url ? (
-        <Avatar className="w-10 h-10 border-0 rounded-[4px]">
-          <AvatarImage
-            src={server.icon_url ?? undefined}
-            alt={server.name}
-            className="object-cover rounded-[4px]"
-          />
-          <AvatarFallback className={cn("rounded-[4px]", getServerColor(server.name))}>
-            {getServerInitials(server.name)}
-          </AvatarFallback>
-        </Avatar>
-      ) : (
-        <span className="text-xs font-bold text-foreground">{getServerInitials(server.name)}</span>
+    <div className="relative">
+      <div
+        className={cn(
+          "w-10 h-10 overflow-hidden rounded-[4px] flex items-center justify-center",
+          !server.icon_url && getServerColor(server.name),
+        )}
+      >
+        {server.icon_url ? (
+          <Avatar className="w-10 h-10 border-0 rounded-[4px]">
+            <AvatarImage
+              src={bustCache(server.icon_url) ?? undefined}
+              alt={server.name}
+              className="object-cover rounded-[4px]"
+            />
+            <AvatarFallback className={cn("rounded-[4px]", getServerColor(server.name))}>
+              {getServerInitials(server.name)}
+            </AvatarFallback>
+          </Avatar>
+        ) : (
+          <span className="text-xs font-bold text-foreground">{getServerInitials(server.name)}</span>
+        )}
+      </div>
+      {server.is_verified && (
+        <img
+          src="/verified.svg"
+          alt="Verified server"
+          className="absolute -right-1 -top-1 h-4 w-4 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]"
+        />
       )}
     </div>
   );
@@ -293,7 +309,7 @@ const HorizontalFolderItem = ({
                     whileHover="hover"
                     whileTap="tap"
                     transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                    className="w-10 h-10 flex items-center justify-center text-white relative"
+                    className="w-10 h-10 flex items-center justify-center text-foreground relative"
                     style={{ backgroundColor: folder.color }}
                   >
                     <Folder className="w-5 h-5" />
@@ -351,25 +367,34 @@ const HorizontalFolderItem = ({
                         isActive ? "bg-primary/20" : "hover:bg-secondary",
                       )}
                     >
-                      <div
-                        className={cn(
-                          "w-8 h-8 rounded-[4px] overflow-hidden flex items-center justify-center flex-shrink-0",
-                          !server.icon_url && getServerColor(server.name),
-                        )}
-                      >
-                        {server.icon_url ? (
-                          <Avatar className="w-8 h-8 border-0 rounded-[4px]">
-                            <AvatarImage
-                              src={server.icon_url ?? undefined}
-                              alt={server.name}
-                              className="object-cover rounded-[4px]"
-                            />
-                            <AvatarFallback className={cn("rounded-[4px]", getServerColor(server.name))}>
-                              {getServerInitials(server.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                        ) : (
-                          <span className="text-xs font-bold text-foreground">{getServerInitials(server.name)}</span>
+                      <div className="relative flex-shrink-0">
+                        <div
+                          className={cn(
+                            "w-8 h-8 rounded-[4px] overflow-hidden flex items-center justify-center",
+                            !server.icon_url && getServerColor(server.name),
+                          )}
+                        >
+                          {server.icon_url ? (
+                            <Avatar className="w-8 h-8 border-0 rounded-[4px]">
+                              <AvatarImage
+                                src={bustCache(server.icon_url) ?? undefined}
+                                alt={server.name}
+                                className="object-cover rounded-[4px]"
+                              />
+                              <AvatarFallback className={cn("rounded-[4px]", getServerColor(server.name))}>
+                                {getServerInitials(server.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                          ) : (
+                            <span className="text-xs font-bold text-foreground">{getServerInitials(server.name)}</span>
+                          )}
+                        </div>
+                        {server.is_verified && (
+                          <img
+                            src="/verified.svg"
+                            alt="Verified server"
+                            className="absolute -right-1 -top-1 h-3.5 w-3.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]"
+                          />
                         )}
                       </div>
                       <span className={cn("text-sm truncate max-w-[150px]", hasUnread && "font-semibold")}>
@@ -579,6 +604,14 @@ const HorizontalSortableServerItem = forwardRef<
                       </div>
                     )}
                   </motion.div>
+
+                  {server.is_verified && (
+                    <img
+                      src="/verified.svg"
+                      alt="Verified server"
+                      className="absolute -right-1 -top-1 h-4 w-4 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]"
+                    />
+                  )}
 
                   {/* Mention badge */}
                   <AnimatePresence>

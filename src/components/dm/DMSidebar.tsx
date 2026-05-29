@@ -22,6 +22,8 @@ import { useAuthStore } from "@/stores/authStore";
 import { useUnreadDMsContext } from "@/hooks/useUnreadDMsContext";
 import { formatCompactTime } from "@/lib/format";
 import { getEffectivePresence } from "@/lib/presence";
+import { hasRecentRealtimePresence } from "@/hooks/useRealtimeUsers";
+import { getUserFromCache, useUserCacheStore } from "@/stores/userCacheStore";
 import { ConversationItemSkeleton } from "@/components/ui/skeletons";
 import type { DMConversation, UserStatus, User } from "@/types";
 import { useRateLimit } from "@/hooks/useRateLimit";
@@ -41,6 +43,8 @@ export const DMSidebar = () => {
     isLoading,
   } = useDMStore();
   const { getUnreadCount, markAsRead } = useUnreadDMsContext();
+  // Re-render when realtime presence patches the user cache so DM status dots update live.
+  useUserCacheStore((s) => s._version);
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const isFriendsRoute = location.pathname === "/app/friends";
@@ -230,11 +234,13 @@ export const DMSidebar = () => {
                         <>
                           <AvatarWithDecoration user={conversation.other_user} className="w-8 h-8" freezeGifUntilHover />
                           {(() => {
-                            const presence = getEffectivePresence(
-                              (conversation.other_user?.status as UserStatus) || "offline",
-                              conversation.other_user?.last_seen,
-                              conversation.other_user?.id,
-                            );
+                            const otherId = conversation.other_user?.id;
+                            const cached = otherId ? getUserFromCache(otherId) : null;
+                            const status = ((cached?.status ?? conversation.other_user?.status) as UserStatus) || "offline";
+                            const lastSeen = cached?.last_seen ?? conversation.other_user?.last_seen;
+                            const presence = otherId && hasRecentRealtimePresence(otherId)
+                              ? { status, isStale: false, isOffline: status === "offline" }
+                              : getEffectivePresence(status, lastSeen, otherId);
                             return (
                               <div
                                 className={cn(

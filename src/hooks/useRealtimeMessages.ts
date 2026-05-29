@@ -5,7 +5,6 @@ import { useFriendStore } from '@/stores/friendStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useServerStore } from '@/stores/serverStore';
 import { useUserCacheStore } from '@/stores/userCacheStore';
-import { resolveSignedUrls, isSupabaseAttachmentUrl } from '@/lib/signedUrl';
 import type { Message, MessageAttachment, MessageReply } from '@/types';
 import { getUserFromCache, getOrFetchUser } from '@/stores/userCacheStore';
 import type { User } from '@/types';
@@ -55,6 +54,10 @@ type MessageAttachmentRealtimeRow = {
   file_size?: number | null;
   width?: number | null;
   height?: number | null;
+  placeholder?: string | null;
+  is_spoiler?: boolean | null;
+  is_voice_message?: boolean | null;
+  waveform?: number[] | null;
 };
 
 const getCacheCatchupState = (
@@ -95,25 +98,42 @@ export const useRealtimeMessages = (channelId: string | null) => {
     const messageFilter = { event: "messages", scope: listenerScopeRef.current };
     const reactionFilter = { event: "reactions", scope: listenerScopeRef.current };
 
+    const rowToAttachment = (row: MessageAttachmentRealtimeRow): MessageAttachment => ({
+      id: row.id || '',
+      message_id: row.message_id || '',
+      file_name: row.file_name || 'attachment',
+      file_url: row.file_url || '',
+      file_type: row.file_type ?? null,
+      file_size: row.file_size ?? null,
+      width: row.width ?? null,
+      height: row.height ?? null,
+      placeholder: row.placeholder ?? null,
+      is_spoiler: row.is_spoiler ?? null,
+      is_voice_message: row.is_voice_message ?? null,
+      waveform: row.waveform ?? null,
+    });
+
     const mergeAttachmentIntoMessage = (attachmentRow: MessageAttachmentRealtimeRow) => {
       if (!attachmentRow.id || !attachmentRow.message_id) return;
       const channelMessages = useMessageStore.getState().messagesByChannel[channelId]?.messages || [];
       const message = channelMessages.find((entry) => entry.id === attachmentRow.message_id);
       if (!message) return;
 
-      const nextAttachment: MessageAttachment = {
-        id: attachmentRow.id,
-        message_id: attachmentRow.message_id,
-        file_name: attachmentRow.file_name || 'attachment',
-        file_url: attachmentRow.file_url || '',
-        file_type: attachmentRow.file_type ?? null,
-        file_size: attachmentRow.file_size ?? null,
-        width: attachmentRow.width ?? null,
-        height: attachmentRow.height ?? null,
-      };
-
+      const nextAttachment = rowToAttachment(attachmentRow);
       const attachments = message.attachments || [];
-      if (attachments.some((entry) => entry.id === nextAttachment.id)) return;
+      const existingIdx = attachments.findIndex((entry) => entry.id === nextAttachment.id);
+
+      if (existingIdx >= 0) {
+        // UPDATE path — patch the existing attachment in place so enriched
+        // fields (placeholder, dimensions) hydrate without losing identity.
+        const next = attachments.slice();
+        next[existingIdx] = { ...attachments[existingIdx], ...nextAttachment };
+        useMessageStore.getState().updateMessage(message.id, {
+          channel_id: channelId,
+          attachments: next,
+        } as Partial<Message>);
+        return;
+      }
 
       const dedupedAttachments = attachments.filter((entry) => {
         const isTemporary = entry.id.startsWith('temp-att-') || entry.file_url.startsWith('blob:');
@@ -429,16 +449,6 @@ export const useRealtimeMessages = (channelId: string | null) => {
                 
                 useMessageStore.getState().addMessage(message);
 
-                // Pre-warm signed URL cache for any attachment URLs embedded in content
-                // so MessageContent resolves them from cache instantly.
-                const urlMatches = (newMsg.content || '').match(/https?:\/\/[^\s<>"]+/g);
-                if (urlMatches) {
-                  const attachmentUrls = urlMatches.filter(isSupabaseAttachmentUrl);
-                  if (attachmentUrls.length > 0) {
-                    resolveSignedUrls(attachmentUrls).catch(() => {});
-                  }
-                }
-
                 // Hydrate author info into cache asynchronously (no UI delay).
                 if (revealIdentity && !cachedUser && localUser?.id !== newMsg.user_id) {
                   void getOrFetchUser(newMsg.user_id)
@@ -484,6 +494,21 @@ export const useRealtimeMessages = (channelId: string | null) => {
               mergeAttachmentIntoMessage(payload.new as MessageAttachmentRealtimeRow);
             } catch (error) {
               console.error('[Realtime] Error processing message attachment insert:', error);
+            }
+          },
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'message_attachments',
+          },
+          (payload) => {
+            try {
+              mergeAttachmentIntoMessage(payload.new as MessageAttachmentRealtimeRow);
+            } catch (error) {
+              console.error('[Realtime] Error processing message attachment update:', error);
             }
           },
         )

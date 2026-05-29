@@ -1612,33 +1612,48 @@ export type Database = {
       }
       message_attachments: {
         Row: {
+          enriched_at: string | null
           file_name: string
           file_size: number | null
           file_type: string | null
           file_url: string
           height: number | null
           id: string
+          is_spoiler: boolean
+          is_voice_message: boolean
           message_id: string
+          placeholder: string | null
+          waveform: Json | null
           width: number | null
         }
         Insert: {
+          enriched_at?: string | null
           file_name: string
           file_size?: number | null
           file_type?: string | null
           file_url: string
           height?: number | null
           id?: string
+          is_spoiler?: boolean
+          is_voice_message?: boolean
           message_id: string
+          placeholder?: string | null
+          waveform?: Json | null
           width?: number | null
         }
         Update: {
+          enriched_at?: string | null
           file_name?: string
           file_size?: number | null
           file_type?: string | null
           file_url?: string
           height?: number | null
           id?: string
+          is_spoiler?: boolean
+          is_voice_message?: boolean
           message_id?: string
+          placeholder?: string | null
+          waveform?: Json | null
           width?: number | null
         }
         Relationships: [
@@ -1942,6 +1957,60 @@ export type Database = {
             columns: ["message_id"]
             isOneToOne: true
             referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      push_tokens: {
+        Row: {
+          app_version: string | null
+          created_at: string
+          device_id: string | null
+          enabled: boolean
+          id: string
+          last_used_at: string | null
+          platform: string
+          token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          app_version?: string | null
+          created_at?: string
+          device_id?: string | null
+          enabled?: boolean
+          id?: string
+          last_used_at?: string | null
+          platform: string
+          token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          app_version?: string | null
+          created_at?: string
+          device_id?: string | null
+          enabled?: boolean
+          id?: string
+          last_used_at?: string | null
+          platform?: string
+          token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "push_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_public"
             referencedColumns: ["id"]
           },
         ]
@@ -4663,6 +4732,17 @@ export type Database = {
       normalize_raid_message_content: {
         Args: { _content: string }
         Returns: string
+      }
+      notification_push_body: {
+        Args: { _body: string; _user_id: string }
+        Returns: string
+      }
+      notification_push_enabled: {
+        Args: {
+          _type: Database["public"]["Enums"]["notification_type"]
+          _user_id: string
+        }
+        Returns: boolean
       }
       open_dm_conversation: {
         Args: { _other_user_id: string; _user_id: string }

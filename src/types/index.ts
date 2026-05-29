@@ -362,6 +362,14 @@ export interface MessageAttachment {
   file_size: number | null;
   width: number | null;
   height: number | null;
+  /** BlurHash 4×3 string used to paint a low-res preview before the real image loads. */
+  placeholder?: string | null;
+  /** When true, the attachment is hidden behind a click-to-reveal overlay. */
+  is_spoiler?: boolean | null;
+  /** When true, render as a voice-message waveform player. */
+  is_voice_message?: boolean | null;
+  /** Sample peaks (0..1) for voice-message waveform rendering. */
+  waveform?: number[] | null;
 }
 
 export interface Reaction {

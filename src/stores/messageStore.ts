@@ -1266,9 +1266,11 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       }));
       endChatPerf(perfId, "server-reconcile");
 
-      // Attach suppression metadata for the caller
+      // Attach mass-mention delivery metadata for the caller.
       (message as any)._mentions_suppressed = (data as any).mentions_suppressed;
       (message as any)._suppressed_types = (data as any).suppressed_types;
+      (message as any)._mass_mentions_queued = (data as any).mass_mentions_queued;
+      (message as any)._queued_mention_types = (data as any).queued_mention_types;
 
       return message;
     } catch (error) {

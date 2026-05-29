@@ -20,7 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getFileIcon } from "@/lib/fileIcons";
+
 import { AudioPlayer } from "./AudioPlayer";
 import { VideoPlayer } from "./VideoPlayer";
 import { Button } from "@/components/ui/button";
@@ -53,6 +53,7 @@ import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { canModerateByRoles } from "@/lib/permissions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MessageContent } from "./MessageContent";
+import { AttachmentGallery } from "./AttachmentGallery";
 import { PollMessage } from "./PollMessage";
 import { isImageOnlyMessage, convertMentionsToReadable } from "@/lib/message";
 import { ReplyPreview } from "./MessageContent";
@@ -69,6 +70,10 @@ import { useMessageUser, fetchAndCacheUser, getUserFromCache, getOrFetchUser } f
 import { useMessageMaps } from "./MessageMapsContext";
 import { cn } from "@/lib/utils";
 import { useSignedUrl } from "@/hooks/useSignedUrl";
+import { useInView } from "@/hooks/useInView";
+import { useBlurhash } from "@/hooks/useBlurhash";
+import { markAttachmentDecoded, wasAttachmentDecoded } from "@/lib/attachmentLru";
+import { FileAttachmentCard } from "@/components/chat/FileAttachmentCard";
 import { getPollIdFromContent, isPollMessageContent, usePollLabel } from "@/lib/poll";
 import { usePollStore } from "@/stores/pollStore";
 import { canRevealGhostIdentityForUser } from "@/lib/ghostIdentity";
@@ -201,6 +206,7 @@ const AttachmentItem = memo(function AttachmentItem({
   attachment,
   onImageClick,
   uploaderName,
+  layout = "natural",
 }: {
   attachment: {
     id: string;
@@ -210,19 +216,50 @@ const AttachmentItem = memo(function AttachmentItem({
     file_size?: number;
     width?: number | null;
     height?: number | null;
+    placeholder?: string | null;
+    is_spoiler?: boolean | null;
+    is_voice_message?: boolean | null;
   };
   onImageClick?: (url: string) => void;
   uploaderName?: string;
+  /** "natural" uses intrinsic aspect & max 400x300; "fill" stretches to container (gallery cells). */
+  layout?: "natural" | "fill";
 }) {
-  const { url: signedUrl, refresh } = useSignedUrl(attachment.file_url, { withRefresh: true });
+  // Only fetch the signed blob URL once the attachment scrolls near the viewport.
+  // 200px keeps off-screen rows as BlurHash-only, which matters a lot in long
+  // channels. Was 600px historically to mask flicker — BlurHash now covers that.
+  const [inViewRef, inView] = useInView<HTMLDivElement>({ rootMargin: "200px", once: true });
+  const blurhashUrl = useBlurhash(attachment.id, attachment.placeholder ?? null);
+  const isSpoiler = !!attachment.is_spoiler;
+  const [revealed, setRevealed] = useState(!isSpoiler);
+  // Optimistic attachments carry a local blob: preview URL (for images) or
+  // an empty preview (for non-image files). They never need signed-URL
+  // resolution — calling sign-bunny-url before the upload finalizes is what
+  // produces the 404 spam during attach/send.
+  const isOptimistic = attachment.id.startsWith("temp-att-");
+  const localPreviewUrl =
+    isOptimistic &&
+    typeof attachment.file_url === "string" &&
+    (attachment.file_url.startsWith("blob:") || attachment.file_url.startsWith("data:"))
+      ? attachment.file_url
+      : null;
+  // Spoiler attachments don't fetch until clicked.
+  const shouldFetch = inView && revealed && !isOptimistic;
+  const { url: signedUrlRaw, refresh } = useSignedUrl(
+    shouldFetch ? attachment.file_url : null,
+    { withRefresh: true },
+  );
+  const signedUrl = signedUrlRaw ?? localPreviewUrl;
   const isImage = attachment.file_type?.startsWith("image/");
   const isVideo = attachment.file_type?.startsWith("video/");
   const isAudio = attachment.file_type?.startsWith("audio/");
 
   // Compute constrained dimensions to reserve space and prevent layout shift
   const reservedStyle = useMemo(() => {
-    if (!isImage || !attachment.width || !attachment.height) {
-      return isImage ? { width: 300, height: 200 } : undefined;
+    if ((!isImage && !isVideo) || !attachment.width || !attachment.height) {
+      if (isImage) return { width: 300, height: 200 };
+      if (isVideo) return { width: 400, height: 225 };
+      return undefined;
     }
     const maxW = 400;
     const maxH = 300;
@@ -237,73 +274,154 @@ const AttachmentItem = memo(function AttachmentItem({
       h = maxH;
     }
     return { width: w, height: h };
-  }, [isImage, attachment.width, attachment.height]);
+  }, [isImage, isVideo, attachment.width, attachment.height]);
 
-  // Show a compact loader while the signed URL resolves (don't return null —
-  // the attachment URL is already stripped from displayContent)
-  if (!signedUrl && (isImage || isVideo || isAudio)) {
+  // Fade-in state per media element. Decoded LRU lets a re-mount skip the
+  // ghost entirely when the bitmap is already in the browser's cache.
+  const [isLoaded, setIsLoaded] = useState(() => wasAttachmentDecoded(attachment.id));
+  const imgRef = useRef<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    if (!wasAttachmentDecoded(attachment.id)) {
+      setIsLoaded(false);
+    }
+  }, [signedUrl, attachment.id]);
+
+  useEffect(() => {
+    const img = imgRef.current;
+    if (!img || !signedUrl) return;
+    if (img.complete && img.naturalWidth > 0) {
+      if (typeof img.decode === "function") {
+        img.decode().then(() => {
+          setIsLoaded(true);
+          markAttachmentDecoded(attachment.id);
+        }).catch(() => {
+          setIsLoaded(true);
+          markAttachmentDecoded(attachment.id);
+        });
+      } else {
+        setIsLoaded(true);
+        markAttachmentDecoded(attachment.id);
+      }
+    }
+  }, [signedUrl, attachment.id]);
+
+  // Audio has no visual surface — render compact loader/player inline.
+  if (isAudio) {
     return (
-      <div
-        className="flex items-center justify-center rounded-lg bg-muted/20"
-        style={reservedStyle ? { width: reservedStyle.width, height: reservedStyle.height } : undefined}
-      >
-        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+      <div ref={inViewRef}>
+        {!signedUrl ? (
+          <div className="flex items-center justify-center rounded-lg bg-muted/20 h-12 w-[280px]">
+            {inView && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+          </div>
+        ) : (
+          <AudioPlayer
+            src={signedUrl}
+            fileName={attachment.file_name}
+            fileSize={attachment.file_size}
+            onError={refresh}
+          />
+        )}
       </div>
     );
   }
 
-  return (
-    <div className={cn("relative", isVideo && "w-full max-w-[480px]")}>
-      {isImage ? (
+  if (isImage) {
+    const placeholderBg = blurhashUrl
+      ? { backgroundImage: `url(${blurhashUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+      : undefined;
+    const isFill = layout === "fill";
+    const containerStyle = isFill
+      ? undefined
+      : reservedStyle
+        ? { width: reservedStyle.width, height: reservedStyle.height }
+        : undefined;
+    return (
+      <div
+        ref={inViewRef}
+        className={cn(
+          "relative rounded-lg overflow-hidden bg-muted/30",
+          isFill && "w-full h-full",
+        )}
+        style={containerStyle}
+      >
+        {/* BlurHash placeholder (or muted gray when no hash yet) */}
         <div
-          className="rounded-lg overflow-hidden bg-muted/30"
-          style={reservedStyle ? { width: reservedStyle.width, height: reservedStyle.height } : undefined}
-        >
+          className={cn(
+            "absolute inset-0 transition-opacity duration-200",
+            blurhashUrl ? "" : "bg-muted/40",
+            isLoaded && signedUrl ? "opacity-0" : "opacity-100",
+            !blurhashUrl && !(isLoaded && signedUrl) && "animate-pulse",
+            isSpoiler && !revealed && "scale-110",
+          )}
+          style={{
+            ...placeholderBg,
+            ...(isSpoiler && !revealed ? { filter: "blur(20px)" } : undefined),
+          }}
+          aria-hidden
+        />
+        {isSpoiler && !revealed && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setRevealed(true); }}
+            className="absolute inset-0 z-10 flex items-center justify-center"
+          >
+            <span className="rounded-full bg-background/80 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-foreground shadow-sm">
+              Spoiler
+            </span>
+          </button>
+        )}
+        {signedUrl && (
           <img
+            ref={imgRef}
             src={signedUrl}
             alt={attachment.file_name}
-            width={reservedStyle?.width}
-            height={reservedStyle?.height}
-            className="w-full h-full object-contain rounded-lg cursor-pointer hover:opacity-90"
+            width={isFill ? undefined : reservedStyle?.width}
+            height={isFill ? undefined : reservedStyle?.height}
+            className={cn(
+              "relative w-full h-full rounded-lg cursor-pointer hover:opacity-90 transition-opacity duration-200",
+              isFill ? "object-cover" : "object-contain",
+              isLoaded ? "opacity-100" : "opacity-0",
+            )}
             decoding="async"
             loading="lazy"
-            onClick={() => signedUrl && onImageClick?.(signedUrl)}
-            onError={refresh}
+            onClick={() => onImageClick?.(signedUrl)}
+            onLoad={() => { setIsLoaded(true); markAttachmentDecoded(attachment.id); }}
+            onError={() => { setIsLoaded(false); refresh(); }}
           />
-        </div>
-      ) : isVideo ? (
-        <VideoPlayer src={signedUrl!} fileName={attachment.file_name} onError={refresh} />
-      ) : isAudio ? (
-        <AudioPlayer
-          src={signedUrl!}
-          fileName={attachment.file_name}
-          fileSize={attachment.file_size}
-          onError={refresh}
+        )}
+      </div>
+    );
+  }
+
+  if (isVideo) {
+    return (
+      <div
+        ref={inViewRef}
+        className="relative rounded-2xl overflow-hidden bg-muted/30 w-full max-w-[480px]"
+        style={reservedStyle ? { aspectRatio: `${reservedStyle.width} / ${reservedStyle.height}` } : undefined}
+      >
+        <div
+          className={cn(
+            "absolute inset-0 bg-muted/40 transition-opacity duration-200 pointer-events-none z-10",
+            isLoaded && signedUrl ? "opacity-0" : "opacity-100 animate-pulse",
+          )}
+          aria-hidden
         />
-      ) : (
-        (() => {
-          const Icon = getFileIcon(attachment.file_type);
-          const sizeLabel = attachment.file_size
-            ? attachment.file_size >= 1024 * 1024
-              ? `${(attachment.file_size / (1024 * 1024)).toFixed(1)} MB`
-              : `${Math.round(attachment.file_size / 1024)} KB`
-            : null;
-          return (
-            <a
-              href={signedUrl ?? attachment.file_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 p-3 bg-secondary rounded-lg hover:bg-secondary/80 max-w-[400px] transition-colors"
-            >
-              <Icon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-              <span className="text-sm font-medium truncate">{attachment.file_name}</span>
-              {sizeLabel && <span className="text-xs text-muted-foreground flex-shrink-0">({sizeLabel})</span>}
-            </a>
-          );
-        })()
-      )}
-    </div>
-  );
+        {signedUrl && (
+          <VideoPlayer
+            src={signedUrl}
+            fileName={attachment.file_name}
+            onError={() => { setIsLoaded(false); refresh(); }}
+            onReady={() => setIsLoaded(true)}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // Generic file attachment
+  return <FileAttachmentCard ref={inViewRef as unknown as React.Ref<HTMLDivElement>} attachment={attachment} />;
 });
 
 export const MessageItem = memo(function MessageItem({
@@ -386,21 +504,24 @@ export const MessageItem = memo(function MessageItem({
     [message.is_own, user?.id, message.user_id],
   );
 
-  // Strip attachment URLs from content to avoid duplicate rendering with AttachmentItem
+  // Strip attachment URLs from content to avoid duplicate rendering with
+  // AttachmentItem — and to avoid the raw-URL fallback when an attachment row
+  // never lands (failed insert, mid-flight reload). We always run the regex
+  // strips, not just when message.attachments is populated.
   const displayContent = useMemo(() => {
-    if (!message.attachments || message.attachments.length === 0) return message.content;
-    let cleaned = message.content;
-    for (const att of message.attachments) {
-      if (att.file_url) {
-        cleaned = cleaned.replace(att.file_url, "").trim();
+    let cleaned = message.content ?? "";
+    if (message.attachments && message.attachments.length > 0) {
+      for (const att of message.attachments) {
+        if (att.file_url) {
+          cleaned = cleaned.replace(att.file_url, "").trim();
+        }
       }
+      cleaned = cleaned
+        .replace(/https?:\/\/[^\s]*supabase\.co\/storage\/v1\/object\/sign\/attachments\/[^\s]*/g, "")
+        .trim();
+      cleaned = cleaned.replace(/kloak-attachment:\/\/[^\s]*/g, "").trim();
+      cleaned = cleaned.replace(/https?:\/\/kloakcdn\.b-cdn\.net\/attachments\/[^\s]*/g, "").trim();
     }
-    // Also strip any Supabase signed attachment URLs and kloak-attachment:// references
-    cleaned = cleaned
-      .replace(/https?:\/\/[^\s]*supabase\.co\/storage\/v1\/object\/sign\/attachments\/[^\s]*/g, "")
-      .trim();
-    cleaned = cleaned.replace(/kloak-attachment:\/\/[^\s]*/g, "").trim();
-    cleaned = cleaned.replace(/https?:\/\/kloakcdn\.b-cdn\.net\/attachments\/[^\s]*/g, "").trim();
     return cleaned;
   }, [message.content, message.attachments]);
 
@@ -839,10 +960,10 @@ export const MessageItem = memo(function MessageItem({
     startEditing({
       id: message.id,
       channelId: message.channel_id || (dmActions ? "" : ""),
-      content: message.content,
+      content: convertMentionsToReadable(message.content, usersMap, channelsMap),
       isDM: !!dmActions,
     });
-  }, [message.id, message.channel_id, message.content, dmActions, checkEditLimit]);
+  }, [message.id, message.channel_id, message.content, dmActions, checkEditLimit, usersMap, channelsMap]);
 
   // For DMs, channel_id won't exist — use conversation context
   // The channelId for DMs is set via the dmActions context in DMChatArea
@@ -1057,7 +1178,7 @@ export const MessageItem = memo(function MessageItem({
     if (isAnnouncementChannel && !isGrouped) {
       classes.push("bg-primary/5 border-l-2 border-l-primary/50 ml-1");
     }
-    if (isMentioned) classes.push("bg-[rgb(30_30_30_/_59%)] border-l-2 border-l-amber-500");
+    if (isMentioned) classes.push("bg-primary/10 border-l-2 border-l-amber-500");
     if (isHighlighted) classes.push("animate-highlight-message bg-primary/20 ring-2 ring-primary/50");
     if (isPending) classes.push("opacity-70");
     return classes.join(" ");
@@ -1371,7 +1492,7 @@ export const MessageItem = memo(function MessageItem({
                                   onClick={handleKickUser}
                                   className="text-orange-400 focus:text-orange-400"
                                 >
-                                  <UserX className="w-4 h-4 text-[#fc6464]" />
+                                  <UserX className="w-4 h-4 text-destructive" />
                                   Kick {displayName}
                                 </ContextMenuItem>
                               )}
@@ -1380,7 +1501,7 @@ export const MessageItem = memo(function MessageItem({
                                   onClick={handleBanUser}
                                   className="text-destructive focus:text-destructive"
                                 >
-                                  <Ban className="w-4 h-4 text-[#fc6464]" />
+                                  <Ban className="w-4 h-4 text-destructive" />
                                   Ban {displayName}
                                 </ContextMenuItem>
                               )}
@@ -1618,18 +1739,41 @@ export const MessageItem = memo(function MessageItem({
                     )}
 
                     {/* Attachments - skip for system messages */}
-                    {!message.is_system_message && message.attachments && message.attachments.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-2 w-full">
-                        {message.attachments.map((attachment) => (
-                          <AttachmentItem
-                            key={attachment.id}
-                            attachment={attachment}
-                            onImageClick={setAttachmentLightboxUrl}
-                            uploaderName={displayName}
-                          />
-                        ))}
-                      </div>
-                    )}
+                    {!message.is_system_message && message.attachments && message.attachments.length > 0 && (() => {
+                      const images = message.attachments.filter((a) => a.file_type?.startsWith("image/") && !a.is_spoiler);
+                      const others = message.attachments.filter((a) => !(a.file_type?.startsWith("image/") && !a.is_spoiler));
+                      const useGallery = images.length >= 2 && images.length <= 4;
+                      return (
+                        <div className="flex flex-col gap-2 mt-2 w-full">
+                          {useGallery && (
+                            <AttachmentGallery
+                              attachments={images}
+                              renderCell={(a) => (
+                                <AttachmentItem
+                                  attachment={a}
+                                  onImageClick={setAttachmentLightboxUrl}
+                                  uploaderName={displayName}
+                                  layout="fill"
+                                />
+                              )}
+                            />
+                          )}
+                          {(!useGallery || others.length > 0) && (
+                            <div className="flex flex-wrap gap-2 w-full">
+                              {(useGallery ? others : message.attachments).map((attachment) => (
+                                <AttachmentItem
+                                  key={attachment.id}
+                                  attachment={attachment}
+                                  onImageClick={setAttachmentLightboxUrl}
+                                  uploaderName={displayName}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
                   </>
                 )}
               </div>
@@ -1698,7 +1842,7 @@ export const MessageItem = memo(function MessageItem({
                       aria-label="Delete"
                       title="Delete"
                     >
-                      <Trash2 className="w-4 h-4 text-[#fc6464]" />
+                      <Trash2 className="w-4 h-4 text-destructive" />
                     </button>
                   )}
 
@@ -1822,13 +1966,13 @@ export const MessageItem = memo(function MessageItem({
                 <ContextMenuSeparator />
                 {canKickUser && (
                   <ContextMenuItem onClick={handleKickUser}>
-                    <UserX className="w-4 h-4 text-[#fc6464]" />
+                    <UserX className="w-4 h-4 text-destructive" />
                     Kick {displayName}
                   </ContextMenuItem>
                 )}
                 {canBanUser && (
                   <ContextMenuItem onClick={handleBanUser}>
-                    <Ban className="w-4 h-4 text-[#fc6464]" />
+                    <Ban className="w-4 h-4 text-destructive" />
                     Ban {displayName}
                   </ContextMenuItem>
                 )}

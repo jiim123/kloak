@@ -18,7 +18,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   isSupabaseAttachmentUrl,
+  isPrivateBunnyAttachmentUrl,
   extractStoragePath,
+  extractPrivateAttachmentPath,
   getSignedAttachmentUrl,
   invalidateCacheEntry,
 } from "@/lib/signedUrl";
@@ -48,6 +50,11 @@ export function useSignedUrl(
       const path = fileUrl.slice(ATTACHMENT_PREFIX.length);
       return _peekCache(path) ?? null;
     }
+    if (isPrivateBunnyAttachmentUrl(fileUrl)) {
+      const path = extractPrivateAttachmentPath(fileUrl);
+      if (!path) return fileUrl;
+      return _peekCache(path) ?? null;
+    }
     if (!isSupabaseAttachmentUrl(fileUrl)) return fileUrl;
     const path = extractStoragePath(fileUrl);
     if (!path) return fileUrl;
@@ -69,6 +76,29 @@ export function useSignedUrl(
     const ATTACHMENT_PREFIX = "kloak-attachment://";
     if (fileUrl.startsWith(ATTACHMENT_PREFIX)) {
       const path = fileUrl.slice(ATTACHMENT_PREFIX.length);
+      let cancelled = false;
+
+      const resolve = async () => {
+        const result = await getSignedAttachmentUrl(path);
+        if (cancelled) return;
+        setSignedUrl(result ?? null);
+        timerRef.current = setTimeout(resolve, (1800 - 300) * 1000);
+      };
+
+      resolve();
+      return () => {
+        cancelled = true;
+        if (timerRef.current) clearTimeout(timerRef.current);
+      };
+    }
+
+    if (isPrivateBunnyAttachmentUrl(fileUrl)) {
+      const path = extractPrivateAttachmentPath(fileUrl);
+      if (!path) {
+        setSignedUrl(fileUrl);
+        return;
+      }
+
       let cancelled = false;
 
       const resolve = async () => {
@@ -116,12 +146,14 @@ export function useSignedUrl(
   }, [fileUrl]);
 
   const refresh = useCallback(() => {
-    if (retriedRef.current || !fileUrl) return;
+    if (!fileUrl) return;
     retriedRef.current = true;
 
     const ATTACHMENT_PREFIX = "kloak-attachment://";
     const path = fileUrl.startsWith(ATTACHMENT_PREFIX)
       ? fileUrl.slice(ATTACHMENT_PREFIX.length)
+      : isPrivateBunnyAttachmentUrl(fileUrl)
+        ? extractPrivateAttachmentPath(fileUrl)
       : extractStoragePath(fileUrl);
     if (!path) return;
 

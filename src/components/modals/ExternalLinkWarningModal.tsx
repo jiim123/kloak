@@ -37,9 +37,9 @@ export const ExternalLinkWarningModal = () => {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-[#4a4f5a] bg-[#333842] p-0 text-[#f4f5f7] shadow-2xl sm:max-w-[448px]">
+      <DialogContent className="max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-border bg-card p-0 text-foreground shadow-2xl sm:max-w-[448px]">
         <div className="flex max-h-[82vh] flex-col overflow-hidden">
-          <div className="border-b border-[#2b3039] bg-[#2f343d] px-5 py-3">
+          <div className="border-b border-border bg-muted px-5 py-3">
             <div className="text-base font-medium leading-none tracking-tight">
               Open External Link?
             </div>
@@ -51,46 +51,46 @@ export const ExternalLinkWarningModal = () => {
                 <ShieldAlert className="h-5 w-5 text-amber-200" />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-medium leading-none text-[#f3f4f7]">
+                <p className="text-sm font-medium leading-none text-foreground">
                   This link goes to an external website
                 </p>
-                <p className="mt-2 text-xs leading-5 text-[#b8bec8]">
+                <p className="mt-2 text-xs leading-5 text-muted-foreground">
                   Continue only if you trust this destination.
                 </p>
               </div>
             </div>
 
-            <div className="border border-[#4a4f5a] bg-[#2f343d] p-3">
+            <div className="border border-border bg-muted p-3">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-xs font-medium uppercase tracking-wide text-[#c4c8d0]">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Destination
                 </p>
-                <ExternalLink className="h-4 w-4 text-[#9ea4af]" />
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
               </div>
               {hostname && (
-                <p className="mt-3 break-all text-sm font-medium leading-5 text-[#f3f4f7]">
+                <p className="mt-3 break-all text-sm font-medium leading-5 text-foreground">
                   {hostname}
                 </p>
               )}
-              <p className="mt-2 break-all font-mono text-xs leading-5 text-[#b8bec8]">
+              <p className="mt-2 break-all font-mono text-xs leading-5 text-muted-foreground">
                 {url}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 border-t border-[#2c3139] bg-[#30353f] px-5 py-3">
+          <div className="flex items-center justify-end gap-3 border-t border-border bg-card px-5 py-3">
             <Button
               type="button"
               variant="ghost"
               onClick={handleClose}
-              className="h-9 rounded-[3px] px-4 text-[#b9bec8] hover:bg-transparent hover:text-white"
+              className="h-9 rounded-[3px] px-4 text-muted-foreground hover:bg-transparent hover:text-white"
             >
               Cancel
             </Button>
             <Button
               type="button"
               onClick={handleContinue}
-              className="h-9 rounded-[3px] bg-[#d7dbe3] px-5 font-medium text-[#363b44] hover:bg-white"
+              className="h-9 rounded-[3px] bg-primary px-5 font-medium text-primary-foreground hover:bg-white"
             >
               Continue
             </Button>

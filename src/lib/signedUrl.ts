@@ -20,6 +20,7 @@ import { getKeyHashAsync } from "@/integrations/supabase/client";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+const PRIVATE_BUNNY_ATTACHMENT_HOST = "kloakcdn.b-cdn.net";
 
 const OBJECT_URL_EXPIRY = 1800; // 30 minutes (matches original signed URL TTL)
 const CACHE_REFRESH_BUFFER = 300; // Refresh 5 min before expiry
@@ -93,6 +94,8 @@ export function invalidateCacheEntry(filePath: string): void {
     safeRevoke(entry.url);
     urlCache.delete(filePath);
   }
+  // Also drop any negative-cache record so a manual refresh truly retries.
+  notFoundCache.delete(filePath);
 }
 
 function setCache(filePath: string, objectUrl: string) {
@@ -112,6 +115,14 @@ function setCache(filePath: string, objectUrl: string) {
 // ---------------------------------------------------------------------------
 
 const inflight = new Map<string, Promise<string | null>>();
+
+// Negative cache: paths that returned 404/non-ok multiple times. Avoids
+// re-hitting the edge function for permanently missing files, but tolerates
+// the first few misses so fresh uploads (where the row exists before the
+// CDN object has propagated) can still recover via refresh().
+const notFoundCache = new Map<string, number>();
+const NOT_FOUND_CACHE_MAX = 500;
+const NOT_FOUND_THRESHOLD = 4; // require 4 consecutive misses before giving up
 
 // ---------------------------------------------------------------------------
 // Path helpers (kept for backward compatibility with legacy Supabase URLs in DB)
@@ -158,6 +169,29 @@ export function extractStoragePath(url: string): string | null {
   }
 }
 
+export function isPrivateBunnyAttachmentUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return (
+      parsed.host.toLowerCase() === PRIVATE_BUNNY_ATTACHMENT_HOST &&
+      parsed.pathname.startsWith("/attachments/")
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function extractPrivateAttachmentPath(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.host.toLowerCase() !== PRIVATE_BUNNY_ATTACHMENT_HOST) return null;
+    const match = parsed.pathname.match(/^\/attachments\/(.+)$/);
+    return match ? decodeURIComponent(match[1]) : null;
+  } catch {
+    return null;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Single URL — blob proxy via Edge Function
 // ---------------------------------------------------------------------------
@@ -171,6 +205,11 @@ export function extractStoragePath(url: string): string | null {
 export async function getSignedAttachmentUrl(filePath: string): Promise<string | null> {
   const cached = getCached(filePath);
   if (cached) return cached;
+
+  // Skip paths that have repeatedly returned 404. We only honor the negative
+  // cache once the failure count crosses NOT_FOUND_THRESHOLD; this lets fresh
+  // uploads recover when the CDN object lands a few seconds after the row.
+  if ((notFoundCache.get(filePath) ?? 0) >= NOT_FOUND_THRESHOLD) return null;
 
   // Deduplicate concurrent requests for the same path
   let pending = inflight.get(filePath);
@@ -192,16 +231,27 @@ export async function getSignedAttachmentUrl(filePath: string): Promise<string |
       });
 
       if (!res.ok) {
-        console.warn("[signedUrl] Blob proxy failed for path:", filePath, res.status);
+        // Drain body to free the connection without surfacing the error.
+        try { await res.text(); } catch { /* ignore */ }
+        if (res.status === 404 || res.status === 410) {
+          if (notFoundCache.size >= NOT_FOUND_CACHE_MAX) {
+            // simple FIFO trim
+            const first = notFoundCache.keys().next().value;
+            if (first) notFoundCache.delete(first);
+          }
+          notFoundCache.set(filePath, (notFoundCache.get(filePath) ?? 0) + 1);
+        }
         return null;
       }
+
+      // Success — clear any prior miss count so future refreshes are fast.
+      notFoundCache.delete(filePath);
 
       const blob = await res.blob();
       const objectUrl = URL.createObjectURL(blob);
       setCache(filePath, objectUrl);
       return objectUrl;
-    } catch (err) {
-      console.warn("[signedUrl] Failed to fetch attachment:", filePath, err);
+    } catch {
       return null;
     }
   })();
@@ -213,6 +263,46 @@ export async function getSignedAttachmentUrl(filePath: string): Promise<string |
 
   return promise;
 }
+
+// ---------------------------------------------------------------------------
+// Lightweight existence check (HEAD-only; no blob download)
+// ---------------------------------------------------------------------------
+
+/**
+ * Check whether an attachment exists on the CDN without downloading it.
+ * Used for post-upload readiness polling so the client doesn't re-pull
+ * large media files through the proxy.
+ */
+export async function checkAttachmentExists(filePath: string): Promise<boolean> {
+  // If we already have a cached object URL, it definitely exists.
+  if (getCached(filePath)) return true;
+
+  try {
+    const keyHash = await getKeyHashAsync();
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${ANON_KEY}`,
+    };
+    if (keyHash) headers["x-key-hash"] = keyHash;
+
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/sign-bunny-url`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ bucket: "attachments", path: filePath, mode: "exists" }),
+    });
+
+    if (!res.ok) {
+      try { await res.text(); } catch { /* ignore */ }
+      return false;
+    }
+    const data = await res.json().catch(() => null) as { exists?: boolean } | null;
+    return Boolean(data?.exists);
+  } catch {
+    return false;
+  }
+}
+
+
 
 // ---------------------------------------------------------------------------
 // Batch URLs
@@ -278,9 +368,21 @@ export async function resolveSignedUrls(
   const pathToOriginal = new Map<string, string>();
 
   for (const url of fullUrls) {
+    if (!url || url.startsWith("blob:") || url.startsWith("data:")) {
+      continue;
+    }
     // Handle kloak-attachment:// stable references
     if (url.startsWith(ATTACHMENT_PREFIX)) {
       const path = url.slice(ATTACHMENT_PREFIX.length);
+      pathToOriginal.set(path, url);
+      continue;
+    }
+    if (isPrivateBunnyAttachmentUrl(url)) {
+      const path = extractPrivateAttachmentPath(url);
+      if (!path) {
+        results.set(url, url);
+        continue;
+      }
       pathToOriginal.set(path, url);
       continue;
     }

@@ -23,7 +23,6 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -598,7 +597,7 @@ const SortableChannel = memo(({
         {channel.is_nsfw && !isUnread && mentionCount === 0 && !(channel.type === "voice" && voiceCount > 0) && !isSortingMode && (
           <span
             className={cn(
-              "absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[11px] font-sans font-medium rounded-full bg-kloak-dnd text-white border border-kloak-dnd/60 uppercase leading-none transition-opacity duration-150",
+              "absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[11px] font-sans font-medium rounded-full bg-kloak-dnd text-foreground border border-kloak-dnd/60 uppercase leading-none transition-opacity duration-150",
               showDesktopActions && "group-hover:opacity-0",
             )}
           >
@@ -634,7 +633,7 @@ const SortableChannel = memo(({
         {mentionCount > 0 && !isSortingMode && (
           <span
             className={cn(
-              "px-1.5 py-0.5 text-xs font-mono rounded-full bg-red-600 text-white flex-shrink-0 transition-opacity",
+              "px-1.5 py-0.5 text-xs font-mono rounded-full bg-red-600 text-foreground flex-shrink-0 transition-opacity",
               showDesktopActions && "group-hover:opacity-0",
             )}
           >
@@ -2018,8 +2017,10 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
           <DropdownMenu>
             <div
               className={cn(
-                "relative overflow-hidden transition-[height,opacity] duration-200 ease-out",
-                isServerHeaderCondensed ? "h-0 opacity-0" : "h-32 opacity-100",
+                "relative h-32 overflow-hidden will-change-transform transition-[transform,opacity,margin] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                isServerHeaderCondensed
+                  ? "-translate-y-full opacity-0 -mb-32 pointer-events-none"
+                  : "translate-y-0 opacity-100 mb-0",
               )}
             >
               {serverBannerUrl ? (
@@ -2039,7 +2040,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
             <DropdownMenuTrigger asChild>
               <button
                 className={cn(
-                  "group relative flex w-full items-center gap-3 overflow-hidden text-left transition-[height,background-color,padding,box-shadow] duration-200 active:scale-[0.995]",
+                  "group relative flex w-full items-center gap-3 overflow-hidden text-left transition-[height,background-color,padding,box-shadow] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] active:scale-[0.995]",
                   isServerHeaderCondensed
                     ? "h-14 px-3 bg-[hsl(var(--layout-channels))] hover:bg-foreground/[0.035]"
                     : "h-12 px-4 hover:bg-foreground/[0.03]",
@@ -2061,7 +2062,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
                 )}
                 <div
                   className={cn(
-                    "relative shrink-0 items-center justify-center overflow-hidden rounded-xl bg-secondary text-sm font-semibold text-foreground ring-1 ring-border/60 transition-[width,height,opacity,transform] duration-200",
+                    "relative shrink-0 items-center justify-center overflow-hidden rounded-xl bg-secondary text-sm font-semibold text-foreground ring-1 ring-border/60 transition-[width,height,opacity,transform] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
                     isServerHeaderCondensed ? "flex h-9 w-9 opacity-100 scale-100" : "h-0 w-0 opacity-0 scale-90",
                   )}
                 >
@@ -2078,7 +2079,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
                         {currentServer.name}
                       </h2>
                       {resolvedServerVerified && (
-                        <CheckCircle2 className="h-4 w-4 shrink-0 fill-sky-400 text-[hsl(223_7%_20%)]" />
+                        <img src="/verified.svg" alt="Verified server" className="h-3.5 w-3.5 shrink-0" />
                       )}
                     </div>
                   </div>
@@ -2106,7 +2107,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
 
               {canSeeServerSettings && (
                 <>
-                  <DropdownMenuSeparator className="mx-0 my-0 bg-white/10" />
+                  <DropdownMenuSeparator className="mx-0 my-0 bg-muted/40" />
 
                   {/* Server Settings */}
                   <DropdownMenuItem
@@ -2149,7 +2150,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
 
               {!isOwner && (
                 <>
-                  <DropdownMenuSeparator className="mx-0 my-0 bg-white/10" />
+                  <DropdownMenuSeparator className="mx-0 my-0 bg-muted/40" />
 
                   {/* Leave Server */}
                   <DropdownMenuItem

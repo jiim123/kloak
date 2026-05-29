@@ -24,7 +24,7 @@ import { rateLimitToast } from "@/lib/rateLimitToast";
 
 type ActionType = "kick" | "ban" | "mute" | "unmute" | "transferOwnership" | "massBan" | "massKick";
 const MODAL_CONTENT_CLASS =
-  "max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-[#4a4f5a] bg-[#333842] p-0 text-[#f4f5f7] shadow-2xl sm:max-w-[448px]";
+  "max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-border bg-card p-0 text-foreground shadow-2xl sm:max-w-[448px]";
 
 const getDisplayName = (member: ServerMember) =>
   member.nickname || member.user?.display_name || member.user?.username || "Unknown member";
@@ -185,43 +185,43 @@ export const ConfirmActionModal = () => {
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
         <DialogContent className={MODAL_CONTENT_CLASS} hideCloseButton>
           <div className="flex max-h-[82vh] flex-col overflow-hidden">
-            <div className="border-b border-[#2b3039] bg-[#2f343d] px-5 py-3">
+            <div className="border-b border-border bg-muted px-5 py-3">
               <div className="text-base font-medium leading-none tracking-tight">{title || `${actionLabel} member`}</div>
             </div>
 
             <div className="space-y-5 overflow-y-auto px-6 py-4">
               <div className="space-y-2">
-                <p className="text-sm leading-6 text-[#f3f4f7]">{message || `Are you sure you want to ${action} this member?`}</p>
-                <p className="text-xs leading-5 text-[#b8bec8]">{helperText}</p>
+                <p className="text-sm leading-6 text-foreground">{message || `Are you sure you want to ${action} this member?`}</p>
+                <p className="text-xs leading-5 text-muted-foreground">{helperText}</p>
               </div>
 
               {(action === "massBan" || action === "massKick") && massActionMembers ? (
-                <div className="border border-[#4a4f5a] bg-[#2f343d] p-3">
-                  <p className="text-sm font-medium leading-none text-[#f3f4f7]">Selected members</p>
+                <div className="border border-border bg-muted p-3">
+                  <p className="text-sm font-medium leading-none text-foreground">Selected members</p>
                   <div className="mt-2 max-h-36 space-y-1 overflow-y-auto">
                     {massActionMembers.map((m) => (
-                      <p key={m.user_id} className="text-sm text-[#d7dbe3]">
+                      <p key={m.user_id} className="text-sm text-foreground">
                         {getDisplayName(m)}
                       </p>
                     ))}
                   </div>
                 </div>
               ) : member ? (
-                <div className="border border-[#4a4f5a] bg-[#2f343d] p-3">
-                  <p className="text-sm font-medium leading-none text-[#f3f4f7]">Selected member</p>
-                  <p className="mt-2 text-sm text-[#d7dbe3]">{getDisplayName(member)}</p>
-                  <p className="mt-1 text-xs text-[#9ea4af]">@{member.user?.username || "unknown"}</p>
+                <div className="border border-border bg-muted p-3">
+                  <p className="text-sm font-medium leading-none text-foreground">Selected member</p>
+                  <p className="mt-2 text-sm text-foreground">{getDisplayName(member)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">@{member.user?.username || "unknown"}</p>
                 </div>
               ) : null}
             </div>
 
-            <div className="flex items-center justify-end gap-3 border-t border-[#2c3139] bg-[#30353f] px-5 py-3">
+            <div className="flex items-center justify-end gap-3 border-t border-border bg-card px-5 py-3">
               <Button
                 type="button"
                 variant="ghost"
                 onClick={handleClose}
                 disabled={isSubmitting}
-                className="h-9 rounded-[3px] px-4 text-[#b9bec8] hover:bg-transparent hover:text-white"
+                className="h-9 rounded-[3px] px-4 text-muted-foreground hover:bg-transparent hover:text-white"
               >
                 Cancel
               </Button>
@@ -229,7 +229,7 @@ export const ConfirmActionModal = () => {
                 type="button"
                 onClick={handleConfirm}
                 disabled={isSubmitting}
-                className="h-9 rounded-[3px] bg-[#d32f2f] px-5 font-medium text-white hover:bg-[#b71c1c]"
+                className="h-9 rounded-[3px] bg-destructive px-5 font-medium text-white hover:bg-destructive"
               >
                 {isSubmitting ? (
                   <>
@@ -347,13 +347,13 @@ export const ChangeNicknameModal = () => {
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className={MODAL_CONTENT_CLASS} hideCloseButton>
         <div className="flex max-h-[82vh] flex-col overflow-hidden">
-          <div className="border-b border-[#2b3039] bg-[#2f343d] px-5 py-3">
+          <div className="border-b border-border bg-muted px-5 py-3">
             <div className="text-base font-medium leading-none tracking-tight">Change nickname</div>
           </div>
 
           <div className="space-y-5 overflow-y-auto px-6 py-4">
             <div>
-              <Label htmlFor="nickname" className="text-xs font-medium uppercase tracking-wide text-[#c4c8d0]">
+              <Label htmlFor="nickname" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Nickname
               </Label>
               <Input
@@ -362,29 +362,29 @@ export const ChangeNicknameModal = () => {
                 onChange={(e) => setNickname(e.target.value.slice(0, 32))}
                 placeholder={member.user?.username || "Enter nickname"}
                 maxLength={32}
-                className="mt-2 h-9 rounded-none border-0 border-b border-white/80 bg-transparent px-0 text-sm text-[#f3f4f7] shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                className="mt-2 h-9 rounded-none border-0 border-b border-white/80 bg-transparent px-0 text-sm text-foreground shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
                 autoFocus
               />
               <div className="mt-2 flex items-center justify-between gap-3 text-xs leading-5">
-                <p className="text-[#b8bec8]">Leave empty to use their display name.</p>
-                <span className="font-mono text-[#9ea4af]">{nickname.length}/32</span>
+                <p className="text-muted-foreground">Leave empty to use their display name.</p>
+                <span className="font-mono text-muted-foreground">{nickname.length}/32</span>
               </div>
             </div>
 
-            <div className="border border-[#4a4f5a] bg-[#2f343d] p-3">
-              <p className="text-sm font-medium leading-none text-[#f3f4f7]">Member</p>
-              <p className="mt-2 text-sm text-[#d7dbe3]">{getDisplayName(member)}</p>
-              <p className="mt-1 text-xs text-[#9ea4af]">@{member.user?.username || "unknown"}</p>
+            <div className="border border-border bg-muted p-3">
+              <p className="text-sm font-medium leading-none text-foreground">Member</p>
+              <p className="mt-2 text-sm text-foreground">{getDisplayName(member)}</p>
+              <p className="mt-1 text-xs text-muted-foreground">@{member.user?.username || "unknown"}</p>
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 border-t border-[#2c3139] bg-[#30353f] px-5 py-3">
+          <div className="flex items-center justify-end gap-3 border-t border-border bg-card px-5 py-3">
             <Button
               type="button"
               variant="ghost"
               onClick={handleClose}
               disabled={isSubmitting}
-              className="h-9 rounded-[3px] px-4 text-[#b9bec8] hover:bg-transparent hover:text-white"
+              className="h-9 rounded-[3px] px-4 text-muted-foreground hover:bg-transparent hover:text-white"
             >
               Cancel
             </Button>
@@ -392,7 +392,7 @@ export const ChangeNicknameModal = () => {
               type="button"
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="h-9 rounded-[3px] bg-[#d7dbe3] px-5 font-medium text-[#363b44] hover:bg-white"
+              className="h-9 rounded-[3px] bg-primary px-5 font-medium text-primary-foreground hover:bg-white"
             >
               {isSubmitting ? (
                 <>

@@ -43,7 +43,7 @@ import { canRevealGhostIdentityForUser } from "@/lib/ghostIdentity";
 import { encodeCustomEmojisForTransport } from "@/lib/globalEmojiResolver";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
 import { useServerEmojis } from "@/hooks/useServerEmojis";
-import { getSignedAttachmentUrl } from "@/lib/signedUrl";
+import { checkAttachmentExists } from "@/lib/signedUrl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -59,6 +59,8 @@ export interface DMInputConfig {
   otherUsername: string;
   replyingTo?: { id: string; sender?: { username?: string; display_name?: string | null }; content: string } | null;
   onCancelReply?: () => void;
+  /** Conversation participants (excluding self) used for @mention autocomplete. */
+  participants?: import("@/types").User[];
 }
 
 export interface ForumThreadInputConfig {
@@ -153,14 +155,15 @@ const GifPickerIcon = ({ className }: { className?: string }) => (
 
 async function waitForAttachmentReady(storagePath: string): Promise<boolean> {
   for (let attempt = 0; attempt <= ATTACHMENT_READY_RETRY_DELAYS_MS.length; attempt += 1) {
-    const signedUrl = await getSignedAttachmentUrl(storagePath);
-    if (signedUrl) return true;
+    const exists = await checkAttachmentExists(storagePath);
+    if (exists) return true;
     if (attempt < ATTACHMENT_READY_RETRY_DELAYS_MS.length) {
       await sleep(ATTACHMENT_READY_RETRY_DELAYS_MS[attempt]);
     }
   }
   return false;
 }
+
 
 function isRetryableAttachmentInsertError(error: unknown): boolean {
   const code = typeof error === "object" && error && "code" in error ? String((error as { code?: unknown }).code ?? "") : "";
@@ -177,10 +180,13 @@ async function insertAttachmentsWithRetry(
     file_name: string;
     file_type: string | null;
     file_size: number | null;
+    width?: number | null;
+    height?: number | null;
+    placeholder?: string | null;
   }>,
 ): Promise<void> {
   for (let attempt = 0; attempt <= ATTACHMENT_INSERT_RETRY_DELAYS_MS.length; attempt += 1) {
-    const { error } = await supabase.from(table).insert(attachments);
+    const { error } = await supabase.from(table as any).insert(attachments as any);
     if (!error) return;
     if (!isRetryableAttachmentInsertError(error) || attempt >= ATTACHMENT_INSERT_RETRY_DELAYS_MS.length) {
       throw error;
@@ -641,6 +647,13 @@ export const MessageInput = ({
       setHasMentionOptions(false);
     }
 
+    // #channel autocomplete is server-only; skip in DMs.
+    if (isDM) {
+      setShowChannels(false);
+      setHasChannelOptions(false);
+      return;
+    }
+
     const hashIdx = textBefore.lastIndexOf("#");
     if (hashIdx !== -1 && !textBefore.slice(hashIdx).includes(" ")) {
       setChannelQuery(textBefore.slice(hashIdx + 1));
@@ -650,7 +663,7 @@ export const MessageInput = ({
       setShowChannels(false);
       setHasChannelOptions(false);
     }
-  }, []);
+  }, [isDM]);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     if (!isDM && !isForum && openChatNoticePopup()) return;
@@ -663,9 +676,7 @@ export const MessageInput = ({
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(onStopTyping!, TYPING_STOP_DELAY);
     }
-    if (!isDM) {
-      detectAutocomplete(val, e.target.selectionStart);
-    }
+    detectAutocomplete(val, e.target.selectionStart);
     // Don't save draft while editing — draft is preserved in savedDraftRef
     if (!isEditMode) {
       const draftKey = isForum ? `forum-${targetId}` : isDM ? `dm-${targetId}` : targetId;
@@ -744,7 +755,7 @@ export const MessageInput = ({
       setIsSending(true);
       try {
         if (editingMessage.isDM) {
-          await dmEditMessage(editingMessage.id, user.id, trimmed);
+          await dmEditMessage(editingMessage.id, user.id, convertMentionsForSend(trimmed));
         } else {
           const finalContent = convertMentionsForSend(trimmed);
           await channelEditMessage(editingMessage.id, finalContent, user.id);
@@ -778,7 +789,7 @@ export const MessageInput = ({
     if ((!trimmedContent && !hasGifOrAttachments) || !user || isSending) return;
 
     setIsSending(true);
-    const contentToSend = isDM ? content.trim() : convertMentionsForSend(content.trim());
+    const contentToSend = convertMentionsForSend(content.trim());
 
     // Check mention permissions AFTER conversion (role mentions are now in <@&uuid> format)
     if (!isDM) {
@@ -852,6 +863,10 @@ export const MessageInput = ({
         await forumConfigRef.current!.onSend(finalContent, replyToId);
       } else {
         const preparedAttachments = prepareAttachmentsForMessage(pendingAttachments);
+        // Inline every attachment URL so the message body is never empty (the
+        // send_message RPC rejects empty content). MessageItem unconditionally
+        // strips kloak-attachment:// / signed-URL refs, so these never reach
+        // the rendered output even if the attachments row never lands.
         const attachmentUrls = preparedAttachments.map((attachment) => attachment.contentUrl);
         if (attachmentUrls.length > 0) {
           const urlBlock = attachmentUrls.join("\n");
@@ -864,6 +879,11 @@ export const MessageInput = ({
           optimisticAttachments: preparedAttachments.map((attachment) => attachment.optimisticAttachment),
         });
         if (!sentMessage) return;
+        if ((sentMessage as any)._mass_mentions_queued) {
+          const queuedTypes = ((sentMessage as any)._queued_mention_types as string[] | undefined) ?? [];
+          const label = queuedTypes.length > 0 ? queuedTypes.map((type) => `@${type}`).join(", ") : "server mentions";
+          toast.info(`${label} notifications are being delivered.`);
+        }
 
         const draftKey = isForum ? `forum-${targetId}` : isDM ? `dm-${targetId}` : targetId;
         setContent("");
@@ -873,12 +893,23 @@ export const MessageInput = ({
 
         void (async () => {
           try {
+            const enrichments = new Map<string, import("@/lib/attachmentEnrich").ImageEnrichment | null>();
             if (preparedAttachments.some((attachment) => attachment.storagePath)) {
+              const { enrichImageFile } = await import("@/lib/attachmentEnrich");
               for (const attachment of preparedAttachments) {
                 if (!attachment.storagePath) continue;
                 let fileToUpload = attachment.pending.file;
                 if (fileToUpload.type.startsWith("image/")) {
                   fileToUpload = await compressAttachmentImage(fileToUpload);
+                }
+                // Compute BlurHash + dimensions from the post-compression file
+                // so the placeholder matches the bytes we actually store.
+                if (fileToUpload.type.startsWith("image/")) {
+                  try {
+                    enrichments.set(attachment.storagePath, await enrichImageFile(fileToUpload));
+                  } catch {
+                    enrichments.set(attachment.storagePath, null);
+                  }
                 }
                 await secureUpload("attachments", attachment.storagePath, fileToUpload, {
                   contentType: fileToUpload.type,
@@ -895,13 +926,19 @@ export const MessageInput = ({
 
             const persistedAttachments = preparedAttachments
               .filter((_, i) => attachmentReadiness[i])
-              .map((attachment, i) => ({
-                message_id: sentMessage.id,
-                file_url: attachment.contentUrl,
-                file_name: attachment.optimisticAttachment.file_name || `attachment-${i + 1}`,
-                file_type: attachment.optimisticAttachment.file_type || null,
-                file_size: attachment.optimisticAttachment.file_size || null,
-              }))
+              .map((attachment, i) => {
+                const enrichment = attachment.storagePath ? enrichments.get(attachment.storagePath) ?? null : null;
+                return {
+                  message_id: sentMessage.id,
+                  file_url: attachment.contentUrl,
+                  file_name: attachment.optimisticAttachment.file_name || `attachment-${i + 1}`,
+                  file_type: attachment.optimisticAttachment.file_type || null,
+                  file_size: attachment.optimisticAttachment.file_size || null,
+                  width: enrichment?.width ?? attachment.optimisticAttachment.width ?? null,
+                  height: enrichment?.height ?? attachment.optimisticAttachment.height ?? null,
+                  placeholder: enrichment?.placeholder || null,
+                };
+              })
               .filter((attachment) => !!attachment.file_url);
 
             if (persistedAttachments.length === 0) return;
@@ -1046,7 +1083,7 @@ export const MessageInput = ({
         }
       }
 
-      if (!isDM) {
+      {
         const isAutocompleteOpen = (showMentions && hasMentionOptions) || (showChannels && hasChannelOptions);
         const autocompleteKeys = ["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"];
         if (isAutocompleteOpen && autocompleteKeys.includes(e.key)) {
@@ -1068,7 +1105,7 @@ export const MessageInput = ({
 
       // Format shortcuts (all modes: channel, DM, forum, reply, edit, etc.)
       if (e.ctrlKey || e.metaKey) {
-        const formatMap: Record<string, string> = { b: "bold", i: "italic", u: "underline", c: "code", k: "codeblock", s: "spoiler" };
+        const formatMap: Record<string, string> = { b: "bold", i: "italic", u: "underline", k: "code", s: "spoiler" };
         const fmt = formatMap[e.key.toLowerCase()];
         if (fmt) {
           e.preventDefault();
@@ -1173,6 +1210,7 @@ export const MessageInput = ({
             <MentionAutocomplete
               query={mentionQuery}
               position={{ top: 40, left: 0 }}
+              participants={isDM ? dmConfig?.participants : undefined}
               onSelect={(opt) => {
                 const before = content.slice(0, mentionStartIndex);
                 const after = content.slice(mentionStartIndex + mentionQuery.length + 1);
@@ -1305,8 +1343,8 @@ export const MessageInput = ({
         setShowCreatePoll={isDM || isForum || !effectiveCanCreatePoll ? undefined : setShowCreatePoll}
         showEmojiPicker={showEmojiPicker}
         setShowEmojiPicker={setShowEmojiPicker}
-        showGifPicker={isDM || isForum ? undefined : showGifPicker}
-        setShowGifPicker={isDM || isForum ? undefined : setShowGifPicker}
+        showGifPicker={isForum ? undefined : showGifPicker}
+        setShowGifPicker={isForum ? undefined : setShowGifPicker}
         isSending={isSending}
         handleSubmit={handleSubmit}
         handleEmojiSelect={(emoji: string) => {
@@ -1336,7 +1374,7 @@ export const MessageInput = ({
             setContent((prev) => prev + emoji);
           }
         }}
-        handleGifSelect={isDM ? undefined : (url: string) => {
+        handleGifSelect={(url: string) => {
           setPendingAttachments((prev) => [...prev, { file: new File([], "gif"), preview: url, gifUrl: url }]);
         }}
         currentServer={isDM ? undefined : currentServer}
