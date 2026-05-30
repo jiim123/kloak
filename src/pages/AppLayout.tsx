@@ -308,15 +308,6 @@ const AppLayout = () => {
     fetchFriends(user.id);
   }, [user?.id, fetchFriends]);
 
-  // Ensure members are loaded as soon as a server becomes active so that
-  // permission evaluation (which needs the current user's member record)
-  // works immediately, independent of the members sidebar being open.
-  useEffect(() => {
-    const serverId = currentServer?.id;
-    if (!serverId) return;
-    useServerStore.getState().fetchMembers(serverId);
-  }, [currentServer?.id]);
-
   // Listen for own membership changes (kicks/bans)
   useRealtimeOwnMembership();
 
@@ -430,7 +421,7 @@ const AppLayout = () => {
   // Fetch server bootstrap only when server changes.
   useEffect(() => {
     if (!currentServer?.id) return;
-    void fetchChannels(currentServer.id, { force: true });
+    void fetchChannels(currentServer.id);
   }, [currentServer?.id, fetchChannels]);
 
   // Clear DM conversation when switching to a server

@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
 import { useUserCacheStore, bulkSetUsersInCache, fetchAndCacheUser } from "@/stores/userCacheStore";
 import { resolveSignedUrls, isSupabaseAttachmentUrl } from "@/lib/signedUrl";
-import { fetchUsersPresence } from "@/lib/presenceBatch";
 import type { DMConversation, DirectMessage, User, ReactionGroup } from "@/types";
 
 /** Registry of active DM broadcast channels keyed by conversationId */
@@ -23,7 +22,9 @@ function trySendBroadcast(conversationId: string, event: string, payload: Record
     if (channel) {
       channel.send({ type: 'broadcast', event, payload }).catch(() => {});
     }
-  } catch {}
+  } catch {
+    // Best-effort local realtime fanout only.
+  }
 }
 
 interface DMState {
@@ -36,7 +37,7 @@ interface DMState {
   fetchingOlderByConversation: Record<string, boolean>;
 
   // Conversation actions
-  fetchConversations: (userId: string) => Promise<void>;
+  fetchConversations: (userId: string, opts?: { force?: boolean }) => Promise<void>;
   openConversation: (userId: string, otherUserId: string) => Promise<DMConversation | null>;
   createGroupConversation: (userId: string, participantIds: string[], name?: string) => Promise<DMConversation | null>;
   setCurrentConversation: (conversation: DMConversation | null) => void;
@@ -88,12 +89,6 @@ interface DMHistoryMeta {
   prefetchedOlder?: DMPrefetchedOlderPage | null;
 }
 
-type PresenceSnapshotRow = {
-  id: string;
-  status: User["status"] | null;
-  last_seen: string | null;
-};
-
 const groupReactions = (reactions: any[], currentUserId?: string): ReactionGroup[] => {
   const groups: Record<string, ReactionGroup> = {};
 
@@ -119,7 +114,21 @@ const groupReactions = (reactions: any[], currentUserId?: string): ReactionGroup
 const MAX_CACHED_DM_CONVERSATIONS = 10;
 const MAX_DM_MESSAGES_PER_CONVERSATION = 200;
 const DM_PREFETCH_CACHE_EXPIRY_MS = 2 * 60 * 1000;
+const DM_CONVERSATIONS_CACHE_TTL_MS = 30_000;
 const inflightDMPrefetches = new Map<string, Promise<void>>();
+const dmConversationsCachedAtByUser = new Map<string, number>();
+const dmConversationsInFlightByUser = new Map<string, Promise<void>>();
+
+const isMissingRpcError = (error: unknown) => {
+  const typed = error as { code?: string; message?: string } | null | undefined;
+  const message = String(typed?.message ?? "");
+  return (
+    typed?.code === "PGRST202" ||
+    typed?.code === "42883" ||
+    message.includes("Could not find the function") ||
+    message.includes("does not exist")
+  );
+};
 
 const pruneDMMessageCache = (
   input: Record<string, DirectMessage[]>,
@@ -146,89 +155,60 @@ const pruneDMMessageCache = (
   return result;
 };
 
-const hydrateConversationPresence = async (
-  conversations: DMConversation[],
-  userId: string,
-): Promise<DMConversation[]> => {
-  const targetUserIds = Array.from(
-    new Set(
-      conversations.flatMap((conversation) =>
-        (conversation.participants || [])
-          .map((participant) => participant.user_id)
-          .filter((participantUserId): participantUserId is string => !!participantUserId && participantUserId !== userId),
-      ),
-    ),
-  );
-
-  if (targetUserIds.length === 0) {
-    return conversations;
-  }
-
-  try {
-    const presenceByUserId = new Map<string, PresenceSnapshotRow>();
-    for (const row of await fetchUsersPresence(userId, targetUserIds)) {
-      presenceByUserId.set(row.id, row);
-    }
-
-    return conversations.map((conversation) => {
-      const otherPresence = conversation.other_user?.id
-        ? presenceByUserId.get(conversation.other_user.id)
-        : undefined;
-
-      const participants = conversation.participants?.map((participant) => {
-        if (!participant.user || participant.user_id === userId) return participant;
-        const presence = presenceByUserId.get(participant.user_id);
-        if (!presence) return participant;
-        return {
-          ...participant,
-          user: {
-            ...participant.user,
-            status: (presence.status as User["status"]) || participant.user.status,
-            last_seen: presence.last_seen,
-          },
-        };
-      });
-
-      return {
-        ...conversation,
-        other_user:
-          conversation.other_user && otherPresence
-            ? {
-                ...conversation.other_user,
-                status: (otherPresence.status as User["status"]) || conversation.other_user.status,
-                last_seen: otherPresence.last_seen,
-              }
-            : conversation.other_user,
-        participants,
-      };
-    });
-  } catch (error) {
-    console.warn("Failed to hydrate DM conversation presence:", error);
-    return conversations;
-  }
-};
-
 const loadDMMessagePage = async (
   conversationId: string,
   userId: string,
   limit: number,
   before?: string,
 ): Promise<{ messages: DirectMessage[]; hasMore: boolean; oldestLoadedMessageId: string | null }> => {
-  const { data, error } = await supabase.rpc("get_dm_messages", {
+  let dataArray: any[] = [];
+  let usedBootstrap = false;
+
+  const bootstrapResult = await (supabase.rpc as any)("get_dm_bootstrap_secure", {
     _conversation_id: conversationId,
     _user_id: userId,
     _limit: limit,
     _before_id: before || null,
   });
 
-  if (error) throw error;
+  if (bootstrapResult.error) {
+    if (!isMissingRpcError(bootstrapResult.error)) {
+      throw bootstrapResult.error;
+    }
 
-  const dataArray = Array.isArray(data) ? data : [];
+    const { data, error } = await supabase.rpc("get_dm_messages", {
+      _conversation_id: conversationId,
+      _user_id: userId,
+      _limit: limit,
+      _before_id: before || null,
+    });
+
+    if (error) throw error;
+    dataArray = Array.isArray(data) ? data : [];
+  } else {
+    let payload = bootstrapResult.data;
+    if (typeof payload === "string") {
+      try {
+        payload = JSON.parse(payload);
+      } catch {
+        payload = null;
+      }
+    }
+    dataArray = Array.isArray(payload?.messages) ? payload.messages : [];
+    usedBootstrap = true;
+  }
+
   const messageIds = dataArray.map((msg: any) => msg.id);
 
-  let reactions: any[] = [];
-  let attachments: any[] = [];
-  if (messageIds.length > 0) {
+  const reactionsByMessageId = new Map<string, any[]>();
+  const attachmentsByMessageId = new Map<string, any[]>();
+
+  if (usedBootstrap) {
+    for (const msg of dataArray) {
+      reactionsByMessageId.set(msg.id, Array.isArray(msg.reactions) ? msg.reactions : []);
+      attachmentsByMessageId.set(msg.id, Array.isArray(msg.attachments) ? msg.attachments : []);
+    }
+  } else if (messageIds.length > 0) {
     const [reactionResult, attachmentResult] = await Promise.all([
       supabase
         .from("dm_reactions")
@@ -239,8 +219,17 @@ const loadDMMessagePage = async (
         .select("id, message_id, file_url, file_name, file_type, file_size, width, height")
         .in("message_id", messageIds),
     ]);
-    reactions = reactionResult.data || [];
-    attachments = attachmentResult.data || [];
+
+    for (const reaction of reactionResult.data || []) {
+      const list = reactionsByMessageId.get(reaction.message_id) ?? [];
+      list.push(reaction);
+      reactionsByMessageId.set(reaction.message_id, list);
+    }
+    for (const attachment of attachmentResult.data || []) {
+      const list = attachmentsByMessageId.get(attachment.message_id) ?? [];
+      list.push(attachment);
+      attachmentsByMessageId.set(attachment.message_id, list);
+    }
   }
 
   const uniqueUsers = new Map<string, User>();
@@ -275,9 +264,23 @@ const loadDMMessagePage = async (
       }
     }
 
-    if (missingIds.length > 0) {
+    for (const msg of reversedData) {
+      if (!msg.reply_to_id || !msg.reply_to || typeof msg.reply_to !== "object") continue;
+      replyToMap[msg.reply_to_id] = {
+        id: msg.reply_to.id,
+        conversation_id: msg.reply_to.conversation_id ?? conversationId,
+        content: msg.reply_to.content,
+        sender_id: msg.reply_to.sender_id,
+        reply_to_id: msg.reply_to.reply_to_id ?? null,
+        edited_at: msg.reply_to.edited_at ?? null,
+        created_at: msg.reply_to.created_at ?? msg.created_at,
+      };
+    }
+
+    const stillMissingIds = missingIds.filter((id) => !replyToMap[id]);
+    if (stillMissingIds.length > 0) {
       const { data: replyData } = await supabase.rpc("get_dm_messages_by_ids_secure", {
-        _message_ids: missingIds,
+        _message_ids: stillMissingIds,
         _user_id: userId,
       });
       if (replyData) {
@@ -293,7 +296,8 @@ const loadDMMessagePage = async (
   }
 
   const messages: DirectMessage[] = reversedData.map((msg: any) => {
-    const msgReactions = reactions.filter((r) => r.message_id === msg.id);
+    const msgReactions = reactionsByMessageId.get(msg.id) ?? [];
+    const msgAttachments = attachmentsByMessageId.get(msg.id) ?? [];
     return {
       id: msg.id,
       conversation_id: msg.conversation_id,
@@ -303,7 +307,7 @@ const loadDMMessagePage = async (
       edited_at: msg.edited_at ?? null,
       created_at: msg.created_at,
       reply_to: msg.reply_to_id ? (replyToMap[msg.reply_to_id] as DirectMessage) || null : null,
-      attachments: attachments.filter((a: any) => a.message_id === msg.id),
+      attachments: msgAttachments,
       reactions: groupReactions(msgReactions, userId),
     };
   });
@@ -330,14 +334,24 @@ export const useDMStore = create<DMState>((set, get) => ({
   isLoading: false,
   fetchingOlderByConversation: {},
 
-  fetchConversations: async (userId: string) => {
+  fetchConversations: async (userId: string, opts?: { force?: boolean }) => {
+    const force = opts?.force === true;
+    const cachedAt = dmConversationsCachedAtByUser.get(userId) ?? 0;
+    if (!force && get().conversations.length > 0 && Date.now() - cachedAt < DM_CONVERSATIONS_CACHE_TTL_MS) {
+      return;
+    }
+
+    const existing = dmConversationsInFlightByUser.get(userId);
+    if (existing) return existing;
+
     // Only show loading when we have no cached conversations (silent background refresh)
     const hasCached = get().conversations.length > 0;
     if (!hasCached) {
       set({ isLoading: true });
     }
 
-    try {
+    const request = (async () => {
+      try {
       // Use RPC function to fetch conversations
       const { data, error } = await supabase.rpc("get_user_dm_conversations", {
         _user_id: userId,
@@ -361,13 +375,29 @@ export const useDMStore = create<DMState>((set, get) => ({
         };
       });
 
-      const hydratedConversations = await hydrateConversationPresence(conversations, userId);
+      for (const conversation of conversations) {
+        const users = [
+          conversation.other_user,
+          ...(conversation.participants || []).map((participant) => participant.user),
+        ].filter((entry): entry is User => !!entry?.id);
+        if (users.length > 0) {
+          bulkSetUsersInCache(users);
+        }
+      }
 
-      set({ conversations: hydratedConversations, isLoading: false });
+      dmConversationsCachedAtByUser.set(userId, Date.now());
+      set({ conversations, isLoading: false });
     } catch (error) {
       console.error("Failed to fetch conversations:", error);
       set({ isLoading: false });
     }
+    })().finally(() => {
+      const current = dmConversationsInFlightByUser.get(userId);
+      if (current === request) dmConversationsInFlightByUser.delete(userId);
+    });
+
+    dmConversationsInFlightByUser.set(userId, request);
+    return request;
   },
 
   openConversation: async (userId: string, otherUserId: string) => {

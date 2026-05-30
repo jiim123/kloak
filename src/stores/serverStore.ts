@@ -49,6 +49,7 @@ const isMissingRpcError = (error: unknown) => {
 type ServerSurfaceCacheEntry = {
   categories: ChannelCategory[];
   channels: Channel[];
+  rolePermissions?: RolePermission[];
   cachedAt: number;
 };
 
@@ -117,11 +118,13 @@ const setCachedServerSurface = (
   userId: string | null,
   categories: ChannelCategory[],
   channels: Channel[],
+  rolePermissions?: RolePermission[] | null,
 ) => {
   const scopedKey = getScopedServerCacheKey(serverId, userId);
   const nextValue = {
     categories: [...categories],
     channels: [...channels],
+    ...(rolePermissions ? { rolePermissions: [...rolePermissions] } : {}),
     cachedAt: Date.now(),
   } satisfies ServerSurfaceCacheEntry;
   serverSurfaceCache.set(scopedKey, nextValue);
@@ -264,6 +267,35 @@ const normalizeRolePermissionRows = (rows: any[]): RolePermission[] => {
     allowed: row.allowed,
     created_at: row.created_at ?? "",
   }));
+};
+
+const normalizeServerMemberFromSurface = (row: any): ServerMember | null => {
+  if (!row || typeof row !== "object" || !row.id || !row.server_id || !row.user_id) return null;
+
+  const user = row.user && typeof row.user === "object" ? row.user : undefined;
+  const normalizedUser = user?.is_bot
+    ? {
+        ...user,
+        status: "online",
+        custom_status: user.custom_status || "Bot",
+        last_seen: user.last_seen ?? new Date().toISOString(),
+      }
+    : user;
+
+  return {
+    id: row.id,
+    server_id: row.server_id,
+    user_id: row.user_id,
+    role: row.role as ServerRole,
+    nickname: row.nickname ?? null,
+    is_banned: Boolean(row.is_banned),
+    is_muted: Boolean(row.is_muted),
+    joined_at: row.joined_at ?? "",
+    join_source: row.join_source as ServerMember["join_source"],
+    join_invite_code: row.join_invite_code ?? undefined,
+    user: normalizedUser as ServerMember["user"],
+    roles: Array.isArray(row.roles) ? (row.roles as ServerMember["roles"]) : [],
+  };
 };
 
 interface ServerState {
@@ -986,7 +1018,10 @@ export const useServerStore = create<ServerState>((set, get) => ({
           // Also restore cached role permissions so permission evaluation
           // works immediately on the cached fast path.
           const cachedRolePerms = rolePermissionsCache.get(serverId);
-          if (
+          if (cachedSurface.rolePermissions && get().currentServer?.id === serverId) {
+            rolePermissionsCache.set(serverId, { data: cachedSurface.rolePermissions, cachedAt: cachedSurface.cachedAt });
+            set({ rolePermissions: cachedSurface.rolePermissions });
+          } else if (
             cachedRolePerms &&
             Date.now() - cachedRolePerms.cachedAt < PERMISSIONS_TTL_MS &&
             get().currentServer?.id === serverId
@@ -1004,6 +1039,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         let rolePermissionsFromSurface: RolePermission[] | null = null;
         let memberCountFromSurface: number | null = null;
         let emojisFromSurface: ServerEmoji[] | null = null;
+        let currentMemberFromSurface: ServerMember | null = null;
 
         const surfaceResult = await supabase.rpc("server", {
           _server_id: serverId,
@@ -1043,6 +1079,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
               role_permissions?: any[];
               member_count?: number | null;
               emojis?: ServerEmoji[];
+              current_member?: any;
             };
             categories = Array.isArray(legacySurface.categories) ? legacySurface.categories : [];
             channels = Array.isArray(legacySurface.channels) ? legacySurface.channels : [];
@@ -1053,6 +1090,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
             memberCountFromSurface =
               typeof legacySurface.member_count === "number" ? legacySurface.member_count : null;
             emojisFromSurface = Array.isArray(legacySurface.emojis) ? legacySurface.emojis : null;
+            currentMemberFromSurface = normalizeServerMemberFromSurface(legacySurface.current_member);
           }
         } else {
           const surface = (surfaceResult.data || {}) as {
@@ -1062,6 +1100,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
             role_permissions?: any[];
             member_count?: number | null;
             emojis?: ServerEmoji[];
+            current_member?: any;
           };
           categories = Array.isArray(surface.categories) ? surface.categories : [];
           channels = Array.isArray(surface.channels) ? surface.channels : [];
@@ -1071,9 +1110,10 @@ export const useServerStore = create<ServerState>((set, get) => ({
             : null;
           memberCountFromSurface = typeof surface.member_count === "number" ? surface.member_count : null;
           emojisFromSurface = Array.isArray(surface.emojis) ? surface.emojis : null;
+          currentMemberFromSurface = normalizeServerMemberFromSurface(surface.current_member);
         }
 
-        setCachedServerSurface(serverId, userId, categories, channels);
+        setCachedServerSurface(serverId, userId, categories, channels, rolePermissionsFromSurface);
         if (rolesFromSurface) {
           setCachedServerRoles(serverId, userId, rolesFromSurface);
         }
@@ -1085,6 +1125,24 @@ export const useServerStore = create<ServerState>((set, get) => ({
         }
         if (emojisFromSurface) {
           hydrateServerEmojis(serverId, emojisFromSurface);
+        }
+        if (currentMemberFromSurface && get().currentServer?.id === serverId) {
+          const existingMembers = get().members;
+          const hasCurrentMember =
+            get().membersServerId === serverId &&
+            existingMembers.some((member) => member.user_id === currentMemberFromSurface?.user_id);
+
+          if (!hasCurrentMember) {
+            if (currentMemberFromSurface.user) {
+              bulkSetUsersInCache([currentMemberFromSurface.user]);
+            }
+            set({
+              members: [currentMemberFromSurface],
+              membersServerId: serverId,
+              membersFetchMode: null,
+              isMembersLoading: false,
+            });
+          }
         }
 
         applyServerSurface(categories, channels);

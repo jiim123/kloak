@@ -66,7 +66,6 @@ export const useRealtimeServer = (serverId: string | null) => {
         handleChannelAccessLost(sid, accessLostMessage);
       }
     });
-    store.fetchRolePermissions(sid, { force: true });
   }, [handleChannelAccessLost]);
 
   const refreshMemberSnapshot = useCallback((sid: string) => {

@@ -10,10 +10,12 @@ const SUPABASE_PUBLISHABLE_KEY = ENV_KEY || CURRENT_ANON_KEY;
 const READ_ONLY_RPC_NAMES = new Set([
   "get_all_channel_unread_counts",
   "get_channel_messages_secure",
+  "get_dm_bootstrap_secure",
   "get_dm_messages_by_ids_secure",
   "get_dm_unread_counts",
   "get_friend_dashboard",
   "get_message_author_styles_secure",
+  "get_user_dm_conversations",
   "get_server_surface_secure",
   "get_server_overview_secure",
   "get_user_server_unread_summary",
@@ -23,6 +25,29 @@ const READ_ONLY_RPC_NAMES = new Set([
   "server",
 ]);
 const inflightReadRequests = new Map<string, Promise<Response>>();
+
+type DbRequestEntry = {
+  at: number;
+  method: string;
+  kind: "rpc" | "table" | "function" | "other";
+  name: string;
+  url: string;
+  status?: number;
+  durationMs?: number;
+  deduped?: boolean;
+};
+
+type DbRequestDebugState = {
+  entries: DbRequestEntry[];
+  summary: Record<string, number>;
+  reset: () => void;
+};
+
+declare global {
+  interface Window {
+    __KLOAK_DB_REQUESTS__?: DbRequestDebugState;
+  }
+}
 
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
   throw new Error("Missing VITE_SUPABASE_URL or VITE_SUPABASE_PUBLISHABLE_KEY in environment.");
@@ -159,6 +184,84 @@ function getReadDedupeKey(input: RequestInfo | URL, init?: RequestInit): string 
   return `${method}:${url}:${bodyKey}`;
 }
 
+function getDbRequestInfo(input: RequestInfo | URL, init?: RequestInit): Pick<DbRequestEntry, "method" | "kind" | "name" | "url"> {
+  const method = getFetchMethod(input, init);
+  const url = getFetchUrl(input);
+
+  try {
+    const parsed = new URL(url);
+    const rpcName = parsed.pathname.match(/\/rpc\/([^/?#]+)/)?.[1];
+    if (rpcName) return { method, kind: "rpc", name: rpcName, url };
+
+    const functionName = parsed.pathname.match(/\/functions\/v1\/([^/?#]+)/)?.[1];
+    if (functionName) return { method, kind: "function", name: functionName, url };
+
+    const tableName = parsed.pathname.match(/\/rest\/v1\/([^/?#]+)/)?.[1];
+    if (tableName) return { method, kind: "table", name: tableName, url };
+  } catch {
+    // Fall through to generic request tracking.
+  }
+
+  return { method, kind: "other", name: "unknown", url };
+}
+
+function getDbDebugState(): DbRequestDebugState | null {
+  if (typeof window === "undefined" || !import.meta.env.DEV) return null;
+
+  if (!window.__KLOAK_DB_REQUESTS__) {
+    window.__KLOAK_DB_REQUESTS__ = {
+      entries: [],
+      summary: {},
+      reset() {
+        this.entries.length = 0;
+        for (const key of Object.keys(this.summary)) {
+          delete this.summary[key];
+        }
+      },
+    };
+  }
+
+  return window.__KLOAK_DB_REQUESTS__;
+}
+
+async function trackedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const debugState = getDbDebugState();
+  if (!debugState) return dedupedFetch(input, init);
+
+  const startedAt = performance.now();
+  const info = getDbRequestInfo(input, init);
+  const dedupeKey = getReadDedupeKey(input, init);
+  const wasDeduped = !!dedupeKey && inflightReadRequests.has(dedupeKey);
+
+  try {
+    const response = await dedupedFetch(input, init);
+    const entry: DbRequestEntry = {
+      ...info,
+      at: Date.now(),
+      status: response.status,
+      durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
+      deduped: wasDeduped,
+    };
+    debugState.entries.push(entry);
+    if (!wasDeduped) {
+      debugState.summary[`${entry.kind}:${entry.name}`] = (debugState.summary[`${entry.kind}:${entry.name}`] ?? 0) + 1;
+    }
+    return response;
+  } catch (error) {
+    const entry: DbRequestEntry = {
+      ...info,
+      at: Date.now(),
+      durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
+      deduped: wasDeduped,
+    };
+    debugState.entries.push(entry);
+    if (!wasDeduped) {
+      debugState.summary[`${entry.kind}:${entry.name}`] = (debugState.summary[`${entry.kind}:${entry.name}`] ?? 0) + 1;
+    }
+    throw error;
+  }
+}
+
 async function dedupedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const key = getReadDedupeKey(input, init);
   if (!key) return fetch(input, init);
@@ -195,7 +298,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
           "x-key-hash": keyHash,
         };
       }
-      return dedupedFetch(input, init);
+      return trackedFetch(input, init);
     },
   },
 });

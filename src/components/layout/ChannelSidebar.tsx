@@ -1201,29 +1201,12 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
   }, [servers, currentServer]);
 
   useEffect(() => {
-    let cancelled = false;
-
     if (!currentServer?.id) {
       setResolvedServerVerified(false);
       return;
     }
 
     setResolvedServerVerified(!!(currentMembership?.is_verified ?? currentServer.is_verified));
-
-    void (async () => {
-      const { data, error } = await supabase
-        .from("servers")
-        .select("is_verified")
-        .eq("id", currentServer.id)
-        .maybeSingle();
-
-      if (cancelled || error || !data) return;
-      setResolvedServerVerified(!!data.is_verified);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
   }, [currentMembership?.is_verified, currentServer?.id, currentServer?.is_verified]);
 
   const memberUserById = useMemo(() => {
