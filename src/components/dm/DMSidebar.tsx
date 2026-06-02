@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Search, MessageSquare, UserRoundPlus, LogOut, Ban, Users } from "lucide-react";
+import { Search, MessageSquare, UserRoundPlus, LogOut, Ban, Users, UserCircle } from "lucide-react";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -48,6 +48,8 @@ export const DMSidebar = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const isFriendsRoute = location.pathname === "/app/friends";
+  const isProfileRoute = location.pathname === `/app/profiles/${user?.id}`;
+  const pendingFriendRequestCount = useFriendStore((s) => s.pendingRequests.length);
 
   // Fetch conversations on mount
   useEffect(() => {
@@ -115,7 +117,7 @@ export const DMSidebar = () => {
     <div className="h-full flex flex-col bg-layout-sidebar overflow-hidden">
         {/* Section header with Create Group */}
         <div className="px-4 pt-3 pb-2 flex items-center justify-between border-b border-border/60">
-          <h3 className="text-xs font-semibold text-foreground/85 uppercase tracking-[0.12em]">Direct Messages</h3>
+          <h3 className="text-xs font-semibold text-foreground/85 uppercase tracking-[0.12em]">Home</h3>
           <Button
             variant="ghost"
             size="icon-sm"
@@ -141,7 +143,28 @@ export const DMSidebar = () => {
             )}
           >
             <Users className="h-4 w-4 shrink-0" />
-            <span>Friends</span>
+            <span className="min-w-0 flex-1">Friends</span>
+            {pendingFriendRequestCount > 0 && (
+              <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-[4px] bg-destructive px-1.5 text-[11px] font-bold leading-none text-destructive-foreground">
+                {pendingFriendRequestCount > 99 ? "99+" : pendingFriendRequestCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (!user?.id) return;
+              setCurrentConversation(null);
+              navigate(`/app/profiles/${user.id}`);
+            }}
+            className={cn(
+              "mb-2 flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition-smooth",
+              isProfileRoute ? "bg-secondary text-foreground" : "text-foreground/90 hover:bg-secondary/50",
+            )}
+          >
+            <UserCircle className="h-4 w-4 shrink-0" />
+            <span>Profile</span>
           </button>
 
           <div className="relative">

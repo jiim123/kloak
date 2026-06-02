@@ -656,8 +656,8 @@ const AppLayout = () => {
     ? "Profile"
     : isDMView
     ? currentConversation
-      ? currentConversation.other_user?.display_name || currentConversation.other_user?.username || "Direct Messages"
-      : "Direct Messages"
+      ? currentConversation.other_user?.display_name || currentConversation.other_user?.username || "Home"
+      : "Home"
     : isServerOverviewView
       ? `${currentServer?.name || "Server"} • Overview`
       : isServerMembersView
@@ -873,7 +873,7 @@ const AppLayout = () => {
                   {/* Main layout - ALWAYS mounted so VoicePersistentHost never unmounts */}
                   <div className={cn("flex-1 overflow-hidden", isFullscreenSettingsOverlayOpen && "invisible")}>
                     <div className="flex h-full">
-                      {!isExploreView && !isFriendsView && (
+                      {!isExploreView && (
                         <div className="w-[288px] shrink-0 overflow-hidden bg-layout-sidebar">
                           {isDMView ? (
                             <DMSidebar />

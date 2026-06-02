@@ -5,7 +5,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   Camera,
-  Compass,
   Plus,
   Trash2,
   Users,
@@ -196,19 +195,14 @@ export const CreateServerModal = () => {
     openModal("join-server");
   };
 
-  const handleExploreClick = () => {
-    handleClose();
-    setCurrentServer(null); // Switch to DM/home view so Explore content is visible
-    navigate("/app/explore");
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent
+        hideCloseButton={view === "choose"}
         className={
           view === "create"
             ? "!left-0 !top-0 !h-screen !w-screen !max-w-none !translate-x-0 !translate-y-0 overflow-hidden border-0 bg-transparent p-0 shadow-none sm:rounded-none [&>button]:right-5 [&>button]:top-5 [&>button]:text-muted-foreground [&>button:hover]:text-white"
-            : "!left-0 !right-0 !top-auto !bottom-0 !w-full !max-w-none !translate-x-0 !translate-y-0 max-h-[85vh] overflow-hidden rounded-t-2xl rounded-b-none border-border/50 bg-background/95 p-0 backdrop-blur-xl data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-left-0 data-[state=open]:slide-in-from-top-0 data-[state=closed]:slide-out-to-left-0 data-[state=closed]:slide-out-to-top-0 data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100 sm:!left-[50%] sm:!right-auto sm:!top-[50%] sm:!bottom-auto sm:!w-full sm:!max-w-xl sm:!translate-x-[-50%] sm:!translate-y-[-50%] sm:max-h-[90vh] sm:rounded-2xl"
+            : "max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-border bg-card p-0 text-foreground shadow-2xl sm:max-w-[448px]"
         }
       >
         {/* Hidden file input */}
@@ -222,15 +216,8 @@ export const CreateServerModal = () => {
 
         {/* Choose View */}
         {view === "choose" && (
-          <div className="p-4 sm:p-6">
-            <DialogHeader className="pb-4">
-              <DialogTitle className="text-xl font-medium">Add a Server</DialogTitle>
-              <DialogDescription className="text-sm text-muted-foreground mt-1">
-                Create your own server or join an existing one
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-3 py-2">
+          <div>
+            <div className="space-y-3 px-6 py-4">
               <button
                 onClick={() => setView("create")}
                 className="w-full p-4 rounded-xl border border-border/50 bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-all duration-200 flex items-center gap-4 group"
@@ -254,19 +241,6 @@ export const CreateServerModal = () => {
                 <div className="text-left flex-1 min-w-0">
                   <p className="font-medium tracking-tight">Join a Server</p>
                   <p className="text-sm text-muted-foreground truncate">Enter an invite code to join</p>
-                </div>
-              </button>
-
-              <button
-                onClick={handleExploreClick}
-                className="w-full p-4 rounded-xl border border-border/50 bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-all duration-200 flex items-center gap-4 group"
-              >
-                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-secondary flex items-center justify-center group-hover:bg-secondary/80 transition-colors flex-shrink-0">
-                  <Compass className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground" />
-                </div>
-                <div className="text-left flex-1 min-w-0">
-                  <p className="font-medium tracking-tight">Explore Servers</p>
-                  <p className="text-sm text-muted-foreground truncate">Discover and join public communities</p>
                 </div>
               </button>
             </div>

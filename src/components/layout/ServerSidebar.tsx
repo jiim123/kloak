@@ -15,7 +15,6 @@ import {
   BellOff,
   Bell,
   GripVertical,
-  MessageSquare,
 } from "lucide-react";
 import { evaluatePermission } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
@@ -620,7 +619,6 @@ export const ServerSidebar = ({
     hasUnread: hasDMUnread,
   } = useUnreadDMsContext();
   const pendingFriendRequestCount = useFriendStore((s) => s.pendingRequests.length);
-
   const [hoveredServer, setHoveredServer] = useState<string | null>(null);
   const [tooltipsEnabled, setTooltipsEnabled] = useState(false);
   const [folderState, setFolderState] = useState<ServerFolderState>(loadServerFoldersState);
@@ -640,9 +638,10 @@ export const ServerSidebar = ({
 
   const totalHomeBadge = totalDMUnread;
   const isExploreActive = location.pathname === "/app/explore";
-  const isDMActive = location.pathname === "/app" && currentServer === null;
+  const isDMActive = currentServer === null && !isExploreActive;
   const hasPendingFriendRequests = pendingFriendRequestCount > 0;
   const isQuickAccessActive = isAddServerPanelOpen || location.pathname === "/app/friends";
+  const showQuickAccessButton = false;
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
@@ -1060,6 +1059,10 @@ export const ServerSidebar = ({
     openModal("create-server");
   }, [onToggleAddServerPanel, openModal]);
 
+  const handleOpenAddServerModal = useCallback(() => {
+    openModal("create-server");
+  }, [openModal]);
+
   const handleCreateFolderCtx = useCallback((e: Event) => {
     e.preventDefault();
     setIsCreateFolderOpen(true);
@@ -1084,7 +1087,6 @@ export const ServerSidebar = ({
     if (hasPendingFriendRequests) return "unread";
     return "hidden";
   }, [isQuickAccessActive, hoveredServer, hasPendingFriendRequests]);
-
   // FIX #18: Helper to compute pill state for a server (called in render map)
   const computePillState = useCallback(
     (serverId: string, hasUnread: boolean) => {
@@ -1275,11 +1277,13 @@ export const ServerSidebar = ({
             <div
               ref={setRootDroppableRef}
               className={cn(
-                "flex-1 flex flex-col items-center gap-2.5 overflow-y-auto scrollbar-overlay scrollbar-hide w-full px-3 py-3",
+                "flex-1 min-h-0 flex flex-col w-full",
                 isOverRoot && "outline outline-2 outline-primary/30 outline-offset-[-2px] rounded-xl",
               )}
             >
-              <div className="w-full flex flex-col items-center gap-2">
+              <div className="w-full shrink-0 px-3 pt-3 pb-2 bg-layout-sidebar">
+                <div className="w-full flex flex-col items-center gap-2">
+                <div className="hidden">
                 <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
                   <TooltipTrigger asChild>
                     <MotionButton
@@ -1307,18 +1311,25 @@ export const ServerSidebar = ({
                         className="w-11 h-11 flex items-center justify-center"
                       >
                         <svg
-                          viewBox="0 0 612 612"
+                          viewBox="0 0 24 24"
+                          fill="none"
                           xmlns="http://www.w3.org/2000/svg"
-                          className="w-[32px] h-[32px]"
+                          className={cn("h-[44px] w-[44px]", isExploreActive ? "text-white" : "text-[#9E9EA7]")}
                           aria-hidden="true"
                         >
                           <path
-                            d="M306,0C137.272,0,0,137.27,0,305.997C0,474.727,137.272,612,306,612s306-137.273,306-306.003C612,137.27,474.73,0,306,0z M306,576.657c-149.24,0-270.657-121.418-270.657-270.66C35.343,156.759,156.76,35.343,306,35.343 s270.657,121.416,270.657,270.655C576.657,455.24,455.24,576.657,306,576.657z"
-                            fill={isExploreActive ? "#FFFFFF" : "#9E9EA7"}
+                            d="M9.73319 10.4608C9.82276 10.1025 10.1025 9.82273 10.4608 9.73315L13.9187 8.86869C14.651 8.68559 15.3144 9.34899 15.1313 10.0814L14.2669 13.5392C14.1773 13.8975 13.8975 14.1773 13.5393 14.2668L10.0814 15.1313C9.34902 15.3144 8.68562 14.651 8.86872 13.9186L9.73319 10.4608Z"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
                           />
                           <path
-                            d="M474.47,144.734c-4.623-8.599-15.336-11.818-23.933-7.197L251.64,244.485c-3.053,1.642-5.556,4.144-7.197,7.198 L137.538,450.536c-3.782,7.035-2.309,15.489,3.063,20.861c1.191,1.193,2.574,2.232,4.137,3.07 c5.313,2.857,11.436,2.71,16.428,0.155l0.003,0.004l0.075-0.04c0.072-0.037,0.143-0.077,0.214-0.115l198.995-106.87 c3.054-1.64,5.556-4.142,7.2-7.197l106.477-198.361c0.233-0.401,0.455-0.806,0.655-1.222l0.144-0.267l-0.018-0.006 C477.174,155.671,477.211,149.833,474.47,144.734z M196.403,415.684l67.933-126.361l58.418,58.42L196.403,415.684z M347.76,322.764l-58.421-58.421l126.351-67.94"
-                            fill={isExploreActive ? "#FFFFFF" : "#9E9EA7"}
+                            d="M12 3.5C5.5 3.5 3.5 5.5 3.5 12C3.5 18.5 5.5 20.5 12 20.5C18.5 20.5 20.5 18.5 20.5 12C20.5 5.5 18.5 3.5 12 3.5Z"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
                           />
                         </svg>
                       </motion.div>
@@ -1328,6 +1339,7 @@ export const ServerSidebar = ({
                     Explore
                   </TooltipContent>
                 </Tooltip>
+                </div>
 
                 <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
                   <TooltipTrigger asChild>
@@ -1371,11 +1383,10 @@ export const ServerSidebar = ({
                               aria-hidden="true"
                             >
                               <path
-                                d="M8 9.5H15M8 13.5H13M15.6953 19.2318L19.1027 20.3676C19.8845 20.6282 20.6282 19.8844 20.3676 19.1027L19.2318 15.6953M15.3 19.1C15.3 19.1 14.0847 20 11.5 20C6.80558 20 3 16.1944 3 11.5C3 6.80558 6.80558 3 11.5 3C16.1944 3 20 6.80558 20 11.5C20 14 19.1 15.3 19.1 15.3"
-                                stroke="currentColor"
-                                strokeWidth="1.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
+                                fillRule="evenodd"
+                                clipRule="evenodd"
+                                d="M22 10.7602V17.5967C22 19.4377 20.5076 20.93 18.6667 20.93H17.4444C16.8922 20.93 16.4444 20.4823 16.4444 19.93V19.7078C16.4444 19.1555 16.8922 18.7078 17.4444 18.7078H18.6667C19.2803 18.7078 19.7778 18.2104 19.7778 17.5967V10.7602C19.7778 10.4141 19.6165 10.0878 19.3416 9.87755L12.6749 4.77951C12.2765 4.47486 11.7235 4.47485 11.3251 4.77951L4.65839 9.87755C4.38348 10.0878 4.22222 10.4141 4.22222 10.7602V17.5967C4.22222 18.2104 4.71968 18.7078 5.33333 18.7078H6.55556C7.10784 18.7078 7.55556 19.1555 7.55556 19.7078V19.93C7.55556 20.4823 7.10784 20.93 6.55556 20.93H5.33333C3.49239 20.93 2 19.4377 2 17.5967V10.7602C2 9.72193 2.48377 8.74299 3.3085 8.11231L9.97517 3.01427C11.1704 2.1003 12.8297 2.10031 14.0248 3.01427L20.6915 8.11231C21.5162 8.74299 22 9.72194 22 10.7602ZM11.8889 11.1523H12.1111C13.768 11.1523 15.1111 12.4954 15.1111 14.1523V17.7078C15.1111 19.3647 13.768 20.7078 12.1111 20.7078H11.8889C10.232 20.7078 8.88889 19.3647 8.88889 17.7078V14.1523C8.88889 12.4954 10.232 11.1523 11.8889 11.1523ZM13.1111 14.1523C13.1111 13.6 12.6634 13.1523 12.1111 13.1523H11.8889C11.3366 13.1523 10.8889 13.6 10.8889 14.1523V17.7078C10.8889 18.2601 11.3366 18.7078 11.8889 18.7078H12.1111C12.6634 18.7078 13.1111 18.2601 13.1111 17.7078V14.1523Z"
+                                fill="currentColor"
                               />
                             </svg>
                           </motion.span>
@@ -1397,10 +1408,11 @@ export const ServerSidebar = ({
                     </MotionButton>
                   </TooltipTrigger>
                   <TooltipContent side="right" className="font-medium">
-                    Direct Messages{totalHomeBadge > 0 ? ` (${totalHomeBadge} unread)` : ""}
+                    Home{totalHomeBadge > 0 ? ` (${totalHomeBadge} unread)` : ""}
                   </TooltipContent>
                 </Tooltip>
 
+                {showQuickAccessButton && (
                 <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
                   <TooltipTrigger asChild>
                     <MotionButton
@@ -1451,44 +1463,50 @@ export const ServerSidebar = ({
                     Quick Access{hasPendingFriendRequests ? ` (${pendingFriendRequestCount} friend request${pendingFriendRequestCount === 1 ? "" : "s"})` : ""}
                   </TooltipContent>
                 </Tooltip>
+                )}
 
-                <div className="w-5 h-px bg-border/60 rounded-full shrink-0 mx-auto my-1" />
+                  <div className="w-5 h-px bg-border/60 rounded-full shrink-0 mx-auto my-1" />
+                </div>
               </div>
 
-              {/* Loading skeleton */}
-              {isLoading && servers.length === 0 && <LoadingSkeleton />}
+              <div className="flex-1 min-h-0 overflow-y-auto scrollbar-overlay scrollbar-hide w-full px-3 pb-[128px]">
+                <div className="w-full flex flex-col items-center gap-2.5">
+                  {/* Loading skeleton */}
+                  {isLoading && servers.length === 0 && <LoadingSkeleton />}
 
-              {/* Folder items + servers */}
-              <AnimatePresence>
-                {foldersWithServers.map(({ folder, servers: folderServers }) => (
-                  <div key={folder.id} className="w-full flex flex-col items-center gap-2">
-                    <FolderItem
-                      folder={folder}
-                      tooltipsEnabled={tooltipsEnabled}
-                      onToggleCollapse={toggleFolderCollapse}
-                      onRename={openRenameFolder}
-                      onChangeColor={openChangeColor}
-                      onDelete={deleteFolder}
-                    />
+                  {/* Folder items + servers */}
+                  <AnimatePresence>
+                    {foldersWithServers.map(({ folder, servers: folderServers }) => (
+                      <div key={folder.id} className="w-full flex flex-col items-center gap-2">
+                        <FolderItem
+                          folder={folder}
+                          tooltipsEnabled={tooltipsEnabled}
+                          onToggleCollapse={toggleFolderCollapse}
+                          onRename={openRenameFolder}
+                          onChangeColor={openChangeColor}
+                          onDelete={deleteFolder}
+                        />
 
-                    <motion.div
-                      layout
-                      initial={false}
-                      animate={
-                        folder.isCollapsed ? { height: 0, opacity: 0, y: -8 } : { height: "auto", opacity: 1, y: 0 }
-                      }
-                      transition={folderCollapseTransition}
-                      className={cn("w-full overflow-hidden", folder.isCollapsed && "pointer-events-none")}
-                    >
-                      <div className="w-full flex flex-col items-center gap-2 pt-2">
-                        {folderServers.map((server) => renderServerItem(server))}
+                        <motion.div
+                          layout
+                          initial={false}
+                          animate={
+                            folder.isCollapsed ? { height: 0, opacity: 0, y: -8 } : { height: "auto", opacity: 1, y: 0 }
+                          }
+                          transition={folderCollapseTransition}
+                          className={cn("w-full overflow-hidden", folder.isCollapsed && "pointer-events-none")}
+                        >
+                          <div className="w-full flex flex-col items-center gap-2 pt-2">
+                            {folderServers.map((server) => renderServerItem(server))}
+                          </div>
+                        </motion.div>
                       </div>
-                    </motion.div>
-                  </div>
-                ))}
+                    ))}
 
-                {rootServers.map((server) => renderServerItem(server))}
-              </AnimatePresence>
+                    {rootServers.map((server) => renderServerItem(server))}
+                  </AnimatePresence>
+                </div>
+              </div>
             </div>
           </ContextMenuTrigger>
           <ContextMenuContent>
@@ -1507,8 +1525,7 @@ export const ServerSidebar = ({
         <DragOverlay>{activeDragServer ? <ServerIconVisual server={activeDragServer} /> : null}</DragOverlay>
       </DndContext>
 
-      {/* Legacy bottom dock kept hidden after moving quick access to the top */}
-      <div className="hidden absolute bottom-0 left-0 right-0 px-3 pb-3 pt-2 bg-layout-sidebar z-10">
+      <div className="absolute bottom-0 left-0 right-0 px-3 pb-3 pt-2 bg-layout-sidebar z-10">
         <div className="w-5 h-px bg-border/60 rounded-full shrink-0 mx-auto mb-2" />
         <div className="flex flex-col items-center gap-2">
           <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
@@ -1538,18 +1555,25 @@ export const ServerSidebar = ({
                   className="w-11 h-11 flex items-center justify-center"
                 >
                   <svg
-                    viewBox="0 0 612 612"
+                    viewBox="0 0 24 24"
+                    fill="none"
                     xmlns="http://www.w3.org/2000/svg"
-                    className="w-[36px] h-[36px]"
+                    className={cn("h-[44px] w-[44px]", isExploreActive ? "text-white" : "text-[#9E9EA7]")}
                     aria-hidden="true"
                   >
                     <path
-                      d="M306,0C137.272,0,0,137.27,0,305.997C0,474.727,137.272,612,306,612s306-137.273,306-306.003C612,137.27,474.73,0,306,0z M306,576.657c-149.24,0-270.657-121.418-270.657-270.66C35.343,156.759,156.76,35.343,306,35.343 s270.657,121.416,270.657,270.655C576.657,455.24,455.24,576.657,306,576.657z"
-                      fill={isExploreActive ? "#FFFFFF" : "#9E9EA7"}
+                      d="M9.73319 10.4608C9.82276 10.1025 10.1025 9.82273 10.4608 9.73315L13.9187 8.86869C14.651 8.68559 15.3144 9.34899 15.1313 10.0814L14.2669 13.5392C14.1773 13.8975 13.8975 14.1773 13.5393 14.2668L10.0814 15.1313C9.34902 15.3144 8.68562 14.651 8.86872 13.9186L9.73319 10.4608Z"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
                     />
                     <path
-                      d="M474.47,144.734c-4.623-8.599-15.336-11.818-23.933-7.197L251.64,244.485c-3.053,1.642-5.556,4.144-7.197,7.198 L137.538,450.536c-3.782,7.035-2.309,15.489,3.063,20.861c1.191,1.193,2.574,2.232,4.137,3.07 c5.313,2.857,11.436,2.71,16.428,0.155l0.003,0.004l0.075-0.04c0.072-0.037,0.143-0.077,0.214-0.115l198.995-106.87 c3.054-1.64,5.556-4.142,7.2-7.197l106.477-198.361c0.233-0.401,0.455-0.806,0.655-1.222l0.144-0.267l-0.018-0.006 C477.174,155.671,477.211,149.833,474.47,144.734z M196.403,415.684l67.933-126.361l58.418,58.42L196.403,415.684z M347.76,322.764l-58.421-58.421l126.351-67.94"
-                      fill={isExploreActive ? "#FFFFFF" : "#9E9EA7"}
+                      d="M12 3.5C5.5 3.5 3.5 5.5 3.5 12C3.5 18.5 5.5 20.5 12 20.5C18.5 20.5 20.5 18.5 20.5 12C20.5 5.5 18.5 3.5 12 3.5Z"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
                     />
                   </svg>
                 </motion.div>
@@ -1561,6 +1585,44 @@ export const ServerSidebar = ({
             </TooltipContent>
           </Tooltip>
 
+          <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
+            <TooltipTrigger asChild>
+              <MotionButton
+                className="relative group"
+                onClick={handleOpenAddServerModal}
+                whileHover="hover"
+                whileTap="tap"
+                aria-label="Create Server"
+              >
+                <motion.div
+                  variants={iconVariants}
+                  initial="animate"
+                  animate="animate"
+                  whileHover="hover"
+                  whileTap="tap"
+                  transition={iconSpringTransition}
+                  className="w-11 h-11 flex items-center justify-center text-[#9E9EA7]"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-[40px] w-[40px]"
+                    aria-hidden="true"
+                  >
+                    <path d="M9 12H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M12 9L12 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M3 12C3 4.5885 4.5885 3 12 3C19.4115 3 21 4.5885 21 12C21 19.4115 19.4115 21 12 21C4.5885 21 3 19.4115 3 12Z" stroke="currentColor" strokeWidth="2" />
+                  </svg>
+                </motion.div>
+              </MotionButton>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="font-medium">
+              Create Server
+            </TooltipContent>
+          </Tooltip>
+
+          <div className="hidden">
           <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
             <TooltipTrigger asChild>
               <MotionButton
@@ -1595,10 +1657,20 @@ export const ServerSidebar = ({
                       exit={{ opacity: 0 }}
                       transition={bottomActionIconTransition}
                     >
-                      <MessageSquare
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
                         className={cn("h-[30px] w-[30px]", isDMActive ? "text-white" : "text-[#9E9EA7]")}
                         aria-hidden="true"
-                      />
+                      >
+                        <path
+                          fillRule="evenodd"
+                          clipRule="evenodd"
+                          d="M22 10.7602V17.5967C22 19.4377 20.5076 20.93 18.6667 20.93H17.4444C16.8922 20.93 16.4444 20.4823 16.4444 19.93V19.7078C16.4444 19.1555 16.8922 18.7078 17.4444 18.7078H18.6667C19.2803 18.7078 19.7778 18.2104 19.7778 17.5967V10.7602C19.7778 10.4141 19.6165 10.0878 19.3416 9.87755L12.6749 4.77951C12.2765 4.47486 11.7235 4.47485 11.3251 4.77951L4.65839 9.87755C4.38348 10.0878 4.22222 10.4141 4.22222 10.7602V17.5967C4.22222 18.2104 4.71968 18.7078 5.33333 18.7078H6.55556C7.10784 18.7078 7.55556 19.1555 7.55556 19.7078V19.93C7.55556 20.4823 7.10784 20.93 6.55556 20.93H5.33333C3.49239 20.93 2 19.4377 2 17.5967V10.7602C2 9.72193 2.48377 8.74299 3.3085 8.11231L9.97517 3.01427C11.1704 2.1003 12.8297 2.10031 14.0248 3.01427L20.6915 8.11231C21.5162 8.74299 22 9.72194 22 10.7602ZM11.8889 11.1523H12.1111C13.768 11.1523 15.1111 12.4954 15.1111 14.1523V17.7078C15.1111 19.3647 13.768 20.7078 12.1111 20.7078H11.8889C10.232 20.7078 8.88889 19.3647 8.88889 17.7078V14.1523C8.88889 12.4954 10.232 11.1523 11.8889 11.1523ZM13.1111 14.1523C13.1111 13.6 12.6634 13.1523 12.1111 13.1523H11.8889C11.3366 13.1523 10.8889 13.6 10.8889 14.1523V17.7078C10.8889 18.2601 11.3366 18.7078 11.8889 18.7078H12.1111C12.6634 18.7078 13.1111 18.2601 13.1111 17.7078V14.1523Z"
+                          fill="currentColor"
+                        />
+                      </svg>
                     </motion.span>
                   </AnimatePresence>
                 </motion.div>
@@ -1618,10 +1690,12 @@ export const ServerSidebar = ({
               </MotionButton>
             </TooltipTrigger>
             <TooltipContent side="right" className="font-medium">
-              Direct Messages{totalHomeBadge > 0 ? ` (${totalHomeBadge} unread)` : ""}
+              Home{totalHomeBadge > 0 ? ` (${totalHomeBadge} unread)` : ""}
             </TooltipContent>
           </Tooltip>
+          </div>
 
+          {showQuickAccessButton && (
           <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
             <TooltipTrigger asChild>
               <MotionButton
@@ -1672,6 +1746,7 @@ export const ServerSidebar = ({
               Quick Access{hasPendingFriendRequests ? ` (${pendingFriendRequestCount} friend request${pendingFriendRequestCount === 1 ? "" : "s"})` : ""}
             </TooltipContent>
           </Tooltip>
+          )}
         </div>
       </div>
 
