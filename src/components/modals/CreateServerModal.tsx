@@ -198,7 +198,6 @@ export const CreateServerModal = () => {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent
-        hideCloseButton={view === "choose"}
         className={
           view === "create"
             ? "!left-0 !top-0 !h-screen !w-screen !max-w-none !translate-x-0 !translate-y-0 overflow-hidden border-0 bg-transparent p-0 shadow-none sm:rounded-none [&>button]:right-5 [&>button]:top-5 [&>button]:text-muted-foreground [&>button:hover]:text-white"
@@ -216,33 +215,42 @@ export const CreateServerModal = () => {
 
         {/* Choose View */}
         {view === "choose" && (
-          <div>
-            <div className="space-y-3 px-6 py-4">
-              <button
-                onClick={() => setView("create")}
-                className="w-full p-4 rounded-xl border border-border/50 bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-all duration-200 flex items-center gap-4 group"
-              >
-                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-secondary flex items-center justify-center group-hover:bg-secondary/80 transition-colors flex-shrink-0">
-                  <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground" />
-                </div>
-                <div className="text-left flex-1 min-w-0">
-                  <p className="font-medium tracking-tight">Create My Own</p>
-                  <p className="text-sm text-muted-foreground truncate">Start fresh with your own server</p>
-                </div>
-              </button>
+          <div className="flex max-h-[82vh] flex-col overflow-hidden">
+            <div className="border-b border-border bg-muted px-5 py-3">
+              <div className="text-base font-medium leading-none tracking-tight">
+                Create a server
+              </div>
+            </div>
+
+            <div className="space-y-4 overflow-y-auto px-6 py-4">
+              <p className="text-sm leading-5 text-muted-foreground">
+                Your server is where your people hang out. Create your own space and start chatting.
+              </p>
 
               <button
-                onClick={handleJoinClick}
-                className="w-full p-4 rounded-xl border border-border/50 bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-all duration-200 flex items-center gap-4 group"
+                onClick={() => setView("create")}
+                className="group flex w-full items-center gap-3 border border-border bg-muted p-3 text-left transition-colors hover:bg-secondary"
               >
-                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-secondary flex items-center justify-center group-hover:bg-secondary/80 transition-colors flex-shrink-0">
-                  <Users className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground" />
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center border border-border bg-card text-muted-foreground transition-colors group-hover:text-foreground">
+                  <Plus className="h-[18px] w-[18px]" />
                 </div>
-                <div className="text-left flex-1 min-w-0">
-                  <p className="font-medium tracking-tight">Join a Server</p>
-                  <p className="text-sm text-muted-foreground truncate">Enter an invite code to join</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium leading-none text-foreground">Create my own</p>
+                  <p className="mt-2 text-xs leading-5 text-muted-foreground">Start fresh with your own server.</p>
                 </div>
               </button>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 border-t border-border bg-card px-5 py-3">
+              <p className="text-xs text-muted-foreground">Have an invite already?</p>
+              <Button
+                type="button"
+                onClick={handleJoinClick}
+                className="h-9 rounded-[3px] bg-primary px-5 font-medium text-primary-foreground hover:bg-white"
+              >
+                <Users className="mr-2 h-4 w-4" />
+                Join by invite
+              </Button>
             </div>
           </div>
         )}
