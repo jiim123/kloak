@@ -263,20 +263,6 @@ const ActionBar = memo(
                 </DropdownMenuItem>
               )}
 
-              {setShowGifPicker && (
-                <DropdownMenuItem
-                  disabled={!canSendMessage}
-                  onSelect={() => {
-                    setShowGifPicker(true);
-                    setIsActionsMenuOpen(false);
-                  }}
-                  className={menuItemClass}
-                >
-                  <GifPickerIcon className="h-4 w-4 text-muted-foreground" />
-                  <span>GIF</span>
-                </DropdownMenuItem>
-              )}
-
               {setShowCreatePoll && (
                 <DropdownMenuItem
                   disabled={!canSendMessage}
@@ -294,14 +280,6 @@ const ActionBar = memo(
               )}
             </DropdownMenuContent>
           </DropdownMenu>
-          {setShowGifPicker && (
-            <GifPicker
-              open={showGifPicker}
-              onOpenChange={setShowGifPicker}
-              onSelect={onGifSelect}
-              anchor={<span className="h-0 w-0" aria-hidden="true" />}
-            />
-          )}
         </div>
 
         <div className="min-w-0 flex-1 self-stretch px-1">
@@ -309,6 +287,24 @@ const ActionBar = memo(
         </div>
 
         <div className="flex shrink-0 items-center">
+          {setShowGifPicker && (
+            <GifPicker
+              open={showGifPicker}
+              onOpenChange={setShowGifPicker}
+              onSelect={onGifSelect}
+            >
+              <button
+                type="button"
+                disabled={!canSendMessage}
+                className={iconBtnClass}
+                onMouseDown={(e) => e.preventDefault()}
+                aria-label="Open GIF picker"
+              >
+                <GifPickerIcon className="h-5 w-5" />
+              </button>
+            </GifPicker>
+          )}
+
           <EmojiPicker
             open={showEmojiPicker}
             onOpenChange={setShowEmojiPicker}
@@ -1527,7 +1523,7 @@ const MobileOptimizedInput = memo(
               placeholder={forumPlaceholder || (dmPlaceholder ? (hasAttachments ? "Add a comment..." : `Message @${dmPlaceholder.length > (isMobile ? 12 : 17) ? dmPlaceholder.slice(0, isMobile ? 12 : 17) + "..." : dmPlaceholder}`) : (isLockedByNotice ? "Write a message..." : canSendMessage ? `Message ${channelName || "channel"}` : "Locked"))}
               disabled={!canSendMessage}
               rows={1}
-              className="message-input-textarea w-full resize-none bg-transparent py-2.5 sm:py-2 text-foreground outline-none min-h-[40px] max-h-[140px] sm:max-h-[160px] overflow-y-auto placeholder:text-muted-foreground/60 font-[Inter,system-ui,sans-serif]"
+              className="message-input-textarea w-full resize-none bg-transparent pb-1.5 pt-3 sm:pb-0.5 sm:pt-3.5 text-foreground outline-none min-h-[40px] max-h-[140px] sm:max-h-[160px] overflow-y-auto placeholder:text-muted-foreground/60 font-[Inter,system-ui,sans-serif]"
               style={{
                 fontSize: isMobile ? "16px" : "15px",
                 lineHeight: "1.45",

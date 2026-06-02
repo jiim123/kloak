@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type WheelEvent } from "react";
 import {
   Apple,
   Car,
@@ -241,6 +241,14 @@ export const EmojiPicker = ({
     return results.slice(0, 72);
   }, [search, serverEmojis]);
 
+  const handleHorizontalWheel = useCallback((event: WheelEvent<HTMLDivElement>) => {
+    const container = event.currentTarget;
+    if (container.scrollWidth <= container.clientWidth || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return;
+
+    event.preventDefault();
+    container.scrollLeft += event.deltaY;
+  }, []);
+
   const renderEmojiButton = (
     key: string,
     emoji: string,
@@ -260,7 +268,7 @@ export const EmojiPicker = ({
         key={key}
         type="button"
         className={cn(
-          "flex h-11 w-11 shrink-0 items-center justify-center rounded-md transition-colors duration-100 sm:h-[28px] sm:w-[28px] sm:rounded-[4px]",
+          "flex h-11 w-11 shrink-0 items-center justify-center rounded-md transition-colors duration-100 sm:h-8 sm:w-8 sm:rounded-[4px]",
           "hover:bg-secondary focus:bg-secondary focus:outline-none active:bg-secondary/80",
           options?.disabled && "pointer-events-none opacity-40",
           options?.className,
@@ -279,11 +287,11 @@ export const EmojiPicker = ({
         title={label}
       >
         {options?.url ? (
-          <img src={options.url} alt={label} className="h-7 w-7 sm:h-[22px] sm:w-[22px] object-contain" loading="lazy" />
+          <img src={options.url} alt={label} className="h-[30px] w-[30px] sm:h-[25px] sm:w-[25px] object-contain" loading="lazy" />
         ) : options?.textFallback ? (
           <span className="block max-w-full truncate text-[11px] leading-none text-muted-foreground sm:text-[9px]">{options.textFallback}</span>
         ) : (
-          <FluentEmoji emoji={emoji} size={isMobile ? 28 : 22} />
+          <FluentEmoji emoji={emoji} size={isMobile ? 30 : 25} />
         )}
       </button>
     );
@@ -307,7 +315,7 @@ export const EmojiPicker = ({
             <p className="text-sm text-muted-foreground sm:text-[11px]">Loading emojis...</p>
           </div>
         ) : currentServerEmojis.length > 0 ? (
-          <div className={cn("grid grid-cols-7 gap-1 sm:grid-cols-9 sm:gap-[1px]", isDisabledSection && "pointer-events-none opacity-50")}>
+          <div className={cn("grid grid-cols-7 gap-1 sm:grid-cols-8 sm:gap-[3px]", isDisabledSection && "pointer-events-none opacity-50")}>
             {currentServerEmojis.map((emoji) =>
               renderEmojiButton(`server-${emoji.id}`, `:${emoji.name}:`, {
                 label: `:${emoji.name}:`,
@@ -336,7 +344,7 @@ export const EmojiPicker = ({
           </div>
 
           {cat.emojis.length > 0 ? (
-            <div className="grid grid-cols-7 gap-1 sm:grid-cols-9 sm:gap-[1px]">
+            <div className="grid grid-cols-7 gap-1 sm:grid-cols-8 sm:gap-[3px]">
               {cat.emojis
                 .map((emoji, index) => renderRecentOrNativeEmoji(cat.key, emoji, index))
                 .filter(Boolean)}
@@ -355,7 +363,7 @@ export const EmojiPicker = ({
               {loadingServers.has(selectedServer.id) ? (
                 <p className="px-0.5 text-sm text-muted-foreground sm:text-[11px]">Loading emojis...</p>
               ) : currentServerEmojis.length > 0 ? (
-                <div className="grid grid-cols-7 gap-1 sm:grid-cols-9 sm:gap-[1px]">
+                <div className="grid grid-cols-7 gap-1 sm:grid-cols-8 sm:gap-[3px]">
                   {currentServerEmojis.slice(0, 54).map((emoji) =>
                     renderEmojiButton(`server-inline-${emoji.id}`, `:${emoji.name}:`, {
                       label: `:${emoji.name}:`,
@@ -418,7 +426,7 @@ export const EmojiPicker = ({
     <div className="flex h-full min-h-0 flex-col bg-popover text-popover-foreground">
       {!search.trim() && (
         <div className="border-b border-border bg-card px-1.5 py-1">
-          <div ref={categoryScrollRef} className="flex h-11 items-center gap-1 overflow-x-auto scrollbar-hide sm:h-[29px] sm:gap-[3px]">
+          <div ref={categoryScrollRef} onWheel={handleHorizontalWheel} className="flex h-11 items-center gap-1 overflow-x-auto scroll-smooth scrollbar-hide sm:h-[29px] sm:gap-[3px]">
             {categories.map((cat) => {
               const Icon = CATEGORY_ICON_MAP[cat.key as keyof typeof CATEGORY_ICON_MAP] || Smile;
               const isActive = activeCategory === cat.key;
@@ -444,7 +452,7 @@ export const EmojiPicker = ({
             })}
           </div>
           {servers.length > 0 && (
-            <div className="mt-1 flex h-12 sm:h-[30px] items-center gap-1.5 sm:gap-[4px] overflow-x-auto scrollbar-hide">
+            <div onWheel={handleHorizontalWheel} className="mt-1 flex h-12 sm:h-[30px] items-center gap-1.5 sm:gap-[4px] overflow-x-auto scroll-smooth scrollbar-hide">
               {servers.map((server) => {
                 const isExternal = server.id !== serverId;
                 const isDisabled = isExternal && !allowExternalEmojis;
@@ -516,7 +524,7 @@ export const EmojiPicker = ({
                 <div className="mb-2 px-0.5 text-xs font-semibold leading-none text-muted-foreground sm:mb-1.5 sm:text-[10px]">
                   Results for "{search.trim()}"
                 </div>
-                <div className="grid grid-cols-7 gap-1 sm:grid-cols-9 sm:gap-[1px]">
+                <div className="grid grid-cols-7 gap-1 sm:grid-cols-8 sm:gap-[3px]">
                   {filteredEmojis.map((item, index) => {
                     if (item.type === "native") {
                       return renderEmojiButton(`search-native-${item.emoji}-${index}`, item.emoji);
