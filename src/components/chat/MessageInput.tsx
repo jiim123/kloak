@@ -273,7 +273,7 @@ const ActionBar = memo(
                   <span className="flex flex-col leading-tight">
                     <span>Poll</span>
                     <span className="mt-0.5 text-[13px] font-medium text-muted-foreground">
-                      A single or multiple-choice question.
+                      A single or multiple-choice question
                     </span>
                   </span>
                 </DropdownMenuItem>

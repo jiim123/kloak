@@ -156,12 +156,9 @@ export const CreateServerModal = () => {
           }
         }
 
-        await updateServer(server.id, user.id, { banner_url: "/default_server_banner.png" });
-
         const serverWithBanner = {
           ...server,
           icon_url: finalIconUrl,
-          banner_url: "/default_server_banner.png",
         };
 
         setCurrentServer(serverWithBanner);
