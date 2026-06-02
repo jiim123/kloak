@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
 import { friendRequestRateLimiter } from '@/lib/security';
+import { fetchUsersPresence } from '@/lib/presenceBatch';
 import type { User, Friendship, FriendWithUser, FriendshipStatus } from '@/types';
 
 const FRIENDS_CACHE_TTL_MS = 45_000;
@@ -114,19 +115,13 @@ export const useFriendStore = create<FriendState>((set, get) => ({
 
         const presenceByUserId = new Map<string, { status: string | null; last_seen: string | null }>();
         if (presenceTargetIds.length > 0) {
-          const { data: presenceData, error: presenceError } = await supabase.rpc('get_users_presence_secure', {
-            _user_id: userId,
-            _target_user_ids: presenceTargetIds,
-          });
-          if (presenceError) throw presenceError;
-          if (Array.isArray(presenceData)) {
-            for (const row of presenceData as Array<{ id?: string; status?: string | null; last_seen?: string | null }>) {
-              if (!row?.id) continue;
-              presenceByUserId.set(row.id, {
-                status: row.status ?? null,
-                last_seen: row.last_seen ?? null,
-              });
-            }
+          const presenceData = await fetchUsersPresence(userId, presenceTargetIds);
+          for (const row of presenceData) {
+            if (!row?.id) continue;
+            presenceByUserId.set(row.id, {
+              status: row.status ?? null,
+              last_seen: row.last_seen ?? null,
+            });
           }
         }
 

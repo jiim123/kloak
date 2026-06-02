@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { format, formatDistanceToNow, isSameDay } from "date-fns";
 import { useServerStore } from "@/stores/serverStore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -67,192 +67,80 @@ export const ServerOverviewView = () => {
   const [recentForumActivity, setRecentForumActivity] = useState<ForumActivityCard[]>([]);
   const [upcomingCalendarEvents, setUpcomingCalendarEvents] = useState<CalendarEventCard[]>([]);
 
+  const usersMap = useMemo(() => {
+    const map = new Map<string, { username: string; display_name?: string | null; nickname?: string | null }>();
+    members.forEach((m) => {
+      if (!m.user) return;
+      map.set(m.user_id, {
+        username: (m.user as User).username,
+        display_name: (m.user as User).display_name,
+        nickname: m.nickname,
+      });
+    });
+    return map;
+  }, [members]);
+
+  const channelsMap = useMemo(() => {
+    const map = new Map<string, { name: string }>();
+    channels.forEach((ch) => map.set(ch.id, { name: ch.name }));
+    return map;
+  }, [channels]);
+
   useEffect(() => {
     if (!currentServer || !userId) return;
-    const fetchAnnouncements = async () => {
+
+    const fetchOverview = async () => {
       try {
-        const announcementChannels = channels.filter((c) => c.type === "announcement");
-        if (announcementChannels.length === 0) {
-          setRecentAnnouncements([]);
-          return;
-        }
-        const { data: messagesData, error } = await supabase.rpc("get_server_recent_announcements_secure", {
+        const { data, error } = await (supabase.rpc as any)("get_server_overview_secure", {
           _server_id: currentServer.id,
           _user_id: userId,
-          _limit: 5,
+          _announcement_limit: 5,
+          _forum_limit: 4,
+          _calendar_limit: 4,
         });
         if (error) throw error;
-        // Build maps for formatting mentions/channels in previews
-        const usersMap = new Map<string, { username: string; display_name?: string | null; nickname?: string | null }>();
-        members.forEach((m) => {
-          if (m.user) {
-            usersMap.set(m.user_id, {
-              username: (m.user as User).username,
-              display_name: (m.user as User).display_name,
-              nickname: m.nickname,
-            });
-          }
-        });
-        const channelsMap = new Map<string, { name: string }>();
-        channels.forEach((ch) => channelsMap.set(ch.id, { name: ch.name }));
 
-        const announcements: AnnouncementCard[] = (Array.isArray(messagesData) ? messagesData : []).map((msg: any) => {
-          const raw = msg.content || "";
-          const stripped = stripMarkdown(raw, usersMap, channelsMap);
-          const parts = stripped.split("\n\n");
-          const title = parts.length > 1 ? parts[0].trim() : stripped.split("\n")[0].trim() || "Announcement";
-          return {
-            id: msg.id,
-            content: title,
-            created_at: msg.created_at,
-            user: msg.user,
-            channel_id: msg.channel_id,
-            channel_name: msg.channel_name || "Announcements",
-          };
-        });
-        setRecentAnnouncements(announcements);
-      } catch (error) {
-        console.error("Failed to fetch announcements:", error);
-      }
-    };
-    fetchAnnouncements();
-  }, [currentServer, channels, userId]);
+        const payload = typeof data === "string" ? JSON.parse(data) : data;
+        const announcementRows = Array.isArray(payload?.announcements) ? payload.announcements : [];
+        const forumRows = Array.isArray(payload?.forum_activity) ? payload.forum_activity : [];
+        const eventRows = Array.isArray(payload?.calendar_events) ? payload.calendar_events : [];
 
-  useEffect(() => {
-    if (!currentServer || !userId) return;
-    const fetchForumActivity = async () => {
-      try {
-        const forumChannels = channels.filter((c) => c.type === "forum");
-        if (forumChannels.length === 0) {
-          setRecentForumActivity([]);
-          return;
-        }
-
-        const forumChannelIds = forumChannels.map((c) => c.id);
-        const channelNameById = new Map<string, string>();
-        forumChannels.forEach((c) => channelNameById.set(c.id, c.name));
-
-        const { data: threadsData, error: threadsError } = await supabase
-          .from("threads")
-          .select("id, message_id, channel_id, created_at")
-          .in("channel_id", forumChannelIds)
-          .order("created_at", { ascending: false })
-          .limit(12);
-        if (threadsError) throw threadsError;
-
-        const threads = Array.isArray(threadsData) ? threadsData : [];
-        if (threads.length === 0) {
-          setRecentForumActivity([]);
-          return;
-        }
-
-        const messageIds = threads.map((t: any) => t.message_id).filter(Boolean);
-        const threadIds = threads.map((t: any) => t.id).filter(Boolean);
-
-        const { data: messagesData, error: messagesError } = await supabase.rpc("get_messages_by_ids_secure", {
-          _message_ids: messageIds,
-          _user_id: userId,
-          _blocked_user_ids: [],
-        });
-        if (messagesError) throw messagesError;
-
-        const { data: summaryData, error: summaryError } = await (supabase.rpc as any)("get_thread_summaries", {
-          _thread_ids: threadIds,
-        });
-        if (summaryError) throw summaryError;
-
-        const rawSummaries = typeof summaryData === "string" ? JSON.parse(summaryData) : summaryData;
-        const summaryByThreadId = new Map<string, any>();
-        if (Array.isArray(rawSummaries)) {
-          rawSummaries.forEach((s: any) => {
-            if (s?.thread_id) summaryByThreadId.set(s.thread_id, s);
-          });
-        }
-
-        const messageById = new Map<string, any>();
-        (Array.isArray(messagesData) ? messagesData : []).forEach((m: any) => {
-          if (m?.id) messageById.set(m.id, m);
-        });
-
-        const activityCards: ForumActivityCard[] = threads
-          .map((thread: any) => {
-            const message = messageById.get(thread.message_id);
-            const summary = summaryByThreadId.get(thread.id);
-            const usersMap = new Map<string, { username: string; display_name?: string | null; nickname?: string | null }>();
-            members.forEach((m) => {
-              if (m.user) {
-                usersMap.set(m.user_id, {
-                  username: (m.user as User).username,
-                  display_name: (m.user as User).display_name,
-                  nickname: m.nickname,
-                });
-              }
-            });
-            const channelsMap = new Map<string, { name: string }>();
-            channels.forEach((ch) => channelsMap.set(ch.id, { name: ch.name }));
-
-            const rawContent = message?.content || "";
-            const plain = stripMarkdown(rawContent, usersMap, channelsMap);
-            const title = (plain.split("\n")[0] || "Forum thread").trim();
-            const messageCount = Number(summary?.message_count ?? 0);
-            const replyCount = Math.max(messageCount - 1, 0);
-            const lastActivity = summary?.last_activity || thread.created_at;
-
+        setRecentAnnouncements(
+          announcementRows.map((msg: any) => {
+            const raw = msg.content || "";
+            const stripped = stripMarkdown(raw, usersMap, channelsMap);
+            const parts = stripped.split("\n\n");
+            const title = parts.length > 1 ? parts[0].trim() : stripped.split("\n")[0].trim() || "Announcement";
             return {
-              id: thread.id,
-              title,
-              reply_count: replyCount,
-              last_activity: lastActivity,
-              channel_id: thread.channel_id,
-              channel_name: channelNameById.get(thread.channel_id) || "forum",
+              id: msg.id,
+              content: title,
+              created_at: msg.created_at,
+              user: msg.user,
+              channel_id: msg.channel_id,
+              channel_name: msg.channel_name || "Announcements",
             };
-          })
-          .filter((item) => item.title.length > 0)
-          .sort((a, b) => new Date(b.last_activity).getTime() - new Date(a.last_activity).getTime())
-          .slice(0, 4);
-
-        setRecentForumActivity(activityCards);
-      } catch (error) {
-        console.error("Failed to fetch forum activity:", error);
-        setRecentForumActivity([]);
-      }
-    };
-
-    void fetchForumActivity();
-  }, [currentServer, channels, userId, members]);
-
-  useEffect(() => {
-    if (!currentServer || !userId) return;
-
-    const fetchCalendarEvents = async () => {
-      try {
-        const calendarChannels = channels.filter((c) => c.type === "calendar");
-        if (calendarChannels.length === 0) {
-          setUpcomingCalendarEvents([]);
-          return;
-        }
-
-        const channelNameById = new Map(calendarChannels.map((channel) => [channel.id, channel.name]));
-        const now = new Date();
-        const rangeEnd = new Date(now);
-        rangeEnd.setDate(rangeEnd.getDate() + 60);
-
-        const eventLists = await Promise.all(
-          calendarChannels.map(async (channel) => {
-            const { data, error } = await (supabase.rpc as any)("get_calendar_events", {
-              _channel_id: channel.id,
-              _user_id: userId,
-              _starts_after: now.toISOString(),
-              _starts_before: rangeEnd.toISOString(),
-            });
-            if (error) throw error;
-            return Array.isArray(data) ? data : [];
           }),
         );
 
-        const events = eventLists
-          .flat()
-          .filter((event: any) => event?.id && new Date(event.ends_at).getTime() >= Date.now())
+        setRecentForumActivity(
+          forumRows
+            .map((thread: any) => {
+              const plain = stripMarkdown(thread.content || "", usersMap, channelsMap);
+              return {
+                id: thread.id,
+                title: (plain.split("\n")[0] || "Forum thread").trim(),
+                reply_count: Number(thread.reply_count ?? 0),
+                last_activity: thread.last_activity || thread.created_at,
+                channel_id: thread.channel_id,
+                channel_name: thread.channel_name || "forum",
+              };
+            })
+            .filter((item: ForumActivityCard) => item.title.length > 0),
+        );
+
+        setUpcomingCalendarEvents(
+          eventRows
+          .filter((event: any) => event?.id)
           .map((event: any) => ({
             id: event.id,
             channel_id: event.channel_id,
@@ -264,20 +152,19 @@ export const ServerOverviewView = () => {
             allow_rsvps: Boolean(event.allow_rsvps),
             rsvp_count: Number(event.rsvp_count ?? 0),
             viewer_rsvp_status: event.viewer_rsvp_status ?? null,
-            channel_name: channelNameById.get(event.channel_id) || "calendar",
-          }))
-          .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime())
-          .slice(0, 4);
-
-        setUpcomingCalendarEvents(events);
+            channel_name: event.channel_name || "calendar",
+          })),
+        );
       } catch (error) {
-        console.error("Failed to fetch calendar events:", error);
+        console.error("Failed to fetch server overview:", error);
+        setRecentAnnouncements([]);
+        setRecentForumActivity([]);
         setUpcomingCalendarEvents([]);
       }
     };
 
-    void fetchCalendarEvents();
-  }, [currentServer, channels, userId]);
+    void fetchOverview();
+  }, [currentServer?.id, userId, usersMap, channelsMap]);
 
   const handleCalendarRsvp = async (event: CalendarEventCard, status: CalendarRsvpStatus) => {
     if (!userId || !event.allow_rsvps) return;

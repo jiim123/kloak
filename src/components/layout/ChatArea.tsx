@@ -238,7 +238,15 @@ export const ChatArea = ({ showHeader = true }: ChatAreaProps) => {
     if (membershipFetchKeyRef.current === fetchKey) return;
     membershipFetchKeyRef.current = fetchKey;
 
-    void fetchMembers(serverId, { force: membersServerId === serverId });
+    const timer = setTimeout(() => {
+      const latest = useServerStore.getState();
+      const latestHasCurrentUserMember =
+        latest.membersServerId === serverId && latest.members.some((member) => member.user_id === user.id);
+      if (latestHasCurrentUserMember) return;
+      void fetchMembers(serverId, { force: latest.membersServerId === serverId });
+    }, 250);
+
+    return () => clearTimeout(timer);
   }, [serverId, user?.id, channelId, membersServerId, hasCurrentUserMember, fetchMembers]);
 
   const { typingUsers, startTyping, stopTyping } = useTyping(isGhostMode ? null : channelId);
@@ -262,7 +270,7 @@ export const ChatArea = ({ showHeader = true }: ChatAreaProps) => {
 
   // Load custom emoji map for pinned message rendering
   useEffect(() => {
-    if (!serverId) {
+    if (!serverId || pinnedMessages.length === 0) {
       setCustomEmojiMap({});
       return;
     }
@@ -287,7 +295,7 @@ export const ChatArea = ({ showHeader = true }: ChatAreaProps) => {
     return () => {
       cancelled = true;
     };
-  }, [serverId]);
+  }, [serverId, pinnedMessages.length]);
 
   // Stable swipe callbacks
   const handleSwipeRight = useCallback(() => setMobileSidebarOpen(true), [setMobileSidebarOpen]);

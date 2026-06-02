@@ -70,7 +70,7 @@ const notifyHydrated = (serverId: string) => {
   }
 };
 
-const waitForHydration = (serverId: string, timeoutMs = 500): Promise<void> => {
+const waitForHydration = (serverId: string, timeoutMs = 1500): Promise<void> => {
   return new Promise((resolve) => {
     const waiter: HydrationWaiter = {
       resolve: () => resolve(),

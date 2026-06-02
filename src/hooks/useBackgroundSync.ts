@@ -113,7 +113,6 @@ export function useBackgroundSync() {
         const { currentServer } = useServerStore.getState();
         if (currentServer) {
           await useServerStore.getState().fetchChannels(currentServer.id);
-          await useServerStore.getState().fetchRolePermissions(currentServer.id);
         }
         
         return;

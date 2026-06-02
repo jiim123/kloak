@@ -6,6 +6,7 @@ import { useDMStore } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useUserCacheStore } from '@/stores/userCacheStore';
 import { useUIStore } from '@/stores/uiStore';
+import { fetchUsersPresence } from '@/lib/presenceBatch';
 import type { User, UserStatus } from '@/types';
 
 /**
@@ -585,16 +586,8 @@ export const useRealtimeUsers = () => {
       if (!opts?.bypassCooldown && now - lastPollRef.current < PRESENCE_FETCH_COOLDOWN_MS) return;
       lastPollRef.current = now;
 
-      // Fetch only the columns we need (optimized query)
-      const { data, error } = await supabase.rpc('get_users_presence_secure', {
-        _user_id: userId,
-        _target_user_ids: targetUserIds,
-      });
-
-      if (error || !data) return;
-
       // Patch each user's presence
-      const rows = Array.isArray(data) ? (data as PresenceRow[]) : [];
+      const rows = await fetchUsersPresence(userId, targetUserIds);
       const nowMs = Date.now();
       rows.forEach((presence) => {
         // Don't overwrite status from realtime Presence with stale DB data

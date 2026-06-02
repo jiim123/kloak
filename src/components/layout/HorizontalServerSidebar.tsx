@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback, forwardRef } from "react";
+import { useState, useMemo, useEffect, useCallback, forwardRef, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import {
@@ -702,6 +702,9 @@ export const HorizontalServerSidebar = () => {
   const [changeFolderColor, setChangeFolderColor] = useState("#6366f1");
   const [activeDragServerId, setActiveDragServerId] = useState<string | null>(null);
   const [isFolderStateLoaded, setIsFolderStateLoaded] = useState(false);
+  const folderStateRef = useRef(folderState);
+  const lastSavedFolderStateRef = useRef<string | null>(null);
+  folderStateRef.current = folderState;
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -802,13 +805,18 @@ export const HorizontalServerSidebar = () => {
               serverIds: Array.isArray(f.serverIds) ? f.serverIds.filter((id: any) => typeof id === "string") : [],
             }));
 
-          setFolderState({ folders: sanitizedFolders, serverToFolder });
+          const sanitized = { folders: sanitizedFolders, serverToFolder };
+          setFolderState(sanitized);
+          lastSavedFolderStateRef.current = JSON.stringify(sanitized);
           try {
             localStorage.setItem(
               SERVER_FOLDERS_STORAGE_KEY,
-              JSON.stringify({ folders: sanitizedFolders, serverToFolder }),
+              JSON.stringify(sanitized),
             );
           } catch {}
+        }
+        if (!lastSavedFolderStateRef.current) {
+          lastSavedFolderStateRef.current = JSON.stringify(folderStateRef.current);
         }
 
         setIsFolderStateLoaded(true);
@@ -824,17 +832,21 @@ export const HorizontalServerSidebar = () => {
   // Persist folders state
   useEffect(() => {
     if (!isFolderStateLoaded || !user?.id) return;
+    const serialized = JSON.stringify(folderState);
+    if (serialized === lastSavedFolderStateRef.current) return;
 
     try {
-      localStorage.setItem(SERVER_FOLDERS_STORAGE_KEY, JSON.stringify(folderState));
+      localStorage.setItem(SERVER_FOLDERS_STORAGE_KEY, serialized);
     } catch {}
 
     const timeoutId = setTimeout(async () => {
       try {
-        await supabase.rpc("save_user_server_folders" as any, {
+        const { error } = await supabase.rpc("save_user_server_folders" as any, {
           _user_id: user.id,
-          _folder_data: folderState,
+          _folder_data: folderStateRef.current,
         });
+        if (error) console.error("Failed to save folder state:", error);
+        else lastSavedFolderStateRef.current = JSON.stringify(folderStateRef.current);
       } catch (err) {
         console.error("Error saving folder state:", err);
       }

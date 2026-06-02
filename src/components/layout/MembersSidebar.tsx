@@ -50,7 +50,7 @@ import type { ServerMember, CustomServerRole, UserStatus } from "@/types";
 import { getEffectivePresence } from "@/lib/presence";
 import { hasRecentRealtimePresence } from "@/hooks/useRealtimeUsers";
 
-import { readCachedMemberCount, persistMemberCount } from "@/lib/serverMemberCount";
+import { readCachedMemberCount, persistMemberCount, waitForCachedMemberCount } from "@/lib/serverMemberCount";
 import { LEFT_ALIGNED_USER_PROFILE_POPOVER, openUserProfileModal } from "@/lib/userProfilePopover";
 import { getUserFromCache, useUserCacheStore } from "@/stores/userCacheStore";
 
@@ -501,13 +501,13 @@ export const MembersSidebar = () => {
 
     let cancelled = false;
     const fetchTimer = setTimeout(() => {
-      const seededCount = readCachedMemberCount(currentServer!.id, user!.id);
-      if (seededCount !== null) {
-        if (!cancelled) setTotalMemberCount(seededCount);
-        return;
-      }
-
       void (async () => {
+        const seededCount = await waitForCachedMemberCount(currentServer!.id, user!.id);
+        if (seededCount !== null) {
+          if (!cancelled) setTotalMemberCount(seededCount);
+          return;
+        }
+
         try {
           const { data, error } = await supabase.rpc("get_server_member_count_secure", {
             _server_id: currentServer!.id,
