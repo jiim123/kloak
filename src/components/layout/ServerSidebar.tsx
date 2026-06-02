@@ -1275,10 +1275,186 @@ export const ServerSidebar = ({
             <div
               ref={setRootDroppableRef}
               className={cn(
-                "flex-1 flex flex-col items-center gap-2.5 overflow-y-auto scrollbar-overlay scrollbar-hide w-full px-3 pt-3 pb-52",
+                "flex-1 flex flex-col items-center gap-2.5 overflow-y-auto scrollbar-overlay scrollbar-hide w-full px-3 py-3",
                 isOverRoot && "outline outline-2 outline-primary/30 outline-offset-[-2px] rounded-xl",
               )}
             >
+              <div className="w-full flex flex-col items-center gap-2">
+                <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
+                  <TooltipTrigger asChild>
+                    <MotionButton
+                      className="relative group"
+                      onMouseEnter={handleExploreHover}
+                      onMouseLeave={handleHoverLeave}
+                      onClick={handleExploreClick}
+                      whileHover="hover"
+                      whileTap="tap"
+                    >
+                      <motion.span
+                        className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full shadow-[0_0_10px_hsl(var(--foreground)_/_0.35)]"
+                        variants={pillVariants}
+                        initial="hidden"
+                        animate={explorePillState}
+                      />
+
+                      <motion.div
+                        variants={iconVariants}
+                        initial="animate"
+                        animate={isExploreActive ? "active" : "animate"}
+                        whileHover="hover"
+                        whileTap="tap"
+                        transition={iconSpringTransition}
+                        className="w-11 h-11 flex items-center justify-center"
+                      >
+                        <svg
+                          viewBox="0 0 612 612"
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="w-[32px] h-[32px]"
+                          aria-hidden="true"
+                        >
+                          <path
+                            d="M306,0C137.272,0,0,137.27,0,305.997C0,474.727,137.272,612,306,612s306-137.273,306-306.003C612,137.27,474.73,0,306,0z M306,576.657c-149.24,0-270.657-121.418-270.657-270.66C35.343,156.759,156.76,35.343,306,35.343 s270.657,121.416,270.657,270.655C576.657,455.24,455.24,576.657,306,576.657z"
+                            fill={isExploreActive ? "#FFFFFF" : "#9E9EA7"}
+                          />
+                          <path
+                            d="M474.47,144.734c-4.623-8.599-15.336-11.818-23.933-7.197L251.64,244.485c-3.053,1.642-5.556,4.144-7.197,7.198 L137.538,450.536c-3.782,7.035-2.309,15.489,3.063,20.861c1.191,1.193,2.574,2.232,4.137,3.07 c5.313,2.857,11.436,2.71,16.428,0.155l0.003,0.004l0.075-0.04c0.072-0.037,0.143-0.077,0.214-0.115l198.995-106.87 c3.054-1.64,5.556-4.142,7.2-7.197l106.477-198.361c0.233-0.401,0.455-0.806,0.655-1.222l0.144-0.267l-0.018-0.006 C477.174,155.671,477.211,149.833,474.47,144.734z M196.403,415.684l67.933-126.361l58.418,58.42L196.403,415.684z M347.76,322.764l-58.421-58.421l126.351-67.94"
+                            fill={isExploreActive ? "#FFFFFF" : "#9E9EA7"}
+                          />
+                        </svg>
+                      </motion.div>
+                    </MotionButton>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="font-medium">
+                    Explore
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
+                  <TooltipTrigger asChild>
+                    <MotionButton
+                      className="relative group"
+                      onMouseEnter={handleDMHover}
+                      onMouseLeave={handleHoverLeave}
+                      onClick={handleDMClick}
+                      whileHover="hover"
+                      whileTap="tap"
+                    >
+                      <motion.span
+                        className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full shadow-[0_0_10px_hsl(var(--foreground)_/_0.35)]"
+                        variants={pillVariants}
+                        initial="hidden"
+                        animate={dmPillState}
+                      />
+
+                      <motion.div
+                        variants={iconVariants}
+                        initial="animate"
+                        animate={isDMActive ? "active" : "animate"}
+                        whileHover="hover"
+                        whileTap="tap"
+                        transition={iconSpringTransition}
+                        className="w-11 h-11 flex items-center justify-center"
+                      >
+                        <AnimatePresence mode="wait" initial={false}>
+                          <motion.span
+                            key={currentServer === null ? "dm-active-icon" : "dm-inactive-icon"}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={bottomActionIconTransition}
+                          >
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              xmlns="http://www.w3.org/2000/svg"
+                              className={cn("h-[36px] w-[36px]", isDMActive ? "text-white" : "text-[#9E9EA7]")}
+                              aria-hidden="true"
+                            >
+                              <path
+                                d="M8 9.5H15M8 13.5H13M15.6953 19.2318L19.1027 20.3676C19.8845 20.6282 20.6282 19.8844 20.3676 19.1027L19.2318 15.6953M15.3 19.1C15.3 19.1 14.0847 20 11.5 20C6.80558 20 3 16.1944 3 11.5C3 6.80558 6.80558 3 11.5 3C16.1944 3 20 6.80558 20 11.5C20 14 19.1 15.3 19.1 15.3"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          </motion.span>
+                        </AnimatePresence>
+                      </motion.div>
+
+                      <AnimatePresence>
+                        {totalHomeBadge > 0 && !isDMActive && (
+                          <motion.span
+                            initial={badgeInitial}
+                            animate={badgeAnimate}
+                            exit={badgeExit}
+                            className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
+                          >
+                            {totalHomeBadge > 99 ? "99+" : totalHomeBadge}
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                    </MotionButton>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="font-medium">
+                    Direct Messages{totalHomeBadge > 0 ? ` (${totalHomeBadge} unread)` : ""}
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
+                  <TooltipTrigger asChild>
+                    <MotionButton
+                      whileTap={{ scale: 0.95 }}
+                      whileHover="hover"
+                      initial="default"
+                      onMouseEnter={handleQuickAccessHover}
+                      onMouseLeave={handleHoverLeave}
+                      onClick={handleAddServer}
+                      className="relative w-11 h-11 flex items-center justify-center"
+                      aria-pressed={isQuickAccessActive}
+                    >
+                      <motion.span
+                        className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 bg-foreground rounded-r-full shadow-[0_0_10px_hsl(var(--foreground)_/_0.35)]"
+                        variants={pillVariants}
+                        initial="hidden"
+                        animate={quickAccessPillState}
+                      />
+                      <svg
+                        viewBox="0 0 64 64"
+                        xmlns="http://www.w3.org/2000/svg"
+                        className={cn("w-[36px] h-[36px]", isQuickAccessActive ? "text-foreground" : "text-muted-foreground")}
+                        aria-hidden="true"
+                      >
+                        <path d="M32,32.83a9.52,9.52,0,0,1-9.56-9.57A9.57,9.57,0,1,1,32,32.83ZM32,16.7a6.43,6.43,0,0,0-4.08,1.42,6.58,6.58,0,0,0,1.51,11.19,6.69,6.69,0,0,0,5.3-.07,6.57,6.57,0,0,0,1.65-10.86A6.5,6.5,0,0,0,32,16.7Z" fill="currentColor" />
+                        <path d="M40.74,34.17a9.63,9.63,0,0,1-6.39-2.44,1.49,1.49,0,0,1,.37-2.48,6.58,6.58,0,0,0,1.66-10.87,1.5,1.5,0,0,1,.38-2.48,9.57,9.57,0,1,1,4,18.27Zm-2.63-3.55A6.56,6.56,0,1,0,40.74,18c-.24,0-.48,0-.71,0a9.57,9.57,0,0,1-1.92,12.55Z" fill="currentColor" />
+                        <path d="M32,57.7c-.32,0-.65,0-1,0l-.81,0c-.41,0-.85-.07-1.29-.13a4.6,4.6,0,0,1-.6-.07l-.7-.1L27,57.2c-.38-.08-.71-.15-1-.24s-.72-.17-1.11-.29L24,56.42c-.32-.1-.63-.21-.95-.34a23.66,23.66,0,0,1-3.82-1.79L18.8,54l-.21-.13a25.73,25.73,0,0,1-2.46-1.71,1.52,1.52,0,0,1-.57-1.05c0-.17,0-.33,0-.5A16.42,16.42,0,0,1,32,34.19,16.45,16.45,0,0,1,48.45,50.65c0,.17,0,.33,0,.5a1.52,1.52,0,0,1-.57,1.05c-.27.21-.54.42-.81.61l-.39.27c-.14.11-.32.23-.49.34s-.59.39-.9.57-.59.35-.88.51c-.64.36-1.29.68-2,1-.29.13-.61.27-.93.39l-.85.32-.88.3-.67.2-.72.19-.74.19c-.83.18-1.66.32-2.46.42l-1,.1a6.71,6.71,0,0,1-.67,0l-.56,0h-.24Zm.47-3h0ZM18.55,50.27c.52.38,1.05.74,1.59,1.07l.23.14.36.21a20.28,20.28,0,0,0,3.4,1.59c.3.12.54.2.8.28a7.63,7.63,0,0,0,.73.23c.33.1.65.19,1,.26s.58.14.84.2l.68.12.62.1.43.05a11.44,11.44,0,0,0,1.19.11,7.59,7.59,0,0,0,.79,0,7.59,7.59,0,0,0,.8,0h.64c.21,0,.42,0,.63,0l.67,0c.32,0,.58,0,.84-.09A21.74,21.74,0,0,0,37,54.14c.22,0,.43-.1.64-.16l.6-.15.63-.19.77-.26.78-.3c.29-.11.53-.22.77-.33.63-.28,1.21-.56,1.77-.87l.8-.47c.25-.15.51-.31.75-.48l.37-.24.09-.07.31-.22.18-.13a13.41,13.41,0,0,0-7.56-11.73A13.46,13.46,0,0,0,18.55,50.27ZM46.94,51h0Z" fill="currentColor" />
+                        <path d="M46.94,52.52a1.5,1.5,0,0,1-1.49-1.63v-.24a13.42,13.42,0,0,0-7.56-12.11,1.5,1.5,0,0,1,.44-2.83,17.53,17.53,0,0,1,2.41-.17,16.45,16.45,0,0,1,13.69,7.33,1.49,1.49,0,0,1,.07,1.55,25.9,25.9,0,0,1-6.63,7.78A1.52,1.52,0,0,1,46.94,52.52ZM43.45,38.81a16.32,16.32,0,0,1,4.77,9,23,23,0,0,0,3.18-4.07A13.48,13.48,0,0,0,43.45,38.81Z" fill="currentColor" />
+                        <path d="M23.82,34a9.57,9.57,0,1,1,3.74-18.38,1.5,1.5,0,0,1,.36,2.56,6.5,6.5,0,0,0-2.48,5.13,6.57,6.57,0,0,0,4,6,1.5,1.5,0,0,1,.35,2.55A9.53,9.53,0,0,1,23.82,34Zm0-16.13a6.57,6.57,0,1,0,0,13.13,6.4,6.4,0,0,0,2.06-.33,9.6,9.6,0,0,1-1.75-12.8Z" fill="currentColor" />
+                        <path d="M17.06,52.52a1.52,1.52,0,0,1-.93-.32,25.6,25.6,0,0,1-6.42-7.41,1.5,1.5,0,0,1,0-1.52,16.36,16.36,0,0,1,14.09-8,17.19,17.19,0,0,1,2.35.16,1.5,1.5,0,0,1,.41,2.86,13.49,13.49,0,0,0-8,12.32v.24a1.5,1.5,0,0,1-1.49,1.63Zm-4.28-8.44a23.2,23.2,0,0,0,3,3.79,16.5,16.5,0,0,1,4.94-9.21A13.36,13.36,0,0,0,12.78,44.08Z" fill="currentColor" />
+                        <path d="M32,57.7c-.32,0-.65,0-1,0l-.81,0c-.41,0-.85-.07-1.29-.13a4.6,4.6,0,0,1-.6-.07l-.7-.1L27,57.2c-.38-.08-.71-.15-1-.24s-.72-.17-1.11-.29L24,56.42c-.32-.1-.63-.21-.95-.34a23.66,23.66,0,0,1-3.82-1.79L18.8,54l-.21-.13A25.72,25.72,0,1,1,47.87,52.2c-.27.21-.54.42-.81.61l-.39.27c-.14.11-.32.23-.49.34s-.59.39-.9.57-.59.35-.88.51c-.64.36-1.29.68-2,1-.29.13-.61.27-.93.39s-.44.17-.7.27l-.15.05-.88.3-.67.2-.72.19-.74.19c-.83.18-1.66.32-2.46.42l-1,.1a6.71,6.71,0,0,1-.67,0l-.56,0h-.24Zm.47-3h0ZM32,9.3A22.68,22.68,0,0,0,18,49.84a23.85,23.85,0,0,0,2.16,1.5l.23.14.36.21a20.28,20.28,0,0,0,3.4,1.59c.3.12.54.2.8.28a7.63,7.63,0,0,0,.73.23c.33.1.65.19,1,.26s.58.14.84.2l.68.12.62.1.43.05a11.44,11.44,0,0,0,1.19.11,7.59,7.59,0,0,0,.79,0,7.59,7.59,0,0,0,.8,0h.64c.21,0,.42,0,.63,0l.67,0c.32,0,.58,0,.84-.09A21.74,21.74,0,0,0,37,54.14c.22,0,.43-.1.64-.16l.6-.15.63-.19.77-.26.13-.05.63-.24c.31-.12.55-.23.79-.34.63-.28,1.21-.56,1.77-.87l.8-.47c.25-.15.51-.31.75-.48l.37-.24.09-.07.31-.22c.28-.2.51-.38.74-.56A22.69,22.69,0,0,0,32,9.3Z" fill="currentColor" />
+                      </svg>
+                      <AnimatePresence>
+                        {hasPendingFriendRequests && (
+                          <motion.span
+                            initial={badgeInitial}
+                            animate={badgeAnimate}
+                            exit={badgeExit}
+                            className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
+                          >
+                            {pendingFriendRequestCount > 99 ? "99+" : pendingFriendRequestCount}
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                    </MotionButton>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="font-medium">
+                    Quick Access{hasPendingFriendRequests ? ` (${pendingFriendRequestCount} friend request${pendingFriendRequestCount === 1 ? "" : "s"})` : ""}
+                  </TooltipContent>
+                </Tooltip>
+
+                <div className="w-5 h-px bg-border/60 rounded-full shrink-0 mx-auto my-1" />
+              </div>
+
               {/* Loading skeleton */}
               {isLoading && servers.length === 0 && <LoadingSkeleton />}
 
@@ -1331,8 +1507,8 @@ export const ServerSidebar = ({
         <DragOverlay>{activeDragServer ? <ServerIconVisual server={activeDragServer} /> : null}</DragOverlay>
       </DndContext>
 
-      {/* Sticky Add Server button at bottom */}
-      <div className="absolute bottom-0 left-0 right-0 px-3 pb-3 pt-2 bg-layout-sidebar z-10">
+      {/* Legacy bottom dock kept hidden after moving quick access to the top */}
+      <div className="hidden absolute bottom-0 left-0 right-0 px-3 pb-3 pt-2 bg-layout-sidebar z-10">
         <div className="w-5 h-px bg-border/60 rounded-full shrink-0 mx-auto mb-2" />
         <div className="flex flex-col items-center gap-2">
           <Tooltip delayDuration={300} {...(tooltipsEnabled ? {} : { open: false })}>
