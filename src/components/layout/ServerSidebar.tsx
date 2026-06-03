@@ -614,10 +614,7 @@ export const ServerSidebar = ({
 
   const { serverChannels, serverUnreadSummary, unreadState, getServerUnreadInfo, markServerAsRead } =
     useUnreadChannelsContext();
-  const {
-    totalUnread: totalDMUnread,
-    hasUnread: hasDMUnread,
-  } = useUnreadDMsContext();
+  const { totalUnread: totalDMUnread } = useUnreadDMsContext();
   const pendingFriendRequestCount = useFriendStore((s) => s.pendingRequests.length);
   const [hoveredServer, setHoveredServer] = useState<string | null>(null);
   const [tooltipsEnabled, setTooltipsEnabled] = useState(false);
@@ -636,7 +633,7 @@ export const ServerSidebar = ({
   const [orderedServerIds, setOrderedServerIds] = useState<string[]>([]);
   const lastSavedFolderStateRef = useRef<string | null>(null);
 
-  const totalHomeBadge = totalDMUnread;
+  const totalHomeBadge = totalDMUnread + pendingFriendRequestCount;
   const isExploreActive = location.pathname === "/app/explore";
   const isDMActive = currentServer === null && !isExploreActive;
   const hasPendingFriendRequests = pendingFriendRequestCount > 0;
@@ -1078,9 +1075,9 @@ export const ServerSidebar = ({
   const dmPillState = useMemo(() => {
     if (isDMActive) return "active";
     if (hoveredServer === "dm") return "hover";
-    if (hasDMUnread) return "unread";
+    if (totalHomeBadge > 0) return "unread";
     return "hidden";
-  }, [isDMActive, hoveredServer, hasDMUnread]);
+  }, [isDMActive, hoveredServer, totalHomeBadge]);
   const quickAccessPillState = useMemo(() => {
     if (isQuickAccessActive) return "active";
     if (hoveredServer === "quick-access") return "hover";
@@ -1394,7 +1391,7 @@ export const ServerSidebar = ({
                       </motion.div>
 
                       <AnimatePresence>
-                        {totalHomeBadge > 0 && !isDMActive && (
+                        {totalHomeBadge > 0 && (
                           <motion.span
                             initial={badgeInitial}
                             animate={badgeAnimate}
@@ -1408,7 +1405,7 @@ export const ServerSidebar = ({
                     </MotionButton>
                   </TooltipTrigger>
                   <TooltipContent side="right" className="font-medium">
-                    Home{totalHomeBadge > 0 ? ` (${totalHomeBadge} unread)` : ""}
+                    Home
                   </TooltipContent>
                 </Tooltip>
 
@@ -1676,7 +1673,7 @@ export const ServerSidebar = ({
                 </motion.div>
 
                 <AnimatePresence>
-                  {totalHomeBadge > 0 && !isDMActive && (
+                  {totalHomeBadge > 0 && (
                     <motion.span
                       initial={badgeInitial}
                       animate={badgeAnimate}
@@ -1690,7 +1687,7 @@ export const ServerSidebar = ({
               </MotionButton>
             </TooltipTrigger>
             <TooltipContent side="right" className="font-medium">
-              Home{totalHomeBadge > 0 ? ` (${totalHomeBadge} unread)` : ""}
+              Home
             </TooltipContent>
           </Tooltip>
           </div>

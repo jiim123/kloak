@@ -15,7 +15,6 @@ import { StackedAvatars } from "@/components/ui/stacked-avatars";
 import { LoggedInUserPanel } from "@/components/layout/LoggedInUserPanel";
 import { VoiceConnectedBanner } from "@/components/layout/VoiceConnectedBanner";
 import { CreateGroupModal } from "@/components/dm/CreateGroupModal";
-import { UserSearchResults } from "@/components/dm/UserSearchResults";
 import { useDMStore } from "@/stores/dmStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -115,22 +114,18 @@ export const DMSidebar = () => {
 
   return (
     <div className="h-full flex flex-col bg-layout-sidebar overflow-hidden">
-        {/* Section header with Create Group */}
-        <div className="px-4 pt-3 pb-2 flex items-center justify-between border-b border-border/60">
-          <h3 className="text-xs font-semibold text-foreground/85 uppercase tracking-[0.12em]">Home</h3>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="h-6 w-6 text-foreground/80 hover:text-foreground hover:bg-secondary/70"
-            onClick={() => setShowCreateGroup(true)}
-            title="Create Group"
-          >
-            <UserRoundPlus className="w-4 h-4" />
-          </Button>
-        </div>
+        <div className="px-2 pt-3 pb-2 border-b border-border/60">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search direct messages"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
 
-        {/* Search */}
-        <div className="px-2 pt-2 pb-2">
           <button
             type="button"
             onClick={() => {
@@ -138,7 +133,7 @@ export const DMSidebar = () => {
               navigate("/app/friends");
             }}
             className={cn(
-              "mb-2 flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition-smooth",
+              "mt-2 flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition-smooth",
               isFriendsRoute ? "bg-secondary text-foreground" : "text-foreground/90 hover:bg-secondary/50",
             )}
           >
@@ -166,21 +161,20 @@ export const DMSidebar = () => {
             <UserCircle className="h-4 w-4 shrink-0" />
             <span>Profile</span>
           </button>
-
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Find or start a conversation"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
         </div>
 
-        {/* User search results (when searching) */}
-        {searchQuery.length >= 2 && <UserSearchResults query={searchQuery} />}
+        <div className="px-4 py-2 flex items-center justify-between border-b border-border/60">
+          <h3 className="text-xs font-semibold text-foreground/85 uppercase tracking-[0.12em]">Direct Messages</h3>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="h-6 w-6 text-foreground/80 hover:text-foreground hover:bg-secondary/70"
+            onClick={() => setShowCreateGroup(true)}
+            title="Create Group"
+          >
+            <UserRoundPlus className="w-4 h-4" />
+          </Button>
+        </div>
 
         {/* Conversations list */}
         <div className="flex-1 overflow-y-auto scrollbar-overlay px-2 space-y-0.5">

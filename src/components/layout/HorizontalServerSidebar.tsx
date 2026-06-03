@@ -1241,7 +1241,7 @@ export const HorizontalServerSidebar = () => {
                     </motion.div>
                     {/* Unread / pending badge */}
                     <AnimatePresence>
-                      {totalHomeBadge > 0 && currentServer !== null && (
+                      {totalHomeBadge > 0 && (
                         <motion.span
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
@@ -1255,7 +1255,7 @@ export const HorizontalServerSidebar = () => {
                   </MotionButton>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="font-medium">
-                  Home{totalHomeBadge > 0 ? ` (${totalHomeBadge} unread)` : ""}
+                  Home
                 </TooltipContent>
               </Tooltip>
 

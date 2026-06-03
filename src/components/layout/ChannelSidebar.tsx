@@ -1132,9 +1132,11 @@ interface ChannelSidebarProps {
   onNavigate?: () => void;
 }
 
+const HEADER_CONDENSE_MIN_OVERFLOW = 140;
+const HEADER_SCROLL_PROGRESS_RANGE = 96;
+const clampHeaderProgress = (value: number) => Math.min(1, Math.max(0, value));
+
 export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
-  const HEADER_CONDENSE_SCROLL_TOP = 20;
-  const HEADER_CONDENSE_MIN_OVERFLOW = 140;
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuthStore();
@@ -1165,11 +1167,12 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
   const [overCategoryId, setOverCategoryId] = useState<string | null>(null);
   const [isSortingMode, setIsSortingMode] = useState(false);
   const [bgDrawerOpen, setBgDrawerOpen] = useState(false);
-  const [isServerHeaderCondensed, setIsServerHeaderCondensed] = useState(false);
+  const [serverHeaderScrollProgress, setServerHeaderScrollProgress] = useState(0);
   const [channelSearchQuery, setChannelSearchQuery] = useState("");
   const [resolvedServerVerified, setResolvedServerVerified] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
   const channelListRef = useRef<HTMLDivElement | null>(null);
+  const headerCondenseFrameRef = useRef<number | null>(null);
   const deferredChannelSearchQuery = useDeferredValue(channelSearchQuery);
   const normalizedChannelSearchQuery = deferredChannelSearchQuery.trim().toLowerCase();
   const isSearchingChannels = normalizedChannelSearchQuery.length > 0;
@@ -1386,19 +1389,21 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
   const isDraggingAny = activeId !== null;
 
   useEffect(() => {
-    setIsServerHeaderCondensed(false);
+    setServerHeaderScrollProgress(0);
     setChannelSearchQuery("");
   }, [currentServer?.id]);
 
-  const syncServerHeaderCondensed = useCallback((node: HTMLDivElement | null) => {
+  const syncServerHeaderScrollProgress = useCallback((node: HTMLDivElement | null) => {
     if (!node) {
-      setIsServerHeaderCondensed(false);
+      setServerHeaderScrollProgress(0);
       return;
     }
 
     const overflow = node.scrollHeight - node.clientHeight;
-    const shouldCondense = overflow > HEADER_CONDENSE_MIN_OVERFLOW && node.scrollTop > HEADER_CONDENSE_SCROLL_TOP;
-    setIsServerHeaderCondensed((prev) => (prev === shouldCondense ? prev : shouldCondense));
+    const progress = overflow > HEADER_CONDENSE_MIN_OVERFLOW
+      ? clampHeaderProgress(node.scrollTop / HEADER_SCROLL_PROGRESS_RANGE)
+      : 0;
+    setServerHeaderScrollProgress((prev) => (Math.abs(prev - progress) < 0.01 ? prev : progress));
   }, []);
 
   const handleChannelSearchChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1406,11 +1411,24 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
   }, []);
 
   const handleChannelListScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
-    syncServerHeaderCondensed(event.currentTarget);
-  }, [syncServerHeaderCondensed]);
+    const node = event.currentTarget;
+    if (headerCondenseFrameRef.current !== null) return;
+    headerCondenseFrameRef.current = requestAnimationFrame(() => {
+      headerCondenseFrameRef.current = null;
+      syncServerHeaderScrollProgress(node);
+    });
+  }, [syncServerHeaderScrollProgress]);
 
   useEffect(() => {
-    syncServerHeaderCondensed(channelListRef.current);
+    return () => {
+      if (headerCondenseFrameRef.current !== null) {
+        cancelAnimationFrame(headerCondenseFrameRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    syncServerHeaderScrollProgress(channelListRef.current);
   }, [
     channels,
     categories,
@@ -1418,7 +1436,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
     channelSearchQuery,
     currentServer?.id,
     showHidden,
-    syncServerHeaderCondensed,
+    syncServerHeaderScrollProgress,
   ]);
 
   const toggleCategory = useCallback((categoryId: string) => {
@@ -2011,25 +2029,28 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
     </>
   );
 
+  const headerProgress = serverHeaderScrollProgress;
+  const compactBackdropOpacity = clampHeaderProgress((headerProgress - 0.2) / 0.8);
+  const compactIconProgress = clampHeaderProgress((headerProgress - 0.15) / 0.85);
+  const searchProgress = clampHeaderProgress((headerProgress - 0.1) / 0.9);
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Server header with banner */}
         <div
-          className={cn(
-            "relative z-10 overflow-hidden border-b border-border/35 bg-[hsl(var(--layout-channels))]",
-            "transition-shadow duration-200",
-            isServerHeaderCondensed && "shadow-[0_8px_24px_rgba(0,0,0,0.18)]",
-          )}
+          className="relative z-10 overflow-hidden border-b border-border/35 bg-[hsl(var(--layout-channels))]"
+          style={{ boxShadow: `0 8px 24px rgba(0,0,0,${0.18 * headerProgress})` }}
         >
           <DropdownMenu>
             <div
-              className={cn(
-                "relative h-32 overflow-hidden will-change-transform transition-[transform,opacity,margin] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
-                isServerHeaderCondensed
-                  ? "-translate-y-full opacity-0 -mb-32 pointer-events-none"
-                  : "translate-y-0 opacity-100 mb-0",
-              )}
+              className="relative h-32 overflow-hidden will-change-[height,opacity,transform] motion-reduce:transition-none"
+              style={{
+                height: `${128 * (1 - headerProgress)}px`,
+                opacity: 1 - headerProgress,
+                transform: `translate3d(0, ${-20 * headerProgress}px, 0)`,
+                pointerEvents: headerProgress > 0.96 ? "none" : "auto",
+              }}
             >
               {serverBannerUrl ? (
                 <>
@@ -2047,32 +2068,36 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
             </div>
             <DropdownMenuTrigger asChild>
               <button
-                className={cn(
-                  "group relative flex w-full items-center gap-3 overflow-hidden text-left transition-[height,background-color,padding,box-shadow] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] active:scale-[0.995]",
-                  isServerHeaderCondensed
-                    ? "h-14 px-3 bg-[hsl(var(--layout-channels))] hover:bg-foreground/[0.035]"
-                    : "h-12 px-4 hover:bg-foreground/[0.03]",
-                )}
+                className="group relative flex w-full items-center gap-3 overflow-hidden text-left hover:bg-foreground/[0.03] active:scale-[0.995]"
+                style={{
+                  height: `${48 + 8 * headerProgress}px`,
+                  paddingLeft: `${16 - 4 * headerProgress}px`,
+                  paddingRight: `${16 - 4 * headerProgress}px`,
+                }}
               >
-                {isServerHeaderCondensed && (
-                  <>
-                    {serverBannerUrl ? (
-                      <img
-                        src={serverBannerUrl}
-                        alt=""
-                        className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-35 blur-md"
-                      />
-                    ) : (
-                      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_22%_22%,hsl(var(--primary)/0.25),transparent_36%),linear-gradient(135deg,hsl(350_42%_18%),hsl(31_31%_19%)_62%,hsl(var(--layout-channels)))]" />
-                    )}
-                    <div className="pointer-events-none absolute inset-0 bg-[hsl(var(--layout-channels)/0.62)]" />
-                  </>
-                )}
                 <div
-                  className={cn(
-                    "relative shrink-0 items-center justify-center overflow-hidden rounded-xl bg-secondary text-sm font-semibold text-foreground ring-1 ring-border/60 transition-[width,height,opacity,transform] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
-                    isServerHeaderCondensed ? "flex h-9 w-9 opacity-100 scale-100" : "h-0 w-0 opacity-0 scale-90",
+                  className="pointer-events-none absolute inset-0"
+                  style={{ opacity: compactBackdropOpacity }}
+                >
+                  {serverBannerUrl ? (
+                    <img
+                      src={serverBannerUrl}
+                      alt=""
+                      className="absolute inset-0 h-full w-full scale-110 object-cover opacity-35 blur-md"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_22%,hsl(var(--primary)/0.25),transparent_36%),linear-gradient(135deg,hsl(350_42%_18%),hsl(31_31%_19%)_62%,hsl(var(--layout-channels)))]" />
                   )}
+                  <div className="absolute inset-0 bg-[hsl(var(--layout-channels)/0.62)]" />
+                </div>
+                <div
+                  className="relative flex shrink-0 items-center justify-center overflow-hidden rounded-xl bg-secondary text-sm font-semibold text-foreground ring-1 ring-border/60"
+                  style={{
+                    width: `${36 * compactIconProgress}px`,
+                    height: `${36 * compactIconProgress}px`,
+                    opacity: compactIconProgress,
+                    transform: `scale(${0.9 + 0.1 * compactIconProgress})`,
+                  }}
                 >
                   {currentServer.icon_url ? (
                     <img src={currentServer.icon_url} alt="" className="h-full w-full object-cover" />
@@ -2177,10 +2202,14 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
         </div>
 
         <div
-          className={cn(
-            "overflow-hidden px-3 transition-[height,padding] duration-200 ease-out",
-            isServerHeaderCondensed ? "h-0 py-0" : "h-[46px] pt-2 pb-1.5",
-          )}
+          className="overflow-hidden px-3"
+          style={{
+            height: `${46 * (1 - searchProgress)}px`,
+            paddingTop: `${8 * (1 - searchProgress)}px`,
+            paddingBottom: `${6 * (1 - searchProgress)}px`,
+            opacity: 1 - searchProgress,
+            pointerEvents: searchProgress > 0.96 ? "none" : "auto",
+          }}
         >
           <label className="relative block">
             <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/70" />

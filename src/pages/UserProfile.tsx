@@ -867,7 +867,7 @@ const UserProfile = () => {
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="flex h-8 w-8 items-center justify-center rounded-[4px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          className="flex h-8 w-8 items-center justify-center rounded-[4px] text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
           aria-label="Back"
         >
           <ChevronLeft className="h-5 w-5" />
