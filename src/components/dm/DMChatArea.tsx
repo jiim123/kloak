@@ -34,7 +34,7 @@ const getDMLoadOlderTopThreshold = (clientHeight: number): number => {
 export const DMChatArea = () => {
   const { user } = useAuthStore();
   const { currentConversation, isLoading, fetchMessages, getMessages, prefetchOlderMessages } = useDMStore();
-  const { setMobileSidebarOpen } = useUIStore();
+  const { activeModal, setMobileSidebarOpen } = useUIStore();
   const { blockedUsers, visibilityBlockedUserIds } = useFriendStore();
   const { markAsRead } = useUnreadDMsContext();
   const isMobile = useIsMobile();
@@ -384,7 +384,7 @@ export const DMChatArea = () => {
       </div>
 
       {/* Jump to present button */}
-      {!isAtBottom && (
+      {!isAtBottom && !activeModal && (
         <div className="pointer-events-none absolute bottom-24 left-1/2 z-[80] -translate-x-1/2">
           <Button variant="primary" size="sm" className="pointer-events-auto gap-2 shadow-lg" onClick={scrollToBottom}>
             <ArrowDown className="w-4 h-4" />

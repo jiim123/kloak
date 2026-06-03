@@ -223,34 +223,37 @@ export const CreateServerModal = () => {
             </div>
 
             <div className="space-y-4 overflow-y-auto px-6 py-4">
-              <p className="text-sm leading-5 text-muted-foreground">
-                Your server is where your people hang out. Create your own space and start chatting.
-              </p>
+              <div className="space-y-3">
+                <p className="text-sm leading-5 text-muted-foreground">
+                  Your server is where your people hang out. Create your own space and start chatting.
+                </p>
 
-              <button
-                onClick={() => setView("create")}
-                className="group flex w-full items-center gap-3 border border-border bg-muted p-3 text-left transition-colors hover:bg-secondary"
-              >
-                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center border border-border bg-card text-muted-foreground transition-colors group-hover:text-foreground">
-                  <Plus className="h-[18px] w-[18px]" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium leading-none text-foreground">Create my own</p>
-                  <p className="mt-2 text-xs leading-5 text-muted-foreground">Start fresh with your own server.</p>
-                </div>
-              </button>
-            </div>
+                <Button
+                  type="button"
+                  onClick={() => setView("create")}
+                  className="h-9 w-full rounded-[3px] border border-border bg-secondary px-4 text-[13px] font-medium text-foreground hover:border-muted-foreground/40 hover:bg-muted"
+                >
+                  <Plus className="mr-1 h-3.5 w-3.5" />
+                  Create my own
+                </Button>
+              </div>
 
-            <div className="flex items-center justify-between gap-3 border-t border-border bg-card px-5 py-3">
-              <p className="text-xs text-muted-foreground">Have an invite already?</p>
-              <Button
-                type="button"
-                onClick={handleJoinClick}
-                className="h-9 rounded-[3px] bg-primary px-5 font-medium text-primary-foreground hover:bg-white"
-              >
-                <Users className="mr-2 h-4 w-4" />
-                Join by invite
-              </Button>
+              <div className="flex items-center gap-3 pt-1">
+                <div className="h-px flex-1 bg-border" />
+                <p className="text-xs text-muted-foreground">Have an invite already?</p>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+
+              <div className="flex justify-center">
+                <Button
+                  type="button"
+                  onClick={handleJoinClick}
+                  className="h-7 rounded-[3px] border border-border bg-card px-3 text-[12px] font-medium text-foreground hover:border-muted-foreground/40 hover:bg-muted [&_svg]:size-3"
+                >
+                  <Users className="mr-1 h-3 w-3" />
+                  Join by invite
+                </Button>
+              </div>
             </div>
           </div>
         )}
@@ -261,7 +264,7 @@ export const CreateServerModal = () => {
             <CreateServerBackdrop />
             <form
               onSubmit={createForm.handleSubmit(onCreateSubmit)}
-              className="relative z-10 w-full max-w-[400px] rounded-[5px] border border-white/[0.03] bg-card px-8 pb-8 pt-7 shadow-[0_18px_40px_rgba(0,0,0,0.35)] sm:px-10"
+              className="relative z-10 w-full max-w-[400px] rounded-[4px] border border-border bg-card px-8 pb-8 pt-7 text-foreground shadow-2xl sm:px-10"
             >
               {isLoading ? (
                 <div className="flex min-h-[320px] w-full flex-col items-center justify-center gap-4">
@@ -297,11 +300,11 @@ export const CreateServerModal = () => {
                 <>
                   <DialogHeader className="pb-6 text-center sm:text-center">
                     <div className="relative flex items-center justify-center">
-                      <DialogTitle className="text-[20px] font-medium leading-6 text-white">
+                      <DialogTitle className="text-base font-medium leading-none tracking-tight text-foreground">
                         Personalize your server
                       </DialogTitle>
                     </div>
-                    <DialogDescription className="mx-auto mt-2 max-w-[310px] text-center text-[12px] font-normal leading-[16px] text-foreground">
+                    <DialogDescription className="mx-auto mt-3 max-w-[310px] text-center text-sm leading-5 text-muted-foreground">
                       Your server is where everyone gets to chat. Give it an avatar and name. You can always change it later.
                     </DialogDescription>
                   </DialogHeader>
@@ -319,7 +322,7 @@ export const CreateServerModal = () => {
                         ) : (
                           <>
                             <Camera className="h-6 w-6" />
-                            <span className="text-[10px] font-normal uppercase leading-none">Upload</span>
+                            <span className="text-[10px] uppercase leading-none">Upload</span>
                           </>
                         )}
                       </button>
@@ -348,14 +351,14 @@ export const CreateServerModal = () => {
                   </div>
 
                   <div className="mx-auto mb-8 w-full max-w-[235px] space-y-1 text-center">
-                    <Label htmlFor="name" className="block text-center text-[12px] font-normal leading-4 text-muted-foreground">
+                    <Label htmlFor="name" className="block text-center text-xs font-medium leading-5 text-muted-foreground">
                       Enter your server name
                     </Label>
                     <Input
                       id="name"
                       aria-label="Enter your server name"
                       {...createForm.register("name")}
-                      className="mx-auto h-8 rounded-none border-0 border-b border-input/75 bg-transparent px-0 text-center text-[15px] font-normal text-white shadow-none outline-none ring-0 placeholder:text-muted-foreground focus-visible:border-white focus-visible:ring-0 focus-visible:ring-offset-0"
+                      className="mx-auto h-10 rounded-none border-0 border-b border-input/75 bg-transparent px-0 text-center text-sm font-medium text-foreground shadow-none outline-none ring-0 placeholder:text-muted-foreground focus-visible:border-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
                       autoFocus
                       maxLength={50}
                     />
@@ -368,10 +371,10 @@ export const CreateServerModal = () => {
                     <Button
                       type="submit"
                       disabled={!canContinue}
-                      className={`h-[28px] w-full rounded-[3px] text-[12px] font-normal disabled:opacity-100 ${
+                      className={`h-9 w-full rounded-[3px] border text-[13px] font-medium disabled:opacity-100 ${
                         canContinue
-                          ? "bg-primary text-primary-foreground hover:bg-primary"
-                          : "bg-primary text-primary-foreground/70"
+                          ? "border-border bg-secondary text-foreground hover:border-muted-foreground/40 hover:bg-muted"
+                          : "border-border bg-muted text-muted-foreground"
                       }`}
                     >
                       Continue
@@ -380,7 +383,7 @@ export const CreateServerModal = () => {
                       type="button"
                       variant="ghost"
                       onClick={handleClose}
-                      className="h-6 rounded-[3px] px-3 text-[12px] font-normal text-muted-foreground hover:bg-transparent hover:text-white"
+                      className="h-8 rounded-[3px] px-3 text-[13px] font-medium text-muted-foreground hover:bg-transparent hover:text-foreground"
                     >
                       Cancel
                     </Button>
