@@ -6,12 +6,11 @@ import type { Permission, CustomServerRole, ServerRole } from "@/types";
 
 /**
  * Hook to check if the current user has a specific permission.
- * Uses Discord-style evaluation:
- * 1. Owner check via server.owner_id (always has all permissions)
- * 2. User-specific channel overrides
- * 3. Custom role channel overrides
- * 4. Server-wide role permissions
- * 5. @everyone role permissions (fallback)
+ * Uses simplified evaluation:
+ * 1. Owner check (always has all permissions)
+ * 2. Channel role permissions (highest priority)
+ * 3. Server role permissions
+ * 4. Default deny
  */
 export const useMemberPermissions = (channelId?: string) => {
   const { user } = useAuthStore();
@@ -19,7 +18,6 @@ export const useMemberPermissions = (channelId?: string) => {
   const currentServer = useServerStore((s) => s.currentServer);
   const rolePermissions = useServerStore((s) => s.rolePermissions);
   const channelPermissions = useServerStore((s) => s.channelPermissions);
-  const roles = useServerStore((s) => s.roles);
 
   const currentMember = useMemo(() => {
     if (!user || !currentServer) return null;
@@ -44,14 +42,11 @@ export const useMemberPermissions = (channelId?: string) => {
         channelPermissions,
         channelId,
         user.id,
-        roles,
-        baseRole,
       );
     },
-    [currentServer, user, isOwner, currentMember, rolePermissions, channelPermissions, channelId, roles, baseRole],
+    [currentServer, user, isOwner, currentMember, rolePermissions, channelPermissions, channelId],
   );
 
-  // Check if current user can moderate a target member (kick/ban/mute/role changes)
   const canModerate = useCallback(
     (targetRoles?: CustomServerRole[], targetBaseRole?: ServerRole, targetIsOwner?: boolean): boolean => {
       return canModerateByRoles(
@@ -85,8 +80,6 @@ export const useMemberPermissions = (channelId?: string) => {
           channelPermissions,
           effectiveChannelId,
           user.id,
-          roles,
-          baseRole,
         );
       },
       [
@@ -97,8 +90,6 @@ export const useMemberPermissions = (channelId?: string) => {
         rolePermissions,
         channelPermissions,
         channelId,
-        roles,
-        baseRole,
         checkPermission,
       ],
     ),

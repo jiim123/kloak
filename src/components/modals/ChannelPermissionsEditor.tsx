@@ -28,8 +28,6 @@ interface ChannelPermissionsEditorProps {
   onClose: () => void;
 }
 
-// No more DEFAULT_ROLES - we use @everyone from server roles instead
-
 export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: ChannelPermissionsEditorProps) => {
   const { user } = useAuthStore();
   const {
@@ -43,27 +41,24 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
   const isMobile = useIsMobile();
 
   const [selectedRoleKey, setSelectedRoleKey] = useState<string | null>(null);
-  const [permissionStates, setPermissionStates] = useState<Map<string, Map<Permission, boolean | null>>>(new Map());
+  const [permissionStates, setPermissionStates] = useState<Map<string, Set<Permission>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  // All roles = custom roles (including @everyone)
   const allRoles = useMemo(() => {
     return roles
-      .map(r => ({ id: r.id, name: null as string | null, label: r.name, color: r.color, position: r.position }))
+      .map(r => ({ id: r.id, name: r.name, label: r.name, color: r.color, position: r.position }))
       .sort((a, b) => {
-        // @everyone always last
         if (a.label === '@everyone') return 1;
         if (b.label === '@everyone') return -1;
         return a.position - b.position;
       });
   }, [roles]);
 
-  // Auto-select first role on desktop when roles are loaded. On mobile, start on the list.
   useEffect(() => {
     if (!isMobile && allRoles.length > 0 && !selectedRoleKey) {
       const firstRole = allRoles[0];
-      setSelectedRoleKey(firstRole.id || firstRole.name!);
+      setSelectedRoleKey(firstRole.id);
     }
   }, [allRoles, selectedRoleKey, isMobile]);
 
@@ -87,50 +82,50 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
   }, [channelId, serverId, user, fetchChannelPermissions, fetchRoles]);
 
   useEffect(() => {
-    const states = new Map<string, Map<Permission, boolean | null>>();
-    const allPermissions = Object.keys(PERMISSION_META) as Permission[];
-
+    const states = new Map<string, Set<Permission>>();
     for (const role of allRoles) {
-      const roleKey = role.id || role.name!;
-      const rolePerms = new Map<Permission, boolean | null>();
-      for (const perm of allPermissions) {
-        rolePerms.set(perm, null);
-      }
-      states.set(roleKey, rolePerms);
+      states.set(role.id, new Set());
     }
 
     for (const cp of channelPermissions) {
-      const roleKey = cp.role_id || cp.role_name!;
-      const roleState = states.get(roleKey);
+      const roleState = states.get(cp.role_id);
       if (roleState) {
-        roleState.set(cp.permission, cp.allowed);
+        roleState.add(cp.permission);
       }
     }
 
     setPermissionStates(states);
   }, [channelPermissions, allRoles]);
 
-  const [confirmAction, setConfirmAction] = useState<{ type: 'deny' | 'allow' } | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ type: 'allow' } | null>(null);
 
-  const handlePermissionChange = (roleKey: string, permission: Permission, value: boolean | null) => {
+  const handlePermissionChange = (roleId: string, permission: Permission, value: boolean) => {
     setPermissionStates((prev) => {
       const next = new Map(prev);
-      const rolePerms = new Map(next.get(roleKey) || []);
-      rolePerms.set(permission, value);
-      next.set(roleKey, rolePerms);
+      const rolePerms = next.get(roleId) || new Set();
+      if (value) {
+        rolePerms.add(permission);
+      } else {
+        rolePerms.delete(permission);
+      }
+      next.set(roleId, rolePerms);
       return next;
     });
   };
 
-  const handleBulkSet = (permissions: Permission[], value: boolean | null) => {
+  const handleBulkSet = (permissions: Permission[], value: boolean) => {
     if (!selectedRoleKey) return;
     setPermissionStates((prev) => {
       const next = new Map(prev);
-      const rolePerms = new Map(next.get(selectedRoleKey) || []);
+      const rolePerms = next.get(selectedRoleKey) || new Set();
       for (const perm of permissions) {
         const meta = PERMISSION_META[perm];
         if (meta.enabled) {
-          rolePerms.set(perm, value);
+          if (value) {
+            rolePerms.add(perm);
+          } else {
+            rolePerms.delete(perm);
+          }
         }
       }
       next.set(selectedRoleKey, rolePerms);
@@ -140,26 +135,17 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
 
   const allEnabledPermissions = PERMISSION_GROUPS.flatMap(g => g.permissions).filter(p => PERMISSION_META[p].enabled);
 
-  const handleGlobalBulkSet = (value: boolean | null) => {
-    if (value !== null) {
-      setConfirmAction({ type: value ? 'allow' : 'deny' });
-    } else {
-      handleBulkSet(allEnabledPermissions, null);
-    }
+  const handleGlobalBulkSet = (value: boolean) => {
+    if (!selectedRoleKey) return;
+    setConfirmAction({ type: 'allow' });
   };
 
-  const getPermissionState = (roleKey: string, permission: Permission): boolean | null => {
-    return permissionStates.get(roleKey)?.get(permission) ?? null;
+  const hasPermission = (roleId: string, permission: Permission): boolean => {
+    return permissionStates.get(roleId)?.has(permission) ?? false;
   };
 
-  const getRoleOverrideCount = (roleKey: string): number => {
-    const rolePerms = permissionStates.get(roleKey);
-    if (!rolePerms) return 0;
-    let count = 0;
-    for (const state of rolePerms.values()) {
-      if (state !== null) count++;
-    }
-    return count;
+  const getRoleOverrideCount = (roleId: string): number => {
+    return permissionStates.get(roleId)?.size ?? 0;
   };
 
   const handleSave = async () => {
@@ -168,28 +154,25 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
     try {
       const currentDbPermMap = new Map<string, ChannelPermission>();
       for (const cp of channelPermissions) {
-        const roleKey = cp.role_id || cp.role_name!;
-        const key = `${roleKey}:${cp.permission}`;
+        const key = `${cp.role_id}:${cp.permission}`;
         currentDbPermMap.set(key, cp);
       }
 
       const savePromises: Promise<void>[] = [];
 
       for (const role of allRoles) {
-        const roleKey = role.id || role.name!;
-        const rolePerms = permissionStates.get(roleKey);
+        const rolePerms = permissionStates.get(role.id);
         if (!rolePerms) continue;
 
-        for (const [permission, state] of rolePerms.entries()) {
-          if (!PERMISSION_GROUPS.some(g => g.permissions.includes(permission))) continue;
-
-          const dbKey = `${roleKey}:${permission}`;
+        for (const permission of allEnabledPermissions) {
+          const state = rolePerms.has(permission);
+          const dbKey = `${role.id}:${permission}`;
           const currentDb = currentDbPermMap.get(dbKey);
 
-          if (state !== null) {
-            if (!currentDb || currentDb.allowed !== state) {
+          if (state) {
+            if (!currentDb) {
               savePromises.push(
-                setChannelPermission(channelId, user.id, permission, state, role.id ? role.id : undefined, undefined)
+                setChannelPermission(channelId, user.id, permission, role.id)
               );
             }
           } else if (currentDb) {
@@ -209,7 +192,7 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
     }
   };
 
-  const selectedRole = allRoles.find(r => (r.id || r.name!) === selectedRoleKey);
+  const selectedRole = allRoles.find(r => r.id === selectedRoleKey);
 
   if (isLoading) {
     return (
@@ -224,7 +207,6 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
 
   return (
     <div className="flex h-full">
-      {/* Left: Roles list */}
       {showList && (
         <div className={cn("border-r border-border flex flex-col", isMobile ? "w-full" : "w-64")}>
           <div className="p-4 border-b border-border">
@@ -237,9 +219,8 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
             {allRoles.length > 0 ? (
               <div className="p-2 space-y-1">
                 {allRoles.map((role) => {
-                  const roleKey = role.id || role.name!;
-                  const isSelected = selectedRoleKey === roleKey;
-                  const overrideCount = getRoleOverrideCount(roleKey);
+                  const isSelected = selectedRoleKey === role.id;
+                  const overrideCount = getRoleOverrideCount(role.id);
                   const isGradient = role.color.startsWith('linear-gradient');
                   const roleNameStyle = isGradient
                     ? ({
@@ -252,9 +233,9 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
 
                   return (
                     <button
-                      key={roleKey}
+                      key={role.id}
                       type="button"
-                      onClick={() => setSelectedRoleKey(roleKey)}
+                      onClick={() => setSelectedRoleKey(role.id)}
                       className={cn(
                         "w-full flex items-center gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors text-left",
                         isSelected && "bg-secondary/70 ring-1 ring-primary/50"
@@ -295,7 +276,6 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
         </div>
       )}
 
-      {/* Right: Permissions detail */}
       {showDetail && (
         <div className="flex-1 overflow-y-auto">
           {selectedRole ? (
@@ -312,7 +292,6 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
                 </Button>
               )}
 
-              {/* Role header */}
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <div
@@ -330,10 +309,9 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
                 </p>
               </div>
 
-              {/* Global bulk set */}
               <div className="pb-3 border-b border-border/50">
                 <BulkPermissionButtons
-                  onSet={handleGlobalBulkSet}
+                  onSet={(value) => handleBulkSet(allEnabledPermissions, value)}
                   label="Set all permissions:"
                 />
               </div>
@@ -353,7 +331,7 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
                   <div className="space-y-0.5">
                     {group.permissions.map((permission) => {
                       const meta = PERMISSION_META[permission];
-                      const state = getPermissionState(selectedRoleKey!, permission);
+                      const state = hasPermission(selectedRoleKey!, permission);
                       const isDisabled = !meta.enabled;
 
                       return (
@@ -377,40 +355,25 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
                               {meta.description}
                             </p>
                           </div>
-                          <div className={cn(
-                            "flex bg-secondary/80 rounded-lg p-0.5 border border-border/50 flex-shrink-0",
-                            isDisabled && "pointer-events-none"
-                          )}>
+                          <div className="flex bg-secondary/80 rounded-lg p-0.5 border border-border/50 flex-shrink-0">
                             <button
                               onClick={() => handlePermissionChange(selectedRoleKey!, permission, false)}
                               disabled={isDisabled}
                               className={cn(
                                 "px-2.5 py-1 text-[10px] font-medium rounded-md transition-all",
-                                state === false
-                                  ? "bg-destructive text-destructive-foreground shadow-sm"
-                                  : "text-muted-foreground hover:text-foreground"
-                              )}
-                            >
-                              ✕
-                            </button>
-                            <button
-                              onClick={() => handlePermissionChange(selectedRoleKey!, permission, null)}
-                              disabled={isDisabled}
-                              className={cn(
-                                "px-2.5 py-1 text-[10px] font-medium rounded-md transition-all",
-                                state === null
+                                !state
                                   ? "bg-background text-foreground shadow-sm border border-border"
                                   : "text-muted-foreground hover:text-foreground"
                               )}
                             >
-                              /
+                              —
                             </button>
                             <button
                               onClick={() => handlePermissionChange(selectedRoleKey!, permission, true)}
                               disabled={isDisabled}
                               className={cn(
                                 "px-2.5 py-1 text-[10px] font-medium rounded-md transition-all",
-                                state === true
+                                state
                                   ? "bg-emerald-600 text-white shadow-sm"
                                   : "text-muted-foreground hover:text-foreground"
                               )}
@@ -425,10 +388,9 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
                 </div>
               ))}
 
-              {/* Save bar */}
               <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm py-3 flex items-center justify-between border-t border-border/50 -mx-6 px-6">
                 <p className="text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground">✕</span> Deny · <span className="font-medium text-foreground">/</span> Inherit · <span className="font-medium text-foreground">✓</span> Allow
+                  <span className="font-medium text-foreground">✓</span> Allow · <span className="font-medium text-foreground">—</span> Inherit
                 </p>
                 <Button onClick={handleSave} disabled={isSaving} size="sm">
                   {isSaving ? (
@@ -461,27 +423,23 @@ export const ChannelPermissionsEditor = ({ channelId, serverId, onClose }: Chann
         </div>
       )}
 
-      {/* Confirmation dialog for global Deny/Allow All */}
       <AlertDialog open={!!confirmAction} onOpenChange={(open) => !open && setConfirmAction(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {confirmAction?.type === 'deny' ? 'Deny All Permissions?' : 'Allow All Permissions?'}
-            </AlertDialogTitle>
+            <AlertDialogTitle>Allow All Permissions?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to set ALL permissions to {confirmAction?.type === 'deny' ? 'Deny' : 'Allow'}? This will override any individual settings.
+              Are you sure you want to grant ALL permissions? This will override any individual settings.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                if (confirmAction) {
-                  handleBulkSet(allEnabledPermissions, confirmAction.type === 'allow');
+                if (confirmAction && selectedRoleKey) {
+                  handleBulkSet(allEnabledPermissions, true);
                 }
                 setConfirmAction(null);
               }}
-              className={confirmAction?.type === 'deny' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
             >
               Confirm
             </AlertDialogAction>

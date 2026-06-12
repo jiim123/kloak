@@ -249,10 +249,7 @@ const normalizeChannelPermissionsRows = (rows: any[]): ChannelPermission[] => {
     id: row.id,
     channel_id: row.channel_id,
     role_id: row.role_id,
-    role_name: row.role_name as ServerRole | null,
-    user_id: row.user_id || null,
     permission: row.permission as Permission,
-    allowed: row.allowed,
     created_at: row.created_at ?? "",
   }));
 };
@@ -262,9 +259,7 @@ const normalizeRolePermissionRows = (rows: any[]): RolePermission[] => {
     id: row.id,
     server_id: row.server_id,
     role_id: row.role_id,
-    role_name: row.role_name as ServerRole | null,
     permission: row.permission as Permission,
-    allowed: row.allowed,
     created_at: row.created_at ?? "",
   }));
 };
@@ -2344,19 +2339,14 @@ export const useServerStore = create<ServerState>((set, get) => ({
     serverId: string,
     userId: string,
     permission: Permission,
-    roleId?: string,
-    roleName?: ServerRole,
-    allowed: boolean = true,
+    roleId: string,
   ) => {
     try {
-      // Use RPC function instead of direct upsert to handle partial indexes correctly
-      const { error } = await supabase.rpc("set_role_permission", {
+      const { error } = await supabase.rpc("set_server_role_permission", {
         _server_id: serverId,
         _user_id: userId,
+        _role_id: roleId,
         _permission: permission as any,
-        _role_id: roleId || null,
-        _role_name: roleName || null,
-        _allowed: allowed,
       });
 
       if (error) throw error;
@@ -2373,21 +2363,14 @@ export const useServerStore = create<ServerState>((set, get) => ({
     channelId: string,
     userId: string,
     permission: Permission,
-    allowed: boolean,
-    roleId?: string,
-    roleName?: ServerRole,
-    targetUserId?: string,
+    roleId: string,
   ) => {
     try {
-      // Use RPC function instead of direct upsert to handle partial indexes correctly
-      const { error } = await supabase.rpc("set_channel_permission", {
+      const { error } = await supabase.rpc("set_channel_role_permission", {
         _channel_id: channelId,
         _user_id: userId,
+        _role_id: roleId,
         _permission: permission as any,
-        _allowed: allowed,
-        _role_id: roleId || null,
-        _role_name: roleName || null,
-        _target_user_id: targetUserId || null,
       });
 
       if (error) throw error;

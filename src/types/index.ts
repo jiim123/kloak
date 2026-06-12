@@ -104,32 +104,24 @@ export type Permission =
 export interface RolePermission {
   id: string;
   server_id: string;
-  role_id: string | null;
-  role_name: ServerRole | null;
+  role_id: string;
   permission: Permission;
-  allowed: boolean;
   created_at: string;
 }
 
 export interface ChannelPermission {
   id: string;
   channel_id: string;
-  role_id: string | null;
-  role_name: ServerRole | null;
-  user_id: string | null;
+  role_id: string;
   permission: Permission;
-  allowed: boolean;
   created_at: string;
 }
 
 export interface CategoryPermission {
   id: string;
   category_id: string;
-  role_id: string | null;
-  role_name: ServerRole | null;
-  user_id: string | null;
+  role_id: string;
   permission: Permission;
-  allowed: boolean;
   created_at: string;
 }
 

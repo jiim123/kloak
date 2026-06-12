@@ -1,31 +1,71 @@
 /**
- * Permission system for Kloak (Discord-style custom roles only)
- *
+ * Simplified Permission System for Kloak
+ * 
  * Permission Evaluation Order:
- * 1. Owner check via server.owner_id (always has all permissions)
- * 2. User-specific channel overrides (highest priority)
- * 3. Role-based channel overrides (DENY wins among multiple roles)
- * 4. Server-wide role permissions (DENY wins)
- * 5. @everyone role permissions (fallback)
- * 6. Default: deny
+ * 1. Owner check (always has all permissions)
+ * 2. Channel role permissions (highest priority - explicit grant only)
+ * 3. Server role permissions (explicit grant only)
+ * 4. Base role defaults (fallback for basic permissions)
+ * 5. Default: deny
  */
 
 import type { Permission, RolePermission, ChannelPermission, CustomServerRole, ServerRole } from "@/types";
 
-// Re-export Permission type from types
 export type { Permission } from "@/types";
 
 /**
- * Evaluate permission using owner_id + custom roles + @everyone
- *
- * @param permission - The permission to check
- * @param isOwner - Whether the user is the server owner (server.owner_id === user.id)
- * @param customRoles - Custom roles assigned to the member (includes @everyone implicitly via rolePermissions)
- * @param rolePermissions - Server-wide role permission overrides (includes @everyone role perms)
- * @param channelPermissions - Channel-specific permission overrides
- * @param channelId - Optional channel ID for channel-specific checks
- * @param userId - Optional user ID for user-specific overrides
- * @returns boolean - Whether the permission is allowed
+ * Default permissions granted to each base role.
+ * These are fallback permissions when no explicit grants exist.
+ */
+const DEFAULT_ROLE_PERMISSIONS: Record<ServerRole, Permission[]> = {
+  owner: [
+    "manage_server", "manage_roles", "manage_channels", "manage_emojis",
+    "kick_members", "ban_members", "mute_members", "deafen_members",
+    "move_members", "manage_nicknames", "manage_messages", "pin_messages",
+    "create_instant_invite", "manage_invites", "transfer_ownership",
+    "view_channels", "read_message_history", "send_messages", "add_reactions",
+    "attach_files", "embed_links", "mention_everyone", "mention_roles",
+    "use_external_emojis", "manage_webhooks", "manage_threads",
+    "connect", "speak", "use_voice_activation", "use_application_commands",
+    "view_tasks", "create_tasks", "edit_own_tasks", "edit_all_tasks",
+    "assign_tasks", "change_task_status", "delete_tasks",
+    "view_events", "create_events", "edit_own_events", "edit_all_events", "delete_events", "rsvp_events"
+  ],
+  admin: [
+    "manage_server", "manage_roles", "manage_channels", "manage_emojis",
+    "kick_members", "ban_members", "mute_members", "deafen_members",
+    "move_members", "manage_nicknames", "manage_messages", "pin_messages",
+    "create_instant_invite", "manage_invites",
+    "view_channels", "read_message_history", "send_messages", "add_reactions",
+    "attach_files", "embed_links", "mention_everyone", "mention_roles",
+    "use_external_emojis", "manage_webhooks", "manage_threads",
+    "connect", "speak", "use_voice_activation", "use_application_commands",
+    "view_tasks", "create_tasks", "edit_own_tasks", "edit_all_tasks",
+    "assign_tasks", "change_task_status", "delete_tasks",
+    "view_events", "create_events", "edit_own_events", "edit_all_events", "delete_events", "rsvp_events"
+  ],
+  moderator: [
+    "kick_members", "mute_members", "manage_nicknames", "manage_messages",
+    "pin_messages", "view_channels", "read_message_history", "send_messages",
+    "add_reactions", "attach_files", "embed_links", "mention_roles",
+    "use_external_emojis", "manage_threads", "connect", "speak",
+    "use_voice_activation", "use_application_commands",
+    "view_tasks", "create_tasks", "edit_own_tasks", "edit_all_tasks",
+    "assign_tasks", "change_task_status", "delete_tasks",
+    "view_events", "create_events", "edit_own_events", "delete_events", "rsvp_events"
+  ],
+  member: [
+    "view_channels", "read_message_history", "send_messages", "add_reactions",
+    "attach_files", "embed_links", "mention_roles", "use_external_emojis",
+    "connect", "speak", "use_voice_activation", "use_application_commands",
+    "change_nickname", "create_tasks", "edit_own_tasks", "change_task_status",
+    "view_events", "create_events", "edit_own_events", "rsvp_events"
+  ],
+};
+
+/**
+ * Evaluate permission using simplified logic.
+ * No explicit deny - permission is granted only if explicitly set or matches base role defaults.
  */
 export const evaluatePermission = (
   permission: Permission,
@@ -35,179 +75,36 @@ export const evaluatePermission = (
   channelPermissions?: ChannelPermission[],
   channelId?: string,
   userId?: string,
-  allRoles?: CustomServerRole[],
-  baseRole?: ServerRole,
 ): boolean => {
   // Owner always has all permissions
   if (isOwner) return true;
 
   const customRoleIds = new Set(customRoles?.map((r) => r.id) ?? []);
 
-  // Find @everyone role by name from the full roles array
-  const everyoneRoleIds = new Set<string>();
-  if (allRoles) {
-    const everyoneRole = allRoles.find((r) => r.name === "@everyone");
-    if (everyoneRole) {
-      everyoneRoleIds.add(everyoneRole.id);
-    }
-  }
-
-  // Step 1: Check user-specific channel overrides (highest priority)
-  if (channelId && userId && channelPermissions && channelPermissions.length > 0) {
-    const userOverride = channelPermissions.find(
-      (cp) =>
-        cp.channel_id === channelId &&
-        cp.permission === permission &&
-        cp.user_id === userId &&
-        !cp.role_id &&
-        !cp.role_name,
-    );
-
-    if (userOverride) {
-      return userOverride.allowed;
-    }
-  }
-
-  // Step 2: Check channel-specific role overrides
+  // Step 1: Check channel role permissions (highest priority)
   if (channelId && channelPermissions && channelPermissions.length > 0) {
-    const relevantChannelPerms = channelPermissions.filter(
-      (cp) => cp.channel_id === channelId && cp.permission === permission && !cp.user_id, // Only role-based overrides here
+    const channelRolePerm = channelPermissions.find(
+      (cp) => cp.channel_id === channelId && cp.permission === permission && cp.role_id && customRoleIds.has(cp.role_id),
     );
-
-    if (relevantChannelPerms.length > 0) {
-      // Check for custom role matches (Higher priority)
-      const customRoleChannelPerms = relevantChannelPerms.filter((cp) => cp.role_id && customRoleIds.has(cp.role_id));
-
-      if (customRoleChannelPerms.length > 0) {
-        const hasDeny = customRoleChannelPerms.some((p) => p.allowed === false);
-        if (hasDeny) return false;
-
-        const hasAllow = customRoleChannelPerms.some((p) => p.allowed === true);
-        if (hasAllow) return true;
-      }
-
-      // Check for @everyone role channel overrides (Lower priority)
-      const everyoneChannelPerms = relevantChannelPerms.filter((cp) => cp.role_id && everyoneRoleIds.has(cp.role_id));
-      // Also check legacy base role overrides (role_name based)
-      const baseRoleChannelPerms = relevantChannelPerms.filter((cp) => cp.role_name && !cp.role_id);
-
-      const fallbackPerms = [...everyoneChannelPerms, ...baseRoleChannelPerms];
-      if (fallbackPerms.length > 0) {
-        const hasDeny = fallbackPerms.some((p) => p.allowed === false);
-        if (hasDeny) return false;
-        const hasAllow = fallbackPerms.some((p) => p.allowed === true);
-        if (hasAllow) return true;
-      }
-    }
+    if (channelRolePerm) return true;
   }
 
-  // Step 3: Check server-wide role permissions
+  // Step 2: Check server role permissions
   if (rolePermissions && rolePermissions.length > 0) {
-    const relevantRolePerms = rolePermissions.filter((rp) => rp.permission === permission);
-
-    if (relevantRolePerms.length > 0) {
-      // Check for custom role matches (Higher priority)
-      const customRolePerms = relevantRolePerms.filter((rp) => rp.role_id && customRoleIds.has(rp.role_id));
-
-      if (customRolePerms.length > 0) {
-        const hasDeny = customRolePerms.some((p) => p.allowed === false);
-        if (hasDeny) return false;
-
-        const hasAllow = customRolePerms.some((p) => p.allowed === true);
-        if (hasAllow) return true;
-      }
-
-      // Check @everyone role permissions (fallback)
-      const everyonePerms = relevantRolePerms.filter((rp) => rp.role_id && everyoneRoleIds.has(rp.role_id));
-      // Also check legacy base role perms
-      const baseRolePerms = relevantRolePerms.filter((rp) => rp.role_name && !rp.role_id);
-
-      const fallbackPerms = [...everyonePerms, ...baseRolePerms];
-      if (fallbackPerms.length > 0) {
-        const hasDeny = fallbackPerms.some((p) => p.allowed === false);
-        if (hasDeny) return false;
-        const hasAllow = fallbackPerms.some((p) => p.allowed === true);
-        if (hasAllow) return true;
-      }
-    }
+    const rolePerm = rolePermissions.find(
+      (rp) => rp.permission === permission && rp.role_id && customRoleIds.has(rp.role_id),
+    );
+    if (rolePerm) return true;
   }
 
-  // Default fallbacks by base role — mirrors DB check_user_permission defaults
-  // so frontend and backend agree without needing explicit role_permissions rows
-  if (baseRole === "admin") return true;
-  if (baseRole === "moderator") {
-    const modAllowed: Permission[] = [
-      "view_channels",
-      "read_message_history",
-      "send_messages",
-      "attach_files",
-      "embed_links",
-      "add_reactions",
-      "use_external_emojis",
-      "mention_roles",
-      "change_nickname",
-      "create_instant_invite",
-      "connect",
-      "speak",
-      "use_voice_activation",
-      "use_application_commands",
-      "manage_messages",
-      "pin_messages",
-      "manage_threads",
-      "kick_members",
-      "mute_members",
-      "deafen_members",
-      "move_members",
-      "manage_nicknames",
-      "view_tasks",
-      "create_tasks",
-      "edit_own_tasks",
-      "edit_all_tasks",
-      "assign_tasks",
-      "change_task_status",
-      "delete_tasks",
-      "view_events",
-      "create_events",
-      "edit_own_events",
-      "edit_all_events",
-      "delete_events",
-      "rsvp_events",
-    ];
-    return modAllowed.includes(permission);
-  }
-  if (baseRole === "member") {
-    const memberAllowed: Permission[] = [
-      "view_channels",
-      "read_message_history",
-      "send_messages",
-      "attach_files",
-      "embed_links",
-      "add_reactions",
-      "use_external_emojis",
-      "mention_roles",
-      "change_nickname",
-      "create_instant_invite",
-      "connect",
-      "speak",
-      "use_voice_activation",
-      "use_application_commands",
-      "view_tasks",
-      "create_tasks",
-      "edit_own_tasks",
-      "change_task_status",
-      "view_events",
-      "create_events",
-      "edit_own_events",
-      "rsvp_events",
-    ];
-    return memberAllowed.includes(permission);
-  }
-
-  // Default: deny
+  // Step 3: Default deny - no more base role override logic needed
+  // All permissions default to false unless explicitly granted
   return false;
 };
 
-// Numeric rank for base roles — lower = higher rank (mirrors DB enum sort order)
+/**
+ * Numeric rank for base roles — lower = higher rank.
+ */
 const BASE_ROLE_RANK: Record<ServerRole, number> = {
   owner: 0,
   admin: 1,
@@ -217,8 +114,6 @@ const BASE_ROLE_RANK: Record<ServerRole, number> = {
 
 /**
  * Check if one member can moderate another based on role positions.
- * The member with the highest-priority (lowest position number) role wins.
- * Owner always wins. Falls back to base role rank if no custom roles exist.
  */
 export const canModerateByRoles = (
   actorIsOwner: boolean,
@@ -239,19 +134,17 @@ export const canModerateByRoles = (
   const actorPos = getHighestPosition(actorRoles);
   const targetPos = getHighestPosition(targetRoles);
 
-  // If either has custom roles, compare by custom role position
   if (actorPos !== Number.POSITIVE_INFINITY || targetPos !== Number.POSITIVE_INFINITY) {
     return actorPos < targetPos;
   }
 
-  // Fall back to base role rank comparison
   const actorRank = BASE_ROLE_RANK[actorBaseRole ?? "member"];
   const targetRank = BASE_ROLE_RANK[targetBaseRole ?? "member"];
   return actorRank < targetRank;
 };
 
 /**
- * Get all permissions for a member considering the full hierarchy
+ * Get all permissions for a member considering the full hierarchy.
  */
 export const getMemberPermissions = (
   isOwner: boolean,
@@ -260,56 +153,21 @@ export const getMemberPermissions = (
   channelPermissions: ChannelPermission[] | undefined,
   channelId?: string,
   userId?: string,
-  allRoles?: CustomServerRole[],
-  baseRole?: ServerRole,
 ): Map<Permission, boolean> => {
   const permissions = new Map<Permission, boolean>();
 
   const allPermissions: Permission[] = [
-    "manage_server",
-    "manage_roles",
-    "manage_channels",
-    "manage_emojis",
-    "kick_members",
-    "ban_members",
-    "mute_members",
-    "deafen_members",
-    "move_members",
-    "manage_nicknames",
-    "change_nickname",
-    "manage_messages",
-    "pin_messages",
-    "send_messages",
-    "add_reactions",
-    "view_channels",
-    "read_message_history",
-    "attach_files",
-    "embed_links",
-    "mention_everyone",
-    "mention_roles",
-    "use_external_emojis",
-    "manage_webhooks",
-    "manage_threads",
-    "create_instant_invite",
-    "transfer_ownership",
-    "manage_invites",
-    "connect",
-    "speak",
-    "use_voice_activation",
-    "use_application_commands",
-    "view_tasks",
-    "create_tasks",
-    "edit_own_tasks",
-    "edit_all_tasks",
-    "assign_tasks",
-    "change_task_status",
-    "delete_tasks",
-    "view_events",
-    "create_events",
-    "edit_own_events",
-    "edit_all_events",
-    "delete_events",
-    "rsvp_events",
+    "manage_server", "manage_roles", "manage_channels", "manage_emojis",
+    "kick_members", "ban_members", "mute_members", "deafen_members",
+    "move_members", "manage_nicknames", "change_nickname", "manage_messages",
+    "pin_messages", "send_messages", "add_reactions", "view_channels",
+    "read_message_history", "attach_files", "embed_links", "mention_everyone",
+    "mention_roles", "use_external_emojis", "manage_webhooks", "manage_threads",
+    "create_instant_invite", "transfer_ownership", "manage_invites",
+    "connect", "speak", "use_voice_activation", "use_application_commands",
+    "view_tasks", "create_tasks", "edit_own_tasks", "edit_all_tasks",
+    "assign_tasks", "change_task_status", "delete_tasks",
+    "view_events", "create_events", "edit_own_events", "edit_all_events", "delete_events", "rsvp_events"
   ];
 
   for (const permission of allPermissions) {
@@ -323,8 +181,6 @@ export const getMemberPermissions = (
         channelPermissions,
         channelId,
         userId,
-        allRoles,
-        baseRole,
       ),
     );
   }
@@ -333,7 +189,7 @@ export const getMemberPermissions = (
 };
 
 /**
- * Get all allowed permissions for a member
+ * Get all allowed permissions for a member.
  */
 export const getAllowedPermissions = (
   isOwner: boolean,
@@ -342,8 +198,6 @@ export const getAllowedPermissions = (
   channelPermissions?: ChannelPermission[],
   channelId?: string,
   userId?: string,
-  allRoles?: CustomServerRole[],
-  baseRole?: ServerRole,
 ): Permission[] => {
   const permissions = getMemberPermissions(
     isOwner,
@@ -352,8 +206,6 @@ export const getAllowedPermissions = (
     channelPermissions,
     channelId,
     userId,
-    allRoles,
-    baseRole,
   );
 
   const allowed: Permission[] = [];
@@ -362,4 +214,38 @@ export const getAllowedPermissions = (
   }
 
   return allowed;
+};
+
+/**
+ * Check if user has any of the specified permissions.
+ */
+export const hasAnyPermission = (
+  permissions: Permission[],
+  isOwner: boolean,
+  customRoles?: CustomServerRole[],
+  rolePermissions?: RolePermission[],
+  channelPermissions?: ChannelPermission[],
+  channelId?: string,
+  userId?: string,
+): boolean => {
+  return permissions.some((p) =>
+    evaluatePermission(p, isOwner, customRoles, rolePermissions, channelPermissions, channelId, userId),
+  );
+};
+
+/**
+ * Check if user has all of the specified permissions.
+ */
+export const hasAllPermissions = (
+  permissions: Permission[],
+  isOwner: boolean,
+  customRoles?: CustomServerRole[],
+  rolePermissions?: RolePermission[],
+  channelPermissions?: ChannelPermission[],
+  channelId?: string,
+  userId?: string,
+): boolean => {
+  return permissions.every((p) =>
+    evaluatePermission(p, isOwner, customRoles, rolePermissions, channelPermissions, channelId, userId),
+  );
 };

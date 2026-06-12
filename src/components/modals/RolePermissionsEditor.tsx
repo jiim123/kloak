@@ -1,9 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Check, Loader2, Minus, Save, Search, ShieldAlert, X } from 'lucide-react';
+import { Loader2, Save, ShieldAlert, X } from 'lucide-react';
 import { useServerStore } from '@/stores/serverStore';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
@@ -30,30 +28,6 @@ interface RolePermissionsEditorProps {
 
 const allRolePermissions = PERMISSION_GROUPS.flatMap((group) => group.permissions);
 
-const permissionValueOptions = [
-  {
-    value: false,
-    label: 'Deny',
-    Icon: X,
-    activeClass: 'bg-destructive text-destructive-foreground border-destructive shadow-sm',
-    inactiveClass: 'text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30',
-  },
-  {
-    value: null,
-    label: 'Inherit',
-    Icon: Minus,
-    activeClass: 'bg-background text-foreground border-border shadow-sm',
-    inactiveClass: 'text-muted-foreground hover:bg-muted hover:text-foreground',
-  },
-  {
-    value: true,
-    label: 'Allow',
-    Icon: Check,
-    activeClass: 'bg-emerald-500 text-white border-emerald-500 shadow-sm',
-    inactiveClass: 'text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-500 hover:border-emerald-500/30',
-  },
-] as const;
-
 export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissionsEditorProps) => {
   const { user } = useAuthStore();
   const {
@@ -63,18 +37,17 @@ export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissio
     deleteRolePermission,
   } = useServerStore();
 
-  const [permissionStates, setPermissionStates] = useState<Map<Permission, boolean | null>>(new Map());
+  const [permissionStates, setPermissionStates] = useState<Set<Permission>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [confirmAction, setConfirmAction] = useState<{ type: 'deny' | 'allow'; permissions: Permission[] } | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ type: 'allow'; permissions: Permission[] } | null>(null);
 
   const roleName = role.name;
 
   useEffect(() => {
     const loadPermissions = async () => {
       if (!user) return;
-
       setIsLoading(true);
       try {
         await fetchRolePermissions(serverId);
@@ -90,39 +63,30 @@ export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissio
   }, [serverId, user, fetchRolePermissions]);
 
   useEffect(() => {
-    // Initialize permission states - start with all permissions as unchecked (null)
-    const states = new Map<Permission, boolean | null>();
-
-    // Initialize all permissions as null (not set)
-    for (const perm of allRolePermissions) {
-      states.set(perm, null);
-    }
-
-    // Apply database permissions (override null with actual values)
+    // Initialize permission states from database
+    const states = new Set<Permission>();
     const relevantPermissions = rolePermissions.filter(
       (rp) => rp.role_id === role.id
     );
 
     for (const rp of relevantPermissions) {
-      states.set(rp.permission, rp.allowed);
+      states.add(rp.permission);
     }
 
     setPermissionStates(states);
   }, [rolePermissions, role]);
 
   const permissionCounts = useMemo(() => {
-    let allowed = 0;
-    let denied = 0;
+    let granted = 0;
     let inherited = 0;
 
     for (const permission of allRolePermissions) {
-      const state = permissionStates.get(permission) ?? null;
-      if (state === true) allowed += 1;
-      else if (state === false) denied += 1;
+      const state = permissionStates.has(permission);
+      if (state) granted += 1;
       else inherited += 1;
     }
 
-    return { allowed, denied, inherited, total: allRolePermissions.length };
+    return { granted, inherited, total: allRolePermissions.length };
   }, [permissionStates]);
 
   const filteredGroups = useMemo(() => {
@@ -143,47 +107,38 @@ export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissio
     })).filter((group) => group.permissions.length > 0);
   }, [searchQuery]);
 
-  const handlePermissionChange = (permission: Permission, value: boolean | null) => {
+  const handlePermissionChange = (permission: Permission, value: boolean) => {
     setPermissionStates((prev) => {
-      const next = new Map(prev);
-      next.set(permission, value);
-      return next;
-    });
-  };
-
-  const handleBulkSet = (permissions: Permission[], value: boolean | null) => {
-    setPermissionStates((prev) => {
-      const next = new Map(prev);
-      for (const perm of permissions) {
-        next.set(perm, value);
+      const next = new Set(prev);
+      if (value) {
+        next.add(permission);
+      } else {
+        next.delete(permission);
       }
       return next;
     });
   };
 
-  const handleGlobalBulkSet = (value: boolean | null) => {
-    if (value !== null) {
-      setConfirmAction({ type: value ? 'allow' : 'deny', permissions: allRolePermissions });
-    } else {
-      handleBulkSet(allRolePermissions, null);
-    }
+  const handleBulkSet = (permissions: Permission[], value: boolean) => {
+    setPermissionStates((prev) => {
+      const next = new Set(prev);
+      for (const perm of permissions) {
+        if (value) {
+          next.add(perm);
+        } else {
+          next.delete(perm);
+        }
+      }
+      return next;
+    });
   };
 
-  const getGroupCounts = (permissions: Permission[]) => {
-    let allowed = 0;
-    let denied = 0;
-
-    for (const permission of permissions) {
-      const state = permissionStates.get(permission) ?? null;
-      if (state === true) allowed += 1;
-      if (state === false) denied += 1;
+  const handleGlobalBulkSet = (value: boolean) => {
+    if (value) {
+      setConfirmAction({ type: 'allow', permissions: allRolePermissions });
+    } else {
+      setPermissionStates(new Set());
     }
-
-    return {
-      allowed,
-      denied,
-      inherited: permissions.length - allowed - denied,
-    };
   };
 
   const handleSave = async () => {
@@ -191,48 +146,35 @@ export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissio
 
     setIsSaving(true);
     try {
-      // Get current database permissions
       const currentDbPermissions = rolePermissions.filter(
         (rp) => rp.role_id === role.id
       );
 
-      const currentDbPermMap = new Map(
-        currentDbPermissions.map((rp) => [rp.permission, rp])
-      );
+      const currentDbPermSet = new Set(currentDbPermissions.map((rp) => rp.permission));
 
       const savePromises: Promise<void>[] = [];
 
       // Process all permissions
-      // If true -> allowed=true
-      // If false -> allowed=false (Explicit Deny)
-      // If null -> delete (Inherit/Neutral)
-      for (const [permission, state] of permissionStates.entries()) {
-        const currentDb = currentDbPermMap.get(permission);
+      // If granted (in set) -> add permission
+      // If not granted (not in set) -> remove permission if exists
+      for (const permission of allRolePermissions) {
+        const isGranted = permissionStates.has(permission);
+        const existsInDb = currentDbPermSet.has(permission);
 
-        if (state !== null) {
-          // Explicitly set (true or false)
-          if (currentDb) {
-            // Update if different
-            if (currentDb.allowed !== state) {
-              savePromises.push(
-                setRolePermission(serverId, user.id, permission, role.id, undefined, state)
-              );
-            }
-          } else {
-            // Create new permission
-            savePromises.push(
-              setRolePermission(serverId, user.id, permission, role.id, undefined, state)
-            );
+        if (isGranted) {
+          if (!existsInDb) {
+            savePromises.push(setRolePermission(serverId, user.id, permission, role.id));
           }
-        } else if (currentDb) {
-          // Permission is null but exists in DB - delete it (inherit)
-          savePromises.push(deleteRolePermission(currentDb.id, user.id));
+        } else if (existsInDb) {
+          const dbPerm = currentDbPermissions.find((rp) => rp.permission === permission);
+          if (dbPerm) {
+            savePromises.push(deleteRolePermission(dbPerm.id, user.id));
+          }
         }
       }
 
       await Promise.all(savePromises);
 
-      // Refresh permissions to ensure they're up to date
       await fetchRolePermissions(serverId);
 
       toast.success('Permissions saved successfully');
@@ -274,19 +216,25 @@ export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissio
             return (
               <section key={group.label} className="space-y-3">
                 <div>
-                  <Label className="text-sm font-semibold text-foreground">{group.label} permissions</Label>
+                  <h4 className="text-xs font-medium uppercase tracking-widest text-muted-foreground/70">{group.label} permissions</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">{group.description}</p>
                 </div>
 
-                <div className="divide-y divide-border/50">
+                <BulkPermissionButtons
+                  onSet={(value) => handleBulkSet(group.permissions, value)}
+                  className="mb-2"
+                />
+
+                <div className="space-y-0.5">
                   {group.permissions.map((permission) => {
-                    const state = permissionStates.get(permission) ?? null;
+                    const state = permissionStates.has(permission);
                     const meta = PERMISSION_META[permission];
 
                     return (
                       <div key={permission} className="grid gap-3 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <Label className="text-sm font-medium">{meta.label}</Label>
+                            <span className="text-sm font-medium">{meta.label}</span>
                             {!meta.enabled && (
                               <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/25 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-500">
                                 <ShieldAlert className="h-3 w-3" />
@@ -297,23 +245,33 @@ export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissio
                           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{meta.description}</p>
                         </div>
 
-                        <div className="grid w-[108px] grid-cols-3 overflow-hidden rounded-[3px] border border-border/70 bg-muted/30">
-                          {permissionValueOptions.map(({ value, label, Icon, activeClass, inactiveClass }) => (
-                            <button
-                              key={label}
-                              type="button"
-                              onClick={() => handlePermissionChange(permission, value)}
-                              className={cn(
-                                'inline-flex h-7 items-center justify-center border-0 text-xs font-medium transition-colors',
-                                state === value ? activeClass : inactiveClass,
-                              )}
-                              aria-pressed={state === value}
-                              aria-label={`${label} ${meta.label}`}
-                              title={label}
-                            >
-                              <Icon className="h-3.5 w-3.5" />
-                            </button>
-                          ))}
+                        <div className="flex bg-secondary/80 rounded-lg p-0.5 border border-border/50 flex-shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handlePermissionChange(permission, false)}
+                            disabled={!meta.enabled}
+                            className={cn(
+                              "px-2.5 py-1 text-[10px] font-medium rounded-md transition-all",
+                              !state
+                                ? "bg-background text-foreground shadow-sm border border-border"
+                                : "text-muted-foreground hover:text-foreground"
+                            )}
+                          >
+                            —
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handlePermissionChange(permission, true)}
+                            disabled={!meta.enabled}
+                            className={cn(
+                              "px-2.5 py-1 text-[10px] font-medium rounded-md transition-all",
+                              state
+                                ? "bg-emerald-600 text-white shadow-sm"
+                                : "text-muted-foreground hover:text-foreground"
+                            )}
+                          >
+                            ✓
+                          </button>
                         </div>
                       </div>
                     );
@@ -344,15 +302,13 @@ export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissio
         </Button>
       </div>
 
-      {/* Confirmation dialog for global Deny/Allow All */}
+      {/* Confirmation dialog for global Allow All */}
       <AlertDialog open={!!confirmAction} onOpenChange={(open) => !open && setConfirmAction(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {confirmAction?.type === 'deny' ? 'Deny All Permissions?' : 'Allow All Permissions?'}
-            </AlertDialogTitle>
+            <AlertDialogTitle>Allow All Permissions?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to set ALL permissions to {confirmAction?.type === 'deny' ? 'Deny' : 'Allow'}? This will override any individual settings.
+              Are you sure you want to grant ALL permissions? This will override any individual settings.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -360,11 +316,10 @@ export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissio
             <AlertDialogAction
               onClick={() => {
                 if (confirmAction) {
-                  handleBulkSet(confirmAction.permissions, confirmAction.type === 'allow');
+                  handleBulkSet(confirmAction.permissions, true);
                 }
                 setConfirmAction(null);
               }}
-              className={confirmAction?.type === 'deny' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
             >
               Confirm
             </AlertDialogAction>
