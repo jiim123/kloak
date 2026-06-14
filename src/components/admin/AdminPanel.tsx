@@ -363,7 +363,7 @@ export const AdminPanel = () => {
           <ShieldAlert className="mx-auto mb-4 h-9 w-9 text-muted-foreground" />
           <h1 className="text-xl font-semibold text-foreground">Admin access required</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Add your username or user ID to the temporary platform admin allowlist to view this panel.
+            NO ACCESS
           </p>
         </div>
       </div>
