@@ -26,6 +26,7 @@ import { ServerMembersPage } from "@/components/members/ServerMembersPage";
 
 import { UserSettingsPage } from "@/components/modals/UserSettingsModal";
 import { PunishmentNoticeModal } from "@/components/modals/PunishmentNoticeModal";
+import { ReportSystemAnnouncementModal } from "@/components/modals/ReportSystemAnnouncementModal";
 
 // Always-mounted modals (have internal form state — lazy for code splitting only)
 const ServerSettingsModal = lazy(() => import("@/components/modals/ServerSettingsModal").then(m => ({ default: m.ServerSettingsModal })));
@@ -1008,6 +1009,7 @@ const AppLayout = () => {
 
         {/* Always-mounted modals (preserve internal form state, lazy for code splitting) */}
         <PunishmentNoticeModal />
+        <ReportSystemAnnouncementModal />
         <Suspense fallback={null}><ServerSettingsModal /></Suspense>
         <Suspense fallback={null}><UserSettingsModal /></Suspense>
 
