@@ -76,6 +76,7 @@ if (keyRole === "service_role") {
 }
 
 let currentKeyHash: string | null = null;
+let currentMfaSession: string | null = null;
 let inflightKeyHash: Promise<string | null> | null = null;
 
 function tryGetPersistedKeyHash(): string | null {
@@ -135,6 +136,10 @@ currentKeyHash = tryGetPersistedKeyHash();
 export function setKeyHashHeader(keyHash: string | null) {
   currentKeyHash = keyHash;
   inflightKeyHash = null;
+}
+
+export function setMfaSessionHeader(sessionToken: string | null) {
+  currentMfaSession = sessionToken;
 }
 
 export function getKeyHash(): string | null {
@@ -338,6 +343,15 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
         init.headers = {
           ...existingHeaders,
           "x-key-hash": keyHash,
+        };
+      }
+      if (currentMfaSession) {
+        init = init || {};
+        const existingHeaders =
+          init.headers instanceof Headers ? Object.fromEntries(init.headers.entries()) : init.headers || {};
+        init.headers = {
+          ...existingHeaders,
+          "x-mfa-session": currentMfaSession,
         };
       }
       return trackedFetch(input, init);

@@ -10,6 +10,7 @@ const DB_VERSION = 1;
 const STORE_NAME = "keys";
 const DEVICE_KEY_ID = "device-key";
 const ENCRYPTED_KEYHASH_ID = "encrypted-keyhash";
+const ENCRYPTED_MFA_SESSION_ID = "encrypted-mfa-session";
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -70,24 +71,24 @@ async function getOrCreateDeviceKey(): Promise<CryptoKey> {
   return key;
 }
 
-export async function encryptAndStoreKeyHash(keyHash: string): Promise<void> {
+async function encryptAndStoreValue(storageId: string, value: string): Promise<void> {
   const deviceKey = await getOrCreateDeviceKey();
   const encoder = new TextEncoder();
   const iv = crypto.getRandomValues(new Uint8Array(12));
 
-  const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, deviceKey, encoder.encode(keyHash));
+  const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, deviceKey, encoder.encode(value));
 
   const db = await openDB();
-  await idbPut(db, ENCRYPTED_KEYHASH_ID, {
+  await idbPut(db, storageId, {
     iv: Array.from(iv),
     data: Array.from(new Uint8Array(encrypted)),
   });
 }
 
-export async function decryptKeyHash(): Promise<string | null> {
+async function decryptStoredValue(storageId: string): Promise<string | null> {
   try {
     const db = await openDB();
-    const stored = await idbGet<{ iv: number[]; data: number[] }>(db, ENCRYPTED_KEYHASH_ID);
+    const stored = await idbGet<{ iv: number[]; data: number[] }>(db, storageId);
     if (!stored) return null;
 
     const deviceKey = await idbGet<CryptoKey>(db, DEVICE_KEY_ID);
@@ -105,10 +106,36 @@ export async function decryptKeyHash(): Promise<string | null> {
   }
 }
 
+export async function encryptAndStoreKeyHash(keyHash: string): Promise<void> {
+  await encryptAndStoreValue(ENCRYPTED_KEYHASH_ID, keyHash);
+}
+
+export async function decryptKeyHash(): Promise<string | null> {
+  return decryptStoredValue(ENCRYPTED_KEYHASH_ID);
+}
+
+export async function encryptAndStoreMfaSession(sessionToken: string): Promise<void> {
+  await encryptAndStoreValue(ENCRYPTED_MFA_SESSION_ID, sessionToken);
+}
+
+export async function decryptMfaSession(): Promise<string | null> {
+  return decryptStoredValue(ENCRYPTED_MFA_SESSION_ID);
+}
+
+export async function clearMfaSession(): Promise<void> {
+  try {
+    const db = await openDB();
+    await idbDelete(db, ENCRYPTED_MFA_SESSION_ID);
+  } catch {
+    // ignore cleanup errors
+  }
+}
+
 export async function clearDeviceCredentials(): Promise<void> {
   try {
     const db = await openDB();
     await idbDelete(db, ENCRYPTED_KEYHASH_ID);
+    await idbDelete(db, ENCRYPTED_MFA_SESSION_ID);
     // Keep the device key itself so re-login reuses it
   } catch {
     // ignore cleanup errors
@@ -119,6 +146,7 @@ export async function clearAllDeviceData(): Promise<void> {
   try {
     const db = await openDB();
     await idbDelete(db, ENCRYPTED_KEYHASH_ID);
+    await idbDelete(db, ENCRYPTED_MFA_SESSION_ID);
     await idbDelete(db, DEVICE_KEY_ID);
   } catch {
     // ignore cleanup errors

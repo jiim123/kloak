@@ -1,9 +1,16 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { supabase, setKeyHashHeader } from "@/integrations/supabase/client";
+import { supabase, setKeyHashHeader, setMfaSessionHeader } from "@/integrations/supabase/client";
 import { generateSecretKey, hashSecretKey, isValidSecretKey } from "@/lib/crypto";
 import { authRateLimiter, accountCreationRateLimiter, validateUsername } from "@/lib/security";
-import { encryptAndStoreKeyHash, decryptKeyHash, clearDeviceCredentials } from "@/lib/deviceKey";
+import {
+  encryptAndStoreKeyHash,
+  decryptKeyHash,
+  clearDeviceCredentials,
+  encryptAndStoreMfaSession,
+  decryptMfaSession,
+  clearMfaSession,
+} from "@/lib/deviceKey";
 import { useUserCacheStore } from "@/stores/userCacheStore";
 import type { User, UserStatus } from "@/types";
 let lastSeenTimestamp = 0;
@@ -60,6 +67,7 @@ interface AuthState {
   error: string | null;
   isNewUser: boolean;
   pendingMfaKeyHash: string | null;
+  mfaSessionToken: string | null;
   /**
    * Manual status chosen by the user (e.g. Invisible / DND).
    * Persisted to survive restarts and avoid treating stale DB "offline" as intentional Invisible.
@@ -72,6 +80,7 @@ interface AuthState {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   setIsNewUser: (isNew: boolean) => void;
+  setMfaSessionToken: (sessionToken: string | null) => Promise<void>;
 
   // Auth methods
   checkAuth: () => Promise<boolean>;
@@ -120,6 +129,7 @@ export const useAuthStore = create<AuthState>()(
       error: null,
       isNewUser: false,
       pendingMfaKeyHash: null,
+      mfaSessionToken: null,
       manualStatus: null,
 
       setUser: (user) => set({ user, isAuthenticated: !!user }),
@@ -127,17 +137,28 @@ export const useAuthStore = create<AuthState>()(
       setLoading: (loading) => set({ isLoading: loading }),
       setError: (error) => set({ error }),
       setIsNewUser: (isNew) => set({ isNewUser: isNew }),
+      setMfaSessionToken: async (sessionToken) => {
+        setMfaSessionHeader(sessionToken);
+        if (sessionToken) {
+          await encryptAndStoreMfaSession(sessionToken);
+        } else {
+          await clearMfaSession();
+        }
+        set({ mfaSessionToken: sessionToken });
+      },
 
       checkAuth: async () => {
-        const { keyHash } = get();
+        const { keyHash, mfaSessionToken } = get();
         if (!keyHash) {
-          set({ isAuthenticated: false, user: null, keyHash: null });
+          set({ isAuthenticated: false, user: null, keyHash: null, mfaSessionToken: null });
           setKeyHashHeader(null);
+          setMfaSessionHeader(null);
           return false;
         }
 
         // Use persisted keyHash directly — no need for raw secretKey
         setKeyHashHeader(keyHash);
+        setMfaSessionHeader(mfaSessionToken);
         set({ isLoading: true });
 
         try {
@@ -147,15 +168,17 @@ export const useAuthStore = create<AuthState>()(
 
           if (error || !data) {
             setKeyHashHeader(null);
-            set({ isAuthenticated: false, user: null, keyHash: null, isLoading: false });
+            setMfaSessionHeader(null);
+            set({ isAuthenticated: false, user: null, keyHash: null, mfaSessionToken: null, isLoading: false });
             return false;
           }
 
           const userData = data as Record<string, unknown>;
           if (userData.mfa_required === true) {
             setKeyHashHeader(null);
+            setMfaSessionHeader(null);
             await clearDeviceCredentials();
-            set({ isAuthenticated: false, user: null, keyHash: null, isLoading: false });
+            set({ isAuthenticated: false, user: null, keyHash: null, mfaSessionToken: null, isLoading: false });
             return false;
           }
 
@@ -167,7 +190,8 @@ export const useAuthStore = create<AuthState>()(
         } catch (error) {
           console.error("checkAuth error:", error);
           setKeyHashHeader(null);
-          set({ isAuthenticated: false, user: null, keyHash: null, isLoading: false });
+          setMfaSessionHeader(null);
+          set({ isAuthenticated: false, user: null, keyHash: null, mfaSessionToken: null, isLoading: false });
           return false;
         }
       },
@@ -273,11 +297,14 @@ export const useAuthStore = create<AuthState>()(
           // New account starts with no manual status override.
           const newKeyHash = await hashSecretKey(secretKey);
           setKeyHashHeader(newKeyHash);
+          setMfaSessionHeader(null);
           await encryptAndStoreKeyHash(newKeyHash);
+          await clearMfaSession();
           set({
             user,
             secretKey,
             keyHash: newKeyHash,
+            mfaSessionToken: null,
             isAuthenticated: true,
             isLoading: false,
             isNewUser: true,
@@ -327,12 +354,21 @@ export const useAuthStore = create<AuthState>()(
                   ? "Login service is temporarily unavailable."
                   : "Failed to login. Please try again.";
             setKeyHashHeader(null);
-            set({ error: normalizedMessage, isLoading: false, isAuthenticated: false, keyHash: null, pendingMfaKeyHash: null });
+            setMfaSessionHeader(null);
+            set({
+              error: normalizedMessage,
+              isLoading: false,
+              isAuthenticated: false,
+              keyHash: null,
+              mfaSessionToken: null,
+              pendingMfaKeyHash: null,
+            });
             return false;
           }
           if (!data) {
             setKeyHashHeader(null);
-            set({ error: "Invalid secret key", isLoading: false, isAuthenticated: false, keyHash: null });
+            setMfaSessionHeader(null);
+            set({ error: "Invalid secret key", isLoading: false, isAuthenticated: false, keyHash: null, mfaSessionToken: null });
             return false;
           }
 
@@ -343,10 +379,17 @@ export const useAuthStore = create<AuthState>()(
           }
 
           const user = mapAuthUser(userData);
+          const mfaSessionToken = typeof userData.mfa_session_token === "string" ? userData.mfa_session_token : null;
 
           setKeyHashHeader(keyHash);
+          setMfaSessionHeader(mfaSessionToken);
           await encryptAndStoreKeyHash(keyHash);
-          set({ user, keyHash, isAuthenticated: true, isLoading: false, manualStatus: null, pendingMfaKeyHash: null });
+          if (mfaSessionToken) {
+            await encryptAndStoreMfaSession(mfaSessionToken);
+          } else {
+            await clearMfaSession();
+          }
+          set({ user, keyHash, mfaSessionToken, isAuthenticated: true, isLoading: false, manualStatus: null, pendingMfaKeyHash: null });
           // Seed user cache to avoid redundant get_user_by_id calls (realtime / DMs).
           useUserCacheStore.getState().upsertUser(user);
 
@@ -392,11 +435,20 @@ export const useAuthStore = create<AuthState>()(
           }
 
           const user = mapAuthUser(userData);
+          const mfaSessionToken =
+            typeof userData.mfa_session_token === "string" ? userData.mfa_session_token : null;
           setKeyHashHeader(pendingMfaKeyHash);
+          setMfaSessionHeader(mfaSessionToken);
           await encryptAndStoreKeyHash(pendingMfaKeyHash);
+          if (mfaSessionToken) {
+            await encryptAndStoreMfaSession(mfaSessionToken);
+          } else {
+            await clearMfaSession();
+          }
           set({
             user,
             keyHash: pendingMfaKeyHash,
+            mfaSessionToken,
             pendingMfaKeyHash: null,
             isAuthenticated: true,
             isLoading: false,
@@ -423,8 +475,9 @@ export const useAuthStore = create<AuthState>()(
           useUserCacheStore.getState().invalidate(user.id);
         }
         setKeyHashHeader(null);
+        setMfaSessionHeader(null);
         clearDeviceCredentials();
-        set({ user: null, secretKey: null, keyHash: null, pendingMfaKeyHash: null, isAuthenticated: false, error: null });
+        set({ user: null, secretKey: null, keyHash: null, mfaSessionToken: null, pendingMfaKeyHash: null, isAuthenticated: false, error: null });
       },
 
       updateUser: async (updates) => {
@@ -714,10 +767,12 @@ export const initializeAuth = async () => {
 
   // Decrypt keyHash from IndexedDB into memory
   const decryptedKeyHash = await decryptKeyHash();
+  const decryptedMfaSession = await decryptMfaSession();
 
   if (decryptedKeyHash) {
     setKeyHashHeader(decryptedKeyHash);
-    useAuthStore.setState({ keyHash: decryptedKeyHash });
+    setMfaSessionHeader(decryptedMfaSession);
+    useAuthStore.setState({ keyHash: decryptedKeyHash, mfaSessionToken: decryptedMfaSession });
   }
 
   const { checkAuth, isAuthenticated, isLoading, keyHash } = useAuthStore.getState();

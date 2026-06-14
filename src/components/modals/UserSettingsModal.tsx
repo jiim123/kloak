@@ -135,7 +135,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     setDmPrivacy,
   } = useUIStore();
   const { playTestSound } = useNotificationSound();
-  const { user, secretKey, updateUser, logout, resetSecretKey, setSecretKey } = useAuthStore();
+  const { user, secretKey, updateUser, logout, resetSecretKey, setSecretKey, setMfaSessionToken } = useAuthStore();
   const { blockedUsers, unblockUser, fetchFriends, isLoading: isFriendsLoading } = useFriendStore();
   const checkBlockLimit = useRateLimit(10, 60_000);
 
@@ -551,6 +551,8 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           toast.error("Invalid 2FA code");
         } else if (result.error === "mfa_required") {
           toast.error("2FA must be enabled before resetting your login key");
+        } else if (result.error === "rate_limited") {
+          toast.error("Too many 2FA attempts. Try again in a few minutes.");
         } else {
           toast.error("Failed to reset login key");
         }
@@ -629,7 +631,11 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     try {
       const { data, error } = await supabase.rpc("begin_totp_enrollment", { _user_id: user.id } as never);
       if (error) throw error;
-      const payload = data as { secret?: string; otpauth_uri?: string } | null;
+      const payload = data as { secret?: string; otpauth_uri?: string; error?: string } | null;
+      if (payload?.error === "rate_limited") {
+        toast.error("Too many 2FA setup attempts. Try again later.");
+        return;
+      }
       if (!payload?.secret || !payload?.otpauth_uri) {
         throw new Error("Missing TOTP enrollment payload");
       }
@@ -653,12 +659,21 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         _code: mfaCode,
       } as never);
       if (error) throw error;
-      const result = data as { success?: boolean; error?: string } | null;
+      const result = data as { success?: boolean; error?: string; mfa_session_token?: string } | null;
       if (!result?.success) {
-        toast.error(result?.error === "invalid_code" ? "Invalid 2FA code" : "Failed to enable 2FA");
+        toast.error(
+          result?.error === "invalid_code"
+            ? "Invalid 2FA code"
+            : result?.error === "rate_limited"
+              ? "Too many 2FA attempts. Try again in a few minutes."
+              : "Failed to enable 2FA"
+        );
         return;
       }
 
+      if (result.mfa_session_token) {
+        await setMfaSessionToken(result.mfa_session_token);
+      }
       setMfaEnabled(true);
       setMfaEnabledAt(new Date().toISOString());
       setMfaSecret(null);
@@ -684,13 +699,20 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       if (error) throw error;
       const result = data as { success?: boolean; error?: string } | null;
       if (!result?.success) {
-        toast.error(result?.error === "invalid_code" ? "Invalid 2FA code" : "Failed to disable 2FA");
+        toast.error(
+          result?.error === "invalid_code"
+            ? "Invalid 2FA code"
+            : result?.error === "rate_limited"
+              ? "Too many 2FA attempts. Try again in a few minutes."
+              : "Failed to disable 2FA"
+        );
         return;
       }
 
       setMfaEnabled(false);
       setMfaEnabledAt(null);
       setDisableMfaCode("");
+      await setMfaSessionToken(null);
       toast.success("Two-factor authentication disabled");
     } catch (error) {
       console.error("Failed to disable 2FA:", error);
@@ -1846,8 +1868,8 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">Current 2FA code</Label>
+                  <div className="space-y-2 flex flex-col items-center">
+                    <Label className="text-xs text-muted-foreground text-center">Current 2FA code</Label>
                     <InputOTP
                       maxLength={6}
                       value={resetKeyMfaCode}
