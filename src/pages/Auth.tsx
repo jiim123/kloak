@@ -21,6 +21,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -66,7 +67,7 @@ type AuthProps = {
 const Auth = ({ formOnly = false }: AuthProps) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, isLoading, error, createAccount, login, setError, setLoading } = useAuthStore();
+  const { user, isLoading, error, createAccount, login, verifyLoginMfa, setError } = useAuthStore();
   
 
   const redirectParam = useMemo(() => new URLSearchParams(location.search).get("redirect"), [location.search]);
@@ -101,6 +102,8 @@ const Auth = ({ formOnly = false }: AuthProps) => {
   // Login state
   const [secretKey, setSecretKey] = useState("");
   const [showSecretKey, setShowSecretKey] = useState(false);
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [mfaCode, setMfaCode] = useState("");
 
   // Check for saved session on mount
   useEffect(() => {
@@ -156,6 +159,8 @@ const Auth = ({ formOnly = false }: AuthProps) => {
     setUsernameErrorType(null);
     setUsername("");
     setSecretKey("");
+    setMfaRequired(false);
+    setMfaCode("");
     setGeneratedKey(null);
     setUsernameSuggestions([]);
     setIsUsernameAvailable(false);
@@ -335,6 +340,12 @@ const Auth = ({ formOnly = false }: AuthProps) => {
     }
 
     const success = await login(trimmedKey);
+    if (success === "mfa_required") {
+      setMfaRequired(true);
+      setMfaCode("");
+      return;
+    }
+
     if (success) {
       toast.success("Welcome back!", {
         description: "Successfully logged in.",
@@ -346,6 +357,66 @@ const Auth = ({ formOnly = false }: AuthProps) => {
       navigate(redirectTo || "/app", { replace: true });
     }
   };
+
+  const handleMfaLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (MAINTENANCE_MODE) return;
+
+    const success = await verifyLoginMfa(mfaCode);
+    if (success) {
+      toast.success("Welcome back!", {
+        description: "Successfully verified 2FA.",
+      });
+
+      await resizeWindowForApp();
+      navigate(redirectTo || "/app", { replace: true });
+    }
+  };
+
+  const renderMfaLoginForm = () => (
+    <form onSubmit={handleMfaLogin} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="mfaCode" className="block text-center">
+          Two-factor code
+        </Label>
+        <InputOTP
+          id="mfaCode"
+          maxLength={6}
+          value={mfaCode}
+          onChange={setMfaCode}
+          disabled={MAINTENANCE_MODE || isLoading}
+          containerClassName="justify-center"
+        >
+          <InputOTPGroup className="gap-1">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <InputOTPSlot key={index} index={index} className="rounded-md border" />
+            ))}
+          </InputOTPGroup>
+        </InputOTP>
+        <p className="text-center text-xs text-muted-foreground">Enter the 6-digit code from your authenticator app.</p>
+      </div>
+
+      <Button type="submit" className="w-full" disabled={MAINTENANCE_MODE || isLoading || mfaCode.length !== 6}>
+        {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+        Verify and Login
+      </Button>
+
+      <Button
+        type="button"
+        variant="ghost"
+        className="w-full"
+        onClick={() => {
+          setMfaRequired(false);
+          setMfaCode("");
+          setError(null);
+        }}
+        disabled={isLoading}
+      >
+        Use a different secret key
+      </Button>
+    </form>
+  );
 
   // Handle key paste - auto-trim whitespace
   const handleKeyPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
@@ -649,6 +720,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
                         exit="exit"
                         transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
                       >
+                        {mfaRequired ? renderMfaLoginForm() : (
                         <form onSubmit={handleLogin} className="space-y-4">
                           <div className="space-y-2">
                             <Label htmlFor="secretKey">Secret Key</Label>
@@ -685,9 +757,10 @@ const Auth = ({ formOnly = false }: AuthProps) => {
                           </Button>
 
                           <p className="text-xs text-muted-foreground">
-                            Forgot your key? Unfortunately, keys cannot be recovered.
+                            Keep your secret key saved.
                           </p>
                         </form>
+                        )}
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -901,6 +974,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
                       exit="exit"
                       transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
                     >
+                      {mfaRequired ? renderMfaLoginForm() : (
                       <form onSubmit={handleLogin} className="space-y-4">
                         <div className="space-y-2">
                           <Label htmlFor="secretKey">Secret Key</Label>
@@ -933,9 +1007,10 @@ const Auth = ({ formOnly = false }: AuthProps) => {
                         </Button>
 
                         <p className="text-xs text-muted-foreground">
-                          Forgot your key? Unfortunately, keys cannot be recovered.
+                          Keep your secret key saved.
                         </p>
                       </form>
+                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>

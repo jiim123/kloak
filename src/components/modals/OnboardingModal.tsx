@@ -117,8 +117,8 @@ export const OnboardingModal = ({
                       secret key that only you control.
                     </p>
                     <ul className="space-y-1.5 list-disc list-inside">
-                      <li>Your secret key is your sole responsibility</li>
-                      <li>We cannot recover lost keys or accounts</li>
+                      <li>Keep your secret key saved and private</li>
+                      <li>Kloak stores only a one-way hash of your key</li>
                       <li>Use the platform responsibly</li>
                     </ul>
                   </div>
@@ -179,7 +179,7 @@ export const OnboardingModal = ({
                     Your Secret Key
                   </DialogTitle>
                   <DialogDescription className="text-sm text-muted-foreground">
-                    This is the only way to access your account. Save it now.
+                    This is your login key. Save it now.
                   </DialogDescription>
                 </DialogHeader>
 
@@ -221,9 +221,9 @@ export const OnboardingModal = ({
                       <li>Never share it with anyone</li>
                     </ul>
                     <p className="pt-1.5 text-xs">
-                      This is the only time your key will be displayed.{" "}
+                      This key will not be shown again after setup.{" "}
                       <span className="text-foreground font-medium">
-                        Save it now — it cannot be recovered later.
+                        Save it somewhere secure now.
                       </span>
                     </p>
                   </div>

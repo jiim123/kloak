@@ -59,6 +59,7 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   isNewUser: boolean;
+  pendingMfaKeyHash: string | null;
   /**
    * Manual status chosen by the user (e.g. Invisible / DND).
    * Persisted to survive restarts and avoid treating stale DB "offline" as intentional Invisible.
@@ -75,12 +76,13 @@ interface AuthState {
   // Auth methods
   checkAuth: () => Promise<boolean>;
   createAccount: (username: string, hcaptchaResponse: string) => Promise<{ secretKey: string; user: User } | null>;
-  login: (secretKey: string) => Promise<boolean>;
+  login: (secretKey: string) => Promise<boolean | "mfa_required">;
+  verifyLoginMfa: (code: string) => Promise<boolean>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => Promise<void>;
   updateStatus: (status: UserStatus, options?: { source?: "manual" | "auto" }) => Promise<void>;
   updateLastSeen: () => Promise<void>;
-  resetSecretKey: () => Promise<
+  resetSecretKey: (totpCode?: string) => Promise<
     { newSecretKey: string } | { error: string; cooldownEndsAt?: string; hoursRemaining?: number } | null
   >;
 }
@@ -117,6 +119,7 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       error: null,
       isNewUser: false,
+      pendingMfaKeyHash: null,
       manualStatus: null,
 
       setUser: (user) => set({ user, isAuthenticated: !!user }),
@@ -138,9 +141,9 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true });
 
         try {
-          const { data, error } = await supabase.rpc("login_user", {
+          const { data, error } = await supabase.rpc("restore_user_session", {
             _key_hash: keyHash,
-          });
+          } as never);
 
           if (error || !data) {
             setKeyHashHeader(null);
@@ -149,6 +152,13 @@ export const useAuthStore = create<AuthState>()(
           }
 
           const userData = data as Record<string, unknown>;
+          if (userData.mfa_required === true) {
+            setKeyHashHeader(null);
+            await clearDeviceCredentials();
+            set({ isAuthenticated: false, user: null, keyHash: null, isLoading: false });
+            return false;
+          }
+
           const user = mapAuthUser(userData);
 
           set({ user, isAuthenticated: true, isLoading: false });
@@ -303,15 +313,10 @@ export const useAuthStore = create<AuthState>()(
         try {
           const keyHash = await hashSecretKey(secretKey);
 
-          // Set the key_hash header for identity verification on all subsequent requests
-          setKeyHashHeader(keyHash);
-          await encryptAndStoreKeyHash(keyHash);
-          set({ keyHash });
-
           // Use RPC function to login (bypasses RLS)
           const { data, error } = await supabase.rpc("login_user", {
             _key_hash: keyHash,
-          });
+          } as never);
 
           if (error) {
             const message = error.message || "";
@@ -322,7 +327,7 @@ export const useAuthStore = create<AuthState>()(
                   ? "Login service is temporarily unavailable."
                   : "Failed to login. Please try again.";
             setKeyHashHeader(null);
-            set({ error: normalizedMessage, isLoading: false, isAuthenticated: false, keyHash: null });
+            set({ error: normalizedMessage, isLoading: false, isAuthenticated: false, keyHash: null, pendingMfaKeyHash: null });
             return false;
           }
           if (!data) {
@@ -332,9 +337,16 @@ export const useAuthStore = create<AuthState>()(
           }
 
           const userData = data as Record<string, unknown>;
+          if (userData.mfa_required === true) {
+            set({ isLoading: false, pendingMfaKeyHash: keyHash, error: null });
+            return "mfa_required";
+          }
+
           const user = mapAuthUser(userData);
 
-          set({ user, isAuthenticated: true, isLoading: false, manualStatus: null });
+          setKeyHashHeader(keyHash);
+          await encryptAndStoreKeyHash(keyHash);
+          set({ user, keyHash, isAuthenticated: true, isLoading: false, manualStatus: null, pendingMfaKeyHash: null });
           // Seed user cache to avoid redundant get_user_by_id calls (realtime / DMs).
           useUserCacheStore.getState().upsertUser(user);
 
@@ -342,6 +354,59 @@ export const useAuthStore = create<AuthState>()(
         } catch (error) {
           console.error("Login error:", error);
           set({ error: "Failed to login. Please try again.", isLoading: false });
+          return false;
+        }
+      },
+
+      verifyLoginMfa: async (code: string) => {
+        const { pendingMfaKeyHash } = get();
+        if (!pendingMfaKeyHash) {
+          set({ error: "Start login again to verify your 2FA code.", isLoading: false });
+          return false;
+        }
+
+        const normalizedCode = code.replace(/\D/g, "");
+        if (!/^\d{6}$/.test(normalizedCode)) {
+          set({ error: "Enter the 6-digit code from your authenticator app.", isLoading: false });
+          return false;
+        }
+
+        set({ isLoading: true, error: null });
+
+        try {
+          const { data, error } = await supabase.rpc("login_user_with_totp", {
+            _key_hash: pendingMfaKeyHash,
+            _totp_code: normalizedCode,
+          } as never);
+
+          if (error) {
+            const message = error.message || "Failed to verify 2FA code.";
+            set({ error: message, isLoading: false, isAuthenticated: false });
+            return false;
+          }
+
+          const userData = data as Record<string, unknown> | null;
+          if (!userData || userData.mfa_required === true) {
+            set({ error: "Invalid 2FA code.", isLoading: false, isAuthenticated: false });
+            return false;
+          }
+
+          const user = mapAuthUser(userData);
+          setKeyHashHeader(pendingMfaKeyHash);
+          await encryptAndStoreKeyHash(pendingMfaKeyHash);
+          set({
+            user,
+            keyHash: pendingMfaKeyHash,
+            pendingMfaKeyHash: null,
+            isAuthenticated: true,
+            isLoading: false,
+            manualStatus: null,
+          });
+          useUserCacheStore.getState().upsertUser(user);
+          return true;
+        } catch (error) {
+          console.error("MFA login error:", error);
+          set({ error: "Failed to verify 2FA code. Please try again.", isLoading: false });
           return false;
         }
       },
@@ -359,7 +424,7 @@ export const useAuthStore = create<AuthState>()(
         }
         setKeyHashHeader(null);
         clearDeviceCredentials();
-        set({ user: null, secretKey: null, keyHash: null, isAuthenticated: false, error: null });
+        set({ user: null, secretKey: null, keyHash: null, pendingMfaKeyHash: null, isAuthenticated: false, error: null });
       },
 
       updateUser: async (updates) => {
@@ -579,11 +644,13 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      resetSecretKey: async () => {
+      resetSecretKey: async (totpCode) => {
         const { user } = get();
         if (!user) return null;
 
         try {
+          const normalizedTotpCode = totpCode?.replace(/\D/g, "") ?? "";
+
           // Generate a new secret key
           const newSecretKey = generateSecretKey();
           const newKeyHash = await hashSecretKey(newSecretKey);
@@ -592,7 +659,8 @@ export const useAuthStore = create<AuthState>()(
           const { data, error } = await supabase.rpc("reset_user_secret_key", {
             _user_id: user.id,
             _new_key_hash: newKeyHash,
-          });
+            _totp_code: normalizedTotpCode,
+          } as never);
 
           if (error) throw error;
 
@@ -609,6 +677,10 @@ export const useAuthStore = create<AuthState>()(
               cooldownEndsAt: result.cooldown_ends_at,
               hoursRemaining: result.hours_remaining,
             };
+          }
+
+          if (!result.success && result.error) {
+            return { error: result.error };
           }
 
           // Update local state with the new key (secretKey held in memory temporarily for display)

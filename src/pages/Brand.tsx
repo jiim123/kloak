@@ -448,7 +448,7 @@ const Brand = () => {
                   </div>
                   <ul className="space-y-4">
                     {[
-                      '"Your key is the only way to access your account."',
+                      '"Your key is your private login credential."',
                       '"We don\'t collect email addresses."',
                       '"Privacy is the architecture."',
                     ].map((text, i) => (

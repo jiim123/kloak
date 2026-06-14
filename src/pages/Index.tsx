@@ -233,7 +233,7 @@ const Index = () => {
     "Secret Key Auth": {
       tagline: "One key. No email. No phone. No password.",
       description:
-        "When you sign up, Kloak generates a single secret key on your device. That key is all you need to log in, forever. We never ask for your email, phone number, or any personal information. If you lose your key, nobody can recover it for you, and that is the point.",
+        "When you sign up, Kloak generates a single secret key on your device. That key is what you use to log in. We never ask for your email, phone number, or any personal information, and we store only a one-way hash of your key.",
       controversial:
         "Every other platform ties your account to personal information they can sell, leak, or hand over. Kloak cannot identify you even if someone demanded it. Your key is hashed before it reaches our servers, so we literally do not know who you are.",
     },

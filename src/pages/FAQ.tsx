@@ -50,11 +50,11 @@ const faqCategories = [
       },
       {
         q: "What happens if I lose my secret key?",
-        a: "Your secret key is the only way to access your account. By design, we cannot recover it for you. This ensures true privacy because we don't store any information that could identify you. Save your key in a secure location like a password manager.",
+        a: "Your secret key is your primary way to access your account. Kloak cannot show or provide the raw key because only a one-way hash is stored. Save your key in a secure location like a password manager, and rotate it from account settings if you need a new one.",
       },
       {
         q: "Where can I find my secret key after signing up?",
-        a: "Your secret key is displayed once during account creation. For security, Kloak does not store your key — only a one-way hash is kept. Make sure to save it immediately in a password manager or another secure location. If you lose it, your account cannot be recovered.",
+        a: "Your secret key is displayed once during account creation. For security, Kloak does not store your key — only a one-way hash is kept. Save it immediately in a password manager or another secure location. You can rotate your login key later from account settings when needed.",
       },
       {
         q: "Is my data encrypted?",

@@ -59,8 +59,7 @@ export const WelcomeModal = ({ open, onClose }: WelcomeModalProps) => {
                     <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                       Unlike traditional apps, Kloak uses a{" "}
                       <span className="font-medium text-foreground">secret key</span> instead of email and password.
-                      This key is the <span className="font-medium text-foreground">only way</span> to access your
-                      account — we cannot recover it for you.
+                      This key is what you use to access your account, so keep it saved somewhere secure.
                     </p>
                   </div>
                 </div>
@@ -108,7 +107,7 @@ export const WelcomeModal = ({ open, onClose }: WelcomeModalProps) => {
                         </span>
                       </div>
                       <p className="leading-relaxed">
-                        For security, Kloak does not store your secret key after registration. Save it to a password
+                        For security, Kloak stores only a one-way hash of your secret key. Save the key to a password
                         manager or write it down in a secure place right away.
                       </p>
                     </div>
@@ -146,11 +145,11 @@ export const WelcomeModal = ({ open, onClose }: WelcomeModalProps) => {
                     <ul className="space-y-1">
                       <li className="flex items-start gap-2">
                         <span className="text-muted-foreground/70 mt-0.5">•</span>
-                        <span>Your secret key is your sole responsibility</span>
+                        <span>Keep your secret key saved and private</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-muted-foreground/70 mt-0.5">•</span>
-                        <span>We cannot recover lost keys or accounts</span>
+                        <span>Kloak stores only a one-way hash of your key</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-muted-foreground/70 mt-0.5">•</span>

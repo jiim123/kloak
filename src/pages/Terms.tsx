@@ -40,7 +40,7 @@
      questions: [
        {
          q: "What about your secret key?",
-         a: "Your secret key is the only way to access your account. By design, we cannot recover it for you. This is a feature, not a bug. It ensures true privacy because we don't store any information that could identify you. You are responsible for: keeping your key secure and private, backing up your key in a safe location, and never sharing your key with anyone. If you lose your key, you lose your account. We mean it.",
+         a: "Your secret key is your primary way to access your account. Kloak cannot show or provide the raw key because we store only a one-way hash. You are responsible for keeping your key secure and private, backing it up in a safe location, and never sharing it with anyone. You may rotate your login key from account settings when needed.",
        },
        {
          q: "Can someone else access my account?",
@@ -90,7 +90,7 @@
         },
         {
           q: "What about liability?",
-          a: "Kloak is not a business. There is no registered legal entity, no corporate structure, and no commercial product. It's a passion project run by a small, distributed team of volunteers who believe privacy-first communication should exist. We don't generate revenue and we don't operate under any jurisdiction as a company.\n\nThat said, here's what you should know: Kloak is provided \"as is.\" We work hard to keep it stable, secure, and improving, but we can't make legal guarantees about uptime, data integrity, or anything else, because there's no entity capable of making those guarantees. If something goes wrong, we'll do everything we reasonably can to fix it. But using Kloak means accepting that you're using a volunteer-built platform, not a commercial service with SLAs and legal backstops.\n\nThe biggest liability that falls on you is your secret key. If you lose it, no one can recover your account.",
+          a: "Kloak is not a business. There is no registered legal entity, no corporate structure, and no commercial product. It's a passion project run by a small, distributed team of volunteers who believe privacy-first communication should exist. We don't generate revenue and we don't operate under any jurisdiction as a company.\n\nThat said, here's what you should know: Kloak is provided \"as is.\" We work hard to keep it stable, secure, and improving, but we can't make legal guarantees about uptime, data integrity, or anything else, because there's no entity capable of making those guarantees. If something goes wrong, we'll do everything we reasonably can to fix it. But using Kloak means accepting that you're using a volunteer-built platform, not a commercial service with SLAs and legal backstops.\n\nThe biggest liability that falls on you is your secret key. Keep your current login key saved and private.",
         },
       ],
    },

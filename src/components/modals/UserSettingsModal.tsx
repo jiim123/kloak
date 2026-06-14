@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import QRCode from "qrcode";
 import {
   Loader2,
   User,
@@ -47,6 +48,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
@@ -133,13 +135,12 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     setDmPrivacy,
   } = useUIStore();
   const { playTestSound } = useNotificationSound();
-  const { user, updateUser, logout } = useAuthStore();
+  const { user, secretKey, updateUser, logout, resetSecretKey, setSecretKey } = useAuthStore();
   const { blockedUsers, unblockUser, fetchFriends, isLoading: isFriendsLoading } = useFriendStore();
   const checkBlockLimit = useRateLimit(10, 60_000);
 
   const [activeTab, setActiveTab] = useState("account");
   const [isLoading, setIsLoading] = useState(false);
-  const [showSecretKey, _setShowSecretKey] = useState(false);
   const [showKeyConfirm, setShowKeyConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDeletePreview, setShowDeletePreview] = useState(false);
@@ -166,6 +167,15 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const [browserPermissionStatus, setBrowserPermissionStatus] = useState<NotificationPermission | "unsupported">(
     "default",
   );
+  const [mfaEnabled, setMfaEnabled] = useState(false);
+  const [mfaEnabledAt, setMfaEnabledAt] = useState<string | null>(null);
+  const [isMfaLoading, setIsMfaLoading] = useState(false);
+  const [mfaSecret, setMfaSecret] = useState<string | null>(null);
+  const [mfaOtpAuthUri, setMfaOtpAuthUri] = useState<string | null>(null);
+  const [mfaQrCodeUrl, setMfaQrCodeUrl] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState("");
+  const [disableMfaCode, setDisableMfaCode] = useState("");
+  const [resetKeyMfaCode, setResetKeyMfaCode] = useState("");
 
   // Sync browser notification toggle with actual browser permission on mount
   useEffect(() => {
@@ -264,6 +274,63 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     if (variant === "modal" && !isOpen) return;
     fetchFriends(user.id);
   }, [fetchFriends, isOpen, user?.id, variant]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    if (variant === "modal" && !isOpen) return;
+
+    let cancelled = false;
+    setIsMfaLoading(true);
+    supabase
+      .rpc("get_my_mfa_status", { _user_id: user.id } as never)
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) throw error;
+        const status = data as { totp_enabled?: boolean; totp_enabled_at?: string | null } | null;
+        setMfaEnabled(status?.totp_enabled === true);
+        setMfaEnabledAt(status?.totp_enabled_at ?? null);
+      })
+      .catch((error) => {
+        console.error("Failed to load MFA status:", error);
+        if (!cancelled) toast.error("Failed to load 2FA status");
+      })
+      .finally(() => {
+        if (!cancelled) setIsMfaLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, user?.id, variant]);
+
+  useEffect(() => {
+    if (!mfaOtpAuthUri) {
+      setMfaQrCodeUrl(null);
+      return;
+    }
+
+    let cancelled = false;
+    QRCode.toDataURL(mfaOtpAuthUri, {
+      errorCorrectionLevel: "M",
+      margin: 2,
+      scale: 6,
+      color: {
+        dark: "#000000",
+        light: "#ffffff",
+      },
+    })
+      .then((url) => {
+        if (!cancelled) setMfaQrCodeUrl(url);
+      })
+      .catch((error) => {
+        console.error("Failed to generate 2FA QR code:", error);
+        if (!cancelled) setMfaQrCodeUrl(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mfaOtpAuthUri]);
 
   // ESC key to close (desktop page variant)
   useEffect(() => {
@@ -443,8 +510,58 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   };
 
   const handleCopyKey = async () => {
-    // Secret key is no longer accessible from settings
-    return;
+    if (!secretKey) return;
+    try {
+      await navigator.clipboard.writeText(secretKey);
+      setCopied(true);
+      toast.success("New login key copied");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Failed to copy login key");
+    }
+  };
+
+  const handleResetSecretKey = async () => {
+    if (!mfaEnabled) {
+      toast.error("Enable 2FA before resetting your login key.");
+      return;
+    }
+
+    if (resetKeyMfaCode.length !== 6) {
+      toast.error("Enter the 6-digit 2FA code.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const result = await resetSecretKey(resetKeyMfaCode);
+      if (!result) {
+        toast.error("Failed to reset login key");
+        return;
+      }
+
+      if ("error" in result) {
+        if (result.error === "cooldown") {
+          toast.error("Login key reset is on cooldown", {
+            description: result.hoursRemaining
+              ? `Try again in about ${Math.ceil(result.hoursRemaining)} hour${Math.ceil(result.hoursRemaining) === 1 ? "" : "s"}.`
+              : undefined,
+          });
+        } else if (result.error === "invalid_totp") {
+          toast.error("Invalid 2FA code");
+        } else if (result.error === "mfa_required") {
+          toast.error("2FA must be enabled before resetting your login key");
+        } else {
+          toast.error("Failed to reset login key");
+        }
+        return;
+      }
+
+      setResetKeyMfaCode("");
+      toast.success("Login key reset");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleLogout = () => {
@@ -502,6 +619,93 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       setShowDeletePreview(false);
     } finally {
       setIsLoadingPreview(false);
+    }
+  };
+
+  const handleBeginMfaEnrollment = async () => {
+    if (!user?.id) return;
+    setIsMfaLoading(true);
+    setMfaCode("");
+    try {
+      const { data, error } = await supabase.rpc("begin_totp_enrollment", { _user_id: user.id } as never);
+      if (error) throw error;
+      const payload = data as { secret?: string; otpauth_uri?: string } | null;
+      if (!payload?.secret || !payload?.otpauth_uri) {
+        throw new Error("Missing TOTP enrollment payload");
+      }
+      setMfaSecret(payload.secret);
+      setMfaOtpAuthUri(payload.otpauth_uri);
+      toast.success("2FA setup started");
+    } catch (error) {
+      console.error("Failed to start 2FA enrollment:", error);
+      toast.error("Failed to start 2FA setup");
+    } finally {
+      setIsMfaLoading(false);
+    }
+  };
+
+  const handleConfirmMfaEnrollment = async () => {
+    if (!user?.id) return;
+    setIsMfaLoading(true);
+    try {
+      const { data, error } = await supabase.rpc("confirm_totp_enrollment", {
+        _user_id: user.id,
+        _code: mfaCode,
+      } as never);
+      if (error) throw error;
+      const result = data as { success?: boolean; error?: string } | null;
+      if (!result?.success) {
+        toast.error(result?.error === "invalid_code" ? "Invalid 2FA code" : "Failed to enable 2FA");
+        return;
+      }
+
+      setMfaEnabled(true);
+      setMfaEnabledAt(new Date().toISOString());
+      setMfaSecret(null);
+      setMfaOtpAuthUri(null);
+      setMfaCode("");
+      toast.success("Two-factor authentication enabled");
+    } catch (error) {
+      console.error("Failed to confirm 2FA enrollment:", error);
+      toast.error("Failed to enable 2FA");
+    } finally {
+      setIsMfaLoading(false);
+    }
+  };
+
+  const handleDisableMfa = async () => {
+    if (!user?.id) return;
+    setIsMfaLoading(true);
+    try {
+      const { data, error } = await supabase.rpc("disable_totp", {
+        _user_id: user.id,
+        _code: disableMfaCode,
+      } as never);
+      if (error) throw error;
+      const result = data as { success?: boolean; error?: string } | null;
+      if (!result?.success) {
+        toast.error(result?.error === "invalid_code" ? "Invalid 2FA code" : "Failed to disable 2FA");
+        return;
+      }
+
+      setMfaEnabled(false);
+      setMfaEnabledAt(null);
+      setDisableMfaCode("");
+      toast.success("Two-factor authentication disabled");
+    } catch (error) {
+      console.error("Failed to disable 2FA:", error);
+      toast.error("Failed to disable 2FA");
+    } finally {
+      setIsMfaLoading(false);
+    }
+  };
+
+  const copyMfaValue = async (value: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(`${label} copied`);
+    } catch {
+      toast.error(`Failed to copy ${label.toLowerCase()}`);
     }
   };
 
@@ -633,23 +837,159 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       {/* Secret Key */}
       <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
         <Label className="text-sm font-medium">Secret Key</Label>
-        <div className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-secondary/30">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <Shield className="w-5 h-5 text-primary" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium">Shown once during registration</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Kloak does not store your secret key</p>
-          </div>
-        </div>
+        
         <div className="p-3 rounded-lg border border-border/50 bg-secondary/30 space-y-2">
           <p className="text-sm text-muted-foreground leading-relaxed">
-            For security, your secret key was displayed once when you created your account.
+            Your secret key is displayed once when it is created.
           </p>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            If you lose your secret key, you will not be able to recover your account. Make sure you have it saved in a secure location.
+            Keep it saved in a secure location. You can rotate your login key from account settings when needed.
           </p>
         </div>
+        {mfaEnabled ? (
+          <Button type="button" variant="outline" onClick={() => setShowKeyConfirm(true)} disabled={isLoading}>
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Reset Login Key
+          </Button>
+        ) : (
+          <div className="p-3 rounded-lg border border-border/50 bg-secondary/30">
+            <p className="text-xs text-muted-foreground">
+              Login key reset can be managed from account settings once you have 2FA enabled on your account.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Two-Factor Authentication */}
+      <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <Label className="text-sm font-medium">Two-Factor Authentication</Label>
+            <p className="text-xs text-muted-foreground mt-1">
+              Require a 6-digit authenticator app code when logging in with your secret key.
+            </p>
+          </div>
+          <div
+            className={cn(
+              "rounded-full px-2.5 py-1 text-xs font-medium",
+              mfaEnabled ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground",
+            )}
+          >
+            {isMfaLoading ? "Loading" : mfaEnabled ? "Enabled" : "Off"}
+          </div>
+        </div>
+
+        {mfaEnabled ? (
+          <div className="space-y-3">
+            <div className="rounded-lg border border-border/50 bg-secondary/30 p-3">
+              <p className="text-sm font-medium">Authenticator app protection is enabled</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {mfaEnabledAt ? `Enabled ${new Date(mfaEnabledAt).toLocaleDateString()}` : "Enabled for this account"}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Current 2FA code</Label>
+              <InputOTP
+                maxLength={6}
+                value={disableMfaCode}
+                onChange={setDisableMfaCode}
+                disabled={isMfaLoading}
+              >
+                <InputOTPGroup>
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <InputOTPSlot key={index} index={index} />
+                  ))}
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDisableMfa}
+              disabled={isMfaLoading || disableMfaCode.length !== 6}
+            >
+              {isMfaLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Disable 2FA
+            </Button>
+          </div>
+        ) : mfaSecret && mfaOtpAuthUri ? (
+          <div className="space-y-3">
+            <div className="rounded-lg border border-border/50 bg-secondary/30 p-3 space-y-3">
+              <div>
+                <p className="text-sm font-medium">Scan this QR code with your authenticator app</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Use apps like 1Password, Google Authenticator, Authy, or Aegis.
+                </p>
+              </div>
+              <div className="flex justify-center">
+                <div className="rounded-xl border border-border bg-white p-3">
+                  {mfaQrCodeUrl ? (
+                    <img src={mfaQrCodeUrl} alt="2FA setup QR code" className="h-44 w-44" />
+                  ) : (
+                    <div className="flex h-44 w-44 items-center justify-center text-xs text-muted-foreground">
+                      Generating QR...
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Manual setup key</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  If scanning does not work, choose manual setup in your authenticator app.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Input value={mfaSecret} readOnly className="font-mono text-xs" />
+                <Button type="button" variant="outline" size="icon" onClick={() => copyMfaValue(mfaSecret, "Setup key")}>
+                  <Copy className="w-4 h-4" />
+                </Button>
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={() => copyMfaValue(mfaOtpAuthUri, "Setup URI")}>
+                <Copy className="w-4 h-4 mr-2" />
+                Copy setup URI
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Verification code</Label>
+              <InputOTP maxLength={6} value={mfaCode} onChange={setMfaCode} disabled={isMfaLoading}>
+                <InputOTPGroup>
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <InputOTPSlot key={index} index={index} />
+                  ))}
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                onClick={handleConfirmMfaEnrollment}
+                disabled={isMfaLoading || mfaCode.length !== 6}
+              >
+                {isMfaLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Enable 2FA
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setMfaSecret(null);
+                  setMfaOtpAuthUri(null);
+                  setMfaCode("");
+                }}
+                disabled={isMfaLoading}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button type="button" variant="outline" onClick={handleBeginMfaEnrollment} disabled={isMfaLoading}>
+            {isMfaLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Shield className="w-4 h-4 mr-2" />}
+            Set up 2FA
+          </Button>
+        )}
       </div>
 
       {/* App Updates - Only show in Tauri */}
@@ -798,7 +1138,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         <div>
           <Label className="text-sm font-medium text-destructive">Danger Zone</Label>
           <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-            Actions here are irreversible. Please make sure you have saved your secret key before logging out.
+            Actions here are irreversible. Please make sure you have saved your current login key before logging out.
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
@@ -1464,7 +1804,92 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         </div>
       )}
 
-      {/* View Key Confirmation - removed: secret key no longer viewable in settings */}
+      {/* Reset Login Key */}
+      <AlertDialog
+        open={showKeyConfirm}
+        onOpenChange={(open) => {
+          setShowKeyConfirm(open);
+          if (!open) {
+            setResetKeyMfaCode("");
+            setCopied(false);
+            setSecretKey(null);
+          }
+        }}
+      >
+        <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset Login Key</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p className="leading-relaxed">
+                  This creates a new login key and immediately replaces the old one. You will need the new key to sign
+                  in again.
+                </p>
+                {secretKey ? (
+                  <div className="space-y-3">
+                    <div className="p-3 rounded-xl bg-primary/10 border border-primary/20">
+                      <p className="text-sm font-medium text-foreground">Save this new login key now.</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        It will not be shown again after this dialog closes.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="text"
+                        value={secretKey}
+                        readOnly
+                        className="font-mono text-xs"
+                      />
+                      <Button type="button" variant="outline" size="icon" onClick={handleCopyKey}>
+                        {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Current 2FA code</Label>
+                    <InputOTP
+                      maxLength={6}
+                      value={resetKeyMfaCode}
+                      onChange={setResetKeyMfaCode}
+                      disabled={isLoading}
+                    >
+                      <InputOTPGroup>
+                        {Array.from({ length: 6 }).map((_, index) => (
+                          <InputOTPSlot key={index} index={index} />
+                        ))}
+                      </InputOTPGroup>
+                    </InputOTP>
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel className="m-0 rounded-xl">
+              {secretKey ? "Close" : "Cancel"}
+            </AlertDialogCancel>
+            {secretKey ? (
+              <AlertDialogAction onClick={handleCopyKey} className="rounded-xl">
+                {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
+                Copy Key
+              </AlertDialogAction>
+            ) : (
+              <AlertDialogAction
+                onClick={(event) => {
+                  event.preventDefault();
+                  void handleResetSecretKey();
+                }}
+                disabled={isLoading || resetKeyMfaCode.length !== 6}
+                className="rounded-xl bg-red-600 text-foreground hover:bg-red-700"
+              >
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                Reset Key
+              </AlertDialogAction>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Logout Confirmation */}
       <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
@@ -1474,15 +1899,15 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
             <AlertDialogDescription asChild>
               <div className="space-y-3">
                 <p className="leading-relaxed">
-                  Are you sure you want to log out? You will need your secret key to sign back in.
+                  Are you sure you want to log out? You will need your current login key to sign back in.
                 </p>
                 <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20">
                   <p className="text-sm text-red-600 dark:text-red-400 font-medium flex items-center gap-2">
                     <Key className="w-4 h-4 flex-shrink-0" />
-                    Make sure you have your secret key saved!
+                    Make sure you have your login key saved.
                   </p>
                   <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                    Your secret key was shown once during registration. Without it, you cannot recover your account.
+                    Kloak does not store the raw key, so keep your current login key in a secure place.
                   </p>
                 </div>
               </div>
