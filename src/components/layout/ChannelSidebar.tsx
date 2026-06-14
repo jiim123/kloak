@@ -56,6 +56,7 @@ import {
 } from "@/components/ui/context-menu";
 import { ChannelContextMenu } from "@/components/layout/ChannelContextMenu";
 import { ChannelContextDrawer } from "@/components/layout/ChannelContextDrawer";
+import { ReportReasonDialog, type ReportReasonOption } from "@/components/modals/ReportReasonDialog";
 import {
   Drawer,
   DrawerContent,
@@ -69,6 +70,13 @@ import type { Channel, ChannelCategory, ServerRole } from "@/types";
 
 const ENABLE_CHANNEL_HOVER_PREFETCH = false;
 const INITIAL_CHANNEL_PREFETCH_LIMIT = 10;
+
+const SERVER_REPORT_REASONS: ReportReasonOption[] = [
+  { value: "Inappropriate content", label: "Inappropriate content" },
+  { value: "Abusive management", label: "Abusive management" },
+  { value: "Impersonation or deception", label: "Impersonation or deception" },
+  { value: "Illegal or dangerous activity", label: "Illegal or dangerous activity" },
+];
 
 // ─── Inline SVG Icons (memo-wrapped, zero bundle cost) ───
 
@@ -150,6 +158,14 @@ const LogOutIcon = memo(({ className }: { className?: string }) => (
   </svg>
 ));
 LogOutIcon.displayName = "LogOutIcon";
+
+const FlagIcon = memo(({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M4 22V4" />
+    <path d="M4 4h11l-1 5 1 5H4" />
+  </svg>
+));
+FlagIcon.displayName = "FlagIcon";
 
 const UserPlusIcon = memo(({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -1171,6 +1187,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
   const [channelSearchQuery, setChannelSearchQuery] = useState("");
   const [resolvedServerVerified, setResolvedServerVerified] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
+  const [showReportServerDialog, setShowReportServerDialog] = useState(false);
   const channelListRef = useRef<HTMLDivElement | null>(null);
   const headerCondenseFrameRef = useRef<number | null>(null);
   const deferredChannelSearchQuery = useDeferredValue(channelSearchQuery);
@@ -1560,6 +1577,25 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
     if (!currentServer || !user || isOwner) return;
     await leaveServer(currentServer.id, user.id);
   }, [currentServer, user, isOwner, leaveServer]);
+
+  const handleReportServer = useCallback(async (reason: string) => {
+    if (!currentServer || !user || isOwner) return;
+
+    try {
+      const { error } = await (supabase.rpc as any)("report_server", {
+        _server_id: currentServer.id,
+        _reason: reason,
+        _details: null,
+      });
+
+      if (error) throw error;
+      toast.success("Server reported");
+    } catch (error) {
+      console.error("Failed to report server:", error);
+      toast.error("Failed to report server");
+      throw error;
+    }
+  }, [currentServer, isOwner, user]);
 
   const handleCopyChannelLink = useCallback(
     (channelId: string) => {
@@ -2185,6 +2221,17 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
                 <>
                   <DropdownMenuSeparator className="mx-0 my-0 bg-muted/40" />
 
+                  {/* Report Server */}
+                  <DropdownMenuItem
+                    onClick={() => setShowReportServerDialog(true)}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-[hsl(var(--menu-hover))] focus:bg-[hsl(var(--menu-focus))]"
+                  >
+                    <div className="flex h-5 w-5 items-center justify-center flex-shrink-0">
+                      <FlagIcon className="h-4 w-4" />
+                    </div>
+                    <span className="text-sm font-medium">Report Server</span>
+                  </DropdownMenuItem>
+
                   {/* Leave Server */}
                   <DropdownMenuItem
                     onClick={handleLeaveServer}
@@ -2335,6 +2382,14 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
         <VoiceConnectedBanner />
         <LoggedInUserPanel />
       </div>
+      <ReportReasonDialog
+        open={showReportServerDialog}
+        onOpenChange={setShowReportServerDialog}
+        title="Report server"
+        description={`Choose the reason that best describes ${currentServer.name}.`}
+        reasons={SERVER_REPORT_REASONS}
+        onSubmit={handleReportServer}
+      />
     </div>
   );
 };

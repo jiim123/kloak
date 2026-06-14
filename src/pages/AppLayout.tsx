@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useCallback, useRef, Suspense, lazy } from "react";
 import { useNavigate, useSearchParams, useLocation, useParams, Outlet } from "react-router-dom";
 import { AnimatePresence, motion, MotionConfig } from "framer-motion";
-import { Link2, Plus, UserCircle, Users, X } from "lucide-react";
+import { Gavel, Link2, Plus, UserCircle, Users, X } from "lucide-react";
 import { useAuthStore, initializeAuth } from "@/stores/authStore";
 import { useUIStore } from "@/stores/uiStore";
 import { getCachedServerChannelMap, useServerStore } from "@/stores/serverStore";
@@ -25,6 +25,7 @@ import { ExploreServers } from "@/components/home/ExploreServers";
 import { ServerMembersPage } from "@/components/members/ServerMembersPage";
 
 import { UserSettingsPage } from "@/components/modals/UserSettingsModal";
+import { PunishmentNoticeModal } from "@/components/modals/PunishmentNoticeModal";
 
 // Always-mounted modals (have internal form state — lazy for code splitting only)
 const ServerSettingsModal = lazy(() => import("@/components/modals/ServerSettingsModal").then(m => ({ default: m.ServerSettingsModal })));
@@ -85,6 +86,7 @@ import { getAuthEntryPath, resizeWindowForApp } from "@/lib/tauriRuntime";
 import { MAINTENANCE_MODE } from "@/lib/maintenance";
 import { AlphaNoticeBanner } from "@/components/layout/AlphaNoticeBanner";
 import { ChannelHeader } from "@/components/chat/ChannelHeader";
+import { isPlatformAdmin } from "@/lib/adminAccess";
 
 const addServerPanelTransition = {
   type: "spring" as const,
@@ -101,7 +103,13 @@ const AppLayout = () => {
 
   // Mask server/channel/DM IDs from the URL bar for privacy
   useEffect(() => {
-    if (location.pathname.startsWith('/app') && location.pathname !== '/app' && !location.pathname.startsWith('/app/profiles/')) {
+    const publicAppPaths = new Set(["/app/friends", "/app/explore"]);
+    if (
+      location.pathname.startsWith('/app') &&
+      location.pathname !== '/app' &&
+      !location.pathname.startsWith('/app/profiles/') &&
+      !publicAppPaths.has(location.pathname)
+    ) {
       window.history.replaceState(null, '', '/app');
     }
   }, [location.pathname, location.search]);
@@ -493,6 +501,7 @@ const AppLayout = () => {
   const isDMView = currentServer === null;
   const isExploreView = isDMView && currentPath === "/explore";
   const isFriendsView = isDMView && currentPath === "/friends";
+  const canUseAdminPanel = isPlatformAdmin(user);
   const hasPendingFriendRequests = pendingFriendRequestCount > 0;
 
   const serverIdsKey = useMemo(() => {
@@ -627,6 +636,13 @@ const AppLayout = () => {
     setCurrentConversation(null);
     navigate(`/app/profiles/${user.id}`);
   }, [navigate, setCurrentConversation, setCurrentServer, user?.id]);
+
+  const openAdminPanel = useCallback(() => {
+    setIsAddServerPanelOpen(false);
+    setCurrentServer(null);
+    setCurrentConversation(null);
+    navigate("/app/admin");
+  }, [navigate, setCurrentConversation, setCurrentServer]);
 
   const closeQuickAccessPanel = useCallback(() => {
     setIsAddServerPanelOpen(false);
@@ -839,6 +855,19 @@ const AppLayout = () => {
                                 </span>
                               )}
                             </button>
+                            {canUseAdminPanel && (
+                              <button
+                                type="button"
+                                onClick={openAdminPanel}
+                                className={cn(
+                                  "flex h-8 w-full items-center gap-3 rounded-[2px] px-2.5 text-left text-[14px] font-medium transition-colors",
+                                  "text-muted-foreground hover:bg-secondary/70 hover:text-foreground",
+                                )}
+                              >
+                                <Gavel className="h-4 w-4 shrink-0" />
+                                <span className="min-w-0 flex-1 truncate">Admin</span>
+                              </button>
+                            )}
                           </nav>
                         </div>
                       </motion.aside>
@@ -978,6 +1007,7 @@ const AppLayout = () => {
         {!isDMView && isMobile && <MembersSidebar />}
 
         {/* Always-mounted modals (preserve internal form state, lazy for code splitting) */}
+        <PunishmentNoticeModal />
         <Suspense fallback={null}><ServerSettingsModal /></Suspense>
         <Suspense fallback={null}><UserSettingsModal /></Suspense>
 

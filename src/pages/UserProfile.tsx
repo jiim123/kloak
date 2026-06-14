@@ -4,6 +4,7 @@ import {
   CalendarDays,
   Check,
   ChevronLeft,
+  Flag,
   Loader2,
   MessageCircle,
   MessageSquare,
@@ -30,6 +31,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/h
 import { UserBadges } from "@/components/ui/user-badges";
 import { BotTag } from "@/components/ui/bot-tag";
 import { FormatToolbar } from "@/components/chat/FormatToolbar";
+import { ReportReasonDialog, type ReportReasonOption } from "@/components/modals/ReportReasonDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { openUserProfileModal, SIDE_ALIGNED_USER_PROFILE_POPOVER } from "@/lib/userProfilePopover";
 import { useAuthStore } from "@/stores/authStore";
@@ -45,6 +47,14 @@ const POST_TITLE_MAX_LENGTH = 100;
 const COMMENT_MAX_LENGTH = 300;
 const TAGLINE_MAX_LENGTH = 80;
 const quickReactionEmojis = ["👍", "❤️", "😂", "🎉", "😮"];
+
+const PROFILE_REPORT_REASONS: ReportReasonOption[] = [
+  { value: "Harassment", label: "Harassment" },
+  { value: "Spam & abusive behavior", label: "Spam & abusive behavior" },
+  { value: "Inappropriate profile content", label: "Inappropriate profile content" },
+  { value: "Impersonation", label: "Impersonation" },
+  { value: "Toxic behavior", label: "Toxic behavior" },
+];
 
 interface ProfilePost {
   id: string;
@@ -408,6 +418,7 @@ const UserProfile = () => {
   const [pendingCommentActionId, setPendingCommentActionId] = useState<string | null>(null);
   const [pendingReactionKey, setPendingReactionKey] = useState<string | null>(null);
   const [isSavingTagline, setIsSavingTagline] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
 
   const serverIds = useMemo(() => servers.map((server) => server.id), [servers]);
   const isSelf = currentUser?.id === userId;
@@ -475,6 +486,25 @@ const UserProfile = () => {
       toast.error("Failed to open conversation");
     }
   }, [currentUser, navigate, openConversation, setCurrentConversation, setCurrentServer, userId]);
+
+  const handleReportProfile = useCallback(async (reason: string) => {
+    if (!currentUser || !profileUser || isSelf) return;
+
+    try {
+      const { error } = await (supabase.rpc as any)("report_profile", {
+        _reported_user_id: profileUser.id,
+        _reason: reason,
+        _details: null,
+      });
+
+      if (error) throw error;
+      toast.success("Profile reported");
+    } catch (error) {
+      console.error("Failed to report profile:", error);
+      toast.error("Failed to report profile");
+      throw error;
+    }
+  }, [currentUser, isSelf, profileUser]);
 
   const handleOpenUserPopup = useCallback(
     (targetUserId: string, anchor: HTMLElement) => {
@@ -862,6 +892,7 @@ const UserProfile = () => {
       };
 
   return (
+    <>
     <div className="h-full overflow-y-auto bg-layout-chat text-foreground">
       <header className="sticky top-0 z-20 flex h-12 items-center gap-2.5 border-b border-border bg-card px-3 text-foreground shadow-sm">
         <button
@@ -961,10 +992,16 @@ const UserProfile = () => {
           ) : null}
 
           {!isSelf && (
-            <Button type="button" onClick={handleMessage} className="mt-4 rounded-[4px]" variant="white" size="default">
-              <MessageCircle className="h-4 w-4" />
-              Message
-            </Button>
+            <div className="mt-4 flex items-center justify-center gap-2">
+              <Button type="button" onClick={handleMessage} className="rounded-[4px]" variant="white" size="default">
+                <MessageCircle className="h-4 w-4" />
+                Message
+              </Button>
+              <Button type="button" onClick={() => setShowReportDialog(true)} className="rounded-[4px]" variant="secondary" size="default">
+                <Flag className="h-4 w-4" />
+                Report
+              </Button>
+            </div>
           )}
         </section>
 
@@ -1443,6 +1480,15 @@ const UserProfile = () => {
         </section>
       </div>
     </div>
+    <ReportReasonDialog
+      open={showReportDialog}
+      onOpenChange={setShowReportDialog}
+      title="Report profile"
+      description="Choose the reason that best describes this profile."
+      reasons={PROFILE_REPORT_REASONS}
+      onSubmit={handleReportProfile}
+    />
+    </>
   );
 };
 

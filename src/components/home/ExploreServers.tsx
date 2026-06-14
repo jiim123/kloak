@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Loader2, Search, Users } from 'lucide-react';
+import { ChevronRight, Flag, Loader2, Search, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
@@ -10,8 +10,16 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { getServerInitials } from '@/lib/serverUtils';
 import { toast } from 'sonner';
+import { ReportReasonDialog, type ReportReasonOption } from '@/components/modals/ReportReasonDialog';
 
 const PAGE_SIZE = 12;
+
+const SERVER_REPORT_REASONS: ReportReasonOption[] = [
+  { value: 'Inappropriate content', label: 'Inappropriate content' },
+  { value: 'Abusive management', label: 'Abusive management' },
+  { value: 'Impersonation or deception', label: 'Impersonation or deception' },
+  { value: 'Illegal or dangerous activity', label: 'Illegal or dangerous activity' },
+];
 
 type ExploreServer = {
   id: string;
@@ -69,6 +77,7 @@ const ExploreServersOriginal = () => {
   const [query, setQuery] = useState('');
   const [items, setItems] = useState<ExploreServer[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [reportingServer, setReportingServer] = useState<ExploreServer | null>(null);
 
   const myServerIds = useMemo(() => new Set(myServers.map((s) => s.id)), [myServers]);
 
@@ -205,6 +214,25 @@ const ExploreServersOriginal = () => {
     handleCardClick(server);
   };
 
+  const handleReportServer = async (reason: string) => {
+    if (!user?.id || !reportingServer) return;
+
+    try {
+      const { error } = await (supabase.rpc as any)('report_server', {
+        _server_id: reportingServer.id,
+        _reason: reason,
+        _details: null,
+      });
+
+      if (error) throw error;
+      toast.success('Server reported');
+    } catch (error) {
+      console.error('Failed to report server:', error);
+      toast.error('Failed to report server');
+      throw error;
+    }
+  };
+
   const renderCommunityCard = (server: ExploreServer, compact = false) => {
     const joined = myServerIds.has(server.id);
 
@@ -228,6 +256,21 @@ const ExploreServersOriginal = () => {
               <div className="h-full w-full bg-gradient-to-br from-secondary via-card to-background" />
             )}
             <div className="absolute inset-0 bg-gradient-to-b from-black/5 to-black/45" />
+            {user?.id && user.id !== server.owner_id && (
+              <Button
+                type="button"
+                size="icon"
+                variant="secondary"
+                className="absolute right-2 top-2 h-7 w-7 rounded-md bg-black/45 text-white hover:bg-black/60"
+                title="Report server"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setReportingServer(server);
+                }}
+              >
+                <Flag className="h-3.5 w-3.5" />
+              </Button>
+            )}
           </div>
 
           <div className="absolute left-1/2 top-9 -translate-x-1/2">
@@ -391,6 +434,16 @@ const ExploreServersOriginal = () => {
           </div>
         </div>
       </div>
+      <ReportReasonDialog
+        open={!!reportingServer}
+        onOpenChange={(open) => {
+          if (!open) setReportingServer(null);
+        }}
+        title="Report server"
+        description={reportingServer ? `Choose the reason that best describes ${reportingServer.name}.` : 'Choose a report reason.'}
+        reasons={SERVER_REPORT_REASONS}
+        onSubmit={handleReportServer}
+      />
     </div>
   );
 };

@@ -13,6 +13,7 @@ const Auth = lazy(() => import("./pages/Auth"));
 const DesktopAuth = lazy(() => import("./pages/DesktopAuth"));
 const Invite = lazy(() => import("./pages/Invite"));
 const AppLayout = lazy(() => import("./pages/AppLayout"));
+const AdminPage = lazy(() => import("./pages/AdminPage"));
 const ServerAuthGuard = lazy(() => import("./components/auth/ServerAuthGuard").then(m => ({ default: m.ServerAuthGuard })));
 const Terms = lazy(() => import("./pages/Terms"));
 const Privacy = lazy(() => import("./pages/Privacy"));
@@ -36,6 +37,7 @@ const AppContent = () => {
           <Route path="/auth" element={<Auth />} />
           <Route path="/desktop-auth" element={<DesktopAuth />} />
           <Route path="/invite/:inviteCode" element={<Invite />} />
+          <Route path="/app/admin" element={<AdminPage />} />
           {/* Keep AppLayout mounted across /app navigation to avoid full remount/reconnect storms */}
           <Route path="/app" element={<AppLayout />}>
             <Route index element={<EmptyRoute />} />

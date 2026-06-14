@@ -14,6 +14,7 @@ import {
   CheckCheck,
   BellOff,
   Bell,
+  Flag,
   GripVertical,
 } from "lucide-react";
 import { evaluatePermission } from "@/lib/permissions";
@@ -52,6 +53,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ReportReasonDialog, type ReportReasonOption } from "@/components/modals/ReportReasonDialog";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -61,6 +63,7 @@ import {
 } from "@/components/ui/context-menu";
 import type { ServerWithMembership } from "@/types";
 import { getServerInitials, getServerColor } from "@/lib/serverUtils";
+import { toast } from "sonner";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -88,6 +91,13 @@ const EMPTY_FOLDER_STATE: ServerFolderState = { folders: [], serverToFolder: {} 
 const EMPTY_CHANNEL_IDS: string[] = [];
 const MODAL_CONTENT_CLASS =
   "max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-border bg-card p-0 text-foreground shadow-2xl sm:max-w-[448px]";
+
+const SERVER_REPORT_REASONS: ReportReasonOption[] = [
+  { value: "Inappropriate content", label: "Inappropriate content" },
+  { value: "Abusive management", label: "Abusive management" },
+  { value: "Impersonation or deception", label: "Impersonation or deception" },
+  { value: "Illegal or dangerous activity", label: "Illegal or dangerous activity" },
+];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ANIMATION VARIANTS — static objects, never re-created
@@ -343,6 +353,7 @@ const DraggableServerItem = memo(
       onOpenSettings?: () => void;
       onMarkAsRead?: () => void;
       onToggleMute?: () => void;
+      onReportServer?: () => void;
     }
   >(
     (
@@ -362,6 +373,7 @@ const DraggableServerItem = memo(
         onOpenSettings,
         onMarkAsRead,
         onToggleMute,
+        onReportServer,
       },
       ref,
     ) => {
@@ -422,6 +434,13 @@ const DraggableServerItem = memo(
           }
         },
         [onLeaveServer, server.id, server.name],
+      );
+      const handleReportServer = useCallback(
+        (e: Event) => {
+          e.preventDefault();
+          onReportServer?.();
+        },
+        [onReportServer],
       );
 
       return (
@@ -549,6 +568,15 @@ const DraggableServerItem = memo(
                 Leave Server
               </ContextMenuItem>
             )}
+            {!isOwner && onReportServer && (
+              <>
+                <ContextMenuSeparator />
+                <ContextMenuItem onSelect={handleReportServer}>
+                  <Flag className="w-4 h-4" />
+                  Report Server
+                </ContextMenuItem>
+              </>
+            )}
           </ContextMenuContent>
         </ContextMenu>
       );
@@ -630,6 +658,7 @@ export const ServerSidebar = ({
   const [changeFolderColor, setChangeFolderColor] = useState("#6366f1");
   const [activeDragServerId, setActiveDragServerId] = useState<string | null>(null);
   const [isFolderStateLoaded, setIsFolderStateLoaded] = useState(false);
+  const [reportingServer, setReportingServer] = useState<ServerWithMembership | null>(null);
   const [orderedServerIds, setOrderedServerIds] = useState<string[]>([]);
   const lastSavedFolderStateRef = useRef<string | null>(null);
 
@@ -1204,6 +1233,25 @@ export const ServerSidebar = ({
     };
   }, [user?.id, leaveServer, currentServer?.id, navigate]);
 
+  const handleReportServer = useCallback(async (reason: string) => {
+    if (!user?.id || !reportingServer) return;
+
+    try {
+      const { error } = await (supabase.rpc as any)("report_server", {
+        _server_id: reportingServer.id,
+        _reason: reason,
+        _details: null,
+      });
+
+      if (error) throw error;
+      toast.success("Server reported");
+    } catch (error) {
+      console.error("Failed to report server:", error);
+      toast.error("Failed to report server");
+      throw error;
+    }
+  }, [reportingServer, user?.id]);
+
   // ── Render helper for server items (used in both folder + root lists) ──
   const renderServerItem = useCallback(
     (server: ServerWithMembership) => {
@@ -1238,6 +1286,7 @@ export const ServerSidebar = ({
           onOpenSettings={getServerSettingsHandler(server)}
           onMarkAsRead={getServerMarkReadHandler(channelIds)}
           onToggleMute={getServerMuteHandler(server.id)}
+          onReportServer={() => setReportingServer(server)}
         />
       );
     },
@@ -1258,6 +1307,7 @@ export const ServerSidebar = ({
       getServerSettingsHandler,
       getServerMarkReadHandler,
       getServerMuteHandler,
+      setReportingServer,
     ],
   );
 
@@ -1860,6 +1910,17 @@ export const ServerSidebar = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ReportReasonDialog
+        open={!!reportingServer}
+        onOpenChange={(open) => {
+          if (!open) setReportingServer(null);
+        }}
+        title="Report server"
+        description={reportingServer ? `Choose the reason that best describes ${reportingServer.name}.` : "Choose a report reason."}
+        reasons={SERVER_REPORT_REASONS}
+        onSubmit={handleReportServer}
+      />
     </div>
   );
 };

@@ -5,6 +5,7 @@ import {
   Calendar,
   Check,
   Clock,
+  Flag,
   Loader2,
   MessageCircle,
   Plus,
@@ -38,6 +39,7 @@ import { hasRecentRealtimePresence } from "@/hooks/useRealtimeUsers";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ReportReasonDialog, type ReportReasonOption } from "@/components/modals/ReportReasonDialog";
 import type { Badge } from "@/types/badge";
 import type { User, UserStatus } from "@/types";
 import type { UserProfileAnchorRect } from "@/lib/userProfilePopover";
@@ -62,6 +64,14 @@ const statusLabels: Record<UserStatus, string> = {
 const COOLDOWN_MINUTES = 5;
 const DESKTOP_CARD_WIDTH = 292;
 const VIEWPORT_MARGIN = 12;
+
+const PROFILE_REPORT_REASONS: ReportReasonOption[] = [
+  { value: "Harassment", label: "Harassment" },
+  { value: "Spam & abusive behavior", label: "Spam & abusive behavior" },
+  { value: "Inappropriate profile content", label: "Inappropriate profile content" },
+  { value: "Impersonation", label: "Impersonation" },
+  { value: "Toxic behavior", label: "Toxic behavior" },
+];
 
 const withAlpha = (hex: string, alphaHex: string) => {
   if (!hex || !hex.startsWith("#") || hex.length !== 7) return hex;
@@ -238,6 +248,7 @@ export const UserProfilePopup = () => {
   const [selfRoleQuery, setSelfRoleQuery] = useState("");
   const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
   const [isBioExpanded, setIsBioExpanded] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
   const cardRef = useRef<HTMLDivElement | null>(null);
   const profileEffectImgRef = useRef<HTMLImageElement | null>(null);
   const profileEffectAnimationEndedRef = useRef(false);
@@ -619,6 +630,25 @@ export const UserProfilePopup = () => {
     }
   };
 
+  const handleReportProfile = useCallback(async (reason: string) => {
+    if (!currentUser || !profileUser || isSelf) return;
+
+    try {
+      const { error } = await (supabase.rpc as any)("report_profile", {
+        _reported_user_id: profileUser.id,
+        _reason: reason,
+        _details: null,
+      });
+
+      if (error) throw error;
+      toast.success("Profile reported");
+    } catch (error) {
+      console.error("Failed to report profile:", error);
+      toast.error("Failed to report profile");
+      throw error;
+    }
+  }, [currentUser, isSelf, profileUser]);
+
   const renderActionRow = (divider: string, muted: string) => {
     if (!profileUser) return null;
 
@@ -640,7 +670,7 @@ export const UserProfilePopup = () => {
             Profile
           </Button>
         ) : !isBlocked ? (
-          <div className={cn("grid gap-2 text-center", hasPendingRequest ? "grid-cols-5" : "grid-cols-4")} style={{ color: muted }}>
+          <div className={cn("grid gap-2 text-center", hasPendingRequest ? "grid-cols-6" : "grid-cols-5")} style={{ color: muted }}>
             <button type="button" onClick={handleOpenProfilePage} className={actionClass}>
               <span className={iconWrapClass}>
                 <UserCircle className="h-5 w-5" />
@@ -708,6 +738,13 @@ export const UserProfilePopup = () => {
                 <Ban className="h-5 w-5" />
               </span>
               <span className="max-w-full truncate">Block</span>
+            </button>
+
+            <button type="button" className={actionClass} onClick={() => setShowReportDialog(true)} title="Report profile">
+              <span className={iconWrapClass}>
+                <Flag className="h-5 w-5" />
+              </span>
+              <span className="max-w-full truncate">Report</span>
             </button>
           </div>
         ) : (
@@ -1048,33 +1085,53 @@ export const UserProfilePopup = () => {
 
   if (isMobile) {
     return (
-      <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-        <DialogContent
-          className="max-h-[85vh] w-[calc(100vw-2rem)] max-w-[360px] overflow-hidden border-none bg-transparent p-0 shadow-none"
-          onOpenAutoFocus={(event) => event.preventDefault()}
-        >
-          <div className="max-h-[75vh] overflow-y-auto rounded-[8px] border border-border bg-popover">
-            {renderCard()}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <>
+        <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+          <DialogContent
+            className="max-h-[85vh] w-[calc(100vw-2rem)] max-w-[360px] overflow-hidden border-none bg-transparent p-0 shadow-none"
+            onOpenAutoFocus={(event) => event.preventDefault()}
+          >
+            <div className="max-h-[75vh] overflow-y-auto rounded-[8px] border border-border bg-popover">
+              {renderCard()}
+            </div>
+          </DialogContent>
+        </Dialog>
+        <ReportReasonDialog
+          open={showReportDialog}
+          onOpenChange={setShowReportDialog}
+          title="Report profile"
+          description="Choose the reason that best describes this profile."
+          reasons={PROFILE_REPORT_REASONS}
+          onSubmit={handleReportProfile}
+        />
+      </>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-50" onMouseDown={handleClose}>
-      <div
-        ref={cardRef}
-        className="absolute max-h-[70vh] w-[292px] overflow-y-auto rounded-[8px] border border-border bg-popover"
-        style={{
-          left: position?.left ?? -9999,
-          top: position?.top ?? -9999,
-          opacity: position ? 1 : 0,
-        }}
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        {renderCard()}
+    <>
+      <div className="fixed inset-0 z-50" onMouseDown={handleClose}>
+        <div
+          ref={cardRef}
+          className="absolute max-h-[70vh] w-[292px] overflow-y-auto rounded-[8px] border border-border bg-popover"
+          style={{
+            left: position?.left ?? -9999,
+            top: position?.top ?? -9999,
+            opacity: position ? 1 : 0,
+          }}
+          onMouseDown={(event) => event.stopPropagation()}
+        >
+          {renderCard()}
+        </div>
       </div>
-    </div>
+      <ReportReasonDialog
+        open={showReportDialog}
+        onOpenChange={setShowReportDialog}
+        title="Report profile"
+        description="Choose the reason that best describes this profile."
+        reasons={PROFILE_REPORT_REASONS}
+        onSubmit={handleReportProfile}
+      />
+    </>
   );
 };

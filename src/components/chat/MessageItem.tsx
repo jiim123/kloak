@@ -17,6 +17,7 @@ import {
   Loader2,
   UserX,
   Ban,
+  Flag,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -62,6 +63,7 @@ import { formatMessageTimestamp } from "@/lib/format";
 import { DeleteMessageModal } from "@/components/modals/DeleteMessageModal";
 import { ImageLightbox } from "@/components/modals/ImageLightbox";
 import { EmojiPicker } from "@/components/modals/EmojiPicker";
+import { ReportReasonDialog, type ReportReasonOption } from "@/components/modals/ReportReasonDialog";
 import { BotTag } from "@/components/ui/bot-tag";
 import type { CustomServerRole, Message, ServerRole } from "@/types";
 import { format } from "date-fns";
@@ -81,6 +83,7 @@ import { pickFirstNonBlank } from "@/lib/utils";
 import { openUserProfileModal, SIDE_ALIGNED_USER_PROFILE_POPOVER } from "@/lib/userProfilePopover";
 import { useRateLimit } from "@/hooks/useRateLimit";
 import { rateLimitToast } from "@/lib/rateLimitToast";
+import { supabase } from "@/integrations/supabase/client";
 
 // Static data moved outside component
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "👋", "🔥", "👀", "💯", "🙌", "😍", "🤔"] as const;
@@ -90,6 +93,13 @@ const ROLE_COLORS: Record<string, string> = {
   admin: "text-red-400",
   moderator: "text-blue-400",
 };
+
+const MESSAGE_REPORT_REASONS: ReportReasonOption[] = [
+  { value: "Harassment", label: "Harassment" },
+  { value: "Spam & suspicious links", label: "Spam & suspicious links" },
+  { value: "Inappropriate content", label: "Inappropriate content" },
+  { value: "Illegal content", label: "Illegal content" },
+];
 
 const getRoleColor = (role?: ServerRole): string => {
   return role ? ROLE_COLORS[role] || "text-foreground" : "text-foreground";
@@ -479,6 +489,7 @@ export const MessageItem = memo(function MessageItem({
   const [showDesktopEmojiPicker, setShowDesktopEmojiPicker] = useState(false);
   const [showMobileEmojiPicker, setShowMobileEmojiPicker] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
   const [isRowHovered, setIsRowHovered] = useState(false);
   const customEmojiMap = sharedCustomEmojiMap ?? EMPTY_CUSTOM_EMOJI_MAP;
   const globalEmojiMap = sharedGlobalEmojiMap ?? EMPTY_GLOBAL_EMOJI_MAP;
@@ -1063,6 +1074,32 @@ export const MessageItem = memo(function MessageItem({
     navigator.clipboard.writeText(message.id);
   }, [message.id]);
 
+  const canReportMessage = !!user && !isOwnMessage && !message.is_system_message && !isPending;
+
+  const handleOpenReportDialog = useCallback(() => {
+    if (!canReportMessage) return;
+    setShowReportDialog(true);
+  }, [canReportMessage]);
+
+  const handleReportMessage = useCallback(async (reason: string) => {
+    if (!canReportMessage) return;
+    try {
+      const { error } = await (supabase.rpc as any)("report_message", {
+        _message_type: isDM ? "dm" : "channel",
+        _message_id: message.id,
+        _reason: reason,
+        _details: null,
+      });
+
+      if (error) throw error;
+      toast.success("Message reported");
+    } catch (error) {
+      console.error("Failed to report message:", error);
+      toast.error("Failed to report message");
+      throw error;
+    }
+  }, [canReportMessage, isDM, message.id]);
+
   const messageLink = useMemo(() => {
     if (typeof window === "undefined") return "";
 
@@ -1335,6 +1372,11 @@ export const MessageItem = memo(function MessageItem({
     handleCopyMessageId();
     setShowMobileActions(false);
   }, [handleCopyMessageId]);
+
+  const handleMobileReport = useCallback(() => {
+    setShowMobileActions(false);
+    handleOpenReportDialog();
+  }, [handleOpenReportDialog]);
 
   const handleMobileDelete = useCallback(() => {
     setShowDeleteModal(true);
@@ -1888,6 +1930,15 @@ export const MessageItem = memo(function MessageItem({
                         <Link2 className="h-4 w-4 shrink-0 mr-2" />
                         Copy link
                       </DropdownMenuItem>
+                      {canReportMessage && (
+                        <>
+                          <DropdownMenuSeparator className="mx-0 my-0" />
+                          <DropdownMenuItem onClick={handleOpenReportDialog} className="rounded-none px-3 py-2">
+                            <Flag className="h-4 w-4 shrink-0 mr-2" />
+                            Report message
+                          </DropdownMenuItem>
+                        </>
+                      )}
                       {canPinMessages && <DropdownMenuSeparator className="mx-0 my-0" />}
                       {canPinMessages && (
                         <DropdownMenuItem onClick={handlePin} className="rounded-none px-3 py-2">
@@ -1913,6 +1964,15 @@ export const MessageItem = memo(function MessageItem({
               <Copy className="w-4 h-4" />
               Copy Text
             </ContextMenuItem>
+            {canReportMessage && (
+              <>
+                <ContextMenuSeparator />
+                <ContextMenuItem onClick={handleOpenReportDialog}>
+                  <Flag className="w-4 h-4" />
+                  Report Message
+                </ContextMenuItem>
+              </>
+            )}
             {isOwnMessage && !pollId && (
               <>
                 <ContextMenuSeparator />
@@ -2205,6 +2265,17 @@ export const MessageItem = memo(function MessageItem({
                 <span className="font-medium">Copy Message ID</span>
               </button>
 
+              {/* Report */}
+              {canReportMessage && (
+                <button
+                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-secondary/40 active:bg-secondary/60 text-left transition-colors"
+                  onClick={handleMobileReport}
+                >
+                  <Flag className="w-5 h-5 text-muted-foreground" />
+                  <span className="font-medium">Report Message</span>
+                </button>
+              )}
+
               {/* Delete */}
               {(isOwnMessage || isAdmin) && (
                 <>
@@ -2303,6 +2374,15 @@ export const MessageItem = memo(function MessageItem({
           </div>
         </DrawerContent>
       </Drawer>
+
+      <ReportReasonDialog
+        open={showReportDialog}
+        onOpenChange={setShowReportDialog}
+        title="Report message"
+        description="Choose the reason that best describes this message."
+        reasons={MESSAGE_REPORT_REASONS}
+        onSubmit={handleReportMessage}
+      />
 
       {/* Delete confirmation modal */}
       <DeleteMessageModal
