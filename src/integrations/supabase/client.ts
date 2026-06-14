@@ -7,6 +7,7 @@ const ENV_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefi
 const CURRENT_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZvcXV1Y3VybndwcWN2Z3F1a3B6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2ODUwNjEsImV4cCI6MjA4NzA0NTA2MX0.XgkhNWxe7CHzeyc8PrXJKztuT6oxFYXX1T8Fab1N6QA";
 const SUPABASE_PUBLISHABLE_KEY = ENV_KEY || CURRENT_ANON_KEY;
+const SUPABASE_FETCH_TIMEOUT_MS = 30_000;
 const READ_ONLY_RPC_NAMES = new Set([
   "get_all_channel_unread_counts",
   "get_channel_messages_secure",
@@ -224,6 +225,47 @@ function getDbDebugState(): DbRequestDebugState | null {
   return window.__KLOAK_DB_REQUESTS__;
 }
 
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "AbortError";
+}
+
+function abortSignalAny(signals: AbortSignal[]): AbortSignal {
+  const controller = new AbortController();
+
+  const abort = () => {
+    controller.abort();
+  };
+
+  for (const signal of signals) {
+    if (signal.aborted) {
+      abort();
+      return controller.signal;
+    }
+    signal.addEventListener("abort", abort, { once: true });
+  }
+
+  return controller.signal;
+}
+
+async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => {
+    controller.abort();
+  }, SUPABASE_FETCH_TIMEOUT_MS);
+
+  try {
+    const signal = init?.signal ? abortSignalAny([init.signal, controller.signal]) : controller.signal;
+    return await fetch(input, { ...init, signal });
+  } catch (error) {
+    if (controller.signal.aborted && isAbortError(error)) {
+      throw new DOMException(`Supabase request timed out after ${SUPABASE_FETCH_TIMEOUT_MS}ms`, "TimeoutError");
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
 async function trackedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const debugState = getDbDebugState();
   if (!debugState) return dedupedFetch(input, init);
@@ -264,7 +306,7 @@ async function trackedFetch(input: RequestInfo | URL, init?: RequestInit): Promi
 
 async function dedupedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const key = getReadDedupeKey(input, init);
-  if (!key) return fetch(input, init);
+  if (!key) return fetchWithTimeout(input, init);
 
   const existing = inflightReadRequests.get(key);
   if (existing) {
@@ -272,7 +314,7 @@ async function dedupedFetch(input: RequestInfo | URL, init?: RequestInit): Promi
     return response.clone();
   }
 
-  const request = fetch(input, init).finally(() => {
+  const request = fetchWithTimeout(input, init).finally(() => {
     inflightReadRequests.delete(key);
   });
   inflightReadRequests.set(key, request);

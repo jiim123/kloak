@@ -73,7 +73,7 @@ export const LoggedInUserPanel = ({
   return (
     <motion.div
       className={cn(
-        "h-14 px-3 flex items-center gap-3 border-t border-border/30",
+        "h-14 shrink-0 px-3 flex items-center gap-3 border-t border-border/30",
         containerClassName ?? "bg-sidebar-secondary/80",
       )}
       initial={{ y: 20, opacity: 0 }}

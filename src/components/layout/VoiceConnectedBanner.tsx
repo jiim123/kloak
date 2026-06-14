@@ -72,7 +72,7 @@ export function VoiceConnectedBanner({ className }: { className?: string }) {
           exit={{ opacity: 0, y: 8 }}
           className={cn(
             // Full width like LoggedInUserPanel; inner content can wrap to multiple lines.
-            "w-full",
+            "w-full shrink-0",
             className,
           )}
         >

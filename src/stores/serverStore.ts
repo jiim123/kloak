@@ -977,7 +977,13 @@ export const useServerStore = create<ServerState>((set, get) => ({
         // Get current user ID for private channel filtering
         const userId = useAuthStore.getState().user?.id ?? null;
 
+        const isRequestedServerActive = () => get().currentServer?.id === serverId;
+
         const applyServerSurface = (categories: ChannelCategory[], channels: Channel[]) => {
+          if (!isRequestedServerActive()) {
+            return false;
+          }
+
           set({
             categories,
             channels,
@@ -1002,14 +1008,18 @@ export const useServerStore = create<ServerState>((set, get) => ({
           } else {
             set({ currentChannel: null });
           }
+
+          return true;
         };
 
         const cachedSurface = !opts?.force ? getCachedServerSurface(serverId, userId) : null;
         if (cachedSurface) {
-          applyServerSurface(cachedSurface.categories, cachedSurface.channels);
+          const applied = applyServerSurface(cachedSurface.categories, cachedSurface.channels);
+          if (!applied) return;
+
           const cachedRoles = getCachedServerRoles(serverId, userId);
           if (cachedRoles) {
-            if (get().currentServer?.id === serverId) {
+            if (isRequestedServerActive()) {
               set({ roles: cachedRoles.roles });
             }
           } else {
@@ -1018,16 +1028,16 @@ export const useServerStore = create<ServerState>((set, get) => ({
           // Also restore cached role permissions so permission evaluation
           // works immediately on the cached fast path.
           const cachedRolePerms = rolePermissionsCache.get(serverId);
-          if (cachedSurface.rolePermissions && get().currentServer?.id === serverId) {
+          if (cachedSurface.rolePermissions && isRequestedServerActive()) {
             rolePermissionsCache.set(serverId, { data: cachedSurface.rolePermissions, cachedAt: cachedSurface.cachedAt });
             set({ rolePermissions: cachedSurface.rolePermissions });
           } else if (
             cachedRolePerms &&
             Date.now() - cachedRolePerms.cachedAt < PERMISSIONS_TTL_MS &&
-            get().currentServer?.id === serverId
+            isRequestedServerActive()
           ) {
             set({ rolePermissions: cachedRolePerms.data });
-          } else if (get().currentServer?.id === serverId) {
+          } else if (isRequestedServerActive()) {
             void get().fetchRolePermissions(serverId);
           }
           return;
@@ -1126,7 +1136,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         if (emojisFromSurface) {
           hydrateServerEmojis(serverId, emojisFromSurface);
         }
-        if (currentMemberFromSurface && get().currentServer?.id === serverId) {
+        if (currentMemberFromSurface && isRequestedServerActive()) {
           const existingMembers = get().members;
           const hasCurrentMember =
             get().membersServerId === serverId &&
@@ -1145,9 +1155,10 @@ export const useServerStore = create<ServerState>((set, get) => ({
           }
         }
 
-        applyServerSurface(categories, channels);
+        const applied = applyServerSurface(categories, channels);
+        if (!applied) return;
 
-        const isActiveServer = get().currentServer?.id === serverId;
+        const isActiveServer = isRequestedServerActive();
         if (isActiveServer) {
           if (rolesFromSurface) {
             set({ roles: rolesFromSurface });
@@ -1954,15 +1965,20 @@ export const useServerStore = create<ServerState>((set, get) => ({
   fetchRoles: async (serverId: string, opts?: { force?: boolean }) => {
     return deduplicatedFetch(`serverStore:fetchRoles:${serverId}`, async () => {
       try {
+        const isRequestedServerActive = () => get().currentServer?.id === serverId;
         const userId = useAuthStore.getState().user?.id ?? null;
         if (!userId) {
-          set({ roles: [] });
+          if (isRequestedServerActive()) {
+            set({ roles: [] });
+          }
           return;
         }
 
         const cached = !opts?.force ? getCachedServerRoles(serverId, userId) : null;
         if (cached) {
-          set({ roles: cached.roles });
+          if (isRequestedServerActive()) {
+            set({ roles: cached.roles });
+          }
           return;
         }
 
@@ -1975,7 +1991,9 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
         const roles = (Array.isArray(data) ? data : []) as unknown as CustomServerRole[];
         setCachedServerRoles(serverId, userId, roles);
-        set({ roles });
+        if (isRequestedServerActive()) {
+          set({ roles });
+        }
       } catch (error) {
         console.error("Failed to fetch roles:", error);
       }
@@ -2283,9 +2301,12 @@ export const useServerStore = create<ServerState>((set, get) => ({
   fetchRolePermissions: async (serverId: string, opts?: { force?: boolean }) => {
     return deduplicatedFetch(`serverStore:fetchRolePermissions:${serverId}`, async () => {
       try {
+        const isRequestedServerActive = () => get().currentServer?.id === serverId;
         const cached = rolePermissionsCache.get(serverId);
         if (!opts?.force && cached && Date.now() - cached.cachedAt < PERMISSIONS_TTL_MS) {
-          set({ rolePermissions: cached.data });
+          if (isRequestedServerActive()) {
+            set({ rolePermissions: cached.data });
+          }
           return;
         }
 
@@ -2302,7 +2323,9 @@ export const useServerStore = create<ServerState>((set, get) => ({
         const permissions = normalizeRolePermissionRows(rows);
 
         rolePermissionsCache.set(serverId, { data: permissions, cachedAt: Date.now() });
-        set({ rolePermissions: permissions });
+        if (isRequestedServerActive()) {
+          set({ rolePermissions: permissions });
+        }
       } catch (error) {
         console.error("Failed to fetch role permissions:", error);
         throw error;
