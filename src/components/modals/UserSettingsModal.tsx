@@ -82,6 +82,20 @@ import { sanitizeDisplayName, validateDisplayName } from "@/lib/displayNameValid
 type UserSettingsVariant = "modal" | "page";
 type ProfileCropTarget = "avatar" | "banner" | null;
 
+const isGifFile = async (file: File) => {
+  if (file.type === "image/gif" || file.name.toLowerCase().endsWith(".gif")) return true;
+
+  try {
+    const header = await file.slice(0, 6).text();
+    return header === "GIF87a" || header === "GIF89a";
+  } catch {
+    return false;
+  }
+};
+
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error && error.message ? error.message : fallback;
+
 const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -221,6 +235,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const [localBannerUrl, setLocalBannerUrl] = useState<string | null>(user?.banner_url ?? null);
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const [cropTarget, setCropTarget] = useState<ProfileCropTarget>(null);
+  const [cropSourceFile, setCropSourceFile] = useState<File | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
@@ -248,12 +263,14 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     }
     setCropImageSrc(null);
     setCropTarget(null);
+    setCropSourceFile(null);
   };
 
   const openCropModal = (file: File, target: Exclude<ProfileCropTarget, null>) => {
     const src = URL.createObjectURL(file);
     setCropImageSrc(src);
     setCropTarget(target);
+    setCropSourceFile(file);
   };
 
   const navItems = [
@@ -369,7 +386,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       });
       toast.success("Profile updated!");
     } catch (error) {
-      toast.error("Failed to update profile");
+      toast.error(getErrorMessage(error, "Failed to update profile"));
     } finally {
       setIsLoading(false);
     }
@@ -389,17 +406,54 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     }
   };
 
+  const uploadAnimatedAvatar = async (file: File) => {
+    if (!user) return;
+
+    const previewUrl = URL.createObjectURL(file);
+    setLocalAvatarUrl(previewUrl);
+    setIsLoading(true);
+
+    try {
+      const filePath = `${user.id}/avatar-${Date.now()}.gif`;
+      const { publicUrl } = await secureUpload("avatars", filePath, file, {
+        contentType: "image/gif",
+        upsert: false,
+        cacheControl: "31536000",
+      });
+
+      setLocalAvatarUrl(publicUrl);
+      URL.revokeObjectURL(previewUrl);
+      await updateUser({ avatar_url: publicUrl });
+      toast.success("Avatar updated!");
+    } catch (error) {
+      console.error("Animated avatar upload error:", error);
+      URL.revokeObjectURL(previewUrl);
+      setLocalAvatarUrl(user.avatar_url ?? null);
+      toast.error(getErrorMessage(error, "Failed to upload avatar"));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
+    const selectedFileIsGif = await isGifFile(file);
 
-    if (!file.type.startsWith("image/")) {
+    if (!selectedFileIsGif && !file.type.startsWith("image/")) {
       toast.error("Please select an image file");
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
       toast.error("Image must be less than 5MB");
+      return;
+    }
+
+    if (selectedFileIsGif) {
+      toast.info("Animated GIFs are uploaded without cropping to preserve animation.");
+      await uploadAnimatedAvatar(file);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
@@ -429,6 +483,12 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     if (!user || !cropTarget) return;
 
     const isAvatar = cropTarget === "avatar";
+    if (isAvatar && cropSourceFile && await isGifFile(cropSourceFile)) {
+      await uploadAnimatedAvatar(cropSourceFile);
+      closeCropModal();
+      return;
+    }
+
     const setUploading = isAvatar ? setIsLoading : setIsBannerUploading;
     const setPreview = isAvatar ? setLocalAvatarUrl : setLocalBannerUrl;
     const uploadType = isAvatar ? "avatar" : "profile-banner";
@@ -465,7 +525,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       console.error("Profile image upload error:", error);
       URL.revokeObjectURL(previewUrl);
       setPreview(isAvatar ? user.avatar_url ?? null : user.banner_url ?? null);
-      toast.error(errorMessage);
+      toast.error(getErrorMessage(error, errorMessage));
     } finally {
       setUploading(false);
     }

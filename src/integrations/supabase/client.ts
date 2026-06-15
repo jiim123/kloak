@@ -150,6 +150,14 @@ export async function getKeyHashAsync(): Promise<string | null> {
   return ensureKeyHash();
 }
 
+function isEdgeFunctionRequest(input: RequestInfo | URL): boolean {
+  try {
+    return new URL(getFetchUrl(input)).pathname.startsWith("/functions/v1/");
+  } catch {
+    return false;
+  }
+}
+
 function getFetchMethod(input: RequestInfo | URL, init?: RequestInit): string {
   return (init?.method || (input instanceof Request ? input.method : "GET")).toUpperCase();
 }
@@ -345,7 +353,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
           "x-key-hash": keyHash,
         };
       }
-      if (currentMfaSession) {
+      if (currentMfaSession && !isEdgeFunctionRequest(input)) {
         init = init || {};
         const existingHeaders =
           init.headers instanceof Headers ? Object.fromEntries(init.headers.entries()) : init.headers || {};

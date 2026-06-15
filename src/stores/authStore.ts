@@ -25,6 +25,26 @@ const LAST_SEEN_INTERVAL = 60_000; // 60 seconds minimum between calls
 const LAST_SEEN_STORAGE_PREFIX = "kloak:last-seen:";
 let initializeAuthInFlight: Promise<void> | null = null;
 
+async function getFunctionErrorMessage(error: Error & { context?: unknown }): Promise<string> {
+  const { context } = error;
+
+  if (context instanceof Response) {
+    const payload = await context.clone().json().catch(() => null);
+    if (payload && typeof payload === "object" && "error" in payload && typeof payload.error === "string") {
+      return payload.error;
+    }
+  }
+
+  if (context && typeof context === "object" && "error" in context) {
+    const contextError = (context as { error?: unknown }).error;
+    if (typeof contextError === "string") return contextError;
+  }
+
+  if (typeof context === "string") return context;
+
+  return error.message;
+}
+
 // One-time migration: move plaintext keyHash from localStorage to encrypted IndexedDB
 const migrateToEncryptedStorage = async () => {
   try {
@@ -495,7 +515,7 @@ export const useAuthStore = create<AuthState>()(
             body: { updates: normalizedUpdates },
           });
 
-          if (error) throw error;
+          if (error) throw new Error(await getFunctionErrorMessage(error));
 
           if (data) {
             const userData = data as Record<string, unknown>;
@@ -563,6 +583,7 @@ export const useAuthStore = create<AuthState>()(
           }
         } catch (error) {
           console.error("Failed to update user:", error);
+          throw error;
         }
       },
 
