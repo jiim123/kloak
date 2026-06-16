@@ -298,22 +298,21 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
     let cancelled = false;
     setIsMfaLoading(true);
-    supabase
-      .rpc("get_my_mfa_status", { _user_id: user.id } as never)
-      .then(({ data, error }) => {
+    (async () => {
+      try {
+        const { data, error } = await supabase.rpc("get_my_mfa_status", { _user_id: user.id } as never);
         if (cancelled) return;
         if (error) throw error;
         const status = data as { totp_enabled?: boolean; totp_enabled_at?: string | null } | null;
         setMfaEnabled(status?.totp_enabled === true);
         setMfaEnabledAt(status?.totp_enabled_at ?? null);
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error("Failed to load MFA status:", error);
         if (!cancelled) toast.error("Failed to load 2FA status");
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setIsMfaLoading(false);
-      });
+      }
+    })();
 
     return () => {
       cancelled = true;

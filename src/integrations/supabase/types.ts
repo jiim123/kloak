@@ -68,6 +68,72 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_moderation_actions: {
+        Row: {
+          action_type: string
+          admin_user_id: string | null
+          created_at: string
+          details: Json
+          id: string
+          report_id: string | null
+          target_user_id: string | null
+        }
+        Insert: {
+          action_type: string
+          admin_user_id?: string | null
+          created_at?: string
+          details?: Json
+          id?: string
+          report_id?: string | null
+          target_user_id?: string | null
+        }
+        Update: {
+          action_type?: string
+          admin_user_id?: string | null
+          created_at?: string
+          details?: Json
+          id?: string
+          report_id?: string | null
+          target_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_moderation_actions_admin_user_id_fkey"
+            columns: ["admin_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_moderation_actions_admin_user_id_fkey"
+            columns: ["admin_user_id"]
+            isOneToOne: false
+            referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_moderation_actions_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "message_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_moderation_actions_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_moderation_actions_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       announcement_comment_reactions: {
         Row: {
           comment_id: string
@@ -1339,6 +1405,107 @@ export type Database = {
           },
         ]
       }
+      entity_reports: {
+        Row: {
+          created_at: string
+          details: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          reason: string
+          reported_server_id: string | null
+          reported_user_id: string | null
+          reporter_id: string | null
+          resolution_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          snapshot: Json
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          details?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          reason: string
+          reported_server_id?: string | null
+          reported_user_id?: string | null
+          reporter_id?: string | null
+          resolution_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          snapshot?: Json
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          details?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          reason?: string
+          reported_server_id?: string | null
+          reported_user_id?: string | null
+          reporter_id?: string | null
+          resolution_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          snapshot?: Json
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_reports_reported_server_id_fkey"
+            columns: ["reported_server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_reports_reported_user_id_fkey"
+            columns: ["reported_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_reports_reported_user_id_fkey"
+            columns: ["reported_user_id"]
+            isOneToOne: false
+            referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_reports_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_reports_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       friendships: {
         Row: {
           addressee_id: string
@@ -1388,6 +1555,96 @@ export type Database = {
             columns: ["requester_id"]
             isOneToOne: false
             referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mass_mention_jobs: {
+        Row: {
+          attempts: number
+          channel_id: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          last_error: string | null
+          last_recipient_id: string | null
+          locked_until: string | null
+          mention_type: Database["public"]["Enums"]["mention_type"]
+          message_id: string
+          processed_count: number
+          sender_id: string
+          server_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          channel_id: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          last_recipient_id?: string | null
+          locked_until?: string | null
+          mention_type: Database["public"]["Enums"]["mention_type"]
+          message_id: string
+          processed_count?: number
+          sender_id: string
+          server_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          channel_id?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          last_recipient_id?: string | null
+          locked_until?: string | null
+          mention_type?: Database["public"]["Enums"]["mention_type"]
+          message_id?: string
+          processed_count?: number
+          sender_id?: string
+          server_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mass_mention_jobs_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mass_mention_jobs_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mass_mention_jobs_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mass_mention_jobs_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mass_mention_jobs_server_id_fkey"
+            columns: ["server_id"]
+            isOneToOne: false
+            referencedRelation: "servers"
             referencedColumns: ["id"]
           },
         ]
@@ -1662,6 +1919,100 @@ export type Database = {
             columns: ["message_id"]
             isOneToOne: false
             referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_reports: {
+        Row: {
+          context: Json
+          created_at: string
+          details: string | null
+          id: string
+          message_content: string
+          message_id: string
+          message_type: string
+          reason: string
+          reported_user_id: string
+          reporter_id: string | null
+          resolution_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          context?: Json
+          created_at?: string
+          details?: string | null
+          id?: string
+          message_content: string
+          message_id: string
+          message_type: string
+          reason: string
+          reported_user_id: string
+          reporter_id?: string | null
+          resolution_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          context?: Json
+          created_at?: string
+          details?: string | null
+          id?: string
+          message_content?: string
+          message_id?: string
+          message_type?: string
+          reason?: string
+          reported_user_id?: string
+          reporter_id?: string | null
+          resolution_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_reports_reported_user_id_fkey"
+            columns: ["reported_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reports_reported_user_id_fkey"
+            columns: ["reported_user_id"]
+            isOneToOne: false
+            referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reports_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reports_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "users_public"
             referencedColumns: ["id"]
           },
         ]
@@ -3081,16 +3432,34 @@ export type Database = {
         Row: {
           key_hash: string
           last_key_reset_at: string | null
+          mfa_session_expires_at: string | null
+          mfa_session_token_hash: string | null
+          totp_enabled_at: string | null
+          totp_last_counter: number | null
+          totp_pending_secret: string | null
+          totp_secret: string | null
           user_id: string
         }
         Insert: {
           key_hash: string
           last_key_reset_at?: string | null
+          mfa_session_expires_at?: string | null
+          mfa_session_token_hash?: string | null
+          totp_enabled_at?: string | null
+          totp_last_counter?: number | null
+          totp_pending_secret?: string | null
+          totp_secret?: string | null
           user_id: string
         }
         Update: {
           key_hash?: string
           last_key_reset_at?: string | null
+          mfa_session_expires_at?: string | null
+          mfa_session_token_hash?: string | null
+          totp_enabled_at?: string | null
+          totp_last_counter?: number | null
+          totp_pending_secret?: string | null
+          totp_secret?: string | null
           user_id?: string
         }
         Relationships: [
@@ -3434,6 +3803,104 @@ export type Database = {
           },
         ]
       }
+      user_punishments: {
+        Row: {
+          acknowledged_at: string | null
+          action_type: string
+          created_at: string
+          created_by: string | null
+          details: string | null
+          expires_at: string | null
+          id: string
+          reason: string
+          report_id: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          starts_at: string
+          user_id: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          action_type: string
+          created_at?: string
+          created_by?: string | null
+          details?: string | null
+          expires_at?: string | null
+          id?: string
+          reason: string
+          report_id?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          starts_at?: string
+          user_id: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          action_type?: string
+          created_at?: string
+          created_by?: string | null
+          details?: string | null
+          expires_at?: string | null
+          id?: string
+          reason?: string
+          report_id?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          starts_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_punishments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_punishments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_punishments_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "message_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_punishments_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_punishments_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_punishments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_punishments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_server_folders: {
         Row: {
           folder_data: Json
@@ -3676,6 +4143,10 @@ export type Database = {
         Args: { _friendship_id: string; _user_id: string }
         Returns: Json
       }
+      acknowledge_my_punishments: {
+        Args: { _punishment_ids: string[]; _user_id: string }
+        Returns: Json
+      }
       add_channel_member: {
         Args: {
           _added_by: string
@@ -3711,6 +4182,37 @@ export type Database = {
       }
       admin_set_raid_mode: {
         Args: { _admin_user_id: string; _level: number; _reason?: string }
+        Returns: Json
+      }
+      apply_admin_entity_report_action: {
+        Args: {
+          _action_type: string
+          _admin_user_id: string
+          _expires_at?: string
+          _note?: string
+          _reason?: string
+          _report_id: string
+        }
+        Returns: Json
+      }
+      apply_admin_report_action: {
+        Args: {
+          _action_type: string
+          _admin_user_id: string
+          _note?: string
+          _report_id: string
+        }
+        Returns: Json
+      }
+      apply_admin_report_action_v2: {
+        Args: {
+          _action_type: string
+          _admin_user_id: string
+          _expires_at?: string
+          _note?: string
+          _reason?: string
+          _report_id: string
+        }
         Returns: Json
       }
       are_messages_similar_for_raid: {
@@ -3765,6 +4267,9 @@ export type Database = {
         Args: { _server_id: string; _target_user_id: string; _user_id: string }
         Returns: undefined
       }
+      base32_decode: { Args: { _value: string }; Returns: string }
+      base32_encode_bytes: { Args: { _bytes: string }; Returns: string }
+      begin_totp_enrollment: { Args: { _user_id: string }; Returns: Json }
       block_user: {
         Args: { _blocked_user_id: string; _user_id: string }
         Returns: Json
@@ -3902,6 +4407,10 @@ export type Database = {
       }
       close_expired_polls: { Args: { _channel_id: string }; Returns: number }
       close_poll: { Args: { _poll_id: string }; Returns: boolean }
+      confirm_totp_enrollment: {
+        Args: { _code: string; _user_id: string }
+        Returns: Json
+      }
       consume_registration_rate_limit: {
         Args: {
           _daily_limit?: number
@@ -4069,6 +4578,10 @@ export type Database = {
         Args: { _message_id: string; _user_id: string }
         Returns: string
       }
+      current_request_mfa_session_valid: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       decline_friend_request: {
         Args: { _friendship_id: string; _user_id: string }
         Returns: boolean
@@ -4162,6 +4675,7 @@ export type Database = {
         Returns: boolean
       }
       delete_user_account: { Args: { _user_id: string }; Returns: boolean }
+      disable_totp: { Args: { _code: string; _user_id: string }; Returns: Json }
       edit_announcement_comment: {
         Args: { _comment_id: string; _content: string; _user_id: string }
         Returns: boolean
@@ -4216,6 +4730,14 @@ export type Database = {
       fetch_key_backup: { Args: { _user_id: string }; Returns: Json }
       fetch_prekey_bundle: { Args: { _target_user_id: string }; Returns: Json }
       generate_invite_code: { Args: never; Returns: string }
+      get_admin_entity_reports: {
+        Args: { _admin_user_id: string; _status?: string }
+        Returns: Json
+      }
+      get_admin_message_reports: {
+        Args: { _admin_user_id: string; _status?: string }
+        Returns: Json
+      }
       get_all_channel_unread_counts: {
         Args: {
           _blocked_user_ids?: string[]
@@ -4290,6 +4812,15 @@ export type Database = {
         Returns: Json
       }
       get_deletion_preview: { Args: { _user_id: string }; Returns: Json }
+      get_dm_bootstrap_secure: {
+        Args: {
+          _before_id?: string
+          _conversation_id: string
+          _limit?: number
+          _user_id: string
+        }
+        Returns: Json
+      }
       get_dm_conversation_id: { Args: { _message_id: string }; Returns: string }
       get_dm_message_conversation_secure: {
         Args: { _message_id: string; _user_id: string }
@@ -4371,6 +4902,11 @@ export type Database = {
         Returns: Json
       }
       get_my_developer_bots: { Args: { _owner_user_id: string }; Returns: Json }
+      get_my_mfa_status: { Args: { _user_id: string }; Returns: Json }
+      get_my_unacknowledged_punishments: {
+        Args: { _user_id: string }
+        Returns: Json
+      }
       get_outgoing_friend_requests: {
         Args: { _user_id: string }
         Returns: Json
@@ -4427,6 +4963,16 @@ export type Database = {
         Args: {
           _limit?: number
           _query?: string
+          _server_id: string
+          _user_id: string
+        }
+        Returns: Json
+      }
+      get_server_overview_secure: {
+        Args: {
+          _announcement_limit?: number
+          _calendar_limit?: number
+          _forum_limit?: number
           _server_id: string
           _user_id: string
         }
@@ -4545,6 +5091,7 @@ export type Database = {
         Args: { _channel_id: string; _user_id: string }
         Returns: boolean
       }
+      hash_mfa_session_token: { Args: { _token: string }; Returns: string }
       insert_announcement_comment: {
         Args: {
           _content: string
@@ -4620,6 +5167,7 @@ export type Database = {
         Args: { _message_id: string; _user_id: string }
         Returns: boolean
       }
+      is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
       is_safe_storage_object_key: {
         Args: { _bucket_id: string; _name: string }
         Returns: boolean
@@ -4643,6 +5191,7 @@ export type Database = {
       is_unicode_emoji: { Args: { _emoji: string }; Returns: boolean }
       is_user_muted: { Args: { _user_id: string }; Returns: boolean }
       is_username_blocked: { Args: { username: string }; Returns: boolean }
+      issue_mfa_session: { Args: { _user_id: string }; Returns: string }
       join_server_by_invite: {
         Args: { _invite_code: string; _join_source?: string; _user_id: string }
         Returns: Json
@@ -4684,6 +5233,10 @@ export type Database = {
         }[]
       }
       login_user: { Args: { _key_hash: string }; Returns: Json }
+      login_user_with_totp: {
+        Args: { _key_hash: string; _totp_code: string }
+        Returns: Json
+      }
       mark_channel_read: {
         Args: {
           _channel_id: string
@@ -4748,14 +5301,28 @@ export type Database = {
         Args: { _other_user_id: string; _user_id: string }
         Returns: Json
       }
+      perform_login_user: {
+        Args: {
+          _key_hash: string
+          _require_totp?: boolean
+          _totp_code?: string
+        }
+        Returns: Json
+      }
       pin_message: {
         Args: { _message_id: string; _pinned: boolean; _user_id: string }
         Returns: undefined
       }
       ping_health: { Args: never; Returns: boolean }
+      platform_admin_user_ids: { Args: never; Returns: string[] }
+      platform_admin_usernames: { Args: never; Returns: string[] }
       post_system_message: {
         Args: { _channel_id: string; _content: string; _user_id: string }
         Returns: string
+      }
+      process_mass_mention_jobs: {
+        Args: { _batch_size?: number; _max_jobs?: number }
+        Returns: Json
       }
       profile: {
         Args: {
@@ -4862,12 +5429,35 @@ export type Database = {
         Args: { _device_id: number; _prekeys: Json; _user_id: string }
         Returns: number
       }
-      request_client_identifier: { Args: never; Returns: string }
-      requesting_user_id: { Args: never; Returns: string }
-      reset_user_secret_key: {
-        Args: { _new_key_hash: string; _user_id: string }
+      report_message: {
+        Args: {
+          _details?: string
+          _message_id: string
+          _message_type: string
+          _reason: string
+        }
         Returns: Json
       }
+      report_profile: {
+        Args: { _details?: string; _reason: string; _reported_user_id: string }
+        Returns: Json
+      }
+      report_server: {
+        Args: { _details?: string; _reason: string; _server_id: string }
+        Returns: Json
+      }
+      request_client_identifier: { Args: never; Returns: string }
+      requesting_user_id: { Args: never; Returns: string }
+      reset_user_secret_key:
+        | { Args: { _new_key_hash: string; _user_id: string }; Returns: Json }
+        | {
+            Args: {
+              _new_key_hash: string
+              _totp_code: string
+              _user_id: string
+            }
+            Returns: Json
+          }
       resolve_custom_emojis_for_render: {
         Args: { _names?: string[]; _qualified?: string[] }
         Returns: {
@@ -4877,9 +5467,14 @@ export type Database = {
           server_name: string
         }[]
       }
+      restore_user_session: { Args: { _key_hash: string }; Returns: Json }
       revoke_server_invite: {
         Args: { _invite_id: string; _user_id: string }
         Returns: boolean
+      }
+      revoke_user_punishment: {
+        Args: { _admin_user_id: string; _note?: string; _punishment_id: string }
+        Returns: Json
       }
       rotate_developer_bot_secret: {
         Args: { _bot_user_id: string; _owner_user_id: string }
@@ -5074,6 +5669,10 @@ export type Database = {
         Args: { _emoji: string; _message_id: string; _user_id: string }
         Returns: Json
       }
+      totp_code: {
+        Args: { _counter: number; _secret: string }
+        Returns: string
+      }
       transfer_ownership: {
         Args: { _new_owner_id: string; _server_id: string }
         Returns: boolean
@@ -5237,6 +5836,10 @@ export type Database = {
         Returns: undefined
       }
       verify_request_identity: { Args: { _user_id: string }; Returns: boolean }
+      verify_totp_code: {
+        Args: { _code: string; _last_counter?: number; _secret: string }
+        Returns: number
+      }
       vote_poll: {
         Args: { _option_indexes: number[]; _poll_id: string; _user_id: string }
         Returns: Json
