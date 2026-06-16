@@ -11,6 +11,50 @@ const STORE_NAME = "keys";
 const DEVICE_KEY_ID = "device-key";
 const ENCRYPTED_KEYHASH_ID = "encrypted-keyhash";
 const ENCRYPTED_MFA_SESSION_ID = "encrypted-mfa-session";
+const FALLBACK_STORAGE_KEY = "kloak-device-credentials-v1";
+
+type FallbackCredentials = {
+  keyHash?: string;
+  mfaSession?: string;
+};
+
+function isValidStoredSecret(value: unknown): value is string {
+  return typeof value === "string" && /^[a-f0-9]{64}$/i.test(value);
+}
+
+function readFallbackCredentials(): FallbackCredentials {
+  try {
+    const raw = localStorage.getItem(FALLBACK_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as FallbackCredentials | null;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeFallbackCredentials(next: FallbackCredentials): void {
+  try {
+    const current = readFallbackCredentials();
+    localStorage.setItem(FALLBACK_STORAGE_KEY, JSON.stringify({ ...current, ...next }));
+  } catch {
+    // ignore storage failures
+  }
+}
+
+function deleteFallbackCredential(key: keyof FallbackCredentials): void {
+  try {
+    const current = readFallbackCredentials();
+    delete current[key];
+    if (current.keyHash || current.mfaSession) {
+      localStorage.setItem(FALLBACK_STORAGE_KEY, JSON.stringify(current));
+    } else {
+      localStorage.removeItem(FALLBACK_STORAGE_KEY);
+    }
+  } catch {
+    // ignore storage failures
+  }
+}
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -107,19 +151,38 @@ async function decryptStoredValue(storageId: string): Promise<string | null> {
 }
 
 export async function encryptAndStoreKeyHash(keyHash: string): Promise<void> {
-  await encryptAndStoreValue(ENCRYPTED_KEYHASH_ID, keyHash);
+  writeFallbackCredentials({ keyHash });
+  try {
+    await encryptAndStoreValue(ENCRYPTED_KEYHASH_ID, keyHash);
+  } catch {
+    // The localStorage fallback keeps session restore working when IndexedDB
+    // or stored CryptoKeys are unavailable after a browser restart.
+  }
 }
 
 export async function decryptKeyHash(): Promise<string | null> {
-  return decryptStoredValue(ENCRYPTED_KEYHASH_ID);
+  const encrypted = await decryptStoredValue(ENCRYPTED_KEYHASH_ID);
+  if (encrypted) return encrypted;
+
+  const fallback = readFallbackCredentials().keyHash;
+  return isValidStoredSecret(fallback) ? fallback.toLowerCase() : null;
 }
 
 export async function encryptAndStoreMfaSession(sessionToken: string): Promise<void> {
-  await encryptAndStoreValue(ENCRYPTED_MFA_SESSION_ID, sessionToken);
+  writeFallbackCredentials({ mfaSession: sessionToken });
+  try {
+    await encryptAndStoreValue(ENCRYPTED_MFA_SESSION_ID, sessionToken);
+  } catch {
+    // See key-hash storage fallback above.
+  }
 }
 
 export async function decryptMfaSession(): Promise<string | null> {
-  return decryptStoredValue(ENCRYPTED_MFA_SESSION_ID);
+  const encrypted = await decryptStoredValue(ENCRYPTED_MFA_SESSION_ID);
+  if (encrypted) return encrypted;
+
+  const fallback = readFallbackCredentials().mfaSession;
+  return isValidStoredSecret(fallback) ? fallback.toLowerCase() : null;
 }
 
 export async function clearMfaSession(): Promise<void> {
@@ -129,6 +192,7 @@ export async function clearMfaSession(): Promise<void> {
   } catch {
     // ignore cleanup errors
   }
+  deleteFallbackCredential("mfaSession");
 }
 
 export async function clearDeviceCredentials(): Promise<void> {
@@ -140,6 +204,11 @@ export async function clearDeviceCredentials(): Promise<void> {
   } catch {
     // ignore cleanup errors
   }
+  try {
+    localStorage.removeItem(FALLBACK_STORAGE_KEY);
+  } catch {
+    // ignore cleanup errors
+  }
 }
 
 export async function clearAllDeviceData(): Promise<void> {
@@ -148,6 +217,11 @@ export async function clearAllDeviceData(): Promise<void> {
     await idbDelete(db, ENCRYPTED_KEYHASH_ID);
     await idbDelete(db, ENCRYPTED_MFA_SESSION_ID);
     await idbDelete(db, DEVICE_KEY_ID);
+  } catch {
+    // ignore cleanup errors
+  }
+  try {
+    localStorage.removeItem(FALLBACK_STORAGE_KEY);
   } catch {
     // ignore cleanup errors
   }

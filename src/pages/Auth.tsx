@@ -121,17 +121,15 @@ const Auth = ({ formOnly = false }: AuthProps) => {
         return;
       }
 
-      // Check if there's a saved secret key in localStorage
-      if (currentState.secretKey) {
-        // Try to restore session using saved key
-        await initializeAuth();
-        if (!cancelled) {
-          const { user: restoredUser, isAuthenticated } = useAuthStore.getState();
-          if (restoredUser && isAuthenticated) {
-            // Session restored, resize window and redirect to app
-            await resizeWindowForApp();
-            navigate(redirectTo || "/app", { replace: true });
-          }
+      // Try to restore the encrypted key hash from IndexedDB. The raw secret key
+      // is intentionally never persisted, so checking `secretKey` here skips
+      // valid saved sessions after a browser restart.
+      await initializeAuth();
+      if (!cancelled) {
+        const { user: restoredUser, isAuthenticated } = useAuthStore.getState();
+        if (restoredUser && isAuthenticated) {
+          await resizeWindowForApp();
+          navigate(redirectTo || "/app", { replace: true });
         }
       }
     })();

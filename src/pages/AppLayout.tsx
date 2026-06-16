@@ -140,6 +140,7 @@ const AppLayout = () => {
   const authEntryPath = getAuthEntryPath();
   const [lockedLayoutIsMobile, setLockedLayoutIsMobile] = useState<boolean | null>(null);
   const [isAddServerPanelOpen, setIsAddServerPanelOpen] = useState(false);
+  const [isAuthInitialized, setIsAuthInitialized] = useState(false);
   const activeVoiceTextChannelId = useMemo(() => {
     if (currentChannel?.type !== "voice") return null;
     return channels.find((channel) => channel.linked_voice_channel_id === currentChannel.id)?.id ?? null;
@@ -447,6 +448,7 @@ const AppLayout = () => {
     (async () => {
       await initializeAuth();
       if (cancelled) return;
+      setIsAuthInitialized(true);
       // Force a re-render after auth init completes
       const state = useAuthStore.getState();
       if (!state.isLoading && !state.user) {
@@ -461,6 +463,7 @@ const AppLayout = () => {
 
   // Only redirect if we've finished loading and still no user
   useEffect(() => {
+    if (!isAuthInitialized) return;
     if (!isLoading && !user) {
       // Small delay to ensure auth state is loaded from localStorage
       const timer = setTimeout(() => {
@@ -471,7 +474,7 @@ const AppLayout = () => {
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [user, isLoading, navigate, authEntryPath]);
+  }, [user, isLoading, isAuthInitialized, navigate, authEntryPath]);
 
   // Maximize window once when user is authenticated (for Tauri)
   // Use a ref to ensure it only runs once

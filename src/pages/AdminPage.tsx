@@ -27,6 +27,7 @@ const AdminPage = () => {
   const isLoading = useAuthStore((s) => s.isLoading);
   const activeModal = useUIStore((s) => s.activeModal);
   const [adminCheck, setAdminCheck] = useState<AdminCheckState>("checking");
+  const [isAuthInitialized, setIsAuthInitialized] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -34,6 +35,7 @@ const AdminPage = () => {
     const init = async () => {
       await initializeAuth();
       if (cancelled) return;
+      setIsAuthInitialized(true);
 
       const state = useAuthStore.getState();
       if (!state.user && !state.isLoading) {
@@ -49,6 +51,7 @@ const AdminPage = () => {
   }, [authEntryPath, navigate]);
 
   useEffect(() => {
+    if (!isAuthInitialized) return;
     if (!isLoading && !user) {
       const timer = setTimeout(() => {
         const state = useAuthStore.getState();
@@ -58,7 +61,7 @@ const AdminPage = () => {
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [authEntryPath, isLoading, navigate, user]);
+  }, [authEntryPath, isAuthInitialized, isLoading, navigate, user]);
 
   // Server-side admin gate: the RPC is the only source of truth.
   useEffect(() => {
