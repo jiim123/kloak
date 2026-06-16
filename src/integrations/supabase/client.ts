@@ -198,7 +198,10 @@ function getReadDedupeKey(input: RequestInfo | URL, init?: RequestInit): string 
   return `${method}:${url}:${bodyKey}`;
 }
 
-function getDbRequestInfo(input: RequestInfo | URL, init?: RequestInit): Pick<DbRequestEntry, "method" | "kind" | "name" | "url"> {
+function getDbRequestInfo(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Pick<DbRequestEntry, "method" | "kind" | "name" | "url"> {
   const method = getFetchMethod(input, init);
   const url = getFetchUrl(input);
 
@@ -340,6 +343,14 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: false,
     autoRefreshToken: false,
+  },
+  realtime: {
+    worker: true,
+    heartbeatCallback: (status) => {
+      if (status === "disconnected") {
+        supabase.realtime.connect();
+      }
+    },
   },
   global: {
     fetch: async (input, init) => {
