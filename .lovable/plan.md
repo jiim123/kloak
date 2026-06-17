@@ -1,51 +1,83 @@
-## Goal
-Make attachment upload/send feel quiet and seamless by stopping the repeated `sign-bunny-url` 404 loop while keeping media/file rendering intact once the attachment is actually ready.
+# Hooks Folder Audit — Cleanup Plan
 
-## What’s causing it
-The 404 spam is not one single bad call — it’s several attachment consumers all trying to resolve a signed URL before the uploaded file is fully available.
+A read-only audit of `src/hooks/` found 10 issues across conflicting writes, dead exports, subscription bugs, and double-delivery. Below is the proposed remediation, grouped by severity. Nothing outside `src/hooks/` and `src/hooks/index.ts` is touched except for one consumer check.
 
-Current call chain I verified:
-- `MessageInput.waitForAttachmentReady()` polls attachment readiness after send.
-- `useSignedUrl()` immediately calls `getSignedAttachmentUrl()` for attachment URLs / `kloak-attachment://...` refs.
-- `FileAttachmentCard` auto-refreshes missing signed URLs on a timer.
-- `MessageContent` retries inline attachment resolution on its own timer.
-- `messageStore`, `dmStore`, and `useRealtimeMessages` all pre-warm signed URLs in the background.
+---
 
-So one fresh attachment can trigger multiple overlapping requests, and each 404 gets surfaced in the console.
+## HIGH severity (breaks logic / visible flashes)
 
-## Plan
-1. **Separate “not ready yet” from “real failure” in the client**
-   - Update signed URL helpers so expected early-miss cases do not behave like hard errors.
-   - Add short-lived negative/in-flight dedupe around readiness/signing paths so one attachment path produces one retry sequence, not many.
+### H1. Delete `useRealtimeReactions` (dead + would conflict if mounted)
+- `src/hooks/useRealtimeReactions.ts` has **zero call sites**.
+- `useRealtimeMessages.ts:530-671` already owns all reaction INSERT/UPDATE/DELETE handling — and unlike the dead hook, it correctly accounts for ghost-mode/pseudonymous users.
+- If `useRealtimeReactions` were ever mounted alongside it, every reaction would be applied twice (inflated counts, duplicate user IDs).
+- **Action:** delete the file; remove the export from `src/hooks/index.ts`.
 
-2. **Stop eager signing during upload/finalization**
-   - Prevent upload-preview / optimistic attachment flows from calling `sign-bunny-url` until the attachment has actually been finalized and is expected to resolve.
-   - Keep the UI in a pending/loading state instead of bouncing between unresolved URL attempts.
+### H2. Delete `useOfflineSync` (duplicates `useBackgroundSync`)
+- Both hooks drain `offlineQueueStore` on `isOnline && wasOffline`, both iterate `queuedMessages`, both call `sendMessage`, both toast "Reconnected" / "Syncing messages…".
+- `useOfflineSync` has **zero call sites**; `useBackgroundSync` is the one wired into `AppLayout`.
+- **Action:** delete `useOfflineSync.ts`; remove the export from `src/hooks/index.ts`.
 
-3. **Remove redundant background pre-warming for fresh attachments**
-   - Audit and trim the `resolveSignedUrls(...)` prewarm calls in message list / DM / realtime paths that currently amplify the same miss.
-   - Keep prewarm only where it helps already-persisted attachments, not newly-uploaded ones.
+### H3. Strip connection-status writes from `useBackgroundSync`
+- `useConnectionStatus` already owns `syncStore.connection.status` (driven by Supabase realtime channel state + the `ping_health` heartbeat).
+- `useBackgroundSync.ts:90,102,135,139` independently calls `setConnectionStatus('reconnecting'|'connected'|'disconnected')` and `incrementReconnectAttempts`/`resetReconnectAttempts` on `navigator.onLine` events.
+- On reconnect both fire near-simultaneously → status flickers and `reconnectAttempts` can be double-incremented/reset.
+- **Action:** in `useBackgroundSync.ts`, remove all `setConnectionStatus`, `incrementReconnectAttempts`, `resetReconnectAttempts` calls and any helper ping that exists only to drive them. Keep the queue-drain logic. `useConnectionStatus` becomes the sole writer.
 
-4. **Unify retry ownership**
-   - Choose one place to retry attachment readiness/signing instead of `useSignedUrl`, `FileAttachmentCard`, and `MessageContent` each running their own timers.
-   - Use a bounded backoff and stop retrying once the attachment is marked unavailable or the component unmounts.
+### H4. Migrate `useUnreadDMs` to `sharedChannel`
+- `useUnreadDMs.ts:187-240` calls `supabase.channel('user:${userId}')` directly, never calls `.subscribe()`, and tears down via the private `_off` API.
+- The same topic is owned by `useUnread` / `useRealtimeOwnMembership` / `useServerUnreadSummary` / `useRealtimeFriendships` via `sharedChannel`. The direct call creates a second channel instance for the same topic, so the broadcast listener registered in `useUnreadDMs` **never receives events** delivered to the shared instance.
+- **Action:** replace the direct `supabase.channel(topic)` + `_off` teardown with `acquireChannel(topic)` + `subscribeChannel(topic)` + `releaseChannel(topic)` from `src/lib/sharedChannel.ts`, matching the pattern used by the four sibling hooks.
 
-5. **Validate the noisy path**
-   - Re-test attach → upload → send for file, audio, and video attachments.
-   - Confirm the console is no longer spammed with repeated 404s and that the attachment resolves once storage propagation finishes.
+---
 
-## Technical notes
-Files most likely involved:
-- `src/lib/signedUrl.ts`
-- `src/hooks/useSignedUrl.ts`
-- `src/components/chat/FileAttachmentCard.tsx`
-- `src/components/chat/MessageContent.tsx`
-- `src/stores/messageStore.ts`
-- `src/stores/dmStore.ts`
-- `src/hooks/useRealtimeMessages.ts`
-- `src/components/chat/MessageInput.tsx`
+## MEDIUM severity (wasted work, audible duplication)
 
-Expected outcome:
-- No repeated `POST /functions/v1/sign-bunny-url 404` spam during attach/upload.
-- Attachment cards stay in a stable pending state while the file propagates.
-- Media/files appear once ready without redundant retries from multiple layers.
+### M1. Stop double-delivery in `useRealtimeNotifications`
+- `useRealtimeNotifications.ts:88-149` registers a Broadcast listener for `"notifications"` AND three `postgres_changes` listeners (INSERT/UPDATE/DELETE) on the same `notifications` table on the same channel.
+- The dedup guard catches the duplicate store write, but `playNotificationSound` (line 83) is called before the store write, so the bell **plays twice** per notification.
+- **Action:** keep the Broadcast path as primary. Gate the `postgres_changes` listeners behind a fallback flag (e.g., only invoke `processIncomingNotification` from the pg path if the broadcast hasn't delivered the same id within ~1s), or remove the pg INSERT path entirely and keep only DELETE/UPDATE (which Broadcast may not emit).
+
+### M2. Consolidate `server_surface` handling between `useRealtimeServer` and `useRealtimeMembers`
+- Both subscribe to the same shared `server:${serverId}` broadcast event `server_surface` and both react to `server_members`/`server_roles`/`server_member_roles` table names by calling `fetchMembers` + `fetchRoles` with `{ force: true }`.
+- Every membership/role change → 2× fetchMembers + 2× fetchRoles in the same tick.
+- **Action:** keep the handler in `useRealtimeServer` (it additionally purges messages from removed members). Remove the duplicate `server_members`/`server_roles`/`server_member_roles` branch from `useRealtimeMembers.ts:75-82`, leaving its other responsibilities intact.
+
+---
+
+## LOW severity (cleanup)
+
+### L1. Stabilize `useSignedUrls` effect dependency
+- `useSignedUrls.ts:44` uses `JSON.stringify(fileUrls)` as a `useEffect` dep. Replace with `const urlsKey = fileUrls.join('\n')` computed once per render and use `urlsKey` as the dep (matches the existing internal `keyRef` comparison).
+
+### L2. Delete unused hooks (confirm with user before deleting)
+- `useAttachmentQueue.ts` — zero call sites, not exported from `index.ts`.
+- `useMaintenanceMode.ts` — zero call sites, not exported from `index.ts`.
+- These may be WIP. **Will ask before deleting.** Everything else above proceeds.
+
+### L3. Latent guard to preserve (no code change)
+- `useRealtimeUsers.ts:402` skips own-user presence writes so it never fights `usePresence`'s idle/online transitions. Add a short comment so the guard isn't accidentally removed.
+
+---
+
+## Files touched
+
+- `src/hooks/useRealtimeReactions.ts` — **delete**
+- `src/hooks/useOfflineSync.ts` — **delete**
+- `src/hooks/index.ts` — remove `useRealtimeReactions` + `useOfflineSync` exports
+- `src/hooks/useBackgroundSync.ts` — strip connection-status writes
+- `src/hooks/useUnreadDMs.ts` — migrate to `sharedChannel`
+- `src/hooks/useRealtimeNotifications.ts` — dedupe broadcast vs postgres_changes
+- `src/hooks/useRealtimeMembers.ts` — remove duplicate `server_surface` table branch
+- `src/hooks/useSignedUrls.ts` — stable dep key
+- `src/hooks/useRealtimeUsers.ts` — add comment on own-user guard
+
+## Out of scope
+- No changes to stores, components, or RPCs.
+- `useAttachmentQueue` / `useMaintenanceMode` deletion deferred pending your confirmation that they aren't WIP.
+
+## Verification after build mode
+- Grep that `useRealtimeReactions` and `useOfflineSync` have no remaining imports.
+- Send a DM and confirm `useUnreadDMs` increments via the shared channel (no `_off` warnings in console).
+- Trigger a reconnect (DevTools offline → online) and confirm `connection.status` transitions exactly once and `reconnectAttempts` is incremented/reset exactly once.
+- Receive a notification and confirm the bell sound plays once.
+- Change a server member's role and confirm `fetchMembers`/`fetchRoles` are each called once.
