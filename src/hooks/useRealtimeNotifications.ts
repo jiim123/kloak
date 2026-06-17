@@ -101,7 +101,8 @@ export const useRealtimeNotifications = (userId: string | null) => {
       },
     );
 
-    // postgres_changes listeners — more reliable than broadcast for notifications
+    // postgres_changes fallback — only acts if broadcast subscription isn't live,
+    // otherwise we double-deliver and the notification sound plays twice.
     channel.on(
       'postgres_changes' as any,
       {
@@ -111,6 +112,7 @@ export const useRealtimeNotifications = (userId: string | null) => {
         filter: `user_id=eq.${userId}`,
       },
       (payload: any) => {
+        if (isSubscribedRef.current) return;
         if (payload.new) {
           processIncomingNotification(payload.new as Notification);
         }
@@ -126,6 +128,7 @@ export const useRealtimeNotifications = (userId: string | null) => {
         filter: `user_id=eq.${userId}`,
       },
       (payload: any) => {
+        if (isSubscribedRef.current) return;
         if (payload.old?.id) {
           storeRef.current.removeNotification(payload.old.id);
         }
@@ -141,6 +144,7 @@ export const useRealtimeNotifications = (userId: string | null) => {
         filter: `user_id=eq.${userId}`,
       },
       (payload: any) => {
+        if (isSubscribedRef.current) return;
         if (payload.new) {
           const n = payload.new as Notification;
           storeRef.current.updateNotification(n.id, n);
