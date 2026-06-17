@@ -18,10 +18,11 @@ export function useSignedUrls(fileUrls: string[]): {
   // Stable serialisation for the dependency array
   const keyRef = useRef("");
 
+  const urlsKey = fileUrls.join("\n");
+
   useEffect(() => {
-    const key = fileUrls.join("\n");
-    if (key === keyRef.current && urls.size > 0) return;
-    keyRef.current = key;
+    if (urlsKey === keyRef.current && urls.size > 0) return;
+    keyRef.current = urlsKey;
 
     if (fileUrls.length === 0) {
       setUrls(new Map());
@@ -41,7 +42,8 @@ export function useSignedUrls(fileUrls: string[]): {
     return () => {
       cancelled = true;
     };
-  }, [JSON.stringify(fileUrls)]); // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlsKey]);
 
   return { urls, loading };
 }

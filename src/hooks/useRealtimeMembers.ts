@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useServerStore } from '@/stores/serverStore';
-import { acquireChannel, subscribeChannel, releaseChannel } from '@/lib/sharedChannel';
+
 
 const activeServerIds = new Set<string>();
 
@@ -61,30 +61,8 @@ export const useRealtimeMembers = (serverId: string | null, opts?: { full?: bool
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [serverId, useFull]);
 
-  // Broadcast listener for member/role changes
-  useEffect(() => {
-    if (!serverId) return;
-
-    const topic = `server:${serverId}`;
-    const channel = acquireChannel(topic);
-    channel.on('broadcast', { event: 'server_surface' }, ({ payload }) => {
-      if (!isActiveInstanceRef.current) return;
-      const event = payload as { table?: string } | null;
-      if (!event?.table) return;
-
-      if (
-        event.table === 'server_members' ||
-        event.table === 'server_roles' ||
-        event.table === 'server_member_roles'
-      ) {
-        fetchRolesRef.current(serverId, { force: true });
-        fetchMembersRef.current(serverId, { force: true, full: useFull });
-      }
-    });
-    subscribeChannel(topic);
-
-    return () => {
-      releaseChannel(topic);
-    };
-  }, [serverId, useFull]);
+  // NOTE: server_members / server_roles / server_member_roles broadcast handling
+  // is owned by useRealtimeServer (which also purges messages from removed members).
+  // Do not re-add a duplicate handler here — it would double fetchMembers/fetchRoles
+  // on every membership change.
 };
