@@ -46,6 +46,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
@@ -1815,13 +1816,82 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         </div>
       )}
 
+      {/* Desktop: Contained settings modal */}
+      {variant === "modal" && isOpen && !isMobile && (
+        <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+          <DialogContent className="server-settings-reference bg-background/95 text-foreground backdrop-blur-xl border-border/50 rounded-2xl p-0 h-[min(820px,calc(100vh-48px))] max-h-[calc(100vh-48px)] w-[min(1120px,calc(100vw-64px))] max-w-none flex flex-col gap-0 overflow-hidden">
+            <DialogHeader className="p-4 sm:p-6 pb-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <Key className="w-5 h-5 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <DialogTitle className="text-base sm:text-lg font-medium">User Settings</DialogTitle>
+                  <DialogDescription className="text-xs sm:text-sm text-muted-foreground">
+                    Manage your account, profile, and preferences
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+
+            <div className="flex-1 flex overflow-hidden p-4 pt-2 sm:p-6 sm:pt-3 gap-4">
+              <div className="flex flex-col items-stretch justify-start h-full w-48 bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-1 gap-1 flex-shrink-0 overflow-y-auto">
+                <div className="flex w-full flex-col">
+                  <div className="px-2 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Settings
+                  </div>
+                  {navItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = activeTab === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => setActiveTab(item.id)}
+                        className={cn(
+                          "user-settings-nav-row w-full flex items-center justify-start gap-2 text-sm px-2 py-2.5 rounded-xl transition-colors",
+                          isActive
+                            ? "bg-primary/15 text-primary shadow-sm"
+                            : "text-muted-foreground hover:text-foreground hover:bg-secondary/80",
+                        )}
+                      >
+                        <Icon className="w-4 h-4 flex-shrink-0" />
+                        <span className="truncate">{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-auto w-full pt-3">
+                  <Separator className="mb-3 bg-border/70" />
+                  <button
+                    type="button"
+                    onClick={handleLogoutClick}
+                    className="user-settings-nav-row w-full flex items-center justify-start gap-2 text-sm px-2 py-2.5 rounded-xl text-destructive transition-colors hover:bg-secondary/80 hover:text-destructive"
+                  >
+                    <LogOut className="w-4 h-4 flex-shrink-0" />
+                    <span className="truncate">Log Out</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto overscroll-contain touch-pan-y min-h-0">
+                <div className="max-w-3xl space-y-4">
+                  <h2 className="text-[20px] leading-7 font-bold text-foreground">{activeNavItem?.label}</h2>
+                  {renderContent()}
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
       {/* Desktop: In-layout page (rendered from AppLayout) */}
       {variant === "page" && !isMobile && (
         <div className="server-settings-reference h-full flex bg-background text-foreground">
           {/* Sidebar Navigation */}
           <div className="w-[250px] flex-shrink-0 bg-layout-sidebar flex flex-col overflow-hidden">
             {/* Settings Title Header */}
-            <div className="px-[30px] pt-[32px] pb-[12px]">
+            <div className="px-4 pt-[32px] pb-[12px]">
               <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground truncate">
                 User settings
               </h2>
@@ -1838,7 +1908,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                       key={item.id}
                       onClick={() => setActiveTab(item.id)}
                       className={cn(
-                        "user-settings-nav-row w-full h-9 justify-start px-[30px] py-0 text-left text-sm font-medium leading-none transition-colors",
+                        "user-settings-nav-row w-full h-9 justify-start px-4 py-0 text-left text-sm font-medium leading-none transition-colors",
                         isActive
                           ? "bg-secondary text-foreground"
                           : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground",
@@ -1854,7 +1924,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 <button
                   type="button"
                   onClick={handleLogoutClick}
-                  className="user-settings-nav-row w-full h-9 px-[30px] py-0 text-left text-sm font-medium leading-none text-destructive transition-colors hover:bg-secondary/70 hover:text-destructive"
+                  className="user-settings-nav-row w-full h-9 px-4 py-0 text-left text-sm font-medium leading-none text-destructive transition-colors hover:bg-secondary/70 hover:text-destructive"
                 >
                   Log Out
                 </button>

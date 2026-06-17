@@ -90,7 +90,7 @@ const SERVER_FOLDERS_STORAGE_KEY = "kloak-server-folders-v1";
 const EMPTY_FOLDER_STATE: ServerFolderState = { folders: [], serverToFolder: {} };
 const EMPTY_CHANNEL_IDS: string[] = [];
 const MODAL_CONTENT_CLASS =
-  "max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-border bg-card p-0 text-foreground shadow-2xl sm:max-w-[448px]";
+  "max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-2xl border border-border bg-card p-0 text-foreground shadow-2xl sm:max-w-[448px]";
 
 const SERVER_REPORT_REASONS: ReportReasonOption[] = [
   { value: "Inappropriate content", label: "Inappropriate content" },
@@ -198,12 +198,12 @@ const ServerIconVisual = memo(({ server }: { server: ServerWithMembership }) => 
     <div className="relative">
       <div
         className={cn(
-          "w-11 h-11 overflow-hidden rounded-[12px] flex items-center justify-center shadow-[0_6px_18px_rgba(0,0,0,0.28)]",
+          "w-11 h-11 overflow-hidden rounded-[18px] flex items-center justify-center shadow-[0_6px_18px_rgba(0,0,0,0.28)]",
           !server.icon_url ? "bg-secondary" : "bg-card",
         )}
       >
         {server.icon_url ? (
-          <Avatar className="w-11 h-11 border-0 rounded-[12px]">
+          <Avatar className="w-11 h-11 border-0 rounded-[18px]">
             <AvatarImage src={server.icon_url} alt={server.name} className="object-cover" />
             <AvatarFallback className={getServerColor(server.name)}>{getServerInitials(server.name)}</AvatarFallback>
           </Avatar>
@@ -278,7 +278,7 @@ const FolderItem = memo(
             <TooltipTrigger asChild>
               <MotionButton
                 ref={setNodeRef}
-                className={cn("relative group", isOver && "ring-1 ring-primary/50 rounded-[12px]")}
+                className={cn("relative group", isOver && "ring-1 ring-primary/50 rounded-[18px]")}
                 onClick={handleToggle}
                 whileHover="hover"
                 whileTap="tap"
@@ -290,7 +290,7 @@ const FolderItem = memo(
                   whileHover="hover"
                   whileTap="tap"
                   transition={iconSpringTransition}
-                  className="w-10 h-10 rounded-[12px] flex items-center justify-center text-foreground relative border border-border/60 shadow-[0_8px_20px_rgba(0,0,0,0.28)]"
+                  className="w-10 h-10 rounded-[16px] flex items-center justify-center text-foreground relative border border-border/60 shadow-[0_8px_20px_rgba(0,0,0,0.28)]"
                   style={{ backgroundColor: folder.color }}
                 >
                   <Folder className="w-[18px] h-[18px]" />
@@ -479,7 +479,7 @@ const DraggableServerItem = memo(
                       whileTap="tap"
                       transition={iconSpringTransition}
                       className={cn(
-                        "w-11 h-11 overflow-hidden rounded-[12px] shadow-[0_8px_20px_rgba(0,0,0,0.28)]",
+                        "w-11 h-11 overflow-hidden rounded-[18px] shadow-[0_8px_20px_rgba(0,0,0,0.28)]",
                         isActive
                           ? "p-[2px] bg-primary text-primary-foreground"
                           : "bg-secondary text-foreground hover:bg-secondary/80",
@@ -488,12 +488,12 @@ const DraggableServerItem = memo(
                     >
                       <div
                         className={cn(
-                          "w-full h-full overflow-hidden rounded-[9px]",
+                          "w-full h-full overflow-hidden rounded-[16px]",
                           isActive && !server.icon_url && "bg-primary",
                         )}
                       >
                         {server.icon_url ? (
-                          <Avatar className="w-full h-full border-0 rounded-[9px]">
+                          <Avatar className="w-full h-full border-0 rounded-[16px]">
                             <AvatarImage src={server.icon_url} alt={server.name} className="object-cover" />
                             <AvatarFallback className={getServerColor(server.name)}>
                               {getServerInitials(server.name)}
@@ -524,7 +524,7 @@ const DraggableServerItem = memo(
                           initial={badgeInitial}
                           animate={badgeAnimate}
                           exit={badgeExit}
-                          className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
+                          className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-full text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
                         >
                           {totalMentions > 99 ? "99+" : totalMentions}
                         </motion.span>
@@ -594,7 +594,7 @@ const LoadingSkeleton = memo(() => (
     {[0, 1, 2].map((i) => (
       <motion.div
         key={i}
-        className="w-11 h-11 rounded-[12px] bg-muted/40"
+        className="w-11 h-11 rounded-[18px] bg-muted/40"
         animate={{ opacity: [0.5, 1, 0.5] }}
         transition={{ repeat: Infinity, duration: 1.5, delay: i * 0.2 }}
       />
@@ -1312,7 +1312,7 @@ export const ServerSidebar = ({
   );
 
   return (
-    <div className="h-full w-[68px] shrink-0 flex flex-col items-center relative overflow-hidden bg-layout-sidebar">
+    <div className="h-full w-[68px] shrink-0 flex flex-col items-center relative overflow-hidden rounded-2xl border border-border/50 bg-layout-sidebar">
       <DndContext
         sensors={sensors}
         onDragStart={handleDragStart}
@@ -1446,7 +1446,7 @@ export const ServerSidebar = ({
                             initial={badgeInitial}
                             animate={badgeAnimate}
                             exit={badgeExit}
-                            className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
+                            className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-full text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
                           >
                             {totalHomeBadge > 99 ? "99+" : totalHomeBadge}
                           </motion.span>
@@ -1498,7 +1498,7 @@ export const ServerSidebar = ({
                             initial={badgeInitial}
                             animate={badgeAnimate}
                             exit={badgeExit}
-                            className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
+                            className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-full text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
                           >
                             {pendingFriendRequestCount > 99 ? "99+" : pendingFriendRequestCount}
                           </motion.span>
@@ -1728,7 +1728,7 @@ export const ServerSidebar = ({
                       initial={badgeInitial}
                       animate={badgeAnimate}
                       exit={badgeExit}
-                      className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
+                      className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-full text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
                     >
                       {totalHomeBadge > 99 ? "99+" : totalHomeBadge}
                     </motion.span>
@@ -1781,7 +1781,7 @@ export const ServerSidebar = ({
                       initial={badgeInitial}
                       animate={badgeAnimate}
                       exit={badgeExit}
-                      className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
+                      className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-full text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
                     >
                       {pendingFriendRequestCount > 99 ? "99+" : pendingFriendRequestCount}
                     </motion.span>
@@ -1817,7 +1817,7 @@ export const ServerSidebar = ({
                     onChange={(e) => setNewFolderName(e.target.value)}
                     placeholder="e.g. Work, Friends, Gaming"
                     autoFocus
-                    className="h-9 rounded-[3px] border border-border bg-secondary/40 text-sm text-foreground placeholder:text-muted-foreground"
+                    className="h-9 rounded-xl border border-border bg-secondary/40 text-sm text-foreground placeholder:text-muted-foreground"
                   />
                 </div>
                 <div className="space-y-2">
@@ -1829,7 +1829,7 @@ export const ServerSidebar = ({
                     type="color"
                     value={newFolderColor}
                     onChange={(e) => setNewFolderColor(e.target.value)}
-                    className="h-9 w-14 rounded-[3px] border border-border bg-secondary/40 p-1"
+                    className="h-9 w-14 rounded-xl border border-border bg-secondary/40 p-1"
                   />
                 </div>
               </div>
@@ -1839,7 +1839,7 @@ export const ServerSidebar = ({
                 type="button"
                 variant="ghost"
                 onClick={() => setIsCreateFolderOpen(false)}
-                className="h-9 rounded-[3px] px-4 text-muted-foreground hover:bg-transparent hover:text-foreground"
+                className="h-9 rounded-full px-4 text-muted-foreground hover:bg-transparent hover:text-foreground"
               >
                 Cancel
               </Button>
@@ -1847,7 +1847,7 @@ export const ServerSidebar = ({
                 type="button"
                 onClick={handleCreateFolder}
                 disabled={!newFolderName.trim()}
-                className="h-9 rounded-[3px] bg-primary px-5 font-medium text-primary-foreground hover:bg-primary/90"
+                className="h-9 rounded-full bg-primary px-5 font-medium text-primary-foreground hover:bg-primary/90"
               >
                 Create
               </Button>

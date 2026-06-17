@@ -249,7 +249,7 @@ export const useUIStore = create<UIState>()(
             activeModal: modal,
             modalData: data,
             isServerSettingsOpen: false,
-            isSettingsOpen: true,
+            isSettingsOpen: false,
             isMobileSidebarOpen: false,
             isMobileChannelSidebarOpen: false,
           });
@@ -268,7 +268,7 @@ export const useUIStore = create<UIState>()(
       openSettings: () => {
         // Close server settings and mobile sidebars when opening user settings to prevent stacking
         set({
-          isSettingsOpen: true,
+          isSettingsOpen: false,
           isServerSettingsOpen: false,
           activeModal: "user-settings",
           isMobileSidebarOpen: false,
@@ -282,8 +282,13 @@ export const useUIStore = create<UIState>()(
 
       openServerSettings: () => {
         // Close user settings when opening server settings to prevent stacking
-        // Set activeModal to 'server-settings' so the modal works on mobile
-        set({ isServerSettingsOpen: true, isSettingsOpen: false, activeModal: "server-settings" });
+        set({
+          isServerSettingsOpen: false,
+          isSettingsOpen: false,
+          activeModal: "server-settings",
+          isMobileSidebarOpen: false,
+          isMobileChannelSidebarOpen: false,
+        });
       },
 
       openServerSettingsPage: () => {

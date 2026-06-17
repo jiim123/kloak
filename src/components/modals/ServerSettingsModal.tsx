@@ -25,6 +25,7 @@ import {
   Check,
   Pencil,
   Search,
+  Download,
   type LucideIcon,
 } from "lucide-react";
 import { useRateLimit } from "@/hooks/useRateLimit";
@@ -213,7 +214,7 @@ export const ServerSettingsModal = () => {
   const isMobile = useIsMobile();
   const checkModLimit = useRateLimit(10, 30_000);
 
-  type SettingsTabId = "overview" | "members" | "roles" | "bans" | "invites" | "emojis";
+  type SettingsTabId = "overview" | "members" | "roles" | "bans" | "invites" | "emojis" | "integrations" | "danger";
 
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -310,7 +311,7 @@ export const ServerSettingsModal = () => {
   const [publicationEligibility, setPublicationEligibility] = useState<PublicationEligibility | null>(null);
   const [isLoadingPublicationEligibility, setIsLoadingPublicationEligibility] = useState(false);
 
-  const isOpen = isMobile && activeModal === "server-settings";
+  const isOpen = activeModal === "server-settings";
 
   // Get server from modal data or use current server
   const serverId = modalData?.serverId as string | undefined;
@@ -512,15 +513,29 @@ export const ServerSettingsModal = () => {
     }
 
     // Integrations category
-    if (canManageInvites) {
+    if (canManageInvites || canManageChannels) {
+      const integrationItems: Array<{ id: SettingsTabId; label: string; icon: LucideIcon }> = [];
+      if (canManageChannels) {
+        integrationItems.push({ id: "integrations", label: "Integrations", icon: Download });
+      }
+      if (canManageInvites) {
+        integrationItems.push({ id: "invites", label: "Invites", icon: Link2 });
+      }
       categories.push({
         label: "Integrations",
-        items: [{ id: "invites", label: "Invites", icon: Link2 }],
+        items: integrationItems,
+      });
+    }
+
+    if (isOwner) {
+      categories.push({
+        label: "Danger Zone",
+        items: [{ id: "danger", label: "Danger Zone", icon: Trash2 }],
       });
     }
 
     return categories;
-  }, [canManageEmojis, canManageInvites]);
+  }, [canManageChannels, canManageEmojis, canManageInvites, isOwner]);
 
   // Flattened navItems for backward compatibility (used in mobile view)
   const navItems = useMemo(() => {
@@ -1461,6 +1476,65 @@ export const ServerSettingsModal = () => {
 
   const displayIconUrl = iconRemoved ? null : iconPreview || server.icon_url;
   const displayBannerUrl = bannerRemoved ? null : bannerPreview || server.banner_url;
+  const integrationsContent = canManageChannels ? (
+    <div className="space-y-4">
+      <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4 space-y-3">
+        <div>
+          <h4 className="text-sm font-medium">Discord Server Template</h4>
+          <p className="text-xs text-muted-foreground mt-1">
+            Import categories, channels, and roles from a Discord server template.
+          </p>
+        </div>
+        <div className="flex items-start justify-between gap-3 rounded-lg border border-border/30 bg-background/40 p-3">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-foreground">Import from Discord</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Imported items will be added to this server.
+            </p>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            rounded="lg"
+            onClick={() => openModal("import-discord-template")}
+            className="h-9 flex-shrink-0 bg-primary px-4 text-primary-foreground hover:bg-primary/90"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Import
+          </Button>
+        </div>
+      </div>
+    </div>
+  ) : (
+    <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-6 flex flex-col items-center justify-center text-center">
+      <Shield className="w-10 h-10 text-muted-foreground mb-3" />
+      <p className="text-sm text-muted-foreground">You don't have permission to manage integrations</p>
+    </div>
+  );
+  const dangerContent = isOwner ? (
+    <div className="space-y-4">
+      <div className="bg-destructive/10 backdrop-blur-sm rounded-xl border border-destructive/30 p-3 sm:p-4 space-y-3">
+        <h4 className="text-sm font-semibold text-destructive">Delete Server</h4>
+        <p className="text-xs text-muted-foreground">
+          Deleting this server will permanently remove all channels, messages, and members.
+        </p>
+        <Button
+          variant="destructive"
+          rounded="xl"
+          onClick={() => setShowDeleteConfirm(true)}
+          className="h-10"
+        >
+          <Trash2 className="w-4 h-4 mr-2" />
+          Delete Server
+        </Button>
+      </div>
+    </div>
+  ) : (
+    <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-6 flex flex-col items-center justify-center text-center">
+      <Shield className="w-10 h-10 text-muted-foreground mb-3" />
+      <p className="text-sm text-muted-foreground">Only the server owner can access Danger Zone</p>
+    </div>
+  );
 
   return (
     <>
@@ -1505,7 +1579,7 @@ export const ServerSettingsModal = () => {
 
           {/* Dialog */}
           <div
-            className="relative bg-background rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-border mb-4"
+            className="server-settings-reference relative bg-background text-foreground rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-border mb-4"
             style={{ maxHeight: "calc(100vh - 140px)" }}
           >
             {/* Header */}
@@ -1521,6 +1595,8 @@ export const ServerSettingsModal = () => {
                   {activeTab === "bans" && "Manage banned users"}
                   {activeTab === "invites" && "Manage invite links"}
                   {activeTab === "emojis" && "Manage custom emojis"}
+                  {activeTab === "integrations" && "Connect external services"}
+                  {activeTab === "danger" && "Destructive server actions"}
                 </p>
               </div>
               <Button variant="ghost" size="icon" onClick={handleClose} className="rounded-full">
@@ -1739,24 +1815,12 @@ export const ServerSettingsModal = () => {
                     </Button>
                   )}
 
-                  {/* Danger Zone */}
-                  {isOwner && (
-                    <div className="bg-destructive/10 backdrop-blur-sm rounded-xl border border-destructive/30 p-3 mt-4 space-y-3">
-                      <h4 className="text-sm font-medium text-destructive">Danger Zone</h4>
-                      <p className="text-xs text-muted-foreground">Delete server permanently.</p>
-                      <Button
-                        variant="destructive"
-                        rounded="xl"
-                        onClick={() => setShowDeleteConfirm(true)}
-                        className="h-10 w-full"
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete Server
-                      </Button>
-                    </div>
-                  )}
                 </form>
               )}
+
+              {activeTab === "integrations" && integrationsContent}
+
+              {activeTab === "danger" && dangerContent}
 
               {activeTab === "invites" &&
                 (canManageInvites ? (
@@ -2548,7 +2612,7 @@ export const ServerSettingsModal = () => {
       {/* Desktop: Standard Dialog */}
       {!isMobile && (
         <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-          <DialogContent className="bg-background/95 backdrop-blur-xl border-border/50 rounded-2xl p-0 max-h-[90vh] max-w-[calc(100vw-2rem)] w-full sm:max-w-4xl flex flex-col">
+          <DialogContent className="server-settings-reference bg-background/95 text-foreground backdrop-blur-xl border-border/50 rounded-2xl p-0 h-[min(820px,calc(100vh-48px))] max-h-[calc(100vh-48px)] w-[min(1120px,calc(100vw-64px))] max-w-none flex flex-col gap-0 overflow-hidden">
             {/* Header */}
             <DialogHeader className="p-4 sm:p-6 pb-0">
               <div className="flex items-center gap-3">
@@ -2564,12 +2628,12 @@ export const ServerSettingsModal = () => {
               </div>
             </DialogHeader>
 
-            <div className="flex-1 flex overflow-hidden p-4 sm:p-6 pt-4 gap-4">
+            <div className="flex-1 flex overflow-hidden p-4 pt-2 sm:p-6 sm:pt-3 gap-4">
               {/* Sidebar Navigation */}
-              <div className="flex flex-col items-start justify-start h-full w-48 bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-1.5 gap-1 flex-shrink-0 overflow-y-auto">
+              <div className="flex flex-col items-stretch justify-start h-full w-48 bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-1 gap-1 flex-shrink-0 overflow-y-auto">
                 {navCategories.map((category, categoryIndex) => (
-                  <div key={category.label} className={cn("w-full", categoryIndex > 0 && "mt-2")}>
-                    <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  <div key={category.label} className={cn("flex w-full flex-col", categoryIndex > 0 && "mt-2")}>
+                    <div className="px-2 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                       {category.label}
                     </div>
                     {category.items.map((item) => {
@@ -2580,9 +2644,9 @@ export const ServerSettingsModal = () => {
                           key={item.id}
                           onClick={() => setActiveTab(item.id)}
                           className={cn(
-                            "w-full flex items-center justify-start gap-2 text-sm px-3 py-2.5 rounded-xl transition-colors",
+                            "server-settings-nav-row w-full flex items-center justify-start gap-2 text-sm px-2 py-2.5 rounded-xl transition-colors",
                             isActive
-                              ? "bg-background shadow-sm"
+                              ? "bg-primary/15 text-primary shadow-sm"
                               : "text-muted-foreground hover:text-foreground hover:bg-secondary/80",
                           )}
                         >
@@ -2731,26 +2795,12 @@ export const ServerSettingsModal = () => {
                       </div>
                     )}
 
-                    {/* Danger Zone */}
-                    {isOwner && (
-                      <div className="bg-destructive/10 backdrop-blur-sm rounded-xl border border-destructive/30 p-3 sm:p-4 mt-4 space-y-3">
-                        <h4 className="text-sm font-semibold text-destructive">Danger Zone</h4>
-                        <p className="text-xs text-muted-foreground">
-                          Deleting this server will permanently remove all channels, messages, and members.
-                        </p>
-                        <Button
-                          variant="destructive"
-                          rounded="xl"
-                          onClick={() => setShowDeleteConfirm(true)}
-                          className="h-10"
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Delete Server
-                        </Button>
-                      </div>
-                    )}
                   </form>
                 )}
+
+                {activeTab === "integrations" && integrationsContent}
+
+                {activeTab === "danger" && dangerContent}
 
                 {activeTab === "invites" &&
                   (canManageInvites ? (

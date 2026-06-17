@@ -19,11 +19,11 @@ const buttonVariants = cva(
 
         // Tertiary - Subtle/ghost action
         tertiary:
-          "rounded-[4px] bg-transparent text-tertiary-foreground hover:bg-tertiary-hover active:bg-tertiary-active",
+          "rounded-xl bg-transparent text-tertiary-foreground hover:bg-tertiary-hover active:bg-tertiary-active",
 
         // Outline - Bordered button
         outline:
-          "rounded-[4px] border border-border bg-transparent text-foreground hover:bg-secondary hover:border-neutral-400 active:bg-secondary-hover",
+          "rounded-xl border border-border bg-transparent text-foreground hover:bg-secondary hover:border-neutral-400 active:bg-secondary-hover",
 
         // White - Shared light CTA
         white:
@@ -31,22 +31,22 @@ const buttonVariants = cva(
 
         // Error/Destructive - Dangerous actions
         error:
-          "rounded-[4px] bg-destructive text-destructive-foreground hover:bg-destructive-hover hover:shadow-[0_4px_12px_hsl(var(--destructive)/0.3)] active:bg-destructive-active",
+          "rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive-hover hover:shadow-[0_4px_12px_hsl(var(--destructive)/0.3)] active:bg-destructive-active",
 
         // Warning - Caution actions
         warning:
-          "rounded-[4px] bg-warning text-warning-foreground hover:bg-warning-hover hover:shadow-[0_4px_12px_hsl(var(--warning)/0.3)] active:bg-warning-active",
+          "rounded-xl bg-warning text-warning-foreground hover:bg-warning-hover hover:shadow-[0_4px_12px_hsl(var(--warning)/0.3)] active:bg-warning-active",
 
         // Success - Positive actions
         success:
-          "rounded-[4px] bg-success text-success-foreground hover:bg-success-hover hover:shadow-[0_4px_12px_hsl(var(--success)/0.3)] active:bg-success-active",
+          "rounded-xl bg-success text-success-foreground hover:bg-success-hover hover:shadow-[0_4px_12px_hsl(var(--success)/0.3)] active:bg-success-active",
 
         // Ghost - Minimal presence
         ghost:
-          "rounded-[4px] bg-transparent text-muted-foreground hover:text-foreground hover:bg-secondary active:bg-secondary-hover",
+          "rounded-xl bg-transparent text-muted-foreground hover:text-foreground hover:bg-secondary active:bg-secondary-hover",
 
         // Link - Text-only button
-        link: "rounded-[4px] text-primary hover:text-primary-hover underline-offset-4 hover:underline p-0 h-auto font-medium",
+        link: "rounded-xl text-primary hover:text-primary-hover underline-offset-4 hover:underline p-0 h-auto font-medium",
 
         // Legacy default (maps to primary)
         default:
@@ -54,7 +54,7 @@ const buttonVariants = cva(
 
         // Legacy destructive (maps to error)
         destructive:
-          "rounded-[4px] bg-destructive text-destructive-foreground hover:bg-destructive-hover hover:shadow-[0_4px_12px_hsl(var(--destructive)/0.3)] active:bg-destructive-active",
+          "rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive-hover hover:shadow-[0_4px_12px_hsl(var(--destructive)/0.3)] active:bg-destructive-active",
       },
       size: {
         default: "h-9 sm:h-10 px-3 sm:px-4 py-2",

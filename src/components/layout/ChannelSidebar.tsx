@@ -569,7 +569,7 @@ const SortableChannel = memo(({
         onBlur={onPrefetchCancel}
         aria-label={ariaLabel}
         className={cn(
-          "group relative flex-1 min-w-0 flex items-center gap-2 px-2.5 py-2 md:py-1.5 text-[14px] leading-5 font-medium select-none rounded-[3px]",
+          "group relative flex-1 min-w-0 flex items-center gap-2 px-2.5 py-2 md:py-1.5 text-[14px] leading-5 font-medium select-none rounded-xl",
           "transition-colors duration-150",
           "hover:bg-foreground/[0.04]",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-1",
@@ -1169,7 +1169,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
 
   const voicePresenceByChannel = useVoiceStore((s) => s.presenceByChannel);
   const joinedVoiceChannelId = useVoiceStore((s) => s.joinedChannelId);
-  const { openModal, openServerSettings, openServerSettingsPage, closeMobileSidebars } = useUIStore();
+  const { openModal, openServerSettings, closeMobileSidebars } = useUIStore();
   const isMobile = useIsMobile();
   const userCacheVersion = useUserCacheStore((s) => s._version);
 
@@ -1749,13 +1749,11 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
   }, [currentServer, openModal]);
 
   const handleOpenServerSettings = useCallback(() => {
+    openServerSettings();
     if (isMobile) {
-      openServerSettings();
       closeMobileSidebars();
-    } else {
-      openServerSettingsPage();
     }
-  }, [isMobile, openServerSettings, openServerSettingsPage, closeMobileSidebars]);
+  }, [isMobile, openServerSettings, closeMobileSidebars]);
 
   const handleOpenCreateChannel = useCallback(() => {
     if (currentServer) openModal("create-channel", { serverId: currentServer.id });
@@ -2068,7 +2066,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
               {/* Invite People */}
               <DropdownMenuItem
                 onClick={handleOpenInvite}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-[hsl(var(--menu-hover))] focus:bg-[hsl(var(--menu-focus))]"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-colors hover:bg-[hsl(var(--menu-hover))] focus:bg-[hsl(var(--menu-focus))]"
               >
                 <div className="flex h-5 w-5 items-center justify-center flex-shrink-0">
                   <UserPlusIcon className="h-4 w-4" />
@@ -2083,7 +2081,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
                   {/* Server Settings */}
                   <DropdownMenuItem
                     onClick={handleOpenServerSettings}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-[hsl(var(--menu-hover))] focus:bg-[hsl(var(--menu-focus))]"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-colors hover:bg-[hsl(var(--menu-hover))] focus:bg-[hsl(var(--menu-focus))]"
                   >
                     <div className="flex h-5 w-5 items-center justify-center flex-shrink-0">
                       <SettingsIcon className="h-4 w-4" />
@@ -2096,7 +2094,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
                       {/* Create Channel */}
                       <DropdownMenuItem
                         onClick={handleOpenCreateChannel}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-[hsl(var(--menu-hover))] focus:bg-[hsl(var(--menu-focus))]"
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-colors hover:bg-[hsl(var(--menu-hover))] focus:bg-[hsl(var(--menu-focus))]"
                       >
                         <div className="flex h-5 w-5 items-center justify-center flex-shrink-0">
                           <HashIcon className="h-4 w-4" />
@@ -2107,7 +2105,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
                       {/* Create Category */}
                       <DropdownMenuItem
                         onClick={handleOpenCreateCategory}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-[hsl(var(--menu-hover))] focus:bg-[hsl(var(--menu-focus))]"
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-colors hover:bg-[hsl(var(--menu-hover))] focus:bg-[hsl(var(--menu-focus))]"
                       >
                         <div className="flex h-5 w-5 items-center justify-center flex-shrink-0">
                           <FolderPlusIcon className="h-4 w-4" />
@@ -2126,7 +2124,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
                   {/* Report Server */}
                   <DropdownMenuItem
                     onClick={() => setShowReportServerDialog(true)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-[hsl(var(--menu-hover))] focus:bg-[hsl(var(--menu-focus))]"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-colors hover:bg-[hsl(var(--menu-hover))] focus:bg-[hsl(var(--menu-focus))]"
                   >
                     <div className="flex h-5 w-5 items-center justify-center flex-shrink-0">
                       <FlagIcon className="h-4 w-4" />
@@ -2137,7 +2135,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
                   {/* Leave Server */}
                   <DropdownMenuItem
                     onClick={handleLeaveServer}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-none cursor-pointer transition-colors hover:bg-[hsl(var(--menu-hover))] focus:bg-[hsl(var(--menu-focus))]"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-colors hover:bg-[hsl(var(--menu-hover))] focus:bg-[hsl(var(--menu-focus))]"
                   >
                     <div className="flex h-5 w-5 items-center justify-center flex-shrink-0">
                       <LogOutIcon className="h-4 w-4" />

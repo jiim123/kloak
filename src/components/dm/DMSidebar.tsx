@@ -140,7 +140,7 @@ export const DMSidebar = () => {
             <Users className="h-4 w-4 shrink-0" />
             <span className="min-w-0 flex-1">Friends</span>
             {pendingFriendRequestCount > 0 && (
-              <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-[4px] bg-destructive px-1.5 text-[11px] font-bold leading-none text-destructive-foreground">
+              <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-destructive px-1.5 text-[11px] font-bold leading-none text-destructive-foreground">
                 {pendingFriendRequestCount > 99 ? "99+" : pendingFriendRequestCount}
               </span>
             )}

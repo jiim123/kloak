@@ -98,7 +98,7 @@ export const CreateGroupModal = ({ open, onOpenChange }: CreateGroupModalProps) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-border bg-card p-0 text-foreground shadow-2xl sm:max-w-[448px]">
+      <DialogContent className="max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-2xl border border-border bg-card p-0 text-foreground shadow-2xl sm:max-w-[448px]">
         <div className="flex max-h-[82vh] flex-col overflow-hidden">
           <div className="border-b border-border bg-secondary/40 px-5 py-3">
             <div className="flex items-center gap-2 text-base font-medium leading-none tracking-tight">
@@ -140,7 +140,7 @@ export const CreateGroupModal = ({ open, onOpenChange }: CreateGroupModalProps) 
                   {selectedFriendData.map((friend) => (
                     <div
                       key={friend.id}
-                      className="flex items-center gap-2 border border-border bg-secondary/40 px-2.5 py-1.5 text-sm text-foreground"
+                      className="flex items-center gap-2 rounded-full border border-border bg-secondary/40 px-2.5 py-1.5 text-sm text-foreground"
                     >
                       <AvatarWithDecoration user={friend} className="h-5 w-5" freezeGifUntilHover />
                       <span className="max-w-[140px] truncate">
@@ -149,7 +149,7 @@ export const CreateGroupModal = ({ open, onOpenChange }: CreateGroupModalProps) 
                       <button
                         type="button"
                         onClick={() => toggleFriend(friend.id)}
-                        className="rounded-[2px] p-0.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                        className="rounded-full p-0.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -178,7 +178,7 @@ export const CreateGroupModal = ({ open, onOpenChange }: CreateGroupModalProps) 
             </div>
 
             {trimmedSearchQuery ? (
-              <div className="border border-border bg-secondary/40">
+              <div className="overflow-hidden rounded-2xl border border-border bg-secondary/40">
                 <div className="border-b border-border px-3 py-2">
                   <p className="text-sm font-medium leading-none text-foreground">
                     Search results
@@ -197,7 +197,7 @@ export const CreateGroupModal = ({ open, onOpenChange }: CreateGroupModalProps) 
                       <label
                         key={friend.id}
                         className={cn(
-                          "flex cursor-pointer items-center gap-3 border border-transparent px-2 py-2 transition-colors",
+                          "flex cursor-pointer items-center gap-3 rounded-xl border border-transparent px-2 py-2 transition-colors",
                           selectedFriends.includes(friend.id)
                             ? "border-border bg-secondary"
                             : "hover:bg-secondary/70"
@@ -224,7 +224,7 @@ export const CreateGroupModal = ({ open, onOpenChange }: CreateGroupModalProps) 
                 </div>
               </div>
             ) : (
-              <div className="border border-dashed border-border bg-secondary/30 px-3 py-4 text-center">
+              <div className="rounded-2xl border border-dashed border-border bg-secondary/30 px-3 py-4 text-center">
                 <p className="text-sm text-muted-foreground">
                   Search for a friend to add them to this group.
                 </p>
@@ -237,7 +237,7 @@ export const CreateGroupModal = ({ open, onOpenChange }: CreateGroupModalProps) 
               type="button"
               variant="ghost"
               onClick={() => onOpenChange(false)}
-              className="h-9 rounded-[3px] px-4 text-muted-foreground hover:bg-transparent hover:text-foreground"
+              className="h-9 rounded-full px-4 text-muted-foreground hover:bg-transparent hover:text-foreground"
             >
               Cancel
             </Button>
@@ -245,7 +245,7 @@ export const CreateGroupModal = ({ open, onOpenChange }: CreateGroupModalProps) 
               type="button"
               onClick={handleCreate}
               disabled={selectedFriends.length < 2 || isCreating}
-              className="h-9 rounded-[3px] bg-primary px-5 font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-secondary disabled:text-muted-foreground disabled:opacity-100"
+              className="h-9 rounded-full bg-primary px-5 font-medium text-primary-foreground hover:bg-primary/90 disabled:bg-secondary disabled:text-muted-foreground disabled:opacity-100"
             >
               {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create Group ({selectedFriends.length})

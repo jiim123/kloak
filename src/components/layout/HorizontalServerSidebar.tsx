@@ -74,7 +74,7 @@ interface ServerChannels {
 }
 
 const MODAL_CONTENT_CLASS =
-  "max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-border bg-card p-0 text-foreground shadow-2xl sm:max-w-[448px]";
+  "max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-2xl border border-border bg-card p-0 text-foreground shadow-2xl sm:max-w-[448px]";
 
 interface ServerFolder {
   id: string;
@@ -177,18 +177,18 @@ const ServerIconVisual = ({
     <div className="relative">
       <div
         className={cn(
-          "w-10 h-10 overflow-hidden rounded-[4px] flex items-center justify-center",
+          "w-10 h-10 overflow-hidden rounded-2xl flex items-center justify-center",
           !server.icon_url && getServerColor(server.name),
         )}
       >
         {server.icon_url ? (
-          <Avatar className="w-10 h-10 border-0 rounded-[4px]">
+          <Avatar className="w-10 h-10 border-0 rounded-2xl">
             <AvatarImage
               src={bustCache(server.icon_url) ?? undefined}
               alt={server.name}
-              className="object-cover rounded-[4px]"
+              className="object-cover rounded-2xl"
             />
-            <AvatarFallback className={cn("rounded-[4px]", getServerColor(server.name))}>
+            <AvatarFallback className={cn("rounded-2xl", getServerColor(server.name))}>
               {getServerInitials(server.name)}
             </AvatarFallback>
           </Avatar>
@@ -323,7 +323,7 @@ const HorizontalFolderItem = ({
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         exit={{ scale: 0 }}
-                        className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
+                        className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-full text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
                       >
                         {folderTotalMentions > 99 ? "99+" : folderTotalMentions}
                       </motion.span>
@@ -370,18 +370,18 @@ const HorizontalFolderItem = ({
                       <div className="relative flex-shrink-0">
                         <div
                           className={cn(
-                            "w-8 h-8 rounded-[4px] overflow-hidden flex items-center justify-center",
+                            "w-8 h-8 rounded-xl overflow-hidden flex items-center justify-center",
                             !server.icon_url && getServerColor(server.name),
                           )}
                         >
                           {server.icon_url ? (
-                            <Avatar className="w-8 h-8 border-0 rounded-[4px]">
+                            <Avatar className="w-8 h-8 border-0 rounded-xl">
                               <AvatarImage
                                 src={bustCache(server.icon_url) ?? undefined}
                                 alt={server.name}
-                                className="object-cover rounded-[4px]"
+                                className="object-cover rounded-xl"
                               />
-                              <AvatarFallback className={cn("rounded-[4px]", getServerColor(server.name))}>
+                              <AvatarFallback className={cn("rounded-xl", getServerColor(server.name))}>
                                 {getServerInitials(server.name)}
                               </AvatarFallback>
                             </Avatar>
@@ -401,7 +401,7 @@ const HorizontalFolderItem = ({
                         {server.name}
                       </span>
                       {totalMentions > 0 && (
-                        <span className="ml-auto min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold">
+                        <span className="ml-auto min-w-[18px] h-[18px] bg-destructive rounded-full text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold">
                           {totalMentions > 99 ? "99+" : totalMentions}
                         </span>
                       )}
@@ -588,13 +588,13 @@ const HorizontalSortableServerItem = forwardRef<
                     )}
                   >
                     {server.icon_url ? (
-                      <Avatar className="w-10 h-10 border-0 rounded-[4px]">
+                      <Avatar className="w-10 h-10 border-0 rounded-2xl">
                         <AvatarImage
                           src={server.icon_url ?? undefined}
                           alt={server.name}
-                          className="object-cover rounded-[4px]"
+                          className="object-cover rounded-2xl"
                         />
-                        <AvatarFallback className={cn("rounded-[4px]", getServerColor(server.name))}>
+                        <AvatarFallback className={cn("rounded-2xl", getServerColor(server.name))}>
                           {getServerInitials(server.name)}
                         </AvatarFallback>
                       </Avatar>
@@ -620,7 +620,7 @@ const HorizontalSortableServerItem = forwardRef<
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         exit={{ scale: 0 }}
-                        className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-[4px] text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
+                        className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-full text-xs text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
                       >
                         {totalMentions > 99 ? "99+" : totalMentions}
                       </motion.span>
@@ -1246,7 +1246,7 @@ export const HorizontalServerSidebar = () => {
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
                           exit={{ scale: 0 }}
-                          className="absolute -bottom-1 -right-1 min-w-[16px] h-[16px] bg-destructive rounded-[4px] text-[10px] text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
+                          className="absolute -bottom-1 -right-1 min-w-[16px] h-[16px] bg-destructive rounded-full text-[10px] text-destructive-foreground flex items-center justify-center px-1 font-bold shadow-lg"
                         >
                           {totalHomeBadge > 99 ? "99+" : totalHomeBadge}
                         </motion.span>
@@ -1397,7 +1397,7 @@ export const HorizontalServerSidebar = () => {
                     whileHover="hover"
                     initial="default"
                     onClick={() => openModal("create-server")}
-                    className="relative w-10 h-10 rounded-[4px] text-muted-foreground hover:text-foreground transition-colors duration-200 flex items-center justify-center overflow-hidden flex-shrink-0"
+                    className="relative w-10 h-10 rounded-2xl text-muted-foreground hover:text-foreground transition-colors duration-200 flex items-center justify-center overflow-hidden flex-shrink-0"
                   >
                     <motion.svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 40 40">
                       <motion.rect
@@ -1424,7 +1424,7 @@ export const HorizontalServerSidebar = () => {
                       />
                     </motion.svg>
                     <motion.div
-                      className="absolute inset-0 rounded-[4px] border border-muted-foreground/50 pointer-events-none"
+                      className="absolute inset-0 rounded-2xl border border-muted-foreground/50 pointer-events-none"
                       variants={{ default: { opacity: 0 }, hover: { opacity: 1 } }}
                       transition={{ duration: 0.2 }}
                     />
@@ -1501,7 +1501,7 @@ export const HorizontalServerSidebar = () => {
                     onChange={(e) => setNewFolderName(e.target.value)}
                     placeholder="e.g. Work, Friends, Gaming"
                     autoFocus
-                    className="h-9 rounded-[3px] border border-border bg-secondary/40 text-sm text-foreground placeholder:text-muted-foreground"
+                    className="h-9 rounded-xl border border-border bg-secondary/40 text-sm text-foreground placeholder:text-muted-foreground"
                   />
                 </div>
                 <div className="space-y-2">
@@ -1513,7 +1513,7 @@ export const HorizontalServerSidebar = () => {
                     type="color"
                     value={newFolderColor}
                     onChange={(e) => setNewFolderColor(e.target.value)}
-                    className="h-9 w-14 rounded-[3px] border border-border bg-secondary/40 p-1"
+                    className="h-9 w-14 rounded-xl border border-border bg-secondary/40 p-1"
                   />
                 </div>
               </div>
@@ -1523,7 +1523,7 @@ export const HorizontalServerSidebar = () => {
                 type="button"
                 variant="ghost"
                 onClick={() => setIsCreateFolderOpen(false)}
-                className="h-9 rounded-[3px] px-4 text-muted-foreground hover:bg-transparent hover:text-foreground"
+                className="h-9 rounded-full px-4 text-muted-foreground hover:bg-transparent hover:text-foreground"
               >
                 Cancel
               </Button>
@@ -1531,7 +1531,7 @@ export const HorizontalServerSidebar = () => {
                 type="button"
                 onClick={handleCreateFolder}
                 disabled={!newFolderName.trim()}
-                className="h-9 rounded-[3px] bg-primary px-5 font-medium text-primary-foreground hover:bg-primary/90"
+                className="h-9 rounded-full bg-primary px-5 font-medium text-primary-foreground hover:bg-primary/90"
               >
                 Create
               </Button>

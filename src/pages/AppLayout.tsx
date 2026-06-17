@@ -20,11 +20,10 @@ import { MobileSidebar } from "@/components/layout/MobileSidebar";
 import { ConnectionStatus } from "@/components/ui/ConnectionStatus";
 import KloakDrawLoader from "@/components/ui/KloakDrawLoader";
 import { DMSidebar, DMChatArea, FriendsList } from "@/components/dm";
-import { ServerSettingsPage, ChannelSettingsPage } from "@/components/settings";
+import { ChannelSettingsPage } from "@/components/settings";
 import { ExploreServers } from "@/components/home/ExploreServers";
 import { ServerMembersPage } from "@/components/members/ServerMembersPage";
 
-import { UserSettingsPage } from "@/components/modals/UserSettingsModal";
 import { PunishmentNoticeModal } from "@/components/modals/PunishmentNoticeModal";
 import { ReportSystemAnnouncementModal } from "@/components/modals/ReportSystemAnnouncementModal";
 
@@ -118,7 +117,6 @@ const AppLayout = () => {
   const isLoading = useAuthStore((s) => s.isLoading);
   const { loadSettings: loadVoiceSettings } = useVoiceSettingsStore();
   const isMemberSidebarOpen = useUIStore((s) => s.isMemberSidebarOpen);
-  const isServerSettingsOpen = useUIStore((s) => s.isServerSettingsOpen);
   const closeMobileSidebars = useUIStore((s) => s.closeMobileSidebars);
   const activeModal = useUIStore((s) => s.activeModal);
   const openModal = useUIStore((s) => s.openModal);
@@ -688,7 +686,7 @@ const AppLayout = () => {
           ? currentServer.name
             : "Kloak";
   const isFullscreenSettingsOverlayOpen =
-    !isMobile && (isServerSettingsOpen || activeModal === "user-settings" || activeModal === "edit-channel");
+    !isMobile && activeModal === "edit-channel";
 
   return (
     <MotionConfig>
@@ -764,7 +762,7 @@ const AppLayout = () => {
                 {/* Alpha notice banner */}
                 {!isFullscreenSettingsOverlayOpen && <AlphaNoticeBanner />}
 
-                <div className="flex flex-1 overflow-hidden relative">
+                <div className="flex flex-1 gap-2 overflow-hidden relative p-2">
                   {/* Server list on left - hidden during full-screen settings */}
                   <AnimatePresence initial={false}>
                     {!isFullscreenSettingsOverlayOpen && isAddServerPanelOpen && (
@@ -774,7 +772,7 @@ const AppLayout = () => {
                         animate={{ width: 228, opacity: 1, x: 0 }}
                         exit={{ width: 0, opacity: 0, x: -18 }}
                         transition={addServerPanelTransition}
-                        className="h-full shrink-0 overflow-hidden border-r border-border/70 bg-layout-sidebar"
+                        className="h-full shrink-0 overflow-hidden rounded-2xl border border-border/60 bg-layout-sidebar"
                       >
                         <div className="flex h-full w-[228px] flex-col">
                           <div className="flex h-[58px] shrink-0 items-center gap-3 border-b border-black/20 px-3 shadow-[0_1px_0_rgba(255,255,255,0.03)]">
@@ -794,7 +792,7 @@ const AppLayout = () => {
                             <button
                               type="button"
                               onClick={() => setIsAddServerPanelOpen(false)}
-                              className="flex h-7 w-7 items-center justify-center rounded-[4px] text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
+                              className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
                               aria-label="Close quick access menu"
                             >
                               <X className="h-4 w-4" />
@@ -809,7 +807,7 @@ const AppLayout = () => {
                               type="button"
                               onClick={openProfilePage}
                               className={cn(
-                                "flex h-8 w-full items-center gap-3 rounded-[2px] px-2.5 text-left text-[14px] font-semibold transition-colors",
+                                "flex h-9 w-full items-center gap-3 rounded-xl px-2.5 text-left text-[14px] font-semibold transition-colors",
                                 isProfileView
                                   ? "bg-secondary text-foreground"
                                   : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground",
@@ -821,7 +819,7 @@ const AppLayout = () => {
                             <button
                               type="button"
                               onClick={openCreateServer}
-                              className="flex h-8 w-full items-center gap-3 rounded-[2px] px-2.5 text-left text-[14px] font-medium text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
+                              className="flex h-9 w-full items-center gap-3 rounded-xl px-2.5 text-left text-[14px] font-medium text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
                             >
                               <Plus className="h-4 w-4 shrink-0" />
                               <span className="truncate">Create Server</span>
@@ -829,7 +827,7 @@ const AppLayout = () => {
                             <button
                               type="button"
                               onClick={openJoinServer}
-                              className="flex h-8 w-full items-center gap-3 rounded-[2px] px-2.5 text-left text-[14px] font-medium text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
+                              className="flex h-9 w-full items-center gap-3 rounded-xl px-2.5 text-left text-[14px] font-medium text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
                             >
                               <Link2 className="h-4 w-4 shrink-0" />
                               <span className="truncate">Join by Invite</span>
@@ -842,7 +840,7 @@ const AppLayout = () => {
                               type="button"
                               onClick={openFriendsPage}
                               className={cn(
-                                "flex h-8 w-full items-center gap-3 rounded-[2px] px-2.5 text-left text-[14px] font-medium transition-colors",
+                                "flex h-9 w-full items-center gap-3 rounded-xl px-2.5 text-left text-[14px] font-medium transition-colors",
                                 isFriendsView
                                   ? "bg-secondary text-foreground"
                                   : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground",
@@ -852,7 +850,7 @@ const AppLayout = () => {
                               <span className="min-w-0 flex-1 truncate">Friends</span>
                               {hasPendingFriendRequests && (
                                 <span
-                                  className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-[4px] bg-destructive px-1.5 text-[11px] font-bold leading-none text-destructive-foreground"
+                                  className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-destructive px-1.5 text-[11px] font-bold leading-none text-destructive-foreground"
                                   aria-label={`${pendingFriendRequestCount} pending friend request${pendingFriendRequestCount === 1 ? "" : "s"}`}
                                 >
                                   {pendingFriendRequestCount > 99 ? "99+" : pendingFriendRequestCount}
@@ -864,7 +862,7 @@ const AppLayout = () => {
                                 type="button"
                                 onClick={openAdminPanel}
                                 className={cn(
-                                  "flex h-8 w-full items-center gap-3 rounded-[2px] px-2.5 text-left text-[14px] font-medium transition-colors",
+                                  "flex h-9 w-full items-center gap-3 rounded-xl px-2.5 text-left text-[14px] font-medium transition-colors",
                                   "text-muted-foreground hover:bg-secondary/70 hover:text-foreground",
                                 )}
                               >
@@ -887,16 +885,6 @@ const AppLayout = () => {
                   )}
 
                   {/* Full-screen settings overlays - rendered on top, main layout stays mounted */}
-                  {isServerSettingsOpen && (
-                    <div className="absolute inset-0 z-50 bg-background">
-                      <ServerSettingsPage />
-                    </div>
-                  )}
-                  {activeModal === "user-settings" && (
-                    <div className="absolute inset-0 z-50 bg-background">
-                      <UserSettingsPage />
-                    </div>
-                  )}
                   {activeModal === "edit-channel" && (
                     <div className="absolute inset-0 z-50 bg-background">
                       <ChannelSettingsPage />
@@ -907,7 +895,7 @@ const AppLayout = () => {
                   <div className={cn("flex-1 overflow-hidden", isFullscreenSettingsOverlayOpen && "invisible")}>
                     <div className="flex h-full">
                       {!isExploreView && (
-                        <div className="w-[288px] shrink-0 overflow-hidden bg-layout-sidebar">
+                        <div className="w-[288px] shrink-0 overflow-hidden rounded-2xl border border-border/50 bg-layout-sidebar">
                           {isDMView ? (
                             <DMSidebar />
                           ) : (
@@ -937,7 +925,12 @@ const AppLayout = () => {
                         ) : null}
 
                         <div className="min-h-0 flex flex-1">
-                          <div className="min-w-0 flex-1 bg-layout-chat relative overflow-hidden">
+                          <div
+                            className={cn(
+                              "min-w-0 flex-1 border border-border/50 bg-layout-chat relative overflow-hidden",
+                              isServerOverviewView ? "rounded-none" : "rounded-2xl",
+                            )}
+                          >
                             <VoicePersistentHost />
                             {/* Keep all views mounted, toggle visibility with CSS to prevent remount sluggishness */}
                             {isProfileView && (
@@ -960,7 +953,7 @@ const AppLayout = () => {
                                   <FriendsList onOpenDM={() => navigate("/app")} />
                                 </div>
                               ) : (
-                                <div className="flex h-full items-center justify-center bg-layout-members px-4 text-center text-muted-foreground">
+                                <div className="flex h-full items-center justify-center rounded-2xl bg-layout-members px-4 text-center text-muted-foreground">
                                   <p>Select a direct message or start one from the sidebar.</p>
                                 </div>
                               )

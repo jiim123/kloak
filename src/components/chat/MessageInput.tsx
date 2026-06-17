@@ -250,7 +250,7 @@ const ActionBar = memo(
               align="start"
               side="top"
               sideOffset={8}
-              className="w-[292px] rounded-md border border-border/80 bg-popover p-0 shadow-[0_10px_28px_rgba(0,0,0,0.5)]"
+              className="w-[292px] rounded-2xl border border-border/80 bg-popover p-1 shadow-[0_10px_28px_rgba(0,0,0,0.5)]"
             >
               {onAttachClick && (
                 <DropdownMenuItem
@@ -1464,7 +1464,7 @@ const MobileOptimizedInput = memo(
 
     return (
         <div
-          className={`rounded-lg bg-muted/35 border transition-all duration-200 shadow-none ${
+          className={`rounded-[22px] bg-muted/35 border transition-all duration-200 shadow-[0_8px_24px_rgba(0,0,0,0.12)] ${
             isFocused
             ? "border-border bg-muted/35"
             : "border-border/60 hover:border-border"

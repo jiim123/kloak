@@ -260,7 +260,7 @@ const MemberListItemContent = forwardRef<HTMLDivElement, MemberListItemContentPr
       <div
         ref={ref}
         className={cn(
-          "group flex items-center gap-2 mx-1.5 my-0.5 px-1 py-1.5 rounded-md cursor-pointer transition-colors",
+          "group flex items-center gap-2 mx-1.5 my-0.5 px-2 py-1.5 rounded-xl cursor-pointer transition-colors",
           "hover:bg-secondary/45 active:bg-secondary/70",
           className,
         )}
@@ -1421,7 +1421,7 @@ export const MembersSidebar = () => {
               placeholder="Search members"
               value={memberSearchQuery}
               onChange={handleSearchChange}
-              className="h-9 w-full rounded-md border border-border/50 bg-layout-members pl-9 pr-9 text-[13px] text-foreground outline-none transition-colors placeholder:text-muted-foreground/55 focus:border-primary/80"
+              className="h-9 w-full rounded-xl border border-border/50 bg-layout-members pl-9 pr-9 text-[13px] text-foreground outline-none transition-colors placeholder:text-muted-foreground/55 focus:border-primary/80"
             />
             {memberSearchQuery && (
               <button
@@ -1442,7 +1442,7 @@ export const MembersSidebar = () => {
         ref={listViewportRef}
         className={cn(
           "flex-1 overflow-y-auto py-2",
-          !isMobile && "mx-2 mb-2 mt-2 rounded bg-layout-members px-0.5 pb-2",
+          !isMobile && "mx-2 mb-2 mt-2 rounded-2xl bg-layout-members px-1 pb-2",
         )}
       >
         <ViewportList viewportRef={listViewportRef} items={memberListRows} itemSize={44} overscan={14}>

@@ -136,7 +136,7 @@
     --border: var(--neutral-200);
     --input: var(--neutral-200);
     --ring: var(--brand-600);
-    --radius: 0.375rem;
+    --radius: 0.875rem;
 
     /* Floating menu tokens */
     --menu: 226 8% 33%;
@@ -273,7 +273,7 @@
     --border: var(--neutral-200);
     --input: var(--neutral-200);
     --ring: var(--brand-600);
-    --radius: 0.375rem;
+    --radius: 0.875rem;
 
     /* Floating menu tokens */
     --menu: 0 0% 100%;
@@ -718,12 +718,12 @@
 
   /* Server icon styling */
   .server-icon {
-    @apply w-12 h-12 rounded-[24px] transition-all duration-200 ease-out;
+    @apply w-12 h-12 rounded-[18px] transition-all duration-200 ease-out;
   }
 
   .server-icon:hover,
   .server-icon.active {
-    @apply rounded-[16px];
+    @apply rounded-[14px];
   }
 
   /* Message hover state */
@@ -891,7 +891,7 @@
 /* Terminal card styles */
 .terminal-card {
   border: 1px solid hsl(var(--muted-foreground) / 0.2);
-  border-radius: 4px;
+  border-radius: 14px;
   transition: border-color 0.3s ease;
 }
 .terminal-card:hover {
@@ -1135,20 +1135,59 @@ body {
   background: hsl(var(--chat));
 }
 
+.discord-inspired {
+  --modern-shell-gap: 8px;
+  background:
+    radial-gradient(circle at top left, hsl(var(--foreground) / 0.045), transparent 28rem),
+    hsl(225 10% 10%);
+}
+
+.discord-inspired .bg-layout-sidebar,
+.discord-inspired .bg-layout-chat,
+.discord-inspired .bg-layout-members {
+  background-clip: padding-box;
+}
+
+.discord-inspired .rounded-2xl.bg-layout-sidebar,
+.discord-inspired .rounded-2xl.bg-layout-chat,
+.discord-inspired .rounded-2xl.bg-layout-members,
+.discord-inspired .rounded-2xl.border.bg-layout-sidebar,
+.discord-inspired .rounded-2xl.border.bg-layout-chat {
+  box-shadow: 0 14px 34px hsl(0 0% 0% / 0.18);
+}
+
+.discord-inspired [data-messages-container] {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
 .discord-inspired .channel-sidebar-scroll {
   scrollbar-color: hsl(var(--muted-foreground) / 0.35) transparent;
 }
 
 .discord-inspired [data-messages-container] {
-  padding: 10px 0 8px;
+  padding: 10px 8px 8px;
 }
 
 .discord-inspired [data-message-row] > div {
-  border-radius: 0;
+  border-radius: 18px;
 }
 
 .discord-inspired [data-message-row] > div:hover {
-  background: hsl(225 7% 24% / 0.72);
+  background: hsl(225 7% 26% / 0.78);
+}
+
+.discord-inspired .message-input-textarea {
+  scrollbar-width: thin;
+}
+
+.discord-inspired .message-input-textarea::-webkit-scrollbar {
+  width: 6px;
+}
+
+.discord-inspired .message-input-textarea::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.22);
+  border-radius: 9999px;
 }
 
 .discord-inspired .mention,
@@ -1203,6 +1242,12 @@ body {
   background: hsl(220 16% 94% / 0.9);
 }
 
+.light .discord-inspired {
+  background:
+    radial-gradient(circle at top left, hsl(225 10% 12% / 0.045), transparent 28rem),
+    hsl(220 18% 90%);
+}
+
 .light .discord-inspired .mention,
 .light .discord-inspired .mention-self,
 .light .discord-inspired .mention-role {
@@ -1246,6 +1291,12 @@ body {
 
 .amoled .discord-inspired [data-message-row] > div:hover {
   background: hsl(0 0% 8% / 0.86);
+}
+
+.amoled .discord-inspired {
+  background:
+    radial-gradient(circle at top left, hsl(0 0% 100% / 0.035), transparent 28rem),
+    hsl(0 0% 0%);
 }
 
 .invite-page-card {
@@ -1294,7 +1345,7 @@ body {
   background: #30333d;
   border-color: #444853;
   color: #e2e4e9;
-  border-radius: 4px;
+  border-radius: 12px;
 }
 
 .server-settings-reference input:focus,
@@ -1308,7 +1359,7 @@ body {
 .server-settings-reference .rounded-lg.border {
   background: transparent;
   border-color: #4b4f5c;
-  border-radius: 0.25rem;
+  border-radius: 0.875rem;
   box-shadow: none;
 }
 
@@ -1323,7 +1374,7 @@ body {
 }
 
 .server-settings-reference button:not([role="tab"]):not([aria-label="Close server settings"]):not([aria-label="Close user settings"]) {
-  border-radius: 4px;
+  border-radius: 9999px;
 }
 
 .default .server-settings-reference button:disabled:not([role="switch"]):not(.server-settings-keep-primary-on-disabled) {
@@ -1386,7 +1437,15 @@ body {
 }
 
 .server-settings-reference .user-settings-nav-row {
-  border-radius: 0;
+  display: flex;
+  width: 100%;
+  border-radius: 12px !important;
+}
+
+.server-settings-reference .server-settings-nav-row {
+  display: flex;
+  width: 100%;
+  border-radius: 12px !important;
 }
 
 .server-settings-reference .border-b,
@@ -1761,14 +1820,14 @@ body {
     flex-shrink: 0 !important;
     height: 36px !important;
     padding: 0 14px !important;
-    border-radius: 6px !important;
+    border-radius: 9999px !important;
   }
   /* Inline destructive buttons in sidebar match tab height */
   .server-settings-reference .w-\[250px\] button[class*="text-destructive"] {
     height: 36px !important;
     width: auto !important;
     padding: 0 14px !important;
-    border-radius: 6px !important;
+    border-radius: 9999px !important;
   }
   /* Hide separator in horizontal mode */
   .server-settings-reference .w-\[250px\] [data-orientation="horizontal"][role="separator"],

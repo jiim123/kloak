@@ -1909,31 +1909,31 @@ export const MessageItem = memo(function MessageItem({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="min-w-[190px] overflow-hidden rounded-md p-0">
                       {isOwnMessage && !pollId && (
-                        <DropdownMenuItem onClick={handleStartEditing} className="rounded-none px-3 py-2">
+                        <DropdownMenuItem onClick={handleStartEditing} className="rounded-lg px-3 py-2">
                           <Pencil className="h-4 w-4 shrink-0 mr-2" />
                           Edit
                         </DropdownMenuItem>
                       )}
                       {isOwnMessage && pollId && !pollIsClosed && (
-                        <DropdownMenuItem onClick={handleEndPoll} className="rounded-none px-3 py-2">
+                        <DropdownMenuItem onClick={handleEndPoll} className="rounded-lg px-3 py-2">
                           <Pencil className="h-4 w-4 shrink-0 mr-2" />
                           End poll
                         </DropdownMenuItem>
                       )}
                       {isOwnMessage && <DropdownMenuSeparator className="mx-0 my-0" />}
-                      <DropdownMenuItem onClick={handleShareMessage} className="rounded-none px-3 py-2">
+                      <DropdownMenuItem onClick={handleShareMessage} className="rounded-lg px-3 py-2">
                         <Share2 className="h-4 w-4 shrink-0 mr-2" />
                         Share message
                       </DropdownMenuItem>
                       <DropdownMenuSeparator className="mx-0 my-0" />
-                      <DropdownMenuItem onClick={handleCopyMessageLink} className="rounded-none px-3 py-2">
+                      <DropdownMenuItem onClick={handleCopyMessageLink} className="rounded-lg px-3 py-2">
                         <Link2 className="h-4 w-4 shrink-0 mr-2" />
                         Copy link
                       </DropdownMenuItem>
                       {canReportMessage && (
                         <>
                           <DropdownMenuSeparator className="mx-0 my-0" />
-                          <DropdownMenuItem onClick={handleOpenReportDialog} className="rounded-none px-3 py-2">
+                          <DropdownMenuItem onClick={handleOpenReportDialog} className="rounded-lg px-3 py-2">
                             <Flag className="h-4 w-4 shrink-0 mr-2" />
                             Report message
                           </DropdownMenuItem>
@@ -1941,7 +1941,7 @@ export const MessageItem = memo(function MessageItem({
                       )}
                       {canPinMessages && <DropdownMenuSeparator className="mx-0 my-0" />}
                       {canPinMessages && (
-                        <DropdownMenuItem onClick={handlePin} className="rounded-none px-3 py-2">
+                        <DropdownMenuItem onClick={handlePin} className="rounded-lg px-3 py-2">
                           <Pin className="h-4 w-4 shrink-0 mr-2" />
                           {message.is_pinned ? "Unpin message" : "Pin message"}
                         </DropdownMenuItem>

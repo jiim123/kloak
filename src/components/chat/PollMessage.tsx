@@ -221,7 +221,7 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
               size="sm"
               onClick={submitVote}
               disabled={!canVote}
-              className="h-8 rounded-[3px] bg-primary px-4 text-xs font-medium text-primary-foreground hover:bg-foreground/90 disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
+              className="h-8 rounded-full bg-primary px-4 text-xs font-medium text-primary-foreground hover:bg-foreground/90 disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
             >
               {isVoting ? "Submitting..." : hasVoted || isEditingResponse ? "Update" : "Submit"}
             </Button>
@@ -231,7 +231,7 @@ export const PollMessage = ({ pollId }: PollMessageProps) => {
               size="sm"
               onClick={handleViewResultsToggle}
               disabled={isClosed}
-              className="h-8 rounded-[3px] border-border bg-transparent px-4 text-xs font-medium text-foreground hover:bg-muted hover:text-foreground disabled:border-border disabled:bg-transparent disabled:text-muted-foreground disabled:opacity-100"
+              className="h-8 rounded-full border-border bg-transparent px-4 text-xs font-medium text-foreground hover:bg-muted hover:text-foreground disabled:border-border disabled:bg-transparent disabled:text-muted-foreground disabled:opacity-100"
             >
               {showResultsOverride ? "Back to poll" : "View results"}
             </Button>

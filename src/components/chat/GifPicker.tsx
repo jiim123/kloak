@@ -92,7 +92,7 @@ function GifPickerContent({
       return (
         <div className="grid grid-cols-3 gap-2 sm:gap-1.5">
           {GIF_GRID_SKELETON.map((_, i) => (
-            <Skeleton key={i} className="aspect-square rounded-md sm:rounded-[4px]" />
+            <Skeleton key={i} className="aspect-square rounded-xl" />
           ))}
         </div>
       );
@@ -104,7 +104,7 @@ function GifPickerContent({
             <button
               key={gif.id}
               type="button"
-              className="aspect-square overflow-hidden rounded-md transition-all hover:ring-2 hover:ring-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/40 sm:rounded-[4px]"
+              className="aspect-square overflow-hidden rounded-xl transition-all hover:ring-2 hover:ring-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/40"
               onClick={() => handleGifClick(gif)}
               onMouseDown={(e) => e.preventDefault()}
             >
@@ -142,7 +142,7 @@ function GifPickerContent({
             key={key}
             type="button"
             className={cn(
-              "flex h-10 sm:h-[23px] min-w-0 flex-1 items-center justify-center gap-2 sm:gap-1.5 rounded-md sm:rounded-[3px] px-3 sm:px-2 text-sm sm:text-[11px] font-medium transition-colors",
+              "flex h-10 sm:h-[23px] min-w-0 flex-1 items-center justify-center gap-2 sm:gap-1.5 rounded-xl sm:rounded-lg px-3 sm:px-2 text-sm sm:text-[11px] font-medium transition-colors",
               tab === key
                 ? "bg-secondary text-foreground"
                 : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground",
@@ -198,7 +198,7 @@ function GifPickerContent({
             categoriesLoading ? (
               <div className="grid grid-cols-2 gap-2 sm:gap-1.5">
                 {Array.from({ length: 8 }).map((_, i) => (
-                  <Skeleton key={i} className="h-28 sm:h-20 rounded-md sm:rounded-[4px]" />
+                  <Skeleton key={i} className="h-28 sm:h-20 rounded-xl" />
                 ))}
               </div>
             ) : categories.length > 0 ? (
@@ -207,7 +207,7 @@ function GifPickerContent({
                   <button
                     key={cat.query}
                     type="button"
-                    className="group relative h-28 overflow-hidden rounded-md focus:outline-none focus:ring-2 focus:ring-primary/40 sm:h-20 sm:rounded-[4px]"
+                    className="group relative h-28 overflow-hidden rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/40 sm:h-20"
                     onClick={() => handleCategoryClick(cat.query)}
                     onMouseDown={(e) => e.preventDefault()}
                   >
@@ -430,7 +430,7 @@ export const GifPicker = ({ children, anchor, onSelect, open, onOpenChange }: Gi
     <Popover open={open} onOpenChange={safeOpenChange}>
       {anchor ? <PopoverAnchor asChild>{anchor}</PopoverAnchor> : children && <PopoverTrigger asChild>{children}</PopoverTrigger>}
       <PopoverContent
-        className="w-[304px] overflow-hidden rounded-[4px] border border-border bg-popover p-0 text-popover-foreground shadow-[0_8px_22px_rgba(0,0,0,0.35)]"
+        className="w-[304px] overflow-hidden rounded-2xl border border-border bg-popover p-0 text-popover-foreground shadow-[0_8px_22px_rgba(0,0,0,0.35)]"
         side="top"
         align="end"
         sideOffset={8}
