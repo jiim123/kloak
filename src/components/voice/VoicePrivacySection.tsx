@@ -49,47 +49,45 @@ export function VoicePrivacySection({
         <h3 className="text-sm font-medium text-primary">Privacy</h3>
       </div>
 
-      <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 space-y-3">
-        <SettingsToggle
-          checked={muteOnJoin}
-          onChange={onMuteOnJoinChange}
-          label="Mute on Join"
-          description="Always join voice channels muted. Unmute manually when you're ready to speak"
-        />
+      <SettingsToggle
+        checked={muteOnJoin}
+        onChange={onMuteOnJoinChange}
+        label="Mute on Join"
+        description="Always join voice channels muted. Unmute manually when you're ready to speak"
+      />
 
-        <div className="space-y-2 py-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <label className="text-sm font-medium text-foreground">Auto-Disconnect</label>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Automatically disconnect from voice after being idle
-              </p>
-            </div>
-            <Select
-              value={String(autoDisconnectMinutes)}
-              onValueChange={(v) => onAutoDisconnectChange(Number(v))}
-            >
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {AUTO_DISCONNECT_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={String(opt.value)}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      <div className="space-y-2 py-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <label className="text-sm font-medium text-foreground">Auto-Disconnect</label>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Automatically disconnect from voice after being idle
+            </p>
           </div>
+          <Select
+            value={String(autoDisconnectMinutes)}
+            onValueChange={(v) => onAutoDisconnectChange(Number(v))}
+          >
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {AUTO_DISCONNECT_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={String(opt.value)}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-
-        <SettingsToggle
-          checked={hideVoiceActivity}
-          onChange={onHideVoiceActivityChange}
-          label="Hide Voice Activity"
-          description="Prevent others from seeing your speaking indicator. Your audio still transmits normally"
-        />
       </div>
+
+      <SettingsToggle
+        checked={hideVoiceActivity}
+        onChange={onHideVoiceActivityChange}
+        label="Hide Voice Activity"
+        description="Prevent others from seeing your speaking indicator. Your audio still transmits normally"
+      />
     </div>
   );
 }

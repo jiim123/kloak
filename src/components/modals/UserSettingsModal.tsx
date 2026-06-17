@@ -936,7 +936,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         ) : (
           <div className="p-3 rounded-lg border border-border/50 bg-secondary/30">
             <p className="text-xs text-muted-foreground">
-              Login key reset can be managed from account settings once you have 2FA enabled on your account.
+              Secret key reset can be managed from account settings once you have 2FA enabled on your account.
             </p>
           </div>
         )}
@@ -1295,15 +1295,17 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     id: "everyone" | "shared_servers" | "friends" | "no_one";
     title: string;
     description: string;
+    icon: React.ElementType;
   }> = [
-    { id: "everyone", title: "Everyone", description: "Anyone can start a DM with you." },
+    { id: "everyone", title: "Everyone", description: "Anyone can start a DM with you.", icon: Globe },
     {
       id: "shared_servers",
       title: "Shared Servers",
       description: "Only people who share a server with you can DM you.",
+      icon: Users,
     },
-    { id: "friends", title: "Friends Only", description: "Only accepted friends can start a DM." },
-    { id: "no_one", title: "No One", description: "Nobody can start new DMs with you." },
+    { id: "friends", title: "Friends Only", description: "Only accepted friends can start a DM.", icon: UserPlus },
+    { id: "no_one", title: "No One", description: "Nobody can start new DMs with you.", icon: UserX },
   ];
 
   const [nsfwConfirmOpen, setNsfwConfirmOpen] = useState(false);
@@ -1358,27 +1360,48 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           <h3 className="text-sm font-medium">Direct Message Privacy</h3>
         </div>
         <p className="text-[12px] text-muted-foreground mb-2">Control who can start a new DM conversation with you.</p>
-        <div className="space-y-2">
+        <div>
           {privacyOptions.map((option) => {
             const active = dmPrivacy === option.id;
+            const Icon = option.icon;
             return (
-              <button
+              <div
                 key={option.id}
-                type="button"
+                role="radio"
+                aria-checked={active}
+                tabIndex={0}
                 onClick={() => void handleDmPrivacyChange(option.id)}
+                onKeyDown={(event) => {
+                  if (event.key !== "Enter" && event.key !== " ") return;
+                  event.preventDefault();
+                  void handleDmPrivacyChange(option.id);
+                }}
                 className={cn(
-                  "w-full text-left p-3 rounded-xl border transition-colors",
-                  active ? "border-primary bg-primary/10" : "border-border/50 bg-background/30 hover:border-primary/40",
+                  "flex w-full cursor-pointer items-center justify-between gap-4 py-4 text-left transition-colors",
+                  active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium">{option.title}</p>
-                    <p className="text-[12px] text-muted-foreground mt-1">{option.description}</p>
+                <div className="flex min-w-0 flex-1 items-start gap-4">
+                  <div
+                    className={cn(
+                      "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl transition-colors",
+                      active ? "bg-primary/15" : "bg-secondary/80",
+                    )}
+                  >
+                    <Icon className={cn("h-5 w-5", active ? "text-primary" : "text-muted-foreground")} />
                   </div>
-                  {active && <Check className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />}
+                  <div className="min-w-0 space-y-1">
+                    <Label className="text-sm font-medium">{option.title}</Label>
+                    <p className="text-xs leading-relaxed text-muted-foreground">{option.description}</p>
+                  </div>
                 </div>
-              </button>
+                <Switch
+                  checked={active}
+                  onCheckedChange={() => void handleDmPrivacyChange(option.id)}
+                  className="ml-4 flex-shrink-0 pointer-events-none"
+                  aria-label={`${option.title} DM privacy`}
+                />
+              </div>
             );
           })}
         </div>
@@ -1412,8 +1435,10 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmEnableNsfw}>I'm 18+, Enable</AlertDialogAction>
+            <AlertDialogCancel className="h-10 !rounded-full px-5">Cancel</AlertDialogCancel>
+            <AlertDialogAction className="h-10 !rounded-full px-5" onClick={confirmEnableNsfw}>
+              I'm 18+, Enable
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

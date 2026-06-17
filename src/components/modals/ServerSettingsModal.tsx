@@ -1615,12 +1615,12 @@ export const ServerSettingsModal = () => {
                         <div
                           onClick={() => canManageServer && !isUploadingIcon && fileInputRef.current?.click()}
                           className={cn(
-                            "w-14 h-14 rounded-xl bg-secondary/50 flex items-center justify-center border border-border/30 transition-colors flex-shrink-0 overflow-hidden relative",
+                            "w-16 h-16 rounded-xl bg-secondary/50 flex items-center justify-center border border-border/60 transition-colors flex-shrink-0 overflow-hidden relative",
                             canManageServer && !isUploadingIcon && "cursor-pointer hover:border-primary/50",
                           )}
                         >
                           {displayIconUrl ? (
-                            <img src={displayIconUrl} alt={server.name} className="w-full h-full object-cover" />
+                            <img src={displayIconUrl} alt={server.name} className="absolute inset-0 h-full w-full object-cover" />
                           ) : (
                             <span className="text-base font-medium text-muted-foreground">
                               {getServerInitials(server.name)}
@@ -1664,12 +1664,12 @@ export const ServerSettingsModal = () => {
                       <div
                         onClick={() => canManageServer && !isUploadingBanner && bannerInputRef.current?.click()}
                         className={cn(
-                          "w-full h-24 rounded-xl bg-secondary/50 flex items-center justify-center border border-border/30 transition-colors overflow-hidden relative",
+                          "w-full h-28 rounded-xl bg-secondary/50 flex items-center justify-center border border-border/60 transition-colors overflow-hidden relative",
                           canManageServer && !isUploadingBanner && "cursor-pointer hover:border-primary/50",
                         )}
                       >
                         {displayBannerUrl ? (
-                          <img src={displayBannerUrl} alt="Server banner" className="w-full h-full object-cover" />
+                          <img src={displayBannerUrl} alt="Server banner" className="absolute inset-0 h-full w-full object-cover" />
                         ) : (
                           <div className="flex flex-col items-center gap-2 text-muted-foreground">
                             <Upload className="w-5 h-5" />
@@ -1700,6 +1700,9 @@ export const ServerSettingsModal = () => {
                         </button>
                       )}
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                      {canManageServer ? "960x540 recommended - Shown in server list" : "Shown in server list"}
+                    </p>
                   </div>
 
                   {/* Server Name Section */}
@@ -2670,12 +2673,12 @@ export const ServerSettingsModal = () => {
                           <div
                             onClick={() => canManageServer && !isUploadingIcon && fileInputRef.current?.click()}
                             className={cn(
-                              "w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-secondary/50 flex items-center justify-center border border-border/30 transition-colors flex-shrink-0 overflow-hidden relative",
+                              "w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-secondary/50 flex items-center justify-center border border-border/60 transition-colors flex-shrink-0 overflow-hidden relative",
                               canManageServer && !isUploadingIcon && "cursor-pointer hover:border-primary/50",
                             )}
                           >
                             {displayIconUrl ? (
-                              <img src={displayIconUrl} alt={server.name} className="w-full h-full object-cover" />
+                              <img src={displayIconUrl} alt={server.name} className="absolute inset-0 h-full w-full object-cover" />
                             ) : (
                               <span className="text-base font-bold text-muted-foreground">
                                 {getServerInitials(server.name)}
@@ -2721,12 +2724,12 @@ export const ServerSettingsModal = () => {
                         <div
                           onClick={() => canManageServer && !isUploadingBanner && bannerInputRef.current?.click()}
                           className={cn(
-                            "w-full h-24 sm:h-32 rounded-xl bg-secondary/50 flex items-center justify-center border border-border/30 transition-colors overflow-hidden relative",
+                            "w-full h-32 sm:h-40 rounded-xl bg-secondary/50 flex items-center justify-center border border-border/60 transition-colors overflow-hidden relative",
                             canManageServer && !isUploadingBanner && "cursor-pointer hover:border-primary/50",
                           )}
                         >
                           {displayBannerUrl ? (
-                            <img src={displayBannerUrl} alt="Server banner" className="w-full h-full object-cover" />
+                            <img src={displayBannerUrl} alt="Server banner" className="absolute inset-0 h-full w-full object-cover" />
                           ) : (
                             <div className="flex flex-col items-center gap-2 text-muted-foreground">
                               <Upload className="w-5 h-5" />

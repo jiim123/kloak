@@ -326,10 +326,10 @@ export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissio
       </ScrollArea>
 
       <div className="flex items-center justify-end gap-2 pt-4 border-t">
-        <Button variant="outline" onClick={onClose} disabled={isSaving}>
+        <Button variant="outline" rounded="full" onClick={onClose} disabled={isSaving}>
           Cancel
         </Button>
-        <Button onClick={handleSave} disabled={isSaving}>
+        <Button rounded="full" onClick={handleSave} disabled={isSaving}>
           {isSaving ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
