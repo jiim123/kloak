@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { acquireChannel, subscribeChannel, releaseChannel } from '@/lib/sharedChannel';
 
 interface DMUnreadInfo {
   conversationId: string;
@@ -184,14 +185,15 @@ export const useUnreadDMs = (userId: string | null) => {
   }, [fetchUnreadCounts]);
 
   // Subscribe to user-scoped DM participant updates via Broadcast.
+  // Goes through sharedChannel so we co-own `user:${userId}` with useUnread et al.
   useEffect(() => {
     if (!userId) return;
 
     const topic = `user:${userId}`;
-    const filter = { event: "dm_participants", scope: `unread-dms-${userId}` };
-    const channel = supabase.channel(topic).on(
+    const channel = acquireChannel(topic);
+    channel.on(
       "broadcast",
-      filter as { event: string },
+      { event: "dm_participants" },
       ({ payload }) => {
         const eventPayload = payload as BroadcastMutationPayload<DmParticipantBroadcastRow>;
         const op = eventPayload?.op;
@@ -228,14 +230,10 @@ export const useUnreadDMs = (userId: string | null) => {
         }));
       },
     );
-    // NOTE: `user:${userId}` is owned/subscribed by `useUnread`.
-    // We only attach/detach this specific listener to avoid channel teardown collisions.
+    subscribeChannel(topic);
 
     return () => {
-      (channel as unknown as { _off?: (type: string, filter: Record<string, unknown>) => void })._off?.(
-        "broadcast",
-        filter,
-      );
+      releaseChannel(topic);
     };
   }, [userId, fetchUnreadCounts]);
 

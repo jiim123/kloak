@@ -347,7 +347,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   realtime: {
     worker: true,
     heartbeatCallback: (status) => {
-      if (status === "disconnected") {
+      if (status === "disconnected" || status === "timeout") {
         supabase.realtime.connect();
       }
     },
