@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Check, Loader2, Minus, Save, Search, ShieldAlert, X } from 'lucide-react';
@@ -254,7 +253,7 @@ export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissio
   }
 
   return (
-    <div className="flex max-h-[82vh] flex-col gap-4">
+    <div className="flex h-[52vh] min-h-[22rem] max-h-[34rem] flex-col gap-4 sm:h-[70vh] sm:max-h-[44rem]">
       <div className="space-y-3">
         <div>
           <h3 className="text-base font-semibold">Role Permissions</h3>
@@ -268,7 +267,7 @@ export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissio
         </div>
       </div>
 
-      <ScrollArea className="min-h-0 flex-1 pr-4">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y pr-2 sm:pr-4">
         <div className="space-y-8 pb-1">
           {filteredGroups.map((group) => {
             return (
@@ -323,7 +322,7 @@ export const RolePermissionsEditor = ({ role, serverId, onClose }: RolePermissio
             );
           })}
         </div>
-      </ScrollArea>
+      </div>
 
       <div className="flex items-center justify-end gap-2 pt-4 border-t">
         <Button variant="outline" rounded="full" onClick={onClose} disabled={isSaving}>

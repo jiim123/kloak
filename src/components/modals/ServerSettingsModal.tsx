@@ -220,7 +220,7 @@ export const ServerSettingsModal = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeTab, setActiveTab] = useState<SettingsTabId>("overview");
   const [memberSearch, setMemberSearch] = useState("");
-  const [memberDisplayCount, setMemberDisplayCount] = useState(50);
+  const [memberDisplayCount, setMemberDisplayCount] = useState(20);
   const [editingRole, setEditingRole] = useState<CustomServerRole | null>(null);
   const [editingRolePermissions, setEditingRolePermissions] = useState<CustomServerRole | null>(null);
   const [roleTab, setRoleTab] = useState<"details" | "permissions">("details");
@@ -231,6 +231,24 @@ export const ServerSettingsModal = () => {
   const [colorType, setColorType] = useState<"solid" | "gradient">("solid");
   const [gradientColors, setGradientColors] = useState<string[]>(["#5865F2", "#7289DA"]);
   const [gradientAngle, setGradientAngle] = useState(135);
+
+  const filteredMembers = useMemo(() => {
+    const query = memberSearch.trim().toLowerCase();
+    if (!query) return members;
+
+    return members.filter((member) => {
+      const username = member.user?.username?.toLowerCase() || "";
+      const displayName = member.user?.display_name?.toLowerCase() || "";
+      const nickname = member.nickname?.toLowerCase() || "";
+      return username.includes(query) || displayName.includes(query) || nickname.includes(query);
+    });
+  }, [memberSearch, members]);
+
+  const visibleMembers = useMemo(
+    () => filteredMembers.slice(0, memberDisplayCount),
+    [filteredMembers, memberDisplayCount],
+  );
+  const hasMoreMembers = filteredMembers.length > memberDisplayCount;
 
   // Icon upload state
   const [iconFile, setIconFile] = useState<File | null>(null);
@@ -1338,6 +1356,8 @@ export const ServerSettingsModal = () => {
   const handleClose = () => {
     reset();
     setActiveTab("overview");
+    setMemberSearch("");
+    setMemberDisplayCount(20);
     clearIcon();
     clearBanner();
     // Cleanup crop modal
@@ -1918,8 +1938,8 @@ export const ServerSettingsModal = () => {
                     <Input
                       placeholder="Search members..."
                       value={memberSearch}
-                      onChange={(e) => { setMemberSearch(e.target.value); setMemberDisplayCount(50); }}
-                      className="pl-10 h-9 rounded-xl border-border/50 bg-secondary/30 text-sm"
+                      onChange={(e) => { setMemberSearch(e.target.value); setMemberDisplayCount(20); }}
+                      className="h-9 !pl-10 rounded-xl border-border/50 bg-secondary/30 text-sm"
                     />
                   </div>
 
@@ -2058,7 +2078,7 @@ export const ServerSettingsModal = () => {
                             <Button
                               variant="outline"
                               className="w-full mt-2 rounded-xl"
-                              onClick={() => setMemberDisplayCount((c) => c + 50)}
+                              onClick={() => setMemberDisplayCount((c) => c + 20)}
                             >
                               Show more ({filtered.length - memberDisplayCount} remaining)
                             </Button>
@@ -2964,14 +2984,34 @@ export const ServerSettingsModal = () => {
                   ))}
 
                 {activeTab === "members" && (
-                  <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4">
+                  <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4 space-y-3">
                     <div className="flex items-center justify-between mb-3">
                       <p className="text-sm text-muted-foreground">
                         {members.length} member{members.length !== 1 ? "s" : ""}
                       </p>
                     </div>
+
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        placeholder="Search members..."
+                        value={memberSearch}
+                        onChange={(e) => {
+                          setMemberSearch(e.target.value);
+                          setMemberDisplayCount(20);
+                        }}
+                        className="h-9 !pl-10 rounded-xl border-border/50 bg-background/50 text-sm"
+                      />
+                    </div>
+
+                    {memberSearch && (
+                      <p className="text-xs text-muted-foreground">
+                        {filteredMembers.length} matching member{filteredMembers.length !== 1 ? "s" : ""}
+                      </p>
+                    )}
+
                     <div className="max-h-[400px] sm:max-h-[500px] overflow-y-auto overscroll-contain touch-pan-y space-y-2">
-                      {members.map((member) => {
+                      {visibleMembers.map((member) => {
                         const memberRoles = member.roles || [];
                         const hasRoles = memberRoles.length > 0;
 
@@ -3086,6 +3126,16 @@ export const ServerSettingsModal = () => {
                           </div>
                         );
                       })}
+
+                      {hasMoreMembers && (
+                        <Button
+                          variant="outline"
+                          className="mt-2 w-full rounded-xl"
+                          onClick={() => setMemberDisplayCount((count) => count + 20)}
+                        >
+                          Show more ({filteredMembers.length - memberDisplayCount} remaining)
+                        </Button>
+                      )}
                     </div>
                   </div>
                 )}
@@ -3097,40 +3147,26 @@ export const ServerSettingsModal = () => {
                       <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4 space-y-4">
                         <h4 className="text-sm font-semibold">{editingRole ? "Edit Role" : "Create Role"}</h4>
                         <div className="space-y-3">
-                          <Label className="text-sm">Role Name & Color</Label>
-                          <div className="flex items-center gap-2">
-                            <Input
-                              id="roleName"
-                              value={roleName}
-                              onChange={(e) => setRoleName(e.target.value)}
-                              placeholder="Enter role name"
-                              className="h-10 rounded-xl bg-secondary/50 border-border/30 flex-1"
-                              maxLength={100}
-                            />
-                            <div className="relative flex items-center gap-2">
-                              <label
-                                htmlFor="roleColor"
-                                className="relative w-10 h-10 rounded-xl border border-border/30 cursor-pointer overflow-hidden flex-shrink-0 hover:border-primary/50 transition-colors"
-                                style={{ backgroundColor: roleColor }}
-                              >
-                                <input
-                                  type="color"
-                                  id="roleColor"
-                                  value={roleColor}
-                                  onChange={(e) => setRoleColor(e.target.value)}
-                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                />
-                              </label>
-                              <Input
-                                value={roleColor}
-                                onChange={(e) => setRoleColor(e.target.value)}
-                                placeholder="#5865F2"
-                                className="h-10 rounded-xl bg-secondary/50 border-border/30 w-24"
-                                maxLength={7}
-                              />
-                            </div>
-                          </div>
+                          <Label htmlFor="roleName" className="text-sm">Role Name</Label>
+                          <Input
+                            id="roleName"
+                            value={roleName}
+                            onChange={(e) => setRoleName(e.target.value)}
+                            placeholder="Enter role name"
+                            className="h-10 rounded-xl bg-secondary/50 border-border/30"
+                            maxLength={100}
+                          />
                         </div>
+                        <RoleColorPicker
+                          colorType={colorType}
+                          onColorTypeChange={setColorType}
+                          color={roleColor}
+                          onColorChange={setRoleColor}
+                          gradientColors={gradientColors}
+                          onGradientColorsChange={setGradientColors}
+                          gradientAngle={gradientAngle}
+                          onGradientAngleChange={setGradientAngle}
+                        />
                         <div className="space-y-3">
                           <Label className="text-sm">Role Icon (optional)</Label>
                           <div className="flex items-center gap-2">
@@ -3203,6 +3239,9 @@ export const ServerSettingsModal = () => {
                                 setRoleName("");
                                 setRoleColor("#5865F2");
                                 setRoleIcon("");
+                                setColorType("solid");
+                                setGradientColors(["#5865F2", "#7289DA"]);
+                                setGradientAngle(135);
                               }}
                               className="h-10"
                             >
@@ -3313,11 +3352,14 @@ export const ServerSettingsModal = () => {
                   (canManageEmojis ? (
                     <div className="space-y-4">
                       {/* Import from emoji.gg */}
-                      <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4">
+                      <div
+                        className="backdrop-blur-sm rounded-xl border p-3 text-white sm:p-4"
+                        style={{ backgroundColor: "#5C60F5", borderColor: "rgba(255, 255, 255, 0.18)" }}
+                      >
                         <div className="flex items-center justify-between">
                           <div className="min-w-0 flex-1">
                             <h4 className="text-sm font-semibold">Import from emoji.gg</h4>
-                            <p className="text-xs text-muted-foreground mt-0.5">
+                            <p className="mt-0.5 text-xs !text-white/75">
                               Browse and import emoji packs from emoji.gg
                             </p>
                           </div>
