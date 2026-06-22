@@ -112,6 +112,25 @@ const serverSettingsSchema = z.object({
 
 type ServerSettingsForm = z.infer<typeof serverSettingsSchema>;
 
+const FALLBACK_TIMEZONES = [
+  "UTC",
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "Europe/London",
+  "Europe/Berlin",
+  "Asia/Colombo",
+  "Asia/Singapore",
+  "Asia/Tokyo",
+  "Australia/Sydney",
+];
+
+const TIMEZONE_OPTIONS =
+  typeof Intl !== "undefined" && typeof (Intl as any).supportedValuesOf === "function"
+    ? ((Intl as any).supportedValuesOf("timeZone") as string[])
+    : FALLBACK_TIMEZONES;
+
 type PublicationRequirement = {
   key: string;
   label: string;
@@ -195,8 +214,11 @@ export const ServerSettingsModal = () => {
     servers,
     members,
     roles,
+    channels,
+    categories,
     fetchMembers,
     fetchRoles,
+    fetchChannels,
     fetchServers,
     createRole,
     updateRole,
@@ -206,6 +228,7 @@ export const ServerSettingsModal = () => {
     removeRoleFromMember,
     updateServer,
     deleteServer,
+    transferOwnership,
     kickMember,
     banMember,
     updateMember,
@@ -218,6 +241,10 @@ export const ServerSettingsModal = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showTransferConfirm, setShowTransferConfirm] = useState(false);
+  const [transferTargetId, setTransferTargetId] = useState<string | null>(null);
+  const [transferConfirmName, setTransferConfirmName] = useState("");
+  const [isTransferring, setIsTransferring] = useState(false);
   const [activeTab, setActiveTab] = useState<SettingsTabId>("overview");
   const [memberSearch, setMemberSearch] = useState("");
   const [memberDisplayCount, setMemberDisplayCount] = useState(20);
@@ -328,6 +355,11 @@ export const ServerSettingsModal = () => {
   const [inviteMaxUses, setInviteMaxUses] = useState<string>("unlimited");
   const [publicationEligibility, setPublicationEligibility] = useState<PublicationEligibility | null>(null);
   const [isLoadingPublicationEligibility, setIsLoadingPublicationEligibility] = useState(false);
+  const [systemChannelJoinId, setSystemChannelJoinId] = useState("");
+  const [systemChannelLeaveId, setSystemChannelLeaveId] = useState("");
+  const [isNsfwDraft, setIsNsfwDraft] = useState(false);
+  const [minAccountAgeDraft, setMinAccountAgeDraft] = useState(0);
+  const [serverTimezoneDraft, setServerTimezoneDraft] = useState("UTC");
 
   const isOpen = activeModal === "server-settings";
 
@@ -636,7 +668,13 @@ export const ServerSettingsModal = () => {
   useEffect(() => {
     if (isOpen && server) {
       fetchRoles(server.id);
+      fetchChannels(server.id);
       reset({ name: server.name, about: server.about || "" });
+      setSystemChannelJoinId(server.system_channel_join_id || "");
+      setSystemChannelLeaveId(server.system_channel_leave_id || "");
+      setIsNsfwDraft(!!server.is_nsfw);
+      setMinAccountAgeDraft(Number(server.min_account_age_days || 0));
+      setServerTimezoneDraft(server.timezone || "UTC");
       // Reset icon state
       setIconFile(null);
       setIconPreview(null);
@@ -662,12 +700,12 @@ export const ServerSettingsModal = () => {
       setGradientColors(["#5865F2", "#7289DA"]);
       setGradientAngle(135);
     }
-  }, [isOpen, server, fetchRoles, reset]);
+  }, [isOpen, server, fetchRoles, fetchChannels, reset]);
 
   // Load full member roster only while the Members tab is active.
   useEffect(() => {
     if (!isOpen || !server?.id) return;
-    if (activeTab !== "members") return;
+    if (activeTab !== "members" && activeTab !== "danger") return;
     fetchMembers(server.id, { full: true });
   }, [isOpen, server?.id, activeTab, fetchMembers]);
 
@@ -1284,6 +1322,13 @@ export const ServerSettingsModal = () => {
       await updateServer(server.id, user.id, {
         name: data.name,
         about: aboutValue || null,
+        system_channel_join_id: systemChannelJoinId || null,
+        system_channel_leave_id: systemChannelLeaveId || null,
+        enable_join_messages: !!systemChannelJoinId,
+        enable_leave_messages: !!systemChannelLeaveId,
+        is_nsfw: !!isNsfwDraft,
+        min_account_age_days: Number(minAccountAgeDraft || 0),
+        timezone: serverTimezoneDraft || "UTC",
       });
 
       await loadPublicationEligibility();
@@ -1373,7 +1418,34 @@ export const ServerSettingsModal = () => {
     setColorType("solid");
     setGradientColors(["#5865F2", "#7289DA"]);
     setGradientAngle(135);
+    setSystemChannelJoinId("");
+    setSystemChannelLeaveId("");
+    setIsNsfwDraft(false);
+    setMinAccountAgeDraft(0);
+    setServerTimezoneDraft("UTC");
+    setShowTransferConfirm(false);
+    setTransferTargetId(null);
+    setTransferConfirmName("");
     closeModal();
+  };
+
+  const handleTransferOwnership = async () => {
+    if (!server || !transferTargetId) return;
+
+    setIsTransferring(true);
+    try {
+      await transferOwnership(server.id, transferTargetId);
+      if (user?.id) await fetchServers(user.id);
+      toast.success("Ownership transferred successfully");
+      setShowTransferConfirm(false);
+      setTransferTargetId(null);
+      setTransferConfirmName("");
+      closeModal();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to transfer ownership");
+    } finally {
+      setIsTransferring(false);
+    }
   };
 
   const handleCreateRole = async () => {
@@ -1496,6 +1568,194 @@ export const ServerSettingsModal = () => {
 
   const displayIconUrl = iconRemoved ? null : iconPreview || server.icon_url;
   const displayBannerUrl = bannerRemoved ? null : bannerPreview || server.banner_url;
+  const overviewAdvancedSettings = (
+    <>
+      {canManageServer && (
+        <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4 space-y-3">
+          <Label className="text-sm font-medium">Server Timezone</Label>
+          <Select value={serverTimezoneDraft} onValueChange={setServerTimezoneDraft}>
+            <SelectTrigger className="h-10 rounded-xl bg-secondary/50 border-border/30 text-sm">
+              <SelectValue placeholder="Select timezone" />
+            </SelectTrigger>
+            <SelectContent className="max-h-72">
+              {TIMEZONE_OPTIONS.map((timezone) => (
+                <SelectItem key={timezone} value={timezone}>
+                  {timezone.replace(/_/g, " ")}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Calendar event defaults use this timezone. Members still see event times in their own local timezone.
+          </p>
+        </div>
+      )}
+
+      {isOwner && (
+        <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4 space-y-3">
+          <Label className="text-sm font-medium">Age-Restricted Server (NSFW)</Label>
+          <div className="flex items-start justify-between gap-3 rounded-lg border border-border/30 bg-background/50 p-3">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground">Mark as NSFW</p>
+              <p className="text-xs text-muted-foreground">
+                Users must enable NSFW in their settings to see this server in Explore.
+              </p>
+            </div>
+            <Switch
+              checked={isNsfwDraft}
+              onCheckedChange={setIsNsfwDraft}
+              disabled={isLoading || isUploadingIcon || isUploadingBanner}
+            />
+          </div>
+        </div>
+      )}
+
+      {canManageServer && (
+        <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4 space-y-3">
+          <Label className="text-sm font-medium">Minimum Account Age to Join</Label>
+          <p className="text-xs text-muted-foreground">
+            Helps prevent raids from freshly created accounts.
+          </p>
+          <Select
+            value={String(minAccountAgeDraft)}
+            onValueChange={(value) => setMinAccountAgeDraft(Number(value))}
+            disabled={isLoading || isUploadingIcon || isUploadingBanner}
+          >
+            <SelectTrigger className="h-10 rounded-xl bg-secondary/50 border-border/30 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0">No restriction</SelectItem>
+              <SelectItem value="1">1 day</SelectItem>
+              <SelectItem value="5">5 days</SelectItem>
+              <SelectItem value="14">14 days</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {isOwner && (
+        <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4 space-y-3">
+          <Label className="text-sm font-medium">Publish Server</Label>
+          <div className="space-y-3 rounded-lg border border-border/30 bg-background/50 p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground">Make this server public</p>
+                <p className="text-xs text-muted-foreground">
+                  Public servers appear in Explore only after meeting the minimum quality requirements.
+                </p>
+              </div>
+              <Switch
+                checked={!!server.is_published}
+                onCheckedChange={handlePublishedChange}
+                disabled={
+                  isLoading ||
+                  isLoadingPublicationEligibility ||
+                  (!server.is_published && !publicationEligibility?.eligible)
+                }
+              />
+            </div>
+
+            {isLoadingPublicationEligibility ? (
+              <p className="text-xs text-muted-foreground">Checking requirements...</p>
+            ) : publicationEligibility?.requirements?.length ? (
+              <div className="space-y-2">
+                {publicationEligibility.requirements.map((requirement) => (
+                  <div
+                    key={requirement.key}
+                    className="flex items-center justify-between gap-3 rounded-md border border-border/30 bg-secondary/30 px-3 py-2"
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      {requirement.met ? (
+                        <Check className="h-4 w-4 flex-shrink-0 text-emerald-500" />
+                      ) : (
+                        <X className="h-4 w-4 flex-shrink-0 text-destructive" />
+                      )}
+                      <span className="text-xs text-foreground">{requirement.label}</span>
+                    </div>
+                    <span className="text-right text-xs text-muted-foreground">
+                      {typeof requirement.current === "boolean"
+                        ? requirement.current
+                          ? "Set"
+                          : "Missing"
+                        : `${requirement.current}/${requirement.required} ${requirement.unit}`}
+                    </span>
+                  </div>
+                ))}
+                {!publicationEligibility.eligible && publicationEligibility.unmet_requirements?.length ? (
+                  <p className="text-xs text-muted-foreground">
+                    Missing: {publicationEligibility.unmet_requirements.join(" | ")}
+                  </p>
+                ) : null}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                {publicationEligibility?.error || "Unable to load publication requirements."}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {canManageServer && (
+        <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4 space-y-3">
+          <Label className="text-sm font-medium">User Messages</Label>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">User Joined Messages</Label>
+              <Select
+                value={systemChannelJoinId || "none"}
+                onValueChange={(value) => setSystemChannelJoinId(value === "none" ? "" : value)}
+                disabled={isLoading || isUploadingIcon || isUploadingBanner}
+              >
+                <SelectTrigger className="h-10 rounded-xl bg-secondary/50 border-border/30 text-sm">
+                  <SelectValue placeholder="Select a channel" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {channels
+                    .filter((channel) => channel.server_id === server.id && channel.type === "text")
+                    .map((channel) => {
+                      const category = categories.find((item) => item.id === channel.category_id);
+                      return (
+                        <SelectItem key={channel.id} value={channel.id}>
+                          {category ? `${category.name} › ` : ""}#{channel.name}
+                        </SelectItem>
+                      );
+                    })}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">User Left Messages</Label>
+              <Select
+                value={systemChannelLeaveId || "none"}
+                onValueChange={(value) => setSystemChannelLeaveId(value === "none" ? "" : value)}
+                disabled={isLoading || isUploadingIcon || isUploadingBanner}
+              >
+                <SelectTrigger className="h-10 rounded-xl bg-secondary/50 border-border/30 text-sm">
+                  <SelectValue placeholder="Select a channel" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {channels
+                    .filter((channel) => channel.server_id === server.id && channel.type === "text")
+                    .map((channel) => {
+                      const category = categories.find((item) => item.id === channel.category_id);
+                      return (
+                        <SelectItem key={channel.id} value={channel.id}>
+                          {category ? `${category.name} › ` : ""}#{channel.name}
+                        </SelectItem>
+                      );
+                    })}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
   const integrationsContent = canManageChannels ? (
     <div className="space-y-4">
       <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4 space-y-3">
@@ -1533,6 +1793,44 @@ export const ServerSettingsModal = () => {
   );
   const dangerContent = isOwner ? (
     <div className="space-y-4">
+      <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4 space-y-3">
+        <div>
+          <h4 className="text-sm font-semibold">Transfer Ownership</h4>
+          <p className="text-xs text-muted-foreground mt-1">
+            Transfer this server to another member. You will become an admin, and this cannot be undone.
+          </p>
+        </div>
+        <Select value={transferTargetId || ""} onValueChange={(value) => setTransferTargetId(value || null)}>
+          <SelectTrigger className="h-10 rounded-xl bg-background/50">
+            <SelectValue placeholder="Select a new owner..." />
+          </SelectTrigger>
+          <SelectContent className="max-h-60">
+            {members
+              .filter((member) => member.user_id !== user?.id && member.role !== "banned")
+              .map((member) => (
+                <SelectItem key={member.user_id} value={member.user_id}>
+                  {member.user?.display_name || member.user?.username || "Unknown member"}
+                  {member.user?.username ? ` (@${member.user.username})` : ""}
+                </SelectItem>
+              ))}
+          </SelectContent>
+        </Select>
+        <Button
+          type="button"
+          variant="destructive"
+          rounded="xl"
+          disabled={!transferTargetId}
+          onClick={() => {
+            setTransferConfirmName("");
+            setShowTransferConfirm(true);
+          }}
+          className="h-10"
+        >
+          <Crown className="w-4 h-4 mr-2" />
+          Transfer Ownership
+        </Button>
+      </div>
+
       <div className="bg-destructive/10 backdrop-blur-sm rounded-xl border border-destructive/30 p-3 sm:p-4 space-y-3">
         <h4 className="text-sm font-semibold text-destructive">Delete Server</h4>
         <p className="text-xs text-muted-foreground">
@@ -1764,65 +2062,7 @@ export const ServerSettingsModal = () => {
                     </p>
                   </div>
 
-                  {/* Publish Server (owner-only) */}
-                  {isOwner && (
-                    <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 space-y-3">
-                      <Label className="text-sm font-medium">Publish Server</Label>
-                      <div className="space-y-3 rounded-lg border bg-background/50 p-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium text-foreground">Make this server public</p>
-                            <p className="text-xs text-muted-foreground">
-                              Public servers appear in Explore only after meeting the minimum quality requirements.
-                            </p>
-                          </div>
-                          <Switch
-                            checked={!!server.is_published}
-                            onCheckedChange={handlePublishedChange}
-                            disabled={isLoading || isLoadingPublicationEligibility || (!server.is_published && !publicationEligibility?.eligible)}
-                          />
-                        </div>
-
-                        {isLoadingPublicationEligibility ? (
-                          <p className="text-xs text-muted-foreground">Checking requirements...</p>
-                        ) : publicationEligibility?.requirements?.length ? (
-                          <div className="space-y-2">
-                            {publicationEligibility.requirements.map((requirement) => (
-                              <div
-                                key={requirement.key}
-                                className="flex items-center justify-between gap-3 rounded-md border border-border/30 bg-secondary/30 px-3 py-2"
-                              >
-                                <div className="flex min-w-0 items-center gap-2">
-                                  {requirement.met ? (
-                                    <Check className="h-4 w-4 flex-shrink-0 text-emerald-500" />
-                                  ) : (
-                                    <X className="h-4 w-4 flex-shrink-0 text-destructive" />
-                                  )}
-                                  <span className="text-xs text-foreground">{requirement.label}</span>
-                                </div>
-                                <span className="text-right text-xs text-muted-foreground">
-                                  {typeof requirement.current === "boolean"
-                                    ? requirement.current
-                                      ? "Set"
-                                      : "Missing"
-                                    : `${requirement.current}/${requirement.required} ${requirement.unit}`}
-                                </span>
-                              </div>
-                            ))}
-                            {!publicationEligibility.eligible && publicationEligibility.unmet_requirements?.length ? (
-                              <p className="text-xs text-muted-foreground">
-                                Missing: {publicationEligibility.unmet_requirements.join(" | ")}
-                              </p>
-                            ) : null}
-                          </div>
-                        ) : (
-                          <p className="text-xs text-muted-foreground">
-                            {publicationEligibility?.error || "Unable to load publication requirements."}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                  {overviewAdvancedSettings}
 
                   {isAdmin && (
                     <Button
@@ -2802,6 +3042,30 @@ export const ServerSettingsModal = () => {
                       {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
                     </div>
 
+                    {/* Server Description Section */}
+                    <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4 space-y-3">
+                      <Label htmlFor="serverAbout" className="text-sm font-medium">
+                        Server Description
+                      </Label>
+                      <Textarea
+                        id="serverAbout"
+                        {...register("about")}
+                        className={cn(
+                          "min-h-[100px] rounded-xl bg-secondary/50 border-border/30 resize-none text-sm",
+                          errors.about && "border-destructive",
+                        )}
+                        disabled={!canManageServer}
+                        placeholder="Tell people what your server is about..."
+                        maxLength={500}
+                      />
+                      {errors.about && <p className="text-xs text-destructive">{errors.about.message}</p>}
+                      <p className="text-xs text-muted-foreground">
+                        This description will be shown in the Explore page (if public) and server overview.
+                      </p>
+                    </div>
+
+                    {overviewAdvancedSettings}
+
                     {isAdmin && (
                       <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2">
                         <Button
@@ -3653,6 +3917,53 @@ export const ServerSettingsModal = () => {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Transfer Ownership Confirmation */}
+      <AlertDialog open={showTransferConfirm} onOpenChange={setShowTransferConfirm}>
+        <AlertDialogContent className="bg-background/95 backdrop-blur-xl border-border/50 rounded-2xl max-w-[calc(100vw-2rem)] sm:max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-lg">Transfer Server Ownership</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm">
+                <p>
+                  You are about to transfer <strong>{server.name}</strong> to{" "}
+                  <strong>
+                    {members.find((member) => member.user_id === transferTargetId)?.user?.username || "Unknown member"}
+                  </strong>
+                  . You will become an admin, and this cannot be undone.
+                </p>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">
+                    Type <span className="font-mono text-foreground">{server.name}</span> to confirm
+                  </Label>
+                  <Input
+                    value={transferConfirmName}
+                    onChange={(event) => setTransferConfirmName(event.target.value)}
+                    placeholder="Enter server name..."
+                    autoComplete="off"
+                    className="h-10 rounded-xl"
+                  />
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
+            <AlertDialogCancel className="h-10 rounded-xl" disabled={isTransferring}>
+              Cancel
+            </AlertDialogCancel>
+            <Button
+              variant="destructive"
+              rounded="xl"
+              disabled={transferConfirmName !== server.name || !transferTargetId || isTransferring}
+              onClick={handleTransferOwnership}
+              className="h-10"
+            >
+              {isTransferring ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Crown className="w-4 h-4 mr-2" />}
+              Transfer Ownership
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Delete Confirmation */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
