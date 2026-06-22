@@ -14,6 +14,9 @@ import {
   Check,
   Pencil,
   Plus,
+  FileUp,
+  FileImage,
+  FileText,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthStore } from "@/stores/authStore";
@@ -139,6 +142,7 @@ const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
 const MAX_ATTACHMENTS = 10;
 const ALLOWED_FILE_EXTENSIONS =
   ".jpg,.jpeg,.png,.gif,.webp,.avif,.svg,.mp4,.webm,.mov,.mp3,.ogg,.wav,.flac,.m4a,.pdf,.txt,.zip,.rar,.gz,.doc,.docx,.xls,.xlsx,.json";
+const ALLOWED_FILE_EXTENSION_SET = new Set(ALLOWED_FILE_EXTENSIONS.split(","));
 const DRAFT_SAVE_DELAY = 500;
 const TYPING_STOP_DELAY = 2000;
 const KLOAK_ATTACHMENT_PREFIX = "kloak-attachment://";
@@ -146,6 +150,13 @@ const ATTACHMENT_READY_RETRY_DELAYS_MS = [800, 1500, 2500, 4000, 6000];
 const ATTACHMENT_INSERT_RETRY_DELAYS_MS = [1200, 2500, 5000];
 
 const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+const isAllowedAttachmentFile = (file: File): boolean => {
+  if (ALLOWED_FILE_TYPES.includes(file.type)) return true;
+  const extensionIndex = file.name.lastIndexOf(".");
+  if (extensionIndex < 0) return false;
+  return ALLOWED_FILE_EXTENSION_SET.has(file.name.slice(extensionIndex).toLowerCase());
+};
 
 const GifPickerIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor" className={className} aria-hidden="true">
@@ -427,6 +438,7 @@ export const MessageInput = ({
   const [showGifPicker, setShowGifPicker] = useState(false);
   const [showCreatePoll, setShowCreatePoll] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
+  const [isDraggingFiles, setIsDraggingFiles] = useState(false);
   const [slowmodeCooldownByChannel, setSlowmodeCooldownByChannel] = useState<Record<string, number>>({});
   const [slowmodeNowMs, setSlowmodeNowMs] = useState(() => Date.now());
   const [showChatNoticePopup, setShowChatNoticePopup] = useState(false);
@@ -438,6 +450,7 @@ export const MessageInput = ({
   const channelMappingsRef = useRef<ChannelMapping[]>([]);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const draftSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const dragDepthRef = useRef(0);
 
   useEffect(() => {
     const draftKey = isForum ? `forum-${targetId}` : isDM ? `dm-${targetId}` : targetId;
@@ -557,6 +570,12 @@ export const MessageInput = ({
   const activeChatNotice = isDM || isForum ? "" : (activeChannel?.chat_notice ?? "").trim();
   const requiresChatNoticeAck = !isDM && !isForum && activeChatNotice.length > 0 && !chatNoticeSeenAt;
   const isComposerLockedByNotice = requiresChatNoticeAck;
+  const dragDropEnabled =
+    effectiveCanAttach &&
+    canSendMessage &&
+    !isEditMode &&
+    !isComposerLockedByNotice &&
+    !forumConfig?.isClosed;
   // In DM mode the reply shape has no user_id — extract it safely
   const replyUserId = isDM ? undefined : (replyingTo as any)?.user_id;
   const replyingToUser = useMessageUser(replyUserId);
@@ -577,6 +596,117 @@ export const MessageInput = ({
     textareaRef.current.style.height = `${Math.min(Math.max(textareaRef.current.scrollHeight, MIN_TEXTAREA_HEIGHT), MAX_TEXTAREA_HEIGHT)}px`;
   }, []);
 
+  const addAttachmentFiles = useCallback((incomingFiles: File[]) => {
+    if (!effectiveCanAttach) {
+      toast.error(
+        blockAttachments
+          ? "Attachments are not allowed in this channel"
+          : "You don't have permission to attach files in this channel",
+      );
+      return;
+    }
+
+    setPendingAttachments((previous) => {
+      const availableSlots = MAX_ATTACHMENTS - previous.length;
+      if (availableSlots <= 0) {
+        toast.error(`You can attach up to ${MAX_ATTACHMENTS} files`);
+        return previous;
+      }
+
+      const accepted: PendingAttachment[] = [];
+      let rejectedType = false;
+      let rejectedSize = false;
+
+      for (const file of incomingFiles) {
+        if (accepted.length >= availableSlots) break;
+        if (!isAllowedAttachmentFile(file)) {
+          rejectedType = true;
+          continue;
+        }
+        if (file.size > MAX_FILE_SIZE) {
+          rejectedSize = true;
+          continue;
+        }
+        accepted.push({
+          file,
+          preview: file.type.startsWith("image/") ? URL.createObjectURL(file) : "",
+        });
+      }
+
+      if (incomingFiles.length > availableSlots) {
+        toast.error(`Only ${MAX_ATTACHMENTS} attachments can be added to a message`);
+      }
+      if (rejectedType) toast.error("One or more files use an unsupported format");
+      if (rejectedSize) toast.error("One or more files exceed the 25 MB limit");
+
+      return accepted.length > 0 ? [...previous, ...accepted] : previous;
+    });
+  }, [blockAttachments, effectiveCanAttach]);
+
+  const removePendingAttachment = useCallback((index: number) => {
+    setPendingAttachments((previous) => {
+      const removed = previous[index];
+      if (removed?.preview && !removed.gifUrl) URL.revokeObjectURL(removed.preview);
+      return previous.filter((_, attachmentIndex) => attachmentIndex !== index);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!dragDropEnabled) {
+      dragDepthRef.current = 0;
+      setIsDraggingFiles(false);
+      return;
+    }
+
+    const containsFiles = (event: DragEvent) =>
+      Array.from(event.dataTransfer?.types ?? []).includes("Files");
+
+    const handleDragEnter = (event: DragEvent) => {
+      if (!containsFiles(event)) return;
+      event.preventDefault();
+      dragDepthRef.current += 1;
+      setIsDraggingFiles(true);
+    };
+    const handleDragOver = (event: DragEvent) => {
+      if (!containsFiles(event)) return;
+      event.preventDefault();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+    };
+    const handleDragLeave = (event: DragEvent) => {
+      if (!containsFiles(event)) return;
+      event.preventDefault();
+      dragDepthRef.current = event.relatedTarget === null
+        ? 0
+        : Math.max(0, dragDepthRef.current - 1);
+      if (dragDepthRef.current === 0) setIsDraggingFiles(false);
+    };
+    const resetDragState = () => {
+      dragDepthRef.current = 0;
+      setIsDraggingFiles(false);
+    };
+    const handleDrop = (event: DragEvent) => {
+      if (!containsFiles(event)) return;
+      event.preventDefault();
+      resetDragState();
+      const files = Array.from(event.dataTransfer?.files ?? []);
+      if (files.length > 0) addAttachmentFiles(files);
+    };
+
+    window.addEventListener("dragenter", handleDragEnter);
+    window.addEventListener("dragover", handleDragOver);
+    window.addEventListener("dragleave", handleDragLeave);
+    window.addEventListener("drop", handleDrop);
+    window.addEventListener("dragend", resetDragState);
+    window.addEventListener("blur", resetDragState);
+    return () => {
+      window.removeEventListener("dragenter", handleDragEnter);
+      window.removeEventListener("dragover", handleDragOver);
+      window.removeEventListener("dragleave", handleDragLeave);
+      window.removeEventListener("drop", handleDrop);
+      window.removeEventListener("dragend", resetDragState);
+      window.removeEventListener("blur", resetDragState);
+    };
+  }, [addAttachmentFiles, dragDropEnabled]);
   useLayoutEffect(() => {
     resizeTextarea();
   }, [content, resizeTextarea]);
@@ -1165,32 +1295,53 @@ export const MessageInput = ({
         multiple
         hidden
         onChange={(e) => {
-          if (!effectiveCanAttach) {
-            toast.error(blockAttachments ? "Attachments are not allowed in this channel" : "You don't have permission to attach files in this channel");
-            e.target.value = "";
-            return;
-          }
-          if (e.target.files) {
-            const files = Array.from(e.target.files).filter((f) => {
-              if (!ALLOWED_FILE_TYPES.includes(f.type)) {
-                return false;
-              }
-              if (f.size > MAX_FILE_SIZE) {
-                return false;
-              }
-              return true;
-            });
-            const mapped = files.map((f) => ({
-              file: f,
-              preview: f.type.startsWith("image/") ? URL.createObjectURL(f) : "",
-            }));
-            setPendingAttachments((prev) => [...prev, ...mapped].slice(0, MAX_ATTACHMENTS));
-          }
+          if (e.target.files) addAttachmentFiles(Array.from(e.target.files));
           e.target.value = "";
         }}
       />
 
-
+      <AnimatePresence>
+        {isDraggingFiles && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.14 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-background/75 p-5 backdrop-blur-[3px]"
+            aria-hidden="true"
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 12, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.97 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              className="relative w-full max-w-md overflow-hidden rounded-[28px] border border-primary/35 bg-card/95 p-3 shadow-[0_24px_80px_rgba(0,0,0,0.48)]"
+            >
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/10 to-transparent" />
+              <div className="relative flex min-h-[286px] flex-col items-center justify-center rounded-[21px] border-2 border-dashed border-primary/50 bg-primary/[0.06] px-8 py-10 text-center">
+                <div className="relative mb-7 h-20 w-32">
+                  <div className="absolute left-1 top-3 flex h-14 w-12 -rotate-12 items-center justify-center rounded-xl border border-border bg-background shadow-lg">
+                    <FileImage className="h-6 w-6 text-primary/80" />
+                  </div>
+                  <div className="absolute right-1 top-3 flex h-14 w-12 rotate-12 items-center justify-center rounded-xl border border-border bg-background shadow-lg">
+                    <FileText className="h-6 w-6 text-primary/80" />
+                  </div>
+                  <div className="absolute left-1/2 top-0 flex h-[72px] w-[58px] -translate-x-1/2 items-center justify-center rounded-2xl border border-primary/30 bg-primary text-primary-foreground shadow-xl">
+                    <FileUp className="h-8 w-8" />
+                  </div>
+                </div>
+                <p className="text-xl font-semibold tracking-tight text-foreground">Drop files to attach</p>
+                <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted-foreground">
+                  They’ll be added to your message so you can review or add a comment before sending.
+                </p>
+                <span className="mt-5 rounded-full border border-border/70 bg-background/70 px-3 py-1.5 text-xs font-medium text-muted-foreground">
+                  Up to {MAX_ATTACHMENTS} files · 25 MB each
+                </span>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <SelectionFormatToolbar textareaRef={textareaRef} onFormat={handleFormat} />
 
@@ -1377,7 +1528,7 @@ export const MessageInput = ({
         allowExternalEmojis={canUseExternalEmojis}
         onAttachClick={effectiveCanAttach ? () => fileInputRef.current?.click() : undefined}
         pendingAttachments={pendingAttachments}
-        onRemoveAttachment={(i: number) => setPendingAttachments((p) => p.filter((_, idx) => idx !== i))}
+        onRemoveAttachment={removePendingAttachment}
         onAddMore={effectiveCanAttach ? () => fileInputRef.current?.click() : undefined}
         showMentions={showMentions}
         hasMentionOptions={hasMentionOptions}

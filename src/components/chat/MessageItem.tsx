@@ -264,17 +264,33 @@ const AttachmentItem = memo(function AttachmentItem({
   const isVideo = attachment.file_type?.startsWith("video/");
   const isAudio = attachment.file_type?.startsWith("audio/");
 
-  // Compute constrained dimensions to reserve space and prevent layout shift
+  const [detectedImageSize, setDetectedImageSize] = useState<{ width: number; height: number } | null>(null);
+
+  const recordImageSize = useCallback((image: HTMLImageElement) => {
+    if (image.naturalWidth <= 0 || image.naturalHeight <= 0) return;
+    setDetectedImageSize((current) =>
+      current?.width === image.naturalWidth && current.height === image.naturalHeight
+        ? current
+        : { width: image.naturalWidth, height: image.naturalHeight },
+    );
+  }, []);
+
+  // Prefer persisted dimensions, but fall back to the browser-detected image
+  // dimensions. The temporary 300x200 box is only used while an unknown image loads.
   const reservedStyle = useMemo(() => {
-    if ((!isImage && !isVideo) || !attachment.width || !attachment.height) {
+    if (!isImage && !isVideo) return undefined;
+
+    const sourceWidth = attachment.width || (isImage ? detectedImageSize?.width : undefined);
+    const sourceHeight = attachment.height || (isImage ? detectedImageSize?.height : undefined);
+    if (!sourceWidth || !sourceHeight) {
       if (isImage) return { width: 300, height: 200 };
-      if (isVideo) return { width: 400, height: 225 };
-      return undefined;
+      return { width: 400, height: 225 };
     }
+
     const maxW = 400;
     const maxH = 300;
-    let w = attachment.width;
-    let h = attachment.height;
+    let w = sourceWidth;
+    let h = sourceHeight;
     if (w > maxW) {
       h = Math.round(h * (maxW / w));
       w = maxW;
@@ -283,8 +299,8 @@ const AttachmentItem = memo(function AttachmentItem({
       w = Math.round(w * (maxH / h));
       h = maxH;
     }
-    return { width: w, height: h };
-  }, [isImage, isVideo, attachment.width, attachment.height]);
+    return { width: Math.max(1, Math.round(w)), height: Math.max(1, Math.round(h)) };
+  }, [isImage, isVideo, attachment.width, attachment.height, detectedImageSize]);
 
   // Fade-in state per media element. Decoded LRU lets a re-mount skip the
   // ghost entirely when the bitmap is already in the browser's cache.
@@ -301,6 +317,7 @@ const AttachmentItem = memo(function AttachmentItem({
     const img = imgRef.current;
     if (!img || !signedUrl) return;
     if (img.complete && img.naturalWidth > 0) {
+      recordImageSize(img);
       if (typeof img.decode === "function") {
         img.decode().then(() => {
           setIsLoaded(true);
@@ -314,7 +331,7 @@ const AttachmentItem = memo(function AttachmentItem({
         markAttachmentDecoded(attachment.id);
       }
     }
-  }, [signedUrl, attachment.id]);
+  }, [signedUrl, attachment.id, recordImageSize]);
 
   // Audio has no visual surface — render compact loader/player inline.
   if (isAudio) {
@@ -390,13 +407,13 @@ const AttachmentItem = memo(function AttachmentItem({
             height={isFill ? undefined : reservedStyle?.height}
             className={cn(
               "relative w-full h-full rounded-lg cursor-pointer hover:opacity-90 transition-opacity duration-200",
-              isFill ? "object-cover" : "object-contain",
+              isFill ? "object-cover" : "object-contain object-left",
               isLoaded ? "opacity-100" : "opacity-0",
             )}
             decoding="async"
             loading="lazy"
             onClick={() => onImageClick?.(signedUrl)}
-            onLoad={() => { setIsLoaded(true); markAttachmentDecoded(attachment.id); }}
+            onLoad={(event) => { recordImageSize(event.currentTarget); setIsLoaded(true); markAttachmentDecoded(attachment.id); }}
             onError={() => { setIsLoaded(false); refresh(); }}
           />
         )}
