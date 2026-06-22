@@ -48,10 +48,10 @@ type UserProfileAnchorSide = "left" | "right";
 type UserProfileAnchorAlign = "auto" | "center";
 
 const statusColors: Record<UserStatus, string> = {
-  online: "bg-[hsl(var(--kloak-success))]",
-  idle: "bg-[hsl(var(--kloak-warning))]",
-  dnd: "bg-destructive",
-  offline: "bg-muted-foreground/50",
+  online: "bg-[hsl(var(--kloak-online))]",
+  idle: "bg-[hsl(var(--kloak-idle))]",
+  dnd: "bg-[hsl(var(--kloak-dnd))]",
+  offline: "bg-[hsl(var(--kloak-offline))]",
 };
 
 const statusLabels: Record<UserStatus, string> = {
@@ -843,8 +843,7 @@ export const UserProfilePopup = () => {
               />
               <div
                 className={cn(
-                  "absolute bottom-1.5 right-1 rounded-full border-[3px] shadow-lg",
-                  "h-4.5 w-4.5",
+                  "absolute bottom-0.5 right-0.5 h-[20px] w-[20px] rounded-full border-[3px] shadow-lg",
                   statusColors[presence.status],
                 )}
                 style={{ borderColor: surface }}
