@@ -256,11 +256,11 @@ export const EditableProfilePreview = ({
           {bannerUrl && !isBannerUploading && (
             <Button
               variant="secondary"
-              size="icon"
-              className="absolute top-2 right-2 h-7 w-7 rounded-lg bg-black/60 hover:bg-destructive/80 text-white border-none"
+              size="sm"
+              className="absolute top-2 right-2 h-8 rounded-lg bg-black/60 hover:bg-destructive/80 text-white border-none"
               onClick={onBannerRemove}
             >
-              <X className="w-4 h-4" />
+              Remove Banner
             </Button>
           )}
         </div>
