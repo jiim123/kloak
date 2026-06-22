@@ -1416,7 +1416,11 @@ export const MessageItem = memo(function MessageItem({
       <ReplyConnector />
       {showReplyAuthorIdentity && replyUser ? (
         <>
-          <img src={replyUser.avatar_url || undefined} alt="" className="h-4 w-4 flex-shrink-0 rounded-full object-cover" />
+          <AvatarWithDecoration
+            user={replyUser}
+            className="h-4 w-4 flex-shrink-0 text-[8px]"
+            freezeGifUntilHover
+          />
           <span className={cn("flex-shrink-0 font-medium", replyUsernameColorClass)} style={replyUsernameColorStyle}>
             {replyDisplayName}
           </span>
