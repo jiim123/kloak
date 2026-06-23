@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { ChannelHeader } from "@/components/chat/ChannelHeader";
 import { MessageList } from "@/components/chat/MessageList";
-import { MessageInput } from "@/components/chat/MessageInput";
+import { AnnouncementComposer } from "@/components/announcement/AnnouncementComposer";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -242,9 +242,8 @@ export const AnnouncementChatArea = ({ showHeader = true }: AnnouncementChatArea
             }
           />
         )}
-        <MessageInput
+        <AnnouncementComposer
           channelId={currentChannel.id}
-          channelName={channelName}
           onTyping={startTyping}
           onStopTyping={stopTyping}
           onSlowmodeStatusChange={setSlowmodeStatus}
