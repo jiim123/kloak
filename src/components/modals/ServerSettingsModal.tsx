@@ -254,6 +254,7 @@ export const ServerSettingsModal = () => {
   const [roleName, setRoleName] = useState("");
   const [roleColor, setRoleColor] = useState("#5865F2");
   const [roleIcon, setRoleIcon] = useState<string>("");
+  const [roleIsSelfAssignable, setRoleIsSelfAssignable] = useState(false);
   const [activeRoleId, setActiveRoleId] = useState<string | null>(null);
   const [colorType, setColorType] = useState<"solid" | "gradient">("solid");
   const [gradientColors, setGradientColors] = useState<string[]>(["#5865F2", "#7289DA"]);
@@ -696,6 +697,7 @@ export const ServerSettingsModal = () => {
       setRoleName("");
       setRoleColor("#5865F2");
       setRoleIcon("");
+      setRoleIsSelfAssignable(false);
       setColorType("solid");
       setGradientColors(["#5865F2", "#7289DA"]);
       setGradientAngle(135);
@@ -1454,12 +1456,20 @@ export const ServerSettingsModal = () => {
     const finalColor = colorType === "gradient" ? createGradientString(gradientColors, gradientAngle) : roleColor;
 
     try {
-      await createRole(server.id, user.id, roleName.trim(), finalColor, roleIcon.trim() ? roleIcon.trim() : null);
+      await createRole(
+        server.id,
+        user.id,
+        roleName.trim(),
+        finalColor,
+        roleIcon.trim() ? roleIcon.trim() : null,
+        roleIsSelfAssignable,
+      );
       await fetchRoles(server.id);
       toast.success("Role created");
       setRoleName("");
       setRoleColor("#5865F2");
       setRoleIcon("");
+      setRoleIsSelfAssignable(false);
       setColorType("solid");
       setGradientColors(["#5865F2", "#7289DA"]);
       setGradientAngle(135);
@@ -1486,6 +1496,7 @@ export const ServerSettingsModal = () => {
         name: roleName.trim(),
         color: finalColor,
         icon: roleIcon.trim() ? roleIcon.trim() : null,
+        is_self_assignable: editingRole.name === "@everyone" ? false : roleIsSelfAssignable,
       });
       await fetchRoles(server.id);
       toast.success("Role updated");
@@ -1493,6 +1504,7 @@ export const ServerSettingsModal = () => {
       setRoleName("");
       setRoleColor("#5865F2");
       setRoleIcon("");
+      setRoleIsSelfAssignable(false);
       setColorType("solid");
       setGradientColors(["#5865F2", "#7289DA"]);
       setGradientAngle(135);
@@ -1530,6 +1542,7 @@ export const ServerSettingsModal = () => {
       setRoleColor(parsed.color || "#5865F2");
     }
     setRoleIcon(role.icon || "");
+    setRoleIsSelfAssignable(role.name === "@everyone" ? false : Boolean(role.is_self_assignable));
   };
 
   const handleAssignRole = async (member: ServerMember, role: CustomServerRole) => {
@@ -2424,6 +2437,26 @@ export const ServerSettingsModal = () => {
                                 </div>
                               </div>
                             </div>
+                            {editingRole.name !== "@everyone" && (
+                              <div className="flex items-start justify-between gap-4 py-1">
+                                <div className="flex-1 min-w-0">
+                                  <label
+                                    htmlFor="compactEditRoleSelfAssignable"
+                                    className="text-sm font-medium cursor-pointer"
+                                  >
+                                    Self Assignable
+                                  </label>
+                                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                                    Members can assign this role to themselves
+                                  </p>
+                                </div>
+                                <Switch
+                                  id="compactEditRoleSelfAssignable"
+                                  checked={roleIsSelfAssignable}
+                                  onCheckedChange={setRoleIsSelfAssignable}
+                                />
+                              </div>
+                            )}
                             <Button
                               onClick={handleUpdateRole}
                               disabled={!roleName.trim()}
@@ -2438,6 +2471,7 @@ export const ServerSettingsModal = () => {
                                 setRoleName("");
                                 setRoleColor("#5865F2");
                                 setRoleIcon("");
+                                setRoleIsSelfAssignable(false);
                                 setColorType("solid");
                                 setGradientColors(["#5865F2", "#7289DA"]);
                                 setGradientAngle(135);
@@ -2520,6 +2554,24 @@ export const ServerSettingsModal = () => {
                               )}
                             </div>
                           </div>
+                        </div>
+                        <div className="flex items-start justify-between gap-4 py-1">
+                          <div className="flex-1 min-w-0">
+                            <label
+                              htmlFor="compactCreateRoleSelfAssignable"
+                              className="text-sm font-medium cursor-pointer"
+                            >
+                              Self Assignable
+                            </label>
+                            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                              Members can assign this role to themselves
+                            </p>
+                          </div>
+                          <Switch
+                            id="compactCreateRoleSelfAssignable"
+                            checked={roleIsSelfAssignable}
+                            onCheckedChange={setRoleIsSelfAssignable}
+                          />
                         </div>
                         <Button
                           onClick={handleCreateRole}
@@ -3475,6 +3527,23 @@ export const ServerSettingsModal = () => {
                             </div>
                           </div>
                         </div>
+                        {(!editingRole || editingRole.name !== "@everyone") && (
+                          <div className="flex items-start justify-between gap-4 py-1">
+                            <div className="flex-1 min-w-0">
+                              <label htmlFor="roleSelfAssignable" className="text-sm font-medium cursor-pointer">
+                                Self Assignable
+                              </label>
+                              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                                Members can assign this role to themselves
+                              </p>
+                            </div>
+                            <Switch
+                              id="roleSelfAssignable"
+                              checked={roleIsSelfAssignable}
+                              onCheckedChange={setRoleIsSelfAssignable}
+                            />
+                          </div>
+                        )}
                         <div className="flex flex-col-reverse sm:flex-row gap-2">
                           <Button
                             onClick={editingRole ? handleUpdateRole : handleCreateRole}
@@ -3503,6 +3572,7 @@ export const ServerSettingsModal = () => {
                                 setRoleName("");
                                 setRoleColor("#5865F2");
                                 setRoleIcon("");
+                                setRoleIsSelfAssignable(false);
                                 setColorType("solid");
                                 setGradientColors(["#5865F2", "#7289DA"]);
                                 setGradientAngle(135);
