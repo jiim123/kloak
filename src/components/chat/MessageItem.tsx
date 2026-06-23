@@ -1215,7 +1215,9 @@ export const MessageItem = memo(function MessageItem({
     return `${base} ${spacing}`.trim();
   }, [compactMode, flushOuterXPadding, isGrouped]);
 
-  const isAnnouncementChannel = currentChannel?.type === "announcement";
+  // The last server channel can remain in the store while the DM view is active.
+  // Never let that stale channel state change direct-message presentation.
+  const isAnnouncementChannel = !isDM && currentChannel?.type === "announcement";
 
   const innerClassName = useMemo(() => {
     const messageSpacing = compactMode
@@ -1739,7 +1741,7 @@ export const MessageItem = memo(function MessageItem({
                       </div>
                     ) : (
                       <div className={messageContentClassName}>
-                        {currentChannel?.type === "announcement" ? (
+                        {isAnnouncementChannel ? (
                           (() => {
                             // Only show title+body split when there's an explicit double-newline separator
                             const content = displayContent || "";
