@@ -736,7 +736,7 @@ const AppLayout = () => {
                     ) : isFriendsView ? (
                       <FriendsList onOpenDM={() => navigate("/app")} />
                     ) : (
-                      <div className="flex h-full items-center justify-center bg-layout-members px-4 text-center text-muted-foreground">
+                      <div className="flex h-full items-center justify-center bg-layout-chat px-4 text-center text-muted-foreground">
                         <p>Select a direct message or start one from the sidebar.</p>
                       </div>
                     )
@@ -895,7 +895,7 @@ const AppLayout = () => {
                   <div className={cn("flex-1 overflow-hidden", isFullscreenSettingsOverlayOpen && "invisible")}>
                     <div className="flex h-full">
                       {!isExploreView && (
-                        <div className="w-[288px] shrink-0 overflow-hidden rounded-2xl border border-border/50 bg-layout-sidebar">
+                        <div className="w-[288px] shrink-0 overflow-hidden rounded-2xl border border-border/50 bg-[hsl(var(--layout-channels))]">
                           {isDMView ? (
                             <DMSidebar />
                           ) : (
@@ -953,7 +953,7 @@ const AppLayout = () => {
                                   <FriendsList onOpenDM={() => navigate("/app")} />
                                 </div>
                               ) : (
-                                <div className="flex h-full items-center justify-center rounded-2xl bg-layout-members px-4 text-center text-muted-foreground">
+                                <div className="flex h-full items-center justify-center rounded-2xl bg-layout-chat px-4 text-center text-muted-foreground">
                                   <p>Select a direct message or start one from the sidebar.</p>
                                 </div>
                               )

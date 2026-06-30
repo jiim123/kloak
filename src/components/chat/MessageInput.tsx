@@ -1615,7 +1615,7 @@ const MobileOptimizedInput = memo(
 
     return (
         <div
-          className={`rounded-[22px] bg-muted/35 border transition-all duration-200 shadow-[0_8px_24px_rgba(0,0,0,0.12)] ${
+          className={`message-composer-shell rounded-[22px] bg-muted/35 border transition-all duration-200 shadow-[0_8px_24px_rgba(0,0,0,0.12)] ${
             isFocused
             ? "border-border bg-muted/35"
             : "border-border/60 hover:border-border"

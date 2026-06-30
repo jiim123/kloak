@@ -113,7 +113,7 @@ export const DMSidebar = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-layout-sidebar overflow-hidden">
+    <div className="h-full flex flex-col bg-[hsl(var(--layout-channels))] overflow-hidden">
         <div className="px-2 pt-3 pb-2 border-b border-border/60">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />

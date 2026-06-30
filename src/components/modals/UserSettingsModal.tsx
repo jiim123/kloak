@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import QRCode from "qrcode";
 import {
   Loader2,
+  LockKeyhole,
   User,
   UserX,
   Palette,
@@ -32,6 +33,7 @@ import {
   AlertTriangle,
   Download,
   Shield,
+  Trophy,
 } from "lucide-react";
 // Rate limit utilities
 import { useRateLimit } from "@/hooks/useRateLimit";
@@ -62,7 +64,11 @@ import { ProfileEffectModal } from "@/components/modals/ProfileEffectModal";
 import { EditableProfilePreview } from "@/components/modals/EditableProfilePreview";
 import { BannerCropModal } from "@/components/modals/BannerCropModal";
 import { DockNavigation } from "@/components/ui/dock-navigation";
-import { useUIStore, THEMES, type Theme } from "@/stores/uiStore";
+import {
+  useUIStore,
+  THEMES,
+  type Theme,
+} from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useServerStore } from "@/stores/serverStore";
@@ -82,6 +88,29 @@ import { sanitizeDisplayName, validateDisplayName } from "@/lib/displayNameValid
 
 type UserSettingsVariant = "modal" | "page";
 type ProfileCropTarget = "avatar" | "banner" | null;
+
+interface AchievementItem {
+  slug: string;
+  category: string;
+  tier: "bronze" | "silver" | "gold" | "diamond";
+  name: string;
+  description: string;
+  hint: string | null;
+  completed_at: string | null;
+  is_completed: boolean;
+}
+
+interface AuraSummary {
+  label: string;
+  rank: number;
+  completed_count: number;
+  total_count: number;
+}
+
+interface MyAchievementsPayload {
+  summary: AuraSummary;
+  achievements: AchievementItem[];
+}
 
 const isGifFile = async (file: File) => {
   if (file.type === "image/gif" || file.name.toLowerCase().endsWith(".gif")) return true;
@@ -191,6 +220,9 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const [mfaCode, setMfaCode] = useState("");
   const [disableMfaCode, setDisableMfaCode] = useState("");
   const [resetKeyMfaCode, setResetKeyMfaCode] = useState("");
+  const [achievementsPayload, setAchievementsPayload] = useState<MyAchievementsPayload | null>(null);
+  const [isAchievementsLoading, setIsAchievementsLoading] = useState(false);
+  const [achievementTab, setAchievementTab] = useState<"completed" | "pending">("pending");
 
   // Sync browser notification toggle with actual browser permission on mount
   useEffect(() => {
@@ -277,6 +309,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const navItems = [
     { id: "account", label: "Account", icon: Key },
     { id: "profile", label: "Profile", icon: User },
+    { id: "achievements", label: "Achievements", icon: Trophy },
     { id: "privacy", label: "Privacy", icon: Shield },
     { id: "voice", label: "Voice & Audio", icon: Mic },
     { id: "notifications", label: "Notifications", icon: Bell },
@@ -348,6 +381,32 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       cancelled = true;
     };
   }, [mfaOtpAuthUri]);
+
+  useEffect(() => {
+    if (!user?.id || activeTab !== "achievements") return;
+    if (variant === "modal" && !isOpen) return;
+
+    let cancelled = false;
+    setIsAchievementsLoading(true);
+
+    (async () => {
+      try {
+        const { data, error } = await supabase.rpc("get_my_achievements" as any, { _user_id: user.id });
+        if (cancelled) return;
+        if (error) throw error;
+        setAchievementsPayload(data as MyAchievementsPayload);
+      } catch (error) {
+        console.error("Failed to load achievements:", error);
+        if (!cancelled) toast.error("Failed to load achievements");
+      } finally {
+        if (!cancelled) setIsAchievementsLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, isOpen, user?.id, variant]);
 
   // ESC key to close (desktop page variant)
   useEffect(() => {
@@ -884,6 +943,8 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         return accountContent;
       case "profile":
         return profileContent;
+      case "achievements":
+        return achievementsContent;
       case "privacy":
         return privacyContent;
       case "voice":
@@ -1290,6 +1351,228 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
   // Voice & Audio Content
   const voiceContent = <VoiceSettingsPanel />;
+
+  const tierLabel: Record<AchievementItem["tier"], string> = {
+    bronze: "Bronze",
+    silver: "Silver",
+    gold: "Gold",
+    diamond: "Diamond",
+  };
+
+  const tierStyles: Record<AchievementItem["tier"], string> = {
+    bronze: "border-amber-500/35 bg-amber-500/15 text-amber-200",
+    silver: "border-slate-300/35 bg-slate-300/15 text-slate-100",
+    gold: "border-yellow-400/35 bg-yellow-400/15 text-yellow-100",
+    diamond: "border-cyan-300/35 bg-cyan-300/15 text-cyan-100",
+  };
+
+  const allAchievements = achievementsPayload?.achievements ?? [];
+  const completedAchievements = allAchievements.filter((achievement) => achievement.is_completed);
+  const pendingAchievements = allAchievements.filter((achievement) => !achievement.is_completed);
+  const visibleAchievements = achievementTab === "completed" ? completedAchievements : pendingAchievements;
+  const achievementSummary = achievementsPayload?.summary;
+  const completedCount = achievementSummary?.completed_count ?? 0;
+  const totalCount = achievementSummary?.total_count ?? 0;
+  const completionPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+  const recentCompletedAchievements = completedAchievements
+    .slice()
+    .sort((a, b) => new Date(b.completed_at ?? 0).getTime() - new Date(a.completed_at ?? 0).getTime())
+    .slice(0, 3);
+
+  const achievementsContent = (
+    <div className="rounded-2xl border border-border/40 p-3 sm:p-4">
+      <div className="space-y-6">
+      {isAchievementsLoading && !achievementsPayload ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <>
+          <div className="overflow-hidden rounded-xl border border-primary/20 bg-secondary/20">
+            <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-primary/25 bg-primary/10">
+                  <img src="/aura-badge.svg" alt="" className="h-11 w-11 rounded-xl object-cover" />
+                </div>
+                <div className="min-w-0">
+                  <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Aura</Label>
+                  <div className="mt-1 truncate text-xl font-black leading-tight">
+                    {achievementSummary?.label ?? "No Aura"}
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {completedCount} of {totalCount} achievements completed
+                  </p>
+                </div>
+              </div>
+
+              <div className="shrink-0 rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-center">
+                <div className="text-2xl font-black leading-none text-primary">{completionPercent}%</div>
+                <div className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Complete
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-border/50 px-4 py-3">
+              <div className="h-2 overflow-hidden rounded-full bg-secondary">
+                <div
+                  className="h-full rounded-full bg-primary transition-all"
+                  style={{ width: `${completionPercent}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {recentCompletedAchievements.length > 0 && (
+            <section className="space-y-2">
+              <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Recently Completed
+              </Label>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {recentCompletedAchievements.map((achievement) => (
+                  <div
+                    key={`recent-${achievement.slug}`}
+                    className="min-w-0 rounded-xl border border-primary/25 bg-primary/10 p-3"
+                  >
+                    <div className={cn("mb-2 inline-flex rounded-lg border px-2 py-1 text-[10px] font-black", tierStyles[achievement.tier])}>
+                      {tierLabel[achievement.tier]}
+                    </div>
+                    <div className="truncate text-sm font-bold">{achievement.name}</div>
+                    {achievement.completed_at && (
+                      <div className="mt-1 text-[11px] text-muted-foreground">
+                        {new Date(achievement.completed_at).toLocaleDateString()}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <Label className="text-sm font-medium">Achievement Vault</Label>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Flip between what you have claimed and what is still waiting.
+                </p>
+              </div>
+              <div className="rounded-full bg-secondary px-3 py-1 text-xs font-bold text-muted-foreground">
+                {completedCount}/{totalCount}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-1 rounded-xl border border-border/50 bg-secondary/40 p-1">
+              <button
+                type="button"
+                onClick={() => setAchievementTab("pending")}
+                className={cn(
+                  "rounded-lg px-3 py-2 text-sm font-bold transition-colors",
+                  achievementTab === "pending"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+                )}
+              >
+                Pending
+                <span className="ml-2 rounded-full bg-black/10 px-1.5 py-0.5 text-[11px]">
+                  {pendingAchievements.length}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setAchievementTab("completed")}
+                className={cn(
+                  "rounded-lg px-3 py-2 text-sm font-bold transition-colors",
+                  achievementTab === "completed"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+                )}
+              >
+                Completed
+                <span className="ml-2 rounded-full bg-black/10 px-1.5 py-0.5 text-[11px]">
+                  {completedAchievements.length}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {visibleAchievements.length === 0 ? (
+            <div className="rounded-xl border border-border/50 bg-secondary/30 p-6 text-center">
+              <div className="text-sm font-bold">
+                {achievementTab === "completed" ? "No completed achievements yet" : "No pending achievements"}
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {achievementTab === "completed"
+                  ? "Go make the Aura number do something funny."
+                  : "That is all of them. Suspiciously powerful."}
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-2 lg:grid-cols-2">
+              {visibleAchievements.map((achievement) => (
+                <div
+                  key={achievement.slug}
+                  className="flex min-h-[116px] gap-3 rounded-xl border border-border/50 p-3 transition-colors hover:border-primary/35"
+                >
+                  <div
+                    className={cn(
+                      "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl",
+                      achievement.is_completed ? tierStyles[achievement.tier] : "bg-secondary text-muted-foreground",
+                    )}
+                    title={tierLabel[achievement.tier]}
+                  >
+                    <img
+                      src={achievement.is_completed ? "/yes-ach.svg" : "/no-ach.svg"}
+                      alt=""
+                      className="h-10 w-10 max-w-none object-contain"
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex min-w-0 items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-semibold text-foreground">
+                          {achievement.name}
+                        </div>
+                      </div>
+                      <span
+                        className={cn(
+                          "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold",
+                          achievement.is_completed
+                            ? "bg-primary/15 text-primary"
+                            : "bg-secondary text-muted-foreground",
+                        )}
+                      >
+                        {achievement.is_completed ? (
+                          <>
+                            <Check className="h-3 w-3" />
+                            Done
+                          </>
+                        ) : (
+                          <>
+                            <LockKeyhole className="h-3 w-3" />
+                            Locked
+                          </>
+                        )}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                      {achievement.description}
+                    </p>
+                    {achievement.completed_at && (
+                      <p className="mt-2 text-[11px] font-semibold text-primary">
+                        Completed {new Date(achievement.completed_at).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+      </div>
+    </div>
+  );
 
   const privacyOptions: Array<{
     id: "everyone" | "shared_servers" | "friends" | "no_one";
@@ -1730,6 +2013,18 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     </div>
   );
 
+  const themePreviewColors: Record<Theme, { server: string; channels: string; chat: string; members: string; accent: string }> = {
+    default: { server: "#0f0f0f", channels: "#171717", chat: "#0f0f0f", members: "#171717", accent: "#ededed" },
+    amoled: { server: "#000000", channels: "#080808", chat: "#000000", members: "#080808", accent: "#f5f5f5" },
+    forest: { server: "#04130a", channels: "#113820", chat: "#071c10", members: "#1e4d2d", accent: "#8af07b" },
+    rose: { server: "#19020f", channels: "#4a1230", chat: "#230715", members: "#5e183c", accent: "#ff4fa3" },
+    midnight: { server: "#050715", channels: "#10205a", chat: "#070d28", members: "#152b73", accent: "#6aa7ff" },
+    ocean: { server: "#031015", channels: "#06404a", chat: "#041d27", members: "#075766", accent: "#22e6d2" },
+    grape: { server: "#10031d", channels: "#35136b", chat: "#17062d", members: "#48208f", accent: "#c084fc" },
+    sunset: { server: "#170705", channels: "#5a1f12", chat: "#25100a", members: "#763018", accent: "#ff9b45" },
+    cyber: { server: "#000000", channels: "#101010", chat: "#030303", members: "#171717", accent: "#b6ff00" },
+  };
+
   // Appearance Content
   const appearanceContent = (
     <div className="space-y-6">
@@ -1751,6 +2046,58 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         <p className="text-xs text-muted-foreground">
           {THEMES.find((t) => t.id === theme)?.description}
         </p>
+      </div>
+
+      <div className="space-y-4 pt-6 border-t border-border/50">
+        <div>
+          <Label className="text-sm font-medium">Color Presets</Label>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Pick a complete palette for sidebars, chat, members, text, and highlights.
+          </p>
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-2">
+          {THEMES.map((preset) => {
+            const colors = themePreviewColors[preset.id];
+            const isSelected = preset.id === theme;
+            return (
+            <button
+              key={preset.id}
+              type="button"
+              onClick={() => setTheme(preset.id)}
+              className={cn(
+                "theme-preset-card group overflow-hidden rounded-none border bg-secondary/25 text-left transition-colors hover:border-primary/60",
+                isSelected ? "border-primary/80 ring-1 ring-primary/40" : "border-border/60",
+              )}
+            >
+              <div className="grid h-14 grid-cols-[34px_minmax(48px,0.8fr)_minmax(0,1.35fr)_36px]">
+                <div style={{ backgroundColor: colors.server }} className="p-1.5">
+                  <div className="mx-auto h-5 w-5 rounded-none" style={{ backgroundColor: colors.accent }} />
+                </div>
+                <div style={{ backgroundColor: colors.channels }} className="space-y-1.5 p-1.5">
+                  <div className="h-1.5 w-10 rounded-none bg-white/55" />
+                  <div className="h-3.5 rounded-none bg-white/10" />
+                  <div className="h-3.5 rounded-none bg-white/5" />
+                </div>
+                <div style={{ backgroundColor: colors.chat }} className="flex flex-col justify-end gap-1.5 p-1.5">
+                  <div className="h-2.5 w-14 rounded-none bg-white/18" />
+                  <div className="h-5 rounded-none border border-white/10 bg-white/10" />
+                </div>
+                <div style={{ backgroundColor: colors.members }} className="space-y-1.5 p-1.5">
+                  <div className="h-4 w-4 rounded-none bg-white/30" />
+                  <div className="h-1.5 w-6 rounded-none bg-white/45" />
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-2 px-2.5 py-1.5">
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-medium text-foreground">{preset.name}</p>
+                  <p className="truncate text-[11px] leading-4 text-muted-foreground">{preset.description}</p>
+                </div>
+                {isSelected && <Check className="h-3.5 w-3.5 shrink-0 text-primary" />}
+              </div>
+            </button>
+          )})}
+        </div>
       </div>
 
       {/* Message Display Section */}
@@ -1808,7 +2155,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
           {/* Dialog */}
           <div
-            className="relative bg-background rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-border mb-4"
+            className="server-settings-reference app-shell-theme-scope relative bg-background text-foreground rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-border mb-4"
             style={{ maxHeight: "calc(100vh - 140px)" }}
           >
             {/* Header */}
@@ -1818,6 +2165,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {activeTab === "account" && "Manage your account"}
                   {activeTab === "profile" && "Customize your profile"}
+                  {activeTab === "achievements" && "Track your progress"}
                   {activeTab === "privacy" && "Control who can message you"}
                   {activeTab === "voice" && "Audio and voice settings"}
                   {activeTab === "notifications" && "Notification settings"}
@@ -1844,7 +2192,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
       {/* Desktop: Contained settings modal */}
       {variant === "modal" && isOpen && !isMobile && (
         <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-          <DialogContent className="server-settings-reference bg-background/95 text-foreground backdrop-blur-xl border-border/50 rounded-2xl p-0 h-[min(820px,calc(100vh-48px))] max-h-[calc(100vh-48px)] w-[min(1120px,calc(100vw-64px))] max-w-none flex flex-col gap-0 overflow-hidden">
+          <DialogContent className="server-settings-reference app-shell-theme-scope bg-background/95 text-foreground backdrop-blur-xl border-border/50 rounded-2xl p-0 h-[min(820px,calc(100vh-48px))] max-h-[calc(100vh-48px)] w-[min(1120px,calc(100vw-64px))] max-w-none flex flex-col gap-0 overflow-hidden">
             <DialogHeader className="p-4 sm:p-6 pb-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -1912,7 +2260,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
       {/* Desktop: In-layout page (rendered from AppLayout) */}
       {variant === "page" && !isMobile && (
-        <div className="server-settings-reference h-full flex bg-background text-foreground">
+        <div className="server-settings-reference app-shell-theme-scope h-full flex bg-background text-foreground">
           {/* Sidebar Navigation */}
           <div className="w-[250px] flex-shrink-0 bg-layout-sidebar flex flex-col overflow-hidden">
             {/* Settings Title Header */}

@@ -5,7 +5,13 @@ import { persist } from "zustand/middleware";
 export const THEMES = [
   { id: "default", name: "Gray", description: "Original gray dark theme" },
   { id: "amoled", name: "Dark", description: "Pure black theme for OLED displays" },
-  { id: "light", name: "Light", description: "Clean light theme" },
+  { id: "forest", name: "Forest", description: "Pine green sidebars with mossy chat surfaces" },
+  { id: "rose", name: "Rose", description: "Deep wine panels with bright candy-pink highlights" },
+  { id: "midnight", name: "Midnight", description: "Blue-black chat with royal navy panels" },
+  { id: "ocean", name: "Ocean", description: "Deep teal chat with bright aqua highlights" },
+  { id: "grape", name: "Grape", description: "Purple-black chat with saturated violet panels" },
+  { id: "sunset", name: "Sunset", description: "Warm red-brown panels with orange highlights" },
+  { id: "cyber", name: "Cyber", description: "Black and charcoal surfaces with neon green highlights" },
 ] as const;
 
 export type Theme = (typeof THEMES)[number]["id"];
@@ -150,10 +156,13 @@ interface UIState {
 }
 
 export const applyTheme = (theme: Theme) => {
+  if (typeof document === "undefined") return;
   const root = document.documentElement;
 
   // Remove all theme classes
   THEMES.forEach((t) => root.classList.remove(t.id));
+  root.classList.remove("custom-theme");
+  root.removeAttribute("data-custom-theme");
 
   // Add the new theme class
   root.classList.add(theme);
@@ -203,7 +212,7 @@ export const useUIStore = create<UIState>()(
 
       toggleTheme: () => {
         const currentTheme = get().theme;
-        const newTheme = currentTheme === "light" ? "amoled" : "light";
+        const newTheme = currentTheme === "amoled" ? "default" : "amoled";
         applyTheme(newTheme);
         set({ theme: newTheme });
       },

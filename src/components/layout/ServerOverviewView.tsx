@@ -202,7 +202,7 @@ export const ServerOverviewView = () => {
   const hasAnnouncements = recentAnnouncements.length > 0;
   const hasCalendarEvents = upcomingCalendarEvents.length > 0;
   return (
-    <div className="h-full overflow-y-auto bg-layout-members">
+    <div className="h-full overflow-y-auto bg-layout-chat">
       <div className="space-y-4">
         <div className="overflow-hidden border-b border-border/50">
               {currentServer.banner_url ? (

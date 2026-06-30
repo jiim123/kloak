@@ -1910,7 +1910,7 @@ export const ServerSettingsModal = () => {
 
           {/* Dialog */}
           <div
-            className="server-settings-reference relative bg-background text-foreground rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-border mb-4"
+            className="server-settings-reference app-shell-theme-scope relative bg-background text-foreground rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-border mb-4"
             style={{ maxHeight: "calc(100vh - 140px)" }}
           >
             {/* Header */}
@@ -2927,7 +2927,7 @@ export const ServerSettingsModal = () => {
       {/* Desktop: Standard Dialog */}
       {!isMobile && (
         <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-          <DialogContent className="server-settings-reference bg-background/95 text-foreground backdrop-blur-xl border-border/50 rounded-2xl p-0 h-[min(820px,calc(100vh-48px))] max-h-[calc(100vh-48px)] w-[min(1120px,calc(100vw-64px))] max-w-none flex flex-col gap-0 overflow-hidden">
+          <DialogContent className="server-settings-reference app-shell-theme-scope bg-background/95 text-foreground backdrop-blur-xl border-border/50 rounded-2xl p-0 h-[min(820px,calc(100vh-48px))] max-h-[calc(100vh-48px)] w-[min(1120px,calc(100vw-64px))] max-w-none flex flex-col gap-0 overflow-hidden">
             {/* Header */}
             <DialogHeader className="p-4 sm:p-6 pb-0">
               <div className="flex items-center gap-3">

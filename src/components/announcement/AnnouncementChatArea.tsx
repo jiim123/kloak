@@ -210,7 +210,7 @@ export const AnnouncementChatArea = ({ showHeader = true }: AnnouncementChatArea
   if (!currentChannel) return null;
 
   return (
-    <div ref={swipeRef} className="h-full flex flex-col min-w-0 max-w-full overflow-x-hidden bg-layout-members relative">
+    <div ref={swipeRef} className="h-full flex flex-col min-w-0 max-w-full overflow-x-hidden bg-layout-chat relative">
       {showHeader && <ChannelHeader channel={currentChannel} />}
 
       <AnnouncementPinnedMessageBar

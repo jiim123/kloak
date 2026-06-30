@@ -14,7 +14,7 @@ const CalendarChannelArea = React.lazy(() => import("@/components/calendar/Calen
 const AnnouncementChatArea = React.lazy(() => import("@/components/announcement/AnnouncementChatArea").then(m => ({ default: m.AnnouncementChatArea })));
 
 const ChannelLoadingSkeleton = () => (
-  <div className="h-full flex flex-col bg-layout-members">
+  <div className="h-full flex flex-col bg-layout-chat">
     <div className="h-12 border-b border-border flex items-center px-4 gap-2 shrink-0">
       <Skeleton className="h-5 w-32" />
     </div>
@@ -69,7 +69,7 @@ const formatSlowmodeDuration = (totalSeconds: number): string => {
 // ── Empty‑channel placeholder (static, extracted to avoid re‑creation) ──
 
 const NoChannelPlaceholder = () => (
-  <div className="h-full flex flex-col items-center justify-center text-center px-4 bg-layout-members relative overflow-hidden">
+  <div className="h-full flex flex-col items-center justify-center text-center px-4 bg-layout-chat relative overflow-hidden">
     <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent" />
 
     <div className="relative mb-6">
@@ -344,7 +344,7 @@ export const ChatArea = ({ showHeader = true }: ChatAreaProps) => {
   }
 
   return (
-    <div ref={swipeRef} className="h-full flex flex-col min-w-0 max-w-full overflow-x-hidden bg-layout-members relative">
+    <div ref={swipeRef} className="h-full flex flex-col min-w-0 max-w-full overflow-x-hidden bg-layout-chat relative">
       {/* Channel header */}
       {showHeader && <ChannelHeader channel={currentChannel} />}
 

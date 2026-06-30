@@ -47,6 +47,13 @@ import type { UserProfileAnchorRect } from "@/lib/userProfilePopover";
 type UserProfileAnchorSide = "left" | "right";
 type UserProfileAnchorAlign = "auto" | "center";
 
+interface AuraSummary {
+  label: string;
+  rank: number;
+  completed_count: number;
+  total_count: number;
+}
+
 const statusColors: Record<UserStatus, string> = {
   online: "bg-[hsl(var(--kloak-online))]",
   idle: "bg-[hsl(var(--kloak-idle))]",
@@ -249,6 +256,7 @@ export const UserProfilePopup = () => {
   const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
   const [isBioExpanded, setIsBioExpanded] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
+  const [auraSummary, setAuraSummary] = useState<AuraSummary | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
   const profileEffectImgRef = useRef<HTMLImageElement | null>(null);
   const profileEffectAnimationEndedRef = useRef(false);
@@ -297,6 +305,7 @@ export const UserProfilePopup = () => {
     setProfileUser(null);
     setUserBadges([]);
     setSharedServers([]);
+    setAuraSummary(null);
     setPosition(null);
     closeModal();
   }, [closeModal]);
@@ -412,11 +421,31 @@ export const UserProfilePopup = () => {
         const sharedServerIds = new Set((Array.isArray(payload.shared_server_ids) ? payload.shared_server_ids : []) as string[]);
         setSharedServers(servers.filter((s) => sharedServerIds.has(s.id)).slice(0, 3));
         applyCooldownFromDeclinedAt(payload.declined_at ?? null);
+
+        if (currentUser.id !== userId) {
+          const { error: profileViewError } = await supabase.rpc("record_profile_view" as any, {
+            _target_user_id: userId,
+            _viewer_user_id: currentUser.id,
+          });
+          if (profileViewError) console.warn("Failed to record profile view:", profileViewError.message);
+        }
+
+        const { data: achievementData, error: achievementError } = await supabase.rpc("get_user_achievement_summary" as any, {
+          _target_user_id: userId,
+          _requesting_user_id: currentUser.id,
+        });
+        if (!achievementError && achievementData) {
+          setAuraSummary(achievementData as AuraSummary);
+        } else if (achievementError) {
+          console.error("Failed to fetch achievement summary:", achievementError);
+          setAuraSummary(null);
+        }
       } catch (error) {
         console.error("Failed to fetch profile:", error);
         toast.error("Failed to load profile");
         setProfileUser(null);
         setUserBadges([]);
+        setAuraSummary(null);
       } finally {
         setIsLoading(false);
       }
@@ -834,7 +863,7 @@ export const UserProfilePopup = () => {
         )}
 
         <div className="relative z-10 px-3.5 pb-3.5">
-          <div className="-mt-10">
+          <div className="-mt-10 flex min-w-0 items-end gap-2">
             <div className="relative w-fit shrink-0">
               <AvatarWithDecoration
                 user={profileUser}
@@ -850,6 +879,19 @@ export const UserProfilePopup = () => {
                 title={statusLabels[presence.status]}
               />
             </div>
+            {auraSummary && (
+              <div
+                className="mb-0.5 flex min-w-0 max-w-[156px] items-center gap-1 rounded-full border px-1.5 py-0.5 shadow-sm backdrop-blur"
+                style={{ backgroundColor: surface, borderColor: divider, color: fg }}
+                title={`${auraSummary.completed_count}/${auraSummary.total_count} achievements completed`}
+              >
+                <img src="/aura-badge.svg" alt="" className="h-4 w-4 shrink-0 rounded-full object-cover" />
+                <span className="min-w-0 truncate text-[10px] font-black leading-none">{auraSummary.label}</span>
+                <span className="shrink-0 text-[10px] font-black leading-none text-[color:var(--profile-muted)]">
+                  {auraSummary.completed_count}/{auraSummary.total_count}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="mt-3 min-w-0">

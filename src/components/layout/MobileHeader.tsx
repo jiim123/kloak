@@ -64,7 +64,7 @@ export const MobileHeader = memo(({ isDMView }: MobileHeaderProps) => {
 
   return (
     <header
-      className="sticky top-0 z-40 md:hidden bg-layout-members/90 backdrop-blur-sm border-b border-border/50"
+      className="sticky top-0 z-40 md:hidden bg-layout-chat/90 backdrop-blur-sm border-b border-border/50"
       style={safeAreaStyle}
     >
       <div className="flex items-center justify-between gap-3 px-3 h-14">

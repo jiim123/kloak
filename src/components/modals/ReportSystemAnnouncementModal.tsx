@@ -7,7 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { MessageSquareWarning, ShieldCheck } from "lucide-react";
+import { MessageSquareWarning, ShieldCheck, Trophy } from "lucide-react";
 
 type Announcement = {
   storageKey: string;
@@ -16,9 +16,21 @@ type Announcement = {
   description: string;
   body: string;
   buttonLabel: string;
+  imageSrc?: string;
+  eyebrow?: string;
 };
 
 const ANNOUNCEMENTS: Announcement[] = [
+  {
+    storageKey: "kloak.aura-announcement.v1.dismissed",
+    icon: Trophy,
+    imageSrc: "/aura-badge.svg",
+    eyebrow: "What's New",
+    title: "Aura is here",
+    description: "Earn achievements as you use Kloak and build your Aura over time.",
+    body: "Your Aura shows your progress across the app. Send messages, make friends, join servers, customize your profile, and unlock achievements that appear in User Settings and on profiles.",
+    buttonLabel: "Start earning Aura",
+  },
   {
     storageKey: "kloak.report-system-announcement.v1.dismissed",
     icon: MessageSquareWarning,
@@ -84,10 +96,23 @@ export const ReportSystemAnnouncementModal = () => {
       <DialogContent className="max-w-[calc(100vw-2rem)] overflow-hidden rounded-[8px] border-border bg-card p-0 text-foreground shadow-2xl sm:max-w-[486px]">
         <div className="overflow-hidden border-b border-border bg-gradient-to-b from-primary/12 via-primary/5 to-transparent px-6 py-8">
           <div className="mx-auto mb-5 flex justify-center text-white">
-            {Icon && <Icon className="h-12 w-12" aria-hidden="true" />}
+            {activeAnnouncement?.imageSrc ? (
+              <img
+                src={activeAnnouncement.imageSrc}
+                alt=""
+                className="h-14 w-14 rounded-2xl object-cover shadow-lg shadow-primary/20"
+              />
+            ) : (
+              Icon && <Icon className="h-12 w-12" aria-hidden="true" />
+            )}
           </div>
 
           <DialogHeader className="mx-auto max-w-[360px] text-center">
+            {activeAnnouncement?.eyebrow && (
+              <div className="pb-2 text-center text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
+                {activeAnnouncement.eyebrow}
+              </div>
+            )}
             <DialogTitle className="text-center text-xl font-semibold tracking-tight sm:text-2xl">
               {activeAnnouncement?.title}
             </DialogTitle>

@@ -1787,7 +1787,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
 
   if (!currentServer) {
     return (
-      <div className="h-full flex flex-col bg-layout-sidebar">
+      <div className="h-full flex flex-col bg-[hsl(var(--layout-channels))]">
         <div className="flex-1 flex flex-col bg-card/50 rounded-2xl border border-border/50 items-center justify-center">
           <div className="text-center animate-fade-in">
             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-secondary/50 flex items-center justify-center">
@@ -2033,7 +2033,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
                   <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.08),rgba(0,0,0,0.58))]" />
                 </>
               ) : (
-                <div className="h-full w-full bg-[radial-gradient(circle_at_22%_22%,hsl(var(--primary)/0.42),transparent_34%),linear-gradient(135deg,hsl(350_42%_23%),hsl(31_31%_25%)_62%,hsl(var(--sidebar)))]" />
+                <div className="h-full w-full bg-[radial-gradient(circle_at_22%_22%,hsl(var(--primary)/0.42),transparent_34%),linear-gradient(135deg,hsl(var(--layout-channels)),hsl(var(--layout-channels))_62%,hsl(var(--sidebar)))]" />
               )}
               <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[hsl(var(--layout-channels))] via-[hsl(var(--layout-channels)/0.42)] to-transparent" />
             </div>

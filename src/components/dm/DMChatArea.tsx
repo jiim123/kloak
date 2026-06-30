@@ -301,7 +301,7 @@ export const DMChatArea = () => {
 
   if (!currentConversation) {
     return (
-      <div className="h-full flex items-center justify-center bg-layout-members">
+      <div className="h-full flex items-center justify-center bg-layout-chat">
         <div className="text-center text-muted-foreground">
           <p>Select a conversation or start a new one</p>
         </div>
@@ -314,7 +314,7 @@ export const DMChatArea = () => {
 
   return (
     <MessageMapsProvider isDM participants={mentionParticipants}>
-    <div ref={swipeRef} className="relative h-full flex flex-col bg-layout-members">
+    <div ref={swipeRef} className="relative h-full flex flex-col bg-layout-chat">
       {/* Desktop header; mobile uses the global app header from AppLayout. */}
       <div className="hidden md:block">
         {isGroup ? (

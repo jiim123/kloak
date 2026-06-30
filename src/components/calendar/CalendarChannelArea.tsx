@@ -779,7 +779,7 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
     const currentRsvpLabel = detail?.viewer_rsvp_status ? RSVP_LABELS[detail.viewer_rsvp_status] || "Respond" : "Respond";
 
     return (
-      <div className="flex h-full min-w-0 flex-col bg-layout-members">
+      <div className="flex h-full min-w-0 flex-col bg-layout-chat">
         {showHeader && <ChannelHeader channel={currentChannel} showMessageActions={false} />}
         <div className="flex min-h-0 flex-1 flex-col bg-background text-foreground">
           <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-3">
@@ -1210,7 +1210,7 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
   }
 
   return (
-    <div className="flex h-full min-w-0 flex-col bg-layout-members">
+    <div className="flex h-full min-w-0 flex-col bg-layout-chat">
       {showHeader && <ChannelHeader channel={currentChannel} showMessageActions={false} />}
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background text-foreground">
