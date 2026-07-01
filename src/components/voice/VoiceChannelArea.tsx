@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import {
   Eye,
   Maximize2,
@@ -33,6 +33,7 @@ import { ParticipantAudioPlayer } from "@/components/voice/ParticipantAudioPlaye
 import { UserVolumeControl, VolumeIndicator } from "@/components/voice/UserVolumeControl";
 import { useAutoDisconnect } from "@/hooks/useAutoDisconnect";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { openUserProfileModal, SIDE_ALIGNED_USER_PROFILE_POPOVER } from "@/lib/userProfilePopover";
 import { MessageList } from "@/components/chat/MessageList";
 import { MessageInput } from "@/components/chat/MessageInput";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
@@ -40,6 +41,7 @@ import { ChannelHeader } from "@/components/chat/ChannelHeader";
 import { useTyping } from "@/hooks/useTyping";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { fetchAndCacheUser, getUserFromCache, useUserCacheStore } from "@/stores/userCacheStore";
+import { useUIStore } from "@/stores/uiStore";
 import type { Channel, ServerMember } from "@/types";
 import type { VideoTrack } from "livekit-client";
 
@@ -146,20 +148,43 @@ function ParticipantTile({
   isWatchingShare,
 }: TileProps) {
   const name = getMemberDisplayName(member, participant);
+  const openModal = useUIStore((s) => s.openModal);
   const visualVoiceIndicators = useVoiceSettingsStore((s) => s.settings.visualVoiceIndicators);
+  const participantVolume = useVoiceSettingsStore((s) => s.settings.userVolumeOverrides[participant.identity] ?? 100);
   const speaking = participant.isSpeaking && !participant.hideVoiceActivity && visualVoiceIndicators;
   const [volumeOpen, setVolumeOpen] = useState(false);
   const isScreenSharing = hasActiveScreenShare(participant);
   const isCameraSharing = hasActiveCameraShare(participant);
   const isSharing = isScreenSharing || isCameraSharing;
 
+  const handleOpenProfile = (event: MouseEvent<HTMLElement>) => {
+    openUserProfileModal(openModal, participant.identity, event.currentTarget, {
+      ...SIDE_ALIGNED_USER_PROFILE_POPOVER,
+      user: avatarUser,
+    });
+  };
+
+  const handleTileKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    openUserProfileModal(openModal, participant.identity, event.currentTarget, {
+      ...SIDE_ALIGNED_USER_PROFILE_POPOVER,
+      user: avatarUser,
+    });
+  };
+
   const tileContent = (
     <div
+      role="button"
+      tabIndex={0}
+      onClick={handleOpenProfile}
+      onKeyDown={handleTileKeyDown}
       className={cn(
-        "group relative overflow-hidden rounded-xl border min-h-[170px] sm:min-h-[210px] transition-transform",
+        "group relative overflow-hidden rounded-xl border min-h-[170px] sm:min-h-[210px] transition-transform cursor-pointer outline-none",
         speaking ? "border-primary/70" : "border-white/15",
-        !isYou && "cursor-pointer hover:scale-[1.01]"
+        "hover:scale-[1.01] focus-visible:ring-2 focus-visible:ring-primary/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(28_30_33)]"
       )}
+      title={`Open ${name}'s profile`}
     >
       <div className="absolute inset-0" style={{ backgroundColor }} />
       <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/20" />
@@ -195,7 +220,38 @@ function ParticipantTile({
         </div>
 
         <div className="shrink-0 flex items-center gap-1.5 rounded-md bg-black/35 px-2 py-1 text-white/90 backdrop-blur">
-          {!isYou && <VolumeIndicator userId={participant.identity} />}
+          {!isYou ? (
+            <Popover open={volumeOpen} onOpenChange={setVolumeOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="flex h-5 min-w-5 items-center justify-center rounded text-white/90 hover:bg-white/15 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/70"
+                  title={`Adjust ${name}'s volume`}
+                  onClick={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => event.stopPropagation()}
+                >
+                  {participantVolume === 100 ? (
+                    <Volume2 className="h-3 w-3 opacity-70" />
+                  ) : (
+                    <VolumeIndicator userId={participant.identity} />
+                  )}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="w-56 p-0"
+                side="top"
+                align="center"
+                onClick={(event) => event.stopPropagation()}
+                onOpenAutoFocus={(e) => e.preventDefault()}
+              >
+                <UserVolumeControl
+                  userId={participant.identity}
+                  userName={name}
+                  onClose={() => setVolumeOpen(false)}
+                />
+              </PopoverContent>
+            </Popover>
+          ) : null}
           {isDeafened && isYou ? <VolumeX className="w-3.5 h-3.5" /> : null}
           {participant.isMuted ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
           {isScreenSharing ? <MonitorUp className="w-3.5 h-3.5" /> : null}
@@ -207,28 +263,7 @@ function ParticipantTile({
     </div>
   );
 
-  // Only wrap in popover for other users (not yourself)
-  if (isYou) {
-    return tileContent;
-  }
-
-  return (
-    <Popover open={volumeOpen} onOpenChange={setVolumeOpen}>
-      <PopoverTrigger asChild>{tileContent}</PopoverTrigger>
-      <PopoverContent
-        className="w-56 p-0"
-        side="top"
-        align="center"
-        onOpenAutoFocus={(e) => e.preventDefault()}
-      >
-        <UserVolumeControl
-          userId={participant.identity}
-          userName={name}
-          onClose={() => setVolumeOpen(false)}
-        />
-      </PopoverContent>
-    </Popover>
-  );
+  return tileContent;
 }
 
 export function VoiceChannelArea({ channel }: { channel: Channel }) {
