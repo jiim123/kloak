@@ -207,6 +207,18 @@ serve(async (req) => {
       if (accessError || !canAccess) {
         return jsonResponse({ error: "Not allowed to join this voice channel" }, 403);
       }
+
+      try {
+        const { error: voiceAchievementError } = await supabase.rpc("record_voice_joined_from_token", {
+          _user_id: requestUserId,
+          _channel_id: channelName,
+        });
+        if (voiceAchievementError) {
+          console.error("[agora-token] Failed to record voice achievement", voiceAchievementError);
+        }
+      } catch (voiceAchievementError) {
+        console.error("[agora-token] Failed to record voice achievement", voiceAchievementError);
+      }
     }
 
     const token = await buildToken(AGORA_APP_ID, AGORA_APP_CERTIFICATE, channelName, uid, 6 * 60 * 60);

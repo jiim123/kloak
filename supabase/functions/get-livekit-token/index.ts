@@ -138,6 +138,18 @@ serve(async (req) => {
       return jsonResponse({ error: "Not a voice channel" }, 400);
     }
 
+    try {
+      const { error: voiceAchievementError } = await supabase.rpc("record_voice_joined_from_token", {
+        _user_id: requestUserId,
+        _channel_id: room,
+      });
+      if (voiceAchievementError) {
+        console.error("[get-livekit-token] Failed to record voice achievement", voiceAchievementError);
+      }
+    } catch (voiceAchievementError) {
+      console.error("[get-livekit-token] Failed to record voice achievement", voiceAchievementError);
+    }
+
     const voiceUserLimit = Number(channelRow.voice_user_limit ?? 0);
     if (Number.isFinite(voiceUserLimit) && voiceUserLimit > 0) {
       try {
