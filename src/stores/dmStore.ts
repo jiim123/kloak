@@ -136,7 +136,7 @@ const pruneDMMessageCache = (
 ): Record<string, DirectMessage[]> => {
   const result: Record<string, DirectMessage[]> = {};
   for (const [id, msgs] of Object.entries(input)) {
-    result[id] = msgs.length > MAX_DM_MESSAGES_PER_CONVERSATION
+    result[id] = id !== keepConversationId && msgs.length > MAX_DM_MESSAGES_PER_CONVERSATION
       ? msgs.slice(msgs.length - MAX_DM_MESSAGES_PER_CONVERSATION)
       : msgs;
   }
