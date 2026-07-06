@@ -15,6 +15,7 @@ import { MessageItem, type DMActions } from "@/components/chat/MessageItem";
 import { MessageMapsProvider } from "@/components/chat/MessageMapsContext";
 import { normalizeDirectMessage } from "@/lib/dmNormalizer";
 import { DMHeader } from "./DMHeader";
+import { DMProfilePanel } from "./DMProfilePanel";
 import { GroupChatHeader } from "./GroupChatHeader";
 import type { DirectMessage, Message, User } from "@/types";
 
@@ -314,7 +315,8 @@ export const DMChatArea = () => {
 
   return (
     <MessageMapsProvider isDM participants={mentionParticipants}>
-    <div ref={swipeRef} className="relative h-full flex flex-col bg-layout-chat">
+    <div ref={swipeRef} className="relative h-full flex bg-layout-chat">
+      <div className="relative flex min-w-0 flex-1 flex-col">
       {/* Desktop header; mobile uses the global app header from AppLayout. */}
       <div className="hidden md:block">
         {isGroup ? (
@@ -414,6 +416,9 @@ export const DMChatArea = () => {
           }}
         />
       )}
+      </div>
+
+      {!isGroup && <DMProfilePanel user={otherUser} />}
     </div>
     </MessageMapsProvider>
   );
