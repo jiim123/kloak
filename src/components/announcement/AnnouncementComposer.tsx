@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { FormatToolbar } from "@/components/chat/FormatToolbar";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { useAuthStore } from "@/stores/authStore";
+import { useEditStore } from "@/stores/editStore";
 import { useMessageStore } from "@/stores/messageStore";
 import { useServerStore } from "@/stores/serverStore";
 
@@ -82,6 +83,67 @@ const htmlToMarkdown = (html: string): string => {
   return Array.from(container.childNodes).map(nodeTextToMarkdown).join("").replace(/\n{3,}/g, "\n\n").trim();
 };
 
+const escapeEditorHtml = (text: string): string =>
+  text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+const markdownInlineToEditorHtml = (markdown: string): string => {
+  const codeTokens: string[] = [];
+  let html = escapeEditorHtml(markdown).replace(/`([^`\n]+)`/g, (_match, code: string) => {
+    const token = `\u0000CODE${codeTokens.length}\u0000`;
+    codeTokens.push(`<code>${code}</code>`);
+    return token;
+  });
+
+  html = html
+    .replace(/\|\|(.+?)\|\|/g, '<span data-profile-spoiler="true" class="rounded bg-muted/80 px-1 text-transparent select-none">$1</span>')
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/__(.+?)__/g, "<u>$1</u>")
+    .replace(/~~(.+?)~~/g, "<s>$1</s>")
+    .replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, "$1<em>$2</em>");
+
+  return html.replace(/\u0000CODE(\d+)\u0000/g, (_match, index: string) => codeTokens[Number(index)] ?? "");
+};
+
+const markdownToEditorHtml = (markdown: string): string => {
+  const normalized = markdown.replace(/\r\n/g, "\n");
+  let html = "";
+  let cursor = 0;
+  const codeBlockPattern = /```[^\n]*\n?([\s\S]*?)```/g;
+
+  for (const match of normalized.matchAll(codeBlockPattern)) {
+    const index = match.index ?? 0;
+    html += markdownInlineToEditorHtml(normalized.slice(cursor, index)).replace(/\n/g, "<br>");
+    html += `<pre><code>${escapeEditorHtml((match[1] ?? "").replace(/\n$/g, ""))}</code></pre>`;
+    cursor = index + match[0].length;
+  }
+
+  html += markdownInlineToEditorHtml(normalized.slice(cursor)).replace(/\n/g, "<br>");
+  return html;
+};
+
+const splitAnnouncementContent = (content: string) => {
+  const normalized = content.replace(/\r\n/g, "\n").trim();
+  const separatorMatch = /\n\s*\n/.exec(normalized);
+  const separatorIndex = separatorMatch?.index ?? -1;
+  if (separatorIndex === -1) {
+    const [firstLine = "", ...rest] = normalized.split("\n");
+    return {
+      title: firstLine.slice(0, TITLE_MAX_LENGTH),
+      body: rest.join("\n").trim(),
+    };
+  }
+
+  return {
+    title: normalized.slice(0, separatorIndex).trim().slice(0, TITLE_MAX_LENGTH),
+    body: normalized.slice(separatorIndex + (separatorMatch?.[0].length ?? 0)).trim(),
+  };
+};
+
 const moveCaretToEnd = (element: HTMLElement) => {
   const selection = window.getSelection();
   if (!selection) return;
@@ -102,15 +164,21 @@ export const AnnouncementComposer = ({
   const currentChannel = useServerStore((state) => state.currentChannel);
   const members = useServerStore((state) => state.members);
   const sendMessage = useMessageStore((state) => state.sendMessage);
+  const editMessage = useMessageStore((state) => state.editMessage);
+  const { editingMessage, cancelEditing } = useEditStore();
   const { hasPermission } = useMemberPermissions(channelId);
   const editorRef = useRef<HTMLDivElement | null>(null);
   const lastValidHtmlRef = useRef("");
   const isRestoringRef = useRef(false);
+  const savedDraftRef = useRef<{ title: string; body: string; html: string } | null>(null);
+  const pendingEditorBodyRef = useRef<string | null>(null);
+  const previousEditingIdRef = useRef<string | null>(null);
 
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [isPosting, setIsPosting] = useState(false);
+  const isEditMode = !!editingMessage && !editingMessage.isDM && editingMessage.channelId === channelId;
   const trimmedTitle = title.trim();
   const trimmedBody = body.trim();
   const composedContent = `${trimmedTitle}\n\n${trimmedBody}`;
@@ -121,6 +189,7 @@ export const AnnouncementComposer = ({
   const isMuted = currentMember?.is_muted ?? false;
   const canManageMessages = hasPermission("manage_messages");
   const canSend = !isMuted && hasPermission("send_messages") && canManageMessages;
+  const canUseComposer = canSend || isEditMode;
   const slowmodeEnabled = Math.max(0, Number(currentChannel?.slowmode_seconds) || 0) > 0;
 
   useEffect(() => {
@@ -133,6 +202,7 @@ export const AnnouncementComposer = ({
   }, [canManageMessages, onSlowmodeStatusChange, slowmodeEnabled]);
 
   useEffect(() => {
+    if (isEditMode) cancelEditing();
     setIsOpen(false);
     setTitle("");
     setBody("");
@@ -140,16 +210,62 @@ export const AnnouncementComposer = ({
     if (editorRef.current) editorRef.current.innerHTML = "";
   }, [channelId]);
 
+  useEffect(() => {
+    const currentEditingId = isEditMode ? editingMessage.id : null;
+    if (currentEditingId === previousEditingIdRef.current) return;
+
+    if (currentEditingId) {
+      savedDraftRef.current = {
+        title,
+        body,
+        html: editorRef.current?.innerHTML ?? lastValidHtmlRef.current,
+      };
+      const next = splitAnnouncementContent(editingMessage.content);
+      setIsOpen(true);
+      setTitle(next.title);
+      setBody(next.body);
+      pendingEditorBodyRef.current = next.body;
+      lastValidHtmlRef.current = "";
+    } else if (previousEditingIdRef.current) {
+      const draft = savedDraftRef.current;
+      savedDraftRef.current = null;
+      setTitle(draft?.title ?? "");
+      setBody(draft?.body ?? "");
+      setIsOpen(!!draft?.title || !!draft?.body);
+      requestAnimationFrame(() => {
+        if (!editorRef.current) return;
+        editorRef.current.innerHTML = draft?.html ?? "";
+        lastValidHtmlRef.current = editorRef.current.innerHTML;
+      });
+    }
+
+    previousEditingIdRef.current = currentEditingId;
+  }, [body, editingMessage?.content, editingMessage?.id, isEditMode, title]);
+
+  useLayoutEffect(() => {
+    if (!isOpen || !isEditMode || pendingEditorBodyRef.current === null || !editorRef.current) return;
+
+    editorRef.current.innerHTML = markdownToEditorHtml(pendingEditorBodyRef.current);
+    lastValidHtmlRef.current = editorRef.current.innerHTML;
+    pendingEditorBodyRef.current = null;
+    editorRef.current.focus();
+    moveCaretToEnd(editorRef.current);
+  }, [isEditMode, isOpen, editingMessage?.id]);
+
   useEffect(() => () => onStopTyping?.(), [onStopTyping]);
 
   const resetComposer = useCallback(() => {
+    if (isEditMode) {
+      cancelEditing();
+      return;
+    }
     setTitle("");
     setBody("");
     setIsOpen(false);
     lastValidHtmlRef.current = "";
     if (editorRef.current) editorRef.current.innerHTML = "";
     onStopTyping?.();
-  }, [onStopTyping]);
+  }, [cancelEditing, isEditMode, onStopTyping]);
 
   const syncBody = useCallback(() => {
     const editor = editorRef.current;
@@ -209,9 +325,22 @@ export const AnnouncementComposer = ({
   );
 
   const handlePost = useCallback(async () => {
-    if (!user?.id || !canSend || !trimmedTitle || !trimmedBody || composedContent.length > MESSAGE_MAX_LENGTH || isPosting) return;
+    if (!user?.id || !canUseComposer || !trimmedTitle || !trimmedBody || composedContent.length > MESSAGE_MAX_LENGTH || isPosting) return;
 
     setIsPosting(true);
+    if (isEditMode && editingMessage) {
+      try {
+        await editMessage(editingMessage.id, composedContent, user.id);
+        cancelEditing();
+      } catch (error) {
+        console.error("Failed to edit announcement:", error);
+        toast.error("Failed to edit announcement");
+      } finally {
+        setIsPosting(false);
+      }
+      return;
+    }
+
     const message = await sendMessage(channelId, user.id, composedContent);
     setIsPosting(false);
 
@@ -222,9 +351,9 @@ export const AnnouncementComposer = ({
 
     resetComposer();
     window.dispatchEvent(new CustomEvent("channelMessageSent", { detail: { channelId } }));
-  }, [canSend, channelId, composedContent, isPosting, resetComposer, sendMessage, trimmedBody, trimmedTitle, user?.id]);
+  }, [canUseComposer, cancelEditing, channelId, composedContent, editMessage, editingMessage, isEditMode, isPosting, resetComposer, sendMessage, trimmedBody, trimmedTitle, user?.id]);
 
-  if (!canSend) {
+  if (!canUseComposer) {
     return (
       <div className="px-4 pb-6">
         <div className="flex items-center justify-center rounded-2xl border border-border/50 bg-muted/30 py-4">
@@ -299,7 +428,7 @@ export const AnnouncementComposer = ({
                   syncBody();
                   onStopTyping?.();
                 }}
-                className="profile-rich-editor min-h-[160px] w-full px-4 py-3 text-[14px] leading-6 text-foreground outline-none [&_code]:rounded [&_code]:bg-muted/40 [&_code]:px-1 [&_pre]:rounded [&_pre]:bg-muted/40 [&_pre]:p-3"
+                className="profile-rich-editor min-h-[160px] w-full whitespace-pre-wrap px-4 py-3 text-[14px] leading-6 text-foreground outline-none [&_code]:rounded [&_code]:bg-muted/40 [&_code]:px-1 [&_pre]:rounded [&_pre]:bg-muted/40 [&_pre]:p-3"
                 role="textbox"
                 aria-multiline="true"
                 aria-label="Announcement body"
@@ -326,7 +455,7 @@ export const AnnouncementComposer = ({
                 onClick={() => void handlePost()}
                 disabled={!title.trim() || !body.trim() || isOverLimit || isPosting}
               >
-                {isPosting ? "Posting" : "Post"}
+                {isPosting ? (isEditMode ? "Saving" : "Posting") : isEditMode ? "Save" : "Post"}
               </button>
             </div>
           </div>
