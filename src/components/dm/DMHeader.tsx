@@ -1,5 +1,5 @@
 import { useState, type MouseEvent } from "react";
-import { MoreHorizontal, Flag, Ban, Phone, ChevronLeft } from "lucide-react";
+import { MoreHorizontal, Flag, Ban, Phone, ChevronLeft, PanelRight } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
@@ -23,12 +23,14 @@ import { openUserProfileModal, SIDE_ALIGNED_USER_PROFILE_POPOVER } from "@/lib/u
 
 interface DMHeaderProps {
   otherUser: User | null | undefined;
+  isProfilePanelOpen: boolean;
+  onToggleProfilePanel: () => void;
 }
 
 
 
 
-export const DMHeader = ({ otherUser }: DMHeaderProps) => {
+export const DMHeader = ({ otherUser, isProfilePanelOpen, onToggleProfilePanel }: DMHeaderProps) => {
   const { openModal, setMobileSidebarOpen } = useUIStore();
   const { blockUser } = useFriendStore();
   const { user } = useAuthStore();
@@ -120,6 +122,25 @@ export const DMHeader = ({ otherUser }: DMHeaderProps) => {
 
         {/* Right side - Actions */}
         <div className="flex items-center gap-0.5 flex-shrink-0">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "relative hidden h-8 w-8 rounded-lg text-muted-foreground hover:bg-foreground/5 hover:text-foreground lg:inline-flex",
+                  isProfilePanelOpen && "text-foreground",
+                )}
+                onClick={onToggleProfilePanel}
+                aria-label={isProfilePanelOpen ? "Hide profile panel" : "Show profile panel"}
+                aria-pressed={isProfilePanelOpen}
+              >
+                <PanelRight className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{isProfilePanelOpen ? "Hide Profile Panel" : "Show Profile Panel"}</TooltipContent>
+          </Tooltip>
+
           <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
             <Tooltip>
               <TooltipTrigger asChild>

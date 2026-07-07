@@ -19,6 +19,7 @@ import { DMProfilePanel } from "./DMProfilePanel";
 import { GroupChatHeader } from "./GroupChatHeader";
 import type { DirectMessage, Message, User } from "@/types";
 
+const DM_PROFILE_PANEL_STORAGE_KEY = "kloak-dm-profile-panel-open";
 const DM_LOAD_OLDER_TOP_THRESHOLD_MIN_PX = 96;
 const DM_LOAD_OLDER_TOP_THRESHOLD_MAX_PX = 420;
 const DM_LOAD_OLDER_TOP_THRESHOLD_VIEWPORT_RATIO = 0.35;
@@ -79,6 +80,18 @@ export const DMChatArea = () => {
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [newMessageCount, setNewMessageCount] = useState(0);
   const [replyingTo, setReplyingTo] = useState<DirectMessage | null>(null);
+  const [isProfilePanelOpen, setIsProfilePanelOpen] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return window.localStorage.getItem(DM_PROFILE_PANEL_STORAGE_KEY) !== "false";
+  });
+
+  const toggleProfilePanel = useCallback(() => {
+    setIsProfilePanelOpen((prev) => {
+      const next = !prev;
+      window.localStorage.setItem(DM_PROFILE_PANEL_STORAGE_KEY, String(next));
+      return next;
+    });
+  }, []);
 
   // Detect conversation switch during render phase (synchronous)
   if (prevConversationIdRef.current !== currentConversation?.id) {
@@ -322,7 +335,11 @@ export const DMChatArea = () => {
         {isGroup ? (
           <GroupChatHeader conversation={currentConversation} participants={otherParticipants} />
         ) : (
-          <DMHeader otherUser={otherUser} />
+          <DMHeader
+            otherUser={otherUser}
+            isProfilePanelOpen={isProfilePanelOpen}
+            onToggleProfilePanel={toggleProfilePanel}
+          />
         )}
       </div>
 
@@ -418,7 +435,7 @@ export const DMChatArea = () => {
       )}
       </div>
 
-      {!isGroup && <DMProfilePanel user={otherUser} />}
+      {!isGroup && isProfilePanelOpen && <DMProfilePanel user={otherUser} />}
     </div>
     </MessageMapsProvider>
   );
