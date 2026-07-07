@@ -274,7 +274,6 @@ const MemberListItemContent = forwardRef<HTMLDivElement, MemberListItemContentPr
           <AvatarWithDecoration
             user={member.user}
             className={cn("w-8 h-8 rounded-full", memberIsOffline && "opacity-50 grayscale-[30%]")}
-            showDecoration={false}
             freezeGifUntilHover
             active={isHovered}
           />

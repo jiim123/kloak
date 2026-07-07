@@ -80,9 +80,8 @@ export const AvatarDecorationModal = ({ open, onOpenChange, onSelect }: AvatarDe
   const [draftTransforms, setDraftTransforms] = useState<Record<string, AvatarDecorationTransform>>(() =>
     buildTransformMap(),
   );
-  // Re-enable debug tuner UI when needed:
-  // const isDev = import.meta.env.DEV;
-  const isDev = false;
+  const isTunerEnabled = typeof window !== "undefined" && window.localStorage.getItem("kloak_deco_tuner") === "1";
+  const isDev = import.meta.env.DEV || isTunerEnabled;
   const baseTransformsById = useMemo(() => buildTransformMap(), []);
 
   // Sync state when modal opens or user changes

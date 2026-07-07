@@ -89,7 +89,7 @@ export const LoggedInUserPanel = ({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <AvatarWithDecoration user={user} className="w-8 h-8" active={isUserAvatarHovered} />
+            <AvatarWithDecoration user={user} className="w-8 h-8" active={isUserAvatarHovered} showDecoration={false} />
           </motion.div>
           {manualStatus === "offline" ? (
             <div className={cn("absolute -bottom-0.5 -right-0.5", statusBorderClassName)}>

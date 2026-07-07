@@ -291,6 +291,10 @@ export const EditableProfilePreview = ({
                   <Upload className="w-4 h-4 mr-2" />
                   Upload Avatar
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={onOpenAvatarDecoration}>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Avatar Decoration
+                </DropdownMenuItem>
                 {localAvatarUrl && (
                   <DropdownMenuItem onClick={onAvatarRemove} className="text-destructive">
                     <Trash2 className="w-4 h-4 mr-2" />
@@ -299,8 +303,6 @@ export const EditableProfilePreview = ({
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
-
-            {/* Avatar decorations are currently disabled */}
           </div>
 
           {/* Display Name - Inline Editable */}
@@ -398,7 +400,16 @@ export const EditableProfilePreview = ({
           </div>
 
           {/* Customization Row */}
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="rounded-lg bg-background/60 hover:bg-background/80"
+              onClick={onOpenAvatarDecoration}
+            >
+              <Sparkles className="w-4 h-4 mr-1.5" />
+              {user.avatar_decoration ? "Change Deco" : "Add Deco"}
+            </Button>
             <Button
               variant="secondary"
               size="sm"

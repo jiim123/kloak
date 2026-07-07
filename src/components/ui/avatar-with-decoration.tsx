@@ -4,7 +4,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { getGifStillPreview } from "@/lib/gifPreview";
 import type { User } from '@/types';
-import type { AvatarDecorationTransform } from '@/lib/avatarDecorations';
+import {
+  DEFAULT_AVATAR_DECORATION_TRANSFORM,
+  getAvatarDecoration,
+  type AvatarDecorationTransform,
+} from '@/lib/avatarDecorations';
 
 interface AvatarWithDecorationProps {
   user: User | null | undefined;
@@ -17,21 +21,33 @@ interface AvatarWithDecorationProps {
   freezeGifUntilHover?: boolean;
 }
 
-/**
- * Avatar decorations are currently disabled.
- * The component still accepts decoration-related props for API compatibility
- * but does not render any decoration overlay.
- */
 export const AvatarWithDecoration = ({ 
   user, 
   className,
   size,
+  showDecoration = true,
+  decorationTransformOverride,
   active = false,
   onClick,
   freezeGifUntilHover = false,
 }: AvatarWithDecorationProps) => {
   const avatarUrl = user?.avatar_url || undefined;
   const isBot = Boolean(user?.is_bot);
+  const decoration = showDecoration ? getAvatarDecoration(user?.avatar_decoration) : null;
+  const decorationTransform: AvatarDecorationTransform = {
+    scale:
+      decorationTransformOverride?.scale ??
+      decoration?.transform.scale ??
+      DEFAULT_AVATAR_DECORATION_TRANSFORM.scale,
+    offsetXPercent:
+      decorationTransformOverride?.offsetXPercent ??
+      decoration?.transform.offsetXPercent ??
+      DEFAULT_AVATAR_DECORATION_TRANSFORM.offsetXPercent,
+    offsetYPercent:
+      decorationTransformOverride?.offsetYPercent ??
+      decoration?.transform.offsetYPercent ??
+      DEFAULT_AVATAR_DECORATION_TRANSFORM.offsetYPercent,
+  };
   const [gifPreviewSrc, setGifPreviewSrc] = useState<string | null>(null);
   const [isGifHovered, setIsGifHovered] = useState(false);
 
@@ -76,6 +92,22 @@ export const AvatarWithDecoration = ({
           {isBot ? <Bot className="h-[55%] w-[55%] text-[#252933]" /> : user?.username?.[0]?.toUpperCase() || 'U'}
         </AvatarFallback>
       </Avatar>
+      {decoration && (
+        <img
+          src={decoration.src}
+          alt=""
+          aria-hidden="true"
+          className={cn(
+            "pointer-events-none absolute inset-0 h-full w-full select-none object-contain",
+            active ? "opacity-100" : "opacity-95",
+          )}
+          style={{
+            imageRendering: "pixelated",
+            transform: `translate(${decorationTransform.offsetXPercent}%, ${decorationTransform.offsetYPercent}%) scale(${decorationTransform.scale})`,
+            transformOrigin: "center center",
+          }}
+        />
+      )}
     </div>
   );
 };

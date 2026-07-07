@@ -37,6 +37,10 @@ export const AVATAR_DECORATION_TRANSFORMS: Record<string, Partial<AvatarDecorati
   "fox": { scale: 1.38, offsetXPercent: 0, offsetYPercent: -6 },
   "frog": { scale: 1.49, offsetXPercent: 0, offsetYPercent: 6 },
   "rainbow": { scale: 1.48, offsetXPercent: 0, offsetYPercent: 1.5 },
+"pink-heart": { scale: 1.22, offsetXPercent: 0, offsetYPercent: 0 },
+"angel-ring": { scale: 1.33, offsetXPercent: -0.5, offsetYPercent: 3.75 },
+"stone": { scale: 1.18, offsetXPercent: 0, offsetYPercent: 0 },
+"blossom": { scale: 1.21, offsetXPercent: 0, offsetYPercent: 2 },
 };
 
 const resolveAvatarDecorationTransform = (
