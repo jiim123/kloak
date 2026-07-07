@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { recoverSupabaseConnection } from "@/integrations/supabase/client";
+import { isSupabaseRealtimeConnected, recoverSupabaseConnection } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
 import { useMessageStore } from "@/stores/messageStore";
 import { useServerStore } from "@/stores/serverStore";
@@ -14,8 +14,11 @@ export function useNetworkRecovery() {
   const lastRecoveryAtRef = useRef(0);
 
   useEffect(() => {
-    const recover = (reason: string, force = false) => {
+    const recover = (reason: string, options: { force?: boolean; onlyIfDisconnected?: boolean } = {}) => {
       if (!navigator.onLine) return;
+
+      const force = options.force ?? false;
+      if (options.onlyIfDisconnected && isSupabaseRealtimeConnected()) return;
 
       const now = Date.now();
       if (!force && now - lastRecoveryAtRef.current < RECOVERY_THROTTLE_MS) return;
@@ -57,15 +60,15 @@ export function useNetworkRecovery() {
       const hiddenAt = hiddenAtRef.current;
       hiddenAtRef.current = null;
       if (!hiddenAt || Date.now() - hiddenAt < MIN_BACKGROUND_MS) return;
-      recover("visibility-resume", true);
+      recover("visibility-resume", { force: true, onlyIfDisconnected: true });
     };
 
     const handleFocus = () => {
-      recover("window-focus");
+      recover("window-focus", { onlyIfDisconnected: true });
     };
 
     const handleOnline = () => {
-      recover("online", true);
+      recover("online", { force: true });
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);

@@ -399,3 +399,11 @@ export function recoverSupabaseConnection(reason = "network-resume") {
     console.info("[Supabase] Realtime recovery requested:", reason);
   }
 }
+
+export function isSupabaseRealtimeConnected(): boolean {
+  try {
+    return supabase.realtime.isConnected();
+  } catch {
+    return false;
+  }
+}
