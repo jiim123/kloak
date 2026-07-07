@@ -195,13 +195,22 @@ const MAX_CACHED_CHANNELS = 5;
 const MAX_MESSAGES_PER_CHANNEL = 150;
 const MAX_REPLY_CACHE_ITEMS = 800;
 const MESSAGE_CACHE_STORAGE_KEY = "kloak:message-cache:v1";
+const INFLIGHT_STALE_MS = 35_000;
 
 // In-flight request coalescing (prevents duplicate message fetches during rapid switching)
-const inflightFetches = new Map<string, Promise<void>>();
-const inflightPrefetches = new Map<string, Promise<void>>();
-const inflightBootstrapPageLoads = new Map<string, Promise<LoadedChannelMessagePage>>();
+const inflightFetches = new Map<string, { promise: Promise<void>; startedAt: number }>();
+const inflightPrefetches = new Map<string, { promise: Promise<void>; startedAt: number }>();
+const inflightBootstrapPageLoads = new Map<string, { promise: Promise<LoadedChannelMessagePage>; startedAt: number }>();
 const replyCache = new Map<string, { data: MessageReply; cachedAt: number }>();
 const bootstrapPrefetchCache = new Map<string, PrefetchedBootstrapPage>();
+
+const getFreshInflight = <T>(map: Map<string, { promise: Promise<T>; startedAt: number }>, key: string) => {
+  const existing = map.get(key);
+  if (!existing) return null;
+  if (Date.now() - existing.startedAt < INFLIGHT_STALE_MS) return existing.promise;
+  map.delete(key);
+  return null;
+};
 
 const trimMessages = (messages: Message[], mode: "newest" | "oldest" = "newest") => {
   if (messages.length <= MAX_MESSAGES_PER_CHANNEL) return messages;
@@ -772,15 +781,15 @@ const loadChannelMessagePage = async (args: {
   const blockedUserIds = useFriendStore.getState().visibilityBlockedUserIds;
   const blockedKey = blockedUserIds.slice().sort().join(",");
   const inflightKey = `${args.channelId}:${requestUserId}:${args.limit}:${blockedKey}`;
-  const existingInflight = inflightBootstrapPageLoads.get(inflightKey);
+  const existingInflight = getFreshInflight(inflightBootstrapPageLoads, inflightKey);
   if (existingInflight) return existingInflight;
 
   const p = loadChannelMessagePageUncached(args).finally(() => {
     const cur = inflightBootstrapPageLoads.get(inflightKey);
-    if (cur === p) inflightBootstrapPageLoads.delete(inflightKey);
+    if (cur?.promise === p) inflightBootstrapPageLoads.delete(inflightKey);
   });
 
-  inflightBootstrapPageLoads.set(inflightKey, p);
+  inflightBootstrapPageLoads.set(inflightKey, { promise: p, startedAt: Date.now() });
   return p;
 };
 
@@ -823,7 +832,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     const requestUserId = useAuthStore.getState().user?.id;
     const blockedUserIds = useFriendStore.getState().visibilityBlockedUserIds;
     const inflightKey = `${channelId}:${normalizedBefore ?? ""}:${limit}`;
-    const existingInflight = inflightFetches.get(inflightKey);
+    const existingInflight = getFreshInflight(inflightFetches, inflightKey);
     if (existingInflight) return existingInflight;
 
     const p = (async () => {
@@ -1058,10 +1067,10 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       }
     })().finally(() => {
       const cur = inflightFetches.get(inflightKey);
-      if (cur === p) inflightFetches.delete(inflightKey);
+      if (cur?.promise === p) inflightFetches.delete(inflightKey);
     });
 
-    inflightFetches.set(inflightKey, p);
+    inflightFetches.set(inflightKey, { promise: p, startedAt: Date.now() });
     return p;
   },
 
@@ -1076,7 +1085,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     if (getPrefetchedBootstrapPage(channelId, limit)) return;
 
     const inflightKey = `bootstrap:${channelId}:${limit}`;
-    const existingInflight = inflightPrefetches.get(inflightKey);
+    const existingInflight = getFreshInflight(inflightPrefetches, inflightKey);
     if (existingInflight) return existingInflight;
 
     const p = (async () => {
@@ -1107,10 +1116,10 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       }
     })().finally(() => {
       const cur = inflightPrefetches.get(inflightKey);
-      if (cur === p) inflightPrefetches.delete(inflightKey);
+      if (cur?.promise === p) inflightPrefetches.delete(inflightKey);
     });
 
-    inflightPrefetches.set(inflightKey, p);
+    inflightPrefetches.set(inflightKey, { promise: p, startedAt: Date.now() });
     return p;
   },
 
@@ -1130,7 +1139,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     }
 
     const inflightKey = `${channelId}:${beforeCursor}:${limit}`;
-    const existingInflight = inflightPrefetches.get(inflightKey);
+    const existingInflight = getFreshInflight(inflightPrefetches, inflightKey);
     if (existingInflight) return existingInflight;
 
     const p = (async () => {
@@ -1172,10 +1181,10 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       }
     })().finally(() => {
       const cur = inflightPrefetches.get(inflightKey);
-      if (cur === p) inflightPrefetches.delete(inflightKey);
+      if (cur?.promise === p) inflightPrefetches.delete(inflightKey);
     });
 
-    inflightPrefetches.set(inflightKey, p);
+    inflightPrefetches.set(inflightKey, { promise: p, startedAt: Date.now() });
     return p;
   },
 

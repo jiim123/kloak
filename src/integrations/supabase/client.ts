@@ -8,6 +8,7 @@ const CURRENT_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZvcXV1Y3VybndwcWN2Z3F1a3B6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2ODUwNjEsImV4cCI6MjA4NzA0NTA2MX0.XgkhNWxe7CHzeyc8PrXJKztuT6oxFYXX1T8Fab1N6QA";
 const SUPABASE_PUBLISHABLE_KEY = ENV_KEY || CURRENT_ANON_KEY;
 const SUPABASE_FETCH_TIMEOUT_MS = 30_000;
+const REALTIME_RECOVERY_THROTTLE_MS = 5_000;
 const READ_ONLY_RPC_NAMES = new Set([
   "get_all_channel_unread_counts",
   "get_channel_messages_secure",
@@ -26,6 +27,7 @@ const READ_ONLY_RPC_NAMES = new Set([
   "server",
 ]);
 const inflightReadRequests = new Map<string, Promise<Response>>();
+let lastRealtimeRecoveryAt = 0;
 
 type DbRequestEntry = {
   at: number;
@@ -377,3 +379,23 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     },
   },
 });
+
+export function recoverSupabaseConnection(reason = "network-resume") {
+  inflightReadRequests.clear();
+
+  const now = Date.now();
+  if (now - lastRealtimeRecoveryAt < REALTIME_RECOVERY_THROTTLE_MS) return;
+  lastRealtimeRecoveryAt = now;
+
+  try {
+    supabase.realtime.connect();
+  } catch {
+    // Best-effort recovery only.
+  }
+
+  window.dispatchEvent(new CustomEvent("kloak:network-recovery", { detail: { reason } }));
+
+  if (import.meta.env.DEV) {
+    console.info("[Supabase] Realtime recovery requested:", reason);
+  }
+}

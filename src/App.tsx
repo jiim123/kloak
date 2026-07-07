@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
+import { useNetworkRecovery } from "@/hooks/useNetworkRecovery";
 import Index from "./pages/Index";
 
 // Lazy-load UI shell components to defer vendor-ui and vendor-utils chunks from initial load
@@ -29,6 +30,8 @@ const queryClient = new QueryClient();
 const EmptyRoute = () => null;
 
 const AppContent = () => {
+  useNetworkRecovery();
+
   return (
     <BrowserRouter>
       <Suspense fallback={null}>

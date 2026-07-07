@@ -60,6 +60,13 @@ type MessageAttachmentRealtimeRow = {
   waveform?: number[] | null;
 };
 
+type MessageReplyRealtimeRow = {
+  id?: string;
+  content?: string;
+  user_id?: string;
+  user?: User;
+};
+
 const getCacheCatchupState = (
   cacheEntry: { messages?: Array<unknown>; lastFetched?: number } | undefined,
   now: number,
@@ -94,7 +101,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
     let retryTimeout: NodeJS.Timeout | null = null;
     let retryCount = 0;
     const RETRY_BASE_DELAY_MS = 2000;
-    const RETRY_MAX_DELAY_MS = 60000;
+    const RETRY_MAX_DELAY_MS = 15000;
     const messageFilter = { event: "messages", scope: listenerScopeRef.current };
     const reactionFilter = { event: "reactions", scope: listenerScopeRef.current };
 
@@ -195,7 +202,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
         if (!Array.isArray(replyRows) || replyRows.length === 0) return;
 
         const replyMap = new Map<string, MessageReply>();
-        for (const replyRow of replyRows as any[]) {
+        for (const replyRow of replyRows as MessageReplyRealtimeRow[]) {
           if (replyRow?.user && typeof replyRow.user === "object" && replyRow.user.id) {
             useUserCacheStore.getState().upsertUser(replyRow.user as User);
           }
@@ -252,8 +259,19 @@ export const useRealtimeMessages = (channelId: string | null) => {
       if (retryTimeout) clearTimeout(retryTimeout);
       retryTimeout = setTimeout(() => {
         if (!isActive) return;
-        setupSubscription();
+        setupSubscription(true);
       }, delay);
+    };
+
+    const retryNow = () => {
+      if (!isActive) return;
+      retryCount = 0;
+      if (retryTimeout) {
+        clearTimeout(retryTimeout);
+        retryTimeout = null;
+      }
+      isSettingUpRef.current = false;
+      setupSubscription(true);
     };
 
     const rememberReactionMessageId = (reactionId: string | undefined, messageId: string | undefined) => {
@@ -332,7 +350,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
         });
     };
 
-    const setupSubscription = () => {
+    const setupSubscription = (replaceExisting = false) => {
       // Prevent duplicate setup
       if (isSettingUpRef.current) {
         return;
@@ -344,6 +362,12 @@ export const useRealtimeMessages = (channelId: string | null) => {
         try {
           // Shared topic: remove only this hook's listeners.
           removeScopedBindings(channel);
+          if (replaceExisting) {
+            isIntentionalClose = true;
+            supabase.removeChannel(channel);
+            channel = null;
+            isSubscribedRef.current = false;
+          }
         } catch {
           // Ignore cleanup errors
         }
@@ -762,20 +786,25 @@ export const useRealtimeMessages = (channelId: string | null) => {
           const channelState = (channel as unknown as { state?: string }).state;
           if (channelState === 'closed' || channelState === 'errored' || channelState === 'timed_out') {
             // Silent re-establish on tab return
-            setupSubscription();
+            setupSubscription(true);
           }
         } catch {
           // If we can't check state, try to re-establish anyway.
           // Silent re-establish on tab return
-          setupSubscription();
+          setupSubscription(true);
         }
 
         // MessageList already handles visibility-based catch-up fetches.
         // Keep realtime recovery here limited to subscription health.
       }
     };
+
+    const handleNetworkRecovery = () => {
+      retryNow();
+    };
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('kloak:network-recovery', handleNetworkRecovery);
 
     return () => {
       isActive = false;
@@ -783,6 +812,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
       isSubscribedRef.current = false;
       isSettingUpRef.current = false;
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('kloak:network-recovery', handleNetworkRecovery);
       if (retryTimeout) {
         clearTimeout(retryTimeout);
       }
