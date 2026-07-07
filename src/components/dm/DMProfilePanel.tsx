@@ -1,10 +1,10 @@
-﻿import { useEffect, useMemo, useState, type MouseEvent } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
-import { Ban, Calendar, Check, Clock, Flag, Loader2, MessageCircle, UserCircle, UserMinus, UserPlus, X } from "lucide-react";
+import { Ban, Calendar, Check, Clock, Flag, Loader2, UserCircle, UserMinus, UserPlus, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { UserBadges } from "@/components/ui/user-badges";
 import { BotTag } from "@/components/ui/bot-tag";
-import { useUIStore } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useFriendStore } from "@/stores/friendStore";
@@ -12,7 +12,6 @@ import { useUserCacheStore } from "@/stores/userCacheStore";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { getEffectivePresence } from "@/lib/presence";
-import { openUserProfileModal, SIDE_ALIGNED_USER_PROFILE_POPOVER } from "@/lib/userProfilePopover";
 import { ReportReasonDialog, type ReportReasonOption } from "@/components/modals/ReportReasonDialog";
 import { toast } from "sonner";
 import type { Badge } from "@/types/badge";
@@ -71,7 +70,7 @@ const buildProfileUser = (d: any): User => ({
 });
 
 export const DMProfilePanel = ({ user }: DMProfilePanelProps) => {
-  const { openModal } = useUIStore();
+  const navigate = useNavigate();
   const { user: currentUser } = useAuthStore();
   const { servers, setCurrentServer } = useServerStore();
   const {
@@ -175,12 +174,12 @@ export const DMProfilePanel = ({ user }: DMProfilePanelProps) => {
   const statusText = profileUser.custom_status?.trim();
   const themeBackground = profileUser.profile_theme_primary && profileUser.profile_theme_accent
     ? `linear-gradient(180deg, ${profileUser.profile_theme_primary} 0%, ${profileUser.profile_theme_accent} 100%)`
-    : `linear-gradient(180deg, ${profileUser.banner_color || "#5865F2"} 0%, ${withAlpha(profileUser.banner_color || "#5865F2", "dd")} 100%)`;
+    : `linear-gradient(180deg, ${withAlpha(profileUser.banner_color || "#5865F2", "33")} 0%, ${withAlpha(profileUser.banner_color || "#5865F2", "14")} 100%)`;
   const divider = "rgba(248,250,252,0.16)";
   const muted = "rgba(248,250,252,0.76)";
 
-  const handleOpenProfile = (event: MouseEvent<HTMLButtonElement>) => {
-    openUserProfileModal(openModal, profileUser.id, event.currentTarget, SIDE_ALIGNED_USER_PROFILE_POPOVER);
+  const handleOpenProfile = () => {
+    navigate(`/app/profiles/${profileUser.id}`);
   };
 
   const handleFriendAction = async () => {
@@ -277,14 +276,10 @@ export const DMProfilePanel = ({ user }: DMProfilePanelProps) => {
                 {badges.length > 0 && <UserBadges badges={badges} />}
               </div>
 
-              <div className={cn("mt-4 grid gap-2 text-center", hasPendingRequest ? "grid-cols-6" : "grid-cols-5")}>
+              <div className={cn("mt-4 grid gap-2 text-center", hasPendingRequest ? "grid-cols-5" : "grid-cols-4")}>
                 <button type="button" onClick={handleOpenProfile} className={actionClass}>
                   <span className={iconWrapClass}><UserCircle className="h-5 w-5" /></span>
                   <span className="max-w-full truncate">Profile</span>
-                </button>
-                <button type="button" className={actionClass} disabled>
-                  <span className={iconWrapClass}><MessageCircle className="h-5 w-5" /></span>
-                  <span className="max-w-full truncate">Message</span>
                 </button>
                 {hasPendingRequest ? (
                   <>
