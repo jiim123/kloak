@@ -98,6 +98,12 @@ interface AchievementItem {
   hint: string | null;
   completed_at: string | null;
   is_completed: boolean;
+  progress?: {
+    current: number;
+    target: number;
+    label: string;
+    percent: number;
+  } | null;
 }
 
 interface AuraSummary {
@@ -1378,6 +1384,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     .slice()
     .sort((a, b) => new Date(b.completed_at ?? 0).getTime() - new Date(a.completed_at ?? 0).getTime())
     .slice(0, 3);
+  const formatAchievementCount = (value: number) => Math.max(0, value).toLocaleString();
 
   const achievementsContent = (
     <div className="rounded-2xl border border-border/40 p-3 sm:p-4">
@@ -1558,6 +1565,23 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                     <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                       {achievement.description}
                     </p>
+                    {!achievement.is_completed && achievement.progress && (
+                      <div className="mt-3 space-y-1.5">
+                        <div className="flex items-center justify-between gap-2 text-[11px] font-semibold text-muted-foreground">
+                          <span className="truncate">{achievement.progress.label}</span>
+                          <span className="shrink-0 text-foreground">
+                            {formatAchievementCount(achievement.progress.current)}/
+                            {formatAchievementCount(achievement.progress.target)}
+                          </span>
+                        </div>
+                        <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
+                          <div
+                            className="h-full rounded-full bg-primary/80 transition-all"
+                            style={{ width: `${achievement.progress.percent}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
                     {achievement.completed_at && (
                       <p className="mt-2 text-[11px] font-semibold text-primary">
                         Completed {new Date(achievement.completed_at).toLocaleDateString()}
