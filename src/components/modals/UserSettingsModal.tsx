@@ -1568,7 +1568,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                     {!achievement.is_completed && achievement.progress && (
                       <div className="mt-3 space-y-1.5">
                         <div className="flex items-center justify-between gap-2 text-[11px] font-semibold text-muted-foreground">
-                          <span className="truncate">{achievement.progress.label}</span>
+                          <span className="truncate">Your progress</span>
                           <span className="shrink-0 text-foreground">
                             {formatAchievementCount(achievement.progress.current)}/
                             {formatAchievementCount(achievement.progress.target)}
