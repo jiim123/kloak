@@ -893,7 +893,7 @@ const AppLayout = () => {
 
                   {/* Main layout - ALWAYS mounted so VoicePersistentHost never unmounts */}
                   <div className={cn("flex-1 overflow-hidden", isFullscreenSettingsOverlayOpen && "invisible")}>
-                    <div className="flex h-full">
+                    <div className="flex h-full gap-2">
                       {!isExploreView && (
                         <div className="w-[288px] shrink-0 overflow-hidden rounded-2xl border border-border/50 bg-[hsl(var(--layout-channels))]">
                           {isDMView ? (
@@ -904,7 +904,7 @@ const AppLayout = () => {
                         </div>
                       )}
 
-                      <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
+                      <div className="min-w-0 flex-1 flex flex-col gap-2 overflow-hidden">
                         {(showDesktopUnifiedChannelHeader && currentChannel) ||
                         (isServerOverviewView && overviewHeaderChannel) ||
                         (isServerMembersView && membersHeaderChannel) ? (
@@ -924,7 +924,7 @@ const AppLayout = () => {
                           </div>
                         ) : null}
 
-                        <div className="min-h-0 flex flex-1">
+                        <div className={cn("min-h-0 flex flex-1", isMemberSidebarOpen && "gap-2")}>
                           <div
                             className={cn(
                               "min-w-0 flex-1 border border-border/50 bg-layout-chat relative overflow-hidden",
