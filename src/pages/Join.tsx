@@ -682,30 +682,30 @@ const Join = () => {
         <NavigationMenu />
         <main>
           {/* Hero Section */}
-          <section className="relative min-h-[85vh] flex items-end px-8 lg:px-16 pb-20 overflow-hidden bg-foreground">
-            <div className="max-w-7xl mx-auto w-full">
+          <section className="relative min-h-[85vh] flex items-end overflow-hidden bg-black px-8 pb-20 text-white lg:px-16">
+            <div className="relative z-10 max-w-7xl mx-auto w-full">
               <motion.div
                 className="flex items-center gap-4 mb-8"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.6 }}
               >
-                <span className="text-xs font-mono text-background tracking-widest uppercase">Volunteer With Us</span>
+                <span className="text-xs font-mono text-zinc-400 tracking-widest uppercase">Volunteer With Us</span>
               </motion.div>
 
               <motion.h1
-                className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light text-background leading-tight tracking-tight mb-8"
+                className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light text-white leading-tight tracking-tight mb-8"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.1 }}
               >
                 Build something
                 <br />
-                <span className="text-background/60">that matters.</span>
+                <span className="text-zinc-500">that matters.</span>
               </motion.h1>
 
               <motion.p
-                className="text-lg md:text-xl text-background/70 max-w-2xl leading-relaxed"
+                className="text-lg md:text-xl text-zinc-300 max-w-2xl leading-relaxed"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
@@ -805,3 +805,4 @@ const Join = () => {
 };
 
 export default Join;
+

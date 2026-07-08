@@ -33,15 +33,15 @@ export const NavigationMenu = () => {
     <header
       className={cn(
         "fixed top-0 left-0 right-0 z-40 w-full transition-all duration-300",
-        scrolled ? "py-2 px-3 sm:px-4" : "py-0 px-0 mix-blend-difference"
+        scrolled ? "py-2 px-3 sm:px-4" : "py-0 px-0"
       )}
     >
       <div
         className={cn(
           "mx-auto transition-all duration-300",
           scrolled
-            ? "max-w-3xl border border-border/40 bg-background/70 backdrop-blur-xl rounded-2xl shadow-lg shadow-black/10"
-            : "max-w-full bg-transparent border-b border-transparent"
+            ? "max-w-3xl border border-white/10 bg-black/80 backdrop-blur-xl rounded-2xl shadow-lg shadow-black/30"
+            : "max-w-full border-b border-white/10 bg-black/65 backdrop-blur-xl"
         )}
       >
         <div
@@ -66,8 +66,8 @@ export const NavigationMenu = () => {
                 className={cn(
                   "px-4 py-2 text-sm font-medium rounded-lg transition-colors",
                   location.pathname === link.href
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
+                    ? "text-white"
+                    : "text-zinc-400 hover:text-white"
                 )}
               >
                 {link.label}
@@ -80,7 +80,7 @@ export const NavigationMenu = () => {
           <button onClick={() => setOpen(!open)} className="md:hidden p-1">
             <MenuToggleIcon
               open={open}
-              className="w-7 h-7 text-foreground"
+              className="w-7 h-7 text-white"
             />
           </button>
         </div>
@@ -89,7 +89,7 @@ export const NavigationMenu = () => {
       {/* Mobile Menu */}
       <div
         className={cn(
-          "fixed inset-0 z-50 bg-background transition-all duration-500 md:hidden flex flex-col",
+          "fixed inset-0 z-50 bg-black text-white transition-all duration-500 md:hidden flex flex-col",
           open
             ? "opacity-100 pointer-events-auto"
             : "opacity-0 pointer-events-none"
@@ -103,7 +103,7 @@ export const NavigationMenu = () => {
           <button onClick={() => setOpen(false)} className="p-1">
             <MenuToggleIcon
               open={open}
-              className="w-7 h-7 text-foreground"
+              className="w-7 h-7 text-white"
             />
           </button>
         </div>
@@ -120,8 +120,8 @@ export const NavigationMenu = () => {
                 className={cn(
                   "flex items-center w-full h-14 px-4 text-lg font-medium rounded-xl transition-colors",
                   location.pathname === link.href
-                    ? "bg-muted text-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    ? "bg-white/10 text-white"
+                    : "text-zinc-400 hover:text-white hover:bg-white/5"
                 )}
               >
                 {link.label}
@@ -132,7 +132,7 @@ export const NavigationMenu = () => {
           {/* CTA Buttons */}
           <div className="flex flex-col gap-3 mt-8">
             <Link to="/app" onClick={() => setOpen(false)} className="block">
-              <Button variant="outline" className="w-full h-12 text-base font-medium" rounded="xl">
+              <Button variant="outline" className="w-full h-12 border-white/15 bg-white/5 text-base font-medium text-white hover:bg-white/10" rounded="xl">
                 Create Account
               </Button>
             </Link>
@@ -147,3 +147,5 @@ export const NavigationMenu = () => {
     </header>
   );
 };
+
+

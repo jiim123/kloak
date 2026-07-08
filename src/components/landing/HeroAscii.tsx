@@ -10,8 +10,13 @@ const HeroPreviewImage = () => {
     target: ref,
     offset: ["start end", "end start"],
   });
-  const y = useTransform(scrollYProgress, [0, 1], [44, -44]);
-  const scale = useTransform(scrollYProgress, [0, 0.45, 1], [0.97, 1, 1.02]);
+  const y = useTransform(scrollYProgress, [0, 0.5, 1], [140, 0, -140]);
+  const scale = useTransform(scrollYProgress, [0, 0.45, 1], [0.86, 1.03, 0.94]);
+  const rotateX = useTransform(scrollYProgress, [0, 0.45, 1], [12, 0, -8]);
+  const rotateZ = useTransform(scrollYProgress, [0, 0.45, 1], [-2, 0, 1.5]);
+  const opacity = useTransform(scrollYProgress, [0, 0.18, 0.82, 1], [0.32, 1, 1, 0.42]);
+  const glowOpacity = useTransform(scrollYProgress, [0, 0.34, 0.74, 1], [0.35, 1, 0.78, 0.28]);
+  const glowScale = useTransform(scrollYProgress, [0, 0.5, 1], [0.82, 1.08, 0.92]);
 
   return (
     <motion.div
@@ -19,14 +24,25 @@ const HeroPreviewImage = () => {
       initial={{ opacity: 0, y: 28, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-      className="relative mx-auto w-full max-w-[1360px]"
+      className="relative mx-auto w-full max-w-[1080px]"
     >
-      <motion.img
-        src="/hero-img.svg"
-        alt="Kloak app interface"
-        style={{ y, scale }}
-        className="relative w-full rounded-[28px] shadow-[0_30px_90px_rgba(0,0,0,0.45)]"
-      />
+      <div className="relative [perspective:1200px]">
+        <motion.div style={{ y, scale, rotateX, rotateZ, opacity }} className="relative [transform-style:preserve-3d]">
+          <motion.div
+            style={{ opacity: glowOpacity, scale: glowScale }}
+            className="pointer-events-none absolute -inset-x-24 -inset-y-20 rounded-[56px] bg-[radial-gradient(ellipse_at_center,rgba(76,76,92,0.9)_0%,rgba(30,30,38,0.86)_34%,rgba(8,8,12,0.62)_56%,rgba(0,0,0,0)_78%)] blur-3xl"
+          />
+          <motion.div
+            style={{ opacity: glowOpacity }}
+            className="pointer-events-none absolute -inset-x-8 -inset-y-6 rounded-[36px] bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.18)_0%,rgba(48,48,60,0.62)_42%,rgba(0,0,0,0)_72%)] blur-xl"
+          />
+          <img
+            src="/hero-img.svg"
+            alt="Kloak app interface"
+            className="relative w-full rounded-[28px] shadow-[0_46px_130px_rgba(0,0,0,0.82),0_0_64px_rgba(120,120,140,0.28)]"
+          />
+        </motion.div>
+      </div>
     </motion.div>
   );
 };
@@ -46,7 +62,8 @@ export const HeroImage = () => {
             className="mx-auto max-w-4xl pt-2 text-center"
           >
             <h1 className="text-[clamp(2.75rem,7vw,6.8rem)] font-semibold leading-[0.9] tracking-tight text-white">
-              The Discord alternative that does not watch you.
+              The <span className="font-['Instrument_Serif'] font-normal italic tracking-normal text-zinc-100">Discord alternative</span> that{" "}
+              <span className="font-['Instrument_Serif'] font-normal italic tracking-normal text-zinc-100">does not watch you</span>.
             </h1>
 
             <p className="mx-auto mt-6 max-w-2xl text-base leading-7 text-zinc-300 sm:text-lg">
@@ -84,3 +101,4 @@ export const HeroImage = () => {
 };
 
 export default HeroImage;
+
