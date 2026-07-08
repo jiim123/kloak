@@ -57,7 +57,7 @@ export const useRealtimeNotifications = (userId: string | null) => {
     if (!userId) return;
     isSubscribedRef.current = false;
 
-    const topic = `user-notifications:${userId}:${crypto.randomUUID()}`;
+    const topic = `user:${userId}`;
 
     // Delay initial fetch until auth key hash is available.
     const initFetch = async () => {
@@ -95,7 +95,12 @@ export const useRealtimeNotifications = (userId: string | null) => {
           return;
         }
 
-        if ((eventPayload.op === 'INSERT' || eventPayload.op === 'UPDATE') && eventPayload.new) {
+        if (eventPayload.op === 'UPDATE' && eventPayload.new) {
+          storeRef.current.updateNotification(eventPayload.new.id, eventPayload.new);
+          return;
+        }
+
+        if (eventPayload.op === 'INSERT' && eventPayload.new) {
           processIncomingNotification(eventPayload.new);
         }
       },
@@ -112,7 +117,6 @@ export const useRealtimeNotifications = (userId: string | null) => {
         filter: `user_id=eq.${userId}`,
       },
       (payload: any) => {
-        if (isSubscribedRef.current) return;
         if (payload.new) {
           processIncomingNotification(payload.new as Notification);
         }
@@ -128,7 +132,6 @@ export const useRealtimeNotifications = (userId: string | null) => {
         filter: `user_id=eq.${userId}`,
       },
       (payload: any) => {
-        if (isSubscribedRef.current) return;
         if (payload.old?.id) {
           storeRef.current.removeNotification(payload.old.id);
         }
@@ -144,7 +147,6 @@ export const useRealtimeNotifications = (userId: string | null) => {
         filter: `user_id=eq.${userId}`,
       },
       (payload: any) => {
-        if (isSubscribedRef.current) return;
         if (payload.new) {
           const n = payload.new as Notification;
           storeRef.current.updateNotification(n.id, n);
@@ -167,8 +169,6 @@ export const useRealtimeNotifications = (userId: string | null) => {
     });
 
     const pollInterval = window.setInterval(async () => {
-      if (isSubscribedRef.current) return;
-
       // Skip poll if auth key hash is unavailable (prevents 401s).
       const { getKeyHash } = await import('@/integrations/supabase/client');
       if (!getKeyHash()) return;
@@ -233,16 +233,6 @@ const showDesktopNotification = async (notification: Notification) => {
     if (!ui.desktopNotificationsEnabled) return;
   } else {
     if (!ui.browserNotificationsEnabled) return;
-  }
-
-  if (isTauri()) {
-    try {
-      const { getCurrentWindow } = await import('@tauri-apps/api/window');
-      const focused = await getCurrentWindow().isFocused();
-      if (focused) return;
-    } catch {
-      // fall through
-    }
   }
 
   if (isTauri()) {

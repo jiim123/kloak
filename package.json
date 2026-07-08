@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "dev:tauri": "node scripts/dev-local.js",
-    "build:tauri": "npm run build && tauri build",
+    "build:tauri": "tauri build",
     "build:local": "node scripts/build-local.js",
     "release": "node scripts/release.js",
     "init-repo": "node scripts/init-repo.js"
