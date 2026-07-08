@@ -1125,12 +1125,10 @@ export const ServerSettingsPage = () => {
     [selectedRoleId, stagedRoles],
   );
   const displayedInvites = useMemo(() => {
-    const updated = invites.map((invite) =>
-      pendingRevokedInviteIds.has(invite.id)
-        ? { ...invite, revoked_at: invite.revoked_at || new Date().toISOString(), revoked_by_username: "Pending" }
-        : invite,
+    const activeInvites = invites.filter(
+      (invite) => !invite.revoked_at && !pendingRevokedInviteIds.has(invite.id),
     );
-    return [...pendingInviteDrafts, ...updated];
+    return [...pendingInviteDrafts, ...activeInvites];
   }, [invites, pendingInviteDrafts, pendingRevokedInviteIds]);
 
   const selectRoleForEditing = (role: CustomServerRole) => {
@@ -1782,7 +1780,7 @@ export const ServerSettingsPage = () => {
       });
 
       if (error) throw error;
-      setInvites((data ?? []) as ServerInviteDraft[]);
+      setInvites(((data ?? []) as ServerInviteDraft[]).filter((invite) => !invite.revoked_at));
     } catch {
       setInvites([]);
     } finally {
@@ -1807,7 +1805,7 @@ export const ServerSettingsPage = () => {
 
         if (error) throw error;
         if (cancelled) return;
-        setInvites((data ?? []) as ServerInviteDraft[]);
+        setInvites(((data ?? []) as ServerInviteDraft[]).filter((invite) => !invite.revoked_at));
       } catch {
         if (!cancelled) setInvites([]);
       } finally {

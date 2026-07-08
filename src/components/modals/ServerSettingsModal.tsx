@@ -255,6 +255,7 @@ export const ServerSettingsModal = () => {
   const [roleColor, setRoleColor] = useState("#5865F2");
   const [roleIcon, setRoleIcon] = useState<string>("");
   const [roleIsSelfAssignable, setRoleIsSelfAssignable] = useState(false);
+  const [showCreateRoleForm, setShowCreateRoleForm] = useState(false);
   const [activeRoleId, setActiveRoleId] = useState<string | null>(null);
   const [colorType, setColorType] = useState<"solid" | "gradient">("solid");
   const [gradientColors, setGradientColors] = useState<string[]>(["#5865F2", "#7289DA"]);
@@ -354,6 +355,7 @@ export const ServerSettingsModal = () => {
   const [copiedInviteId, setCopiedInviteId] = useState<string | null>(null);
   const [inviteExpiresIn, setInviteExpiresIn] = useState<string>("never");
   const [inviteMaxUses, setInviteMaxUses] = useState<string>("unlimited");
+  const activeInvites = useMemo(() => invites.filter((invite) => !invite.revoked_at), [invites]);
   const [publicationEligibility, setPublicationEligibility] = useState<PublicationEligibility | null>(null);
   const [isLoadingPublicationEligibility, setIsLoadingPublicationEligibility] = useState(false);
   const [systemChannelJoinId, setSystemChannelJoinId] = useState("");
@@ -698,6 +700,7 @@ export const ServerSettingsModal = () => {
       setRoleColor("#5865F2");
       setRoleIcon("");
       setRoleIsSelfAssignable(false);
+      setShowCreateRoleForm(false);
       setColorType("solid");
       setGradientColors(["#5865F2", "#7289DA"]);
       setGradientAngle(135);
@@ -765,7 +768,7 @@ export const ServerSettingsModal = () => {
       });
 
       if (error) throw error;
-      setInvites((data ?? []) as any);
+      setInvites(((data ?? []) as typeof invites).filter((invite) => !invite.revoked_at));
     } catch {
       setInvites([]);
     } finally {
@@ -789,7 +792,7 @@ export const ServerSettingsModal = () => {
 
         if (error) throw error;
         if (cancelled) return;
-        setInvites((data ?? []) as any);
+        setInvites(((data ?? []) as typeof invites).filter((invite) => !invite.revoked_at));
       } catch {
         if (!cancelled) setInvites([]);
       } finally {
@@ -1470,6 +1473,7 @@ export const ServerSettingsModal = () => {
       setRoleColor("#5865F2");
       setRoleIcon("");
       setRoleIsSelfAssignable(false);
+      setShowCreateRoleForm(false);
       setColorType("solid");
       setGradientColors(["#5865F2", "#7289DA"]);
       setGradientAngle(135);
@@ -1505,6 +1509,7 @@ export const ServerSettingsModal = () => {
       setRoleColor("#5865F2");
       setRoleIcon("");
       setRoleIsSelfAssignable(false);
+      setShowCreateRoleForm(false);
       setColorType("solid");
       setGradientColors(["#5865F2", "#7289DA"]);
       setGradientAngle(135);
@@ -1530,6 +1535,7 @@ export const ServerSettingsModal = () => {
   };
 
   const handleEditRole = (role: CustomServerRole) => {
+    setShowCreateRoleForm(false);
     setEditingRole(role);
     setRoleName(role.name);
     const parsed = parseColorValue(role.color);
@@ -2103,7 +2109,7 @@ export const ServerSettingsModal = () => {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <p className="text-sm text-muted-foreground">
-                        {invites.length} active invite{invites.length !== 1 ? "s" : ""}
+                        {activeInvites.length} active invite{activeInvites.length !== 1 ? "s" : ""}
                       </p>
                       <Button
                         onClick={createInvite}
@@ -2122,9 +2128,9 @@ export const ServerSettingsModal = () => {
                         <div className="flex items-center justify-center py-8 text-muted-foreground">
                           <Loader2 className="w-5 h-5 animate-spin" />
                         </div>
-                      ) : invites.length > 0 ? (
+                      ) : activeInvites.length > 0 ? (
                         <div className="space-y-2">
-                          {invites.map((invite) => (
+                          {activeInvites.map((invite) => (
                             <div
                               key={invite.id}
                               className="flex items-center justify-between gap-2 p-3 rounded-xl bg-background/50 border border-border/30"
@@ -2472,6 +2478,7 @@ export const ServerSettingsModal = () => {
                                 setRoleColor("#5865F2");
                                 setRoleIcon("");
                                 setRoleIsSelfAssignable(false);
+                                setShowCreateRoleForm(false);
                                 setColorType("solid");
                                 setGradientColors(["#5865F2", "#7289DA"]);
                                 setGradientAngle(135);
@@ -2490,7 +2497,7 @@ export const ServerSettingsModal = () => {
                           )}
                         </TabsContent>
                       </Tabs>
-                    ) : (
+                    ) : showCreateRoleForm ? (
                       <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 space-y-4">
                         <h4 className="text-sm font-medium">Create Role</h4>
                         <div className="space-y-3">
@@ -2580,11 +2587,49 @@ export const ServerSettingsModal = () => {
                         >
                           Create Role
                         </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setRoleName("");
+                            setRoleColor("#5865F2");
+                            setRoleIcon("");
+                            setRoleIsSelfAssignable(false);
+                            setColorType("solid");
+                            setGradientColors(["#5865F2", "#7289DA"]);
+                            setGradientAngle(135);
+                            setShowCreateRoleForm(false);
+                          }}
+                          className="h-10 rounded-xl w-full"
+                        >
+                          Cancel
+                        </Button>
                       </div>
-                    )}
+                    ) : null}
 
                     <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 space-y-3">
-                      <h4 className="text-sm font-medium">Server Roles</h4>
+                      <div className="flex items-center justify-between gap-3">
+                        <h4 className="text-sm font-medium">Server Roles</h4>
+                        {!editingRole && !showCreateRoleForm && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => {
+                              setRoleName("");
+                              setRoleColor("#5865F2");
+                              setRoleIcon("");
+                              setRoleIsSelfAssignable(false);
+                              setColorType("solid");
+                              setGradientColors(["#5865F2", "#7289DA"]);
+                              setGradientAngle(135);
+                              setShowCreateRoleForm(true);
+                            }}
+                            className="h-8 rounded-lg"
+                          >
+                            <Plus className="w-3 h-3 mr-1" />
+                            New Role
+                          </Button>
+                        )}
+                      </div>
                       {roles.length > 0 ? (
                         <div className="space-y-2">
                           {roles.map((role) => (
@@ -3146,7 +3191,7 @@ export const ServerSettingsModal = () => {
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <p className="text-sm text-muted-foreground">
-                          {invites.length} active invite{invites.length !== 1 ? "s" : ""}
+                          {activeInvites.length} active invite{activeInvites.length !== 1 ? "s" : ""}
                         </p>
                         <Button
                           onClick={createInvite}
@@ -3196,9 +3241,9 @@ export const ServerSettingsModal = () => {
                           <div className="flex items-center justify-center py-10 text-muted-foreground">
                             <Loader2 className="w-5 h-5 animate-spin" />
                           </div>
-                        ) : invites.length > 0 ? (
+                        ) : activeInvites.length > 0 ? (
                           <div className="space-y-2">
-                            {invites.map((invite) => {
+                            {activeInvites.map((invite) => {
                               const isRevoked = !!invite.revoked_at;
                               const isExpired =
                                 !!invite.expires_at && new Date(invite.expires_at).getTime() <= Date.now();
@@ -3460,6 +3505,7 @@ export const ServerSettingsModal = () => {
                   (canManageRoles ? (
                     <div className="space-y-4">
                       {/* Create/Edit Role Form */}
+                      {(editingRole || showCreateRoleForm) && (
                       <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4 space-y-4">
                         <h4 className="text-sm font-semibold">{editingRole ? "Edit Role" : "Create Role"}</h4>
                         <div className="space-y-3">
@@ -3563,7 +3609,7 @@ export const ServerSettingsModal = () => {
                               </>
                             )}
                           </Button>
-                          {editingRole && (
+                          {(editingRole || showCreateRoleForm) && (
                             <Button
                               variant="outline"
                               rounded="xl"
@@ -3573,6 +3619,7 @@ export const ServerSettingsModal = () => {
                                 setRoleColor("#5865F2");
                                 setRoleIcon("");
                                 setRoleIsSelfAssignable(false);
+                                setShowCreateRoleForm(false);
                                 setColorType("solid");
                                 setGradientColors(["#5865F2", "#7289DA"]);
                                 setGradientAngle(135);
@@ -3584,10 +3631,34 @@ export const ServerSettingsModal = () => {
                           )}
                         </div>
                       </div>
+                      )}
 
                       {/* Existing Roles List */}
                       <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4 space-y-3">
-                        <h4 className="text-sm font-semibold">Server Roles</h4>
+                        <div className="flex items-center justify-between gap-3">
+                          <h4 className="text-sm font-semibold">Server Roles</h4>
+                          {!editingRole && !showCreateRoleForm && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              rounded="xl"
+                              onClick={() => {
+                                setRoleName("");
+                                setRoleColor("#5865F2");
+                                setRoleIcon("");
+                                setRoleIsSelfAssignable(false);
+                                setColorType("solid");
+                                setGradientColors(["#5865F2", "#7289DA"]);
+                                setGradientAngle(135);
+                                setShowCreateRoleForm(true);
+                              }}
+                              className="h-8"
+                            >
+                              <Plus className="w-3 h-3 mr-1" />
+                              New Role
+                            </Button>
+                          )}
+                        </div>
                         {roles.length > 0 ? (
                           <DndContext
                             sensors={roleSensors}
@@ -3610,7 +3681,7 @@ export const ServerSettingsModal = () => {
                               <Palette className="w-5 h-5 text-muted-foreground" />
                             </div>
                             <p className="text-sm text-muted-foreground">No custom roles yet</p>
-                            <p className="text-xs text-muted-foreground mt-1">Create your first role above</p>
+                            <p className="text-xs text-muted-foreground mt-1">Use New Role to create your first role.</p>
                           </div>
                         )}
                       </div>

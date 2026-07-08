@@ -79,6 +79,52 @@ const PROFILE_REPORT_REASONS: ReportReasonOption[] = [
   { value: "Impersonation", label: "Impersonation" },
   { value: "Toxic behavior", label: "Toxic behavior" },
 ];
+const PROFILE_POPUP_CACHE_TTL_MS = 2 * 60 * 1000;
+
+interface CachedProfilePopupPayload {
+  user: User;
+  badges: Badge[];
+  sharedServerIds: string[];
+  declinedAt: string | null;
+  auraSummary: AuraSummary | null;
+  cachedAt: number;
+}
+
+const profilePopupCache = new Map<string, CachedProfilePopupPayload>();
+
+const getProfilePopupCacheKey = (requestingUserId: string, targetUserId: string, serverIds: string[]) =>
+  `${requestingUserId}:${targetUserId}:${[...serverIds].sort().join(",")}`;
+
+const getCachedProfilePopup = (cacheKey: string) => {
+  const cached = profilePopupCache.get(cacheKey);
+  if (!cached) return null;
+  if (Date.now() - cached.cachedAt > PROFILE_POPUP_CACHE_TTL_MS) {
+    profilePopupCache.delete(cacheKey);
+    return null;
+  }
+  return cached;
+};
+
+const toProfileUser = (rawUser: any): User => ({
+  id: rawUser.id,
+  username: rawUser.username,
+  display_name: rawUser.display_name,
+  avatar_url: rawUser.avatar_url,
+  banner_url: rawUser.banner_url ?? null,
+  avatar_decoration: rawUser.avatar_decoration,
+  profile_effect: rawUser.profile_effect ?? null,
+  banner_color: rawUser.banner_color || "#5865F2",
+  profile_theme_primary: rawUser.profile_theme_primary ?? null,
+  profile_theme_accent: rawUser.profile_theme_accent ?? null,
+  bio: rawUser.bio,
+  tagline: rawUser.tagline ?? null,
+  status: rawUser.status as UserStatus,
+  custom_status: rawUser.custom_status,
+  created_at: rawUser.created_at,
+  last_seen: rawUser.last_seen,
+  pronouns: rawUser.pronouns ?? null,
+  is_bot: rawUser.is_bot ?? false,
+});
 
 const withAlpha = (hex: string, alphaHex: string) => {
   if (!hex || !hex.startsWith("#") || hex.length !== 7) return hex;
@@ -360,8 +406,35 @@ export const UserProfilePopup = () => {
   useEffect(() => {
     if (!isOpen || !userId || !currentUser?.id) return;
 
+    let cancelled = false;
+    const cacheKey = getProfilePopupCacheKey(currentUser.id, userId, serverIds);
+    const cachedProfile = getCachedProfilePopup(cacheKey);
+    const cachedUser = useUserCacheStore.getState().getUser(userId);
+    const instantUser = cachedProfile?.user ?? cachedUser ?? null;
+    const hasInstantProfile = Boolean(instantUser && !instantUser.is_bot);
+
+    if (cachedProfile && !cachedProfile.user.is_bot) {
+      setProfileUser(cachedProfile.user);
+      setUserBadges(cachedProfile.badges);
+      setSharedServers(servers.filter((s) => cachedProfile.sharedServerIds.includes(s.id)).slice(0, 3));
+      setAuraSummary(cachedProfile.auraSummary);
+      applyCooldownFromDeclinedAt(cachedProfile.declinedAt);
+    } else if (cachedUser && !cachedUser.is_bot) {
+      setProfileUser(cachedUser);
+      setUserBadges([]);
+      setSharedServers([]);
+      setAuraSummary(null);
+      setCooldownSeconds(0);
+    } else {
+      setProfileUser(null);
+      setUserBadges([]);
+      setSharedServers([]);
+      setAuraSummary(null);
+      setCooldownSeconds(0);
+    }
+
     const fetchProfile = async () => {
-      setIsLoading(true);
+      setIsLoading(!hasInstantProfile);
       try {
         const { data, error } = await supabase.rpc("profile", {
           _target_user_id: userId,
@@ -373,54 +446,46 @@ export const UserProfilePopup = () => {
         const payload = data as any;
         if (!payload?.user) throw new Error("Profile not found");
 
-        const d = payload.user as any;
-        const nextProfileUser: User = {
-          id: d.id,
-          username: d.username,
-          display_name: d.display_name,
-          avatar_url: d.avatar_url,
-          banner_url: d.banner_url ?? null,
-          avatar_decoration: d.avatar_decoration,
-          profile_effect: d.profile_effect ?? null,
-          banner_color: d.banner_color || "#5865F2",
-          profile_theme_primary: d.profile_theme_primary ?? null,
-          profile_theme_accent: d.profile_theme_accent ?? null,
-          bio: d.bio,
-          tagline: d.tagline ?? null,
-          status: d.status as UserStatus,
-          custom_status: d.custom_status,
-          created_at: d.created_at,
-          last_seen: d.last_seen,
-          pronouns: d.pronouns ?? null,
-          is_bot: d.is_bot ?? false,
-        };
-        const cachedUser = useUserCacheStore.getState().getUser(nextProfileUser.id);
+        const nextProfileUser = toProfileUser(payload.user);
+        const latestCachedUser = useUserCacheStore.getState().getUser(nextProfileUser.id);
         const nextProfileWithFreshPresence: User =
-          cachedUser &&
+          latestCachedUser &&
           (hasRecentRealtimePresence(nextProfileUser.id) ||
-            cachedUser.status !== nextProfileUser.status ||
-            cachedUser.last_seen !== nextProfileUser.last_seen ||
-            cachedUser.custom_status !== nextProfileUser.custom_status)
+            latestCachedUser.status !== nextProfileUser.status ||
+            latestCachedUser.last_seen !== nextProfileUser.last_seen ||
+            latestCachedUser.custom_status !== nextProfileUser.custom_status)
             ? {
                 ...nextProfileUser,
-                status: cachedUser.status,
-                last_seen: cachedUser.last_seen,
-                custom_status: cachedUser.custom_status,
+                status: latestCachedUser.status,
+                last_seen: latestCachedUser.last_seen,
+                custom_status: latestCachedUser.custom_status,
               }
             : nextProfileUser;
 
         if (nextProfileWithFreshPresence.is_bot) {
-          closeModal();
+          if (!cancelled) closeModal();
           return;
         }
+
+        if (cancelled) return;
 
         setProfileUser(nextProfileWithFreshPresence);
         useUserCacheStore.getState().upsertUser(nextProfileWithFreshPresence);
 
-        setUserBadges((Array.isArray(payload.badges) ? payload.badges : []) as Badge[]);
-        const sharedServerIds = new Set((Array.isArray(payload.shared_server_ids) ? payload.shared_server_ids : []) as string[]);
-        setSharedServers(servers.filter((s) => sharedServerIds.has(s.id)).slice(0, 3));
+        const badges = (Array.isArray(payload.badges) ? payload.badges : []) as Badge[];
+        const sharedServerIds = (Array.isArray(payload.shared_server_ids) ? payload.shared_server_ids : []) as string[];
+        setUserBadges(badges);
+        setSharedServers(servers.filter((s) => sharedServerIds.includes(s.id)).slice(0, 3));
         applyCooldownFromDeclinedAt(payload.declined_at ?? null);
+
+        profilePopupCache.set(cacheKey, {
+          user: nextProfileWithFreshPresence,
+          badges,
+          sharedServerIds,
+          declinedAt: payload.declined_at ?? null,
+          auraSummary: null,
+          cachedAt: Date.now(),
+        });
 
         if (currentUser.id !== userId) {
           const { error: profileViewError } = await supabase.rpc("record_profile_view" as any, {
@@ -434,24 +499,34 @@ export const UserProfilePopup = () => {
           _target_user_id: userId,
           _requesting_user_id: currentUser.id,
         });
+        if (cancelled) return;
         if (!achievementError && achievementData) {
-          setAuraSummary(achievementData as AuraSummary);
+          const nextAuraSummary = achievementData as AuraSummary;
+          setAuraSummary(nextAuraSummary);
+          const cached = profilePopupCache.get(cacheKey);
+          if (cached) profilePopupCache.set(cacheKey, { ...cached, auraSummary: nextAuraSummary, cachedAt: Date.now() });
         } else if (achievementError) {
           console.error("Failed to fetch achievement summary:", achievementError);
           setAuraSummary(null);
         }
       } catch (error) {
         console.error("Failed to fetch profile:", error);
-        toast.error("Failed to load profile");
-        setProfileUser(null);
-        setUserBadges([]);
-        setAuraSummary(null);
+        if (!hasInstantProfile) {
+          toast.error("Failed to load profile");
+          setProfileUser(null);
+          setUserBadges([]);
+          setAuraSummary(null);
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
     void fetchProfile();
+
+    return () => {
+      cancelled = true;
+    };
   }, [applyCooldownFromDeclinedAt, closeModal, currentUser?.id, isOpen, serverIds, servers, userId]);
 
   useEffect(() => {
