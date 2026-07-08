@@ -195,10 +195,20 @@ export const useAuthStore = create<AuthState>()(
 
           const userData = data as Record<string, unknown>;
           if (userData.mfa_required === true) {
-            setKeyHashHeader(null);
+            // The long-lived login key is still valid; only the remembered MFA
+            // session expired. Keep the key so the auth page can ask for a new
+            // TOTP code instead of forcing a full logout/login-key re-entry.
             setMfaSessionHeader(null);
-            await clearDeviceCredentials();
-            set({ isAuthenticated: false, user: null, keyHash: null, mfaSessionToken: null, isLoading: false });
+            await clearMfaSession();
+            set({
+              isAuthenticated: false,
+              user: null,
+              keyHash,
+              pendingMfaKeyHash: keyHash,
+              mfaSessionToken: null,
+              isLoading: false,
+              error: "Your 2FA session expired. Enter your authenticator code to continue.",
+            });
             return false;
           }
 

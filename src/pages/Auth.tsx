@@ -82,7 +82,8 @@ const Auth = ({ formOnly = false }: AuthProps) => {
   }, [redirectParam]);
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<"create" | "login">("create");
+  const initialMode = new URLSearchParams(location.search).get("mode");
+  const [activeTab, setActiveTab] = useState<"create" | "login">(initialMode === "login" ? "login" : "create");
 
   // Create account state
   const [username, setUsername] = useState("");
@@ -126,10 +127,14 @@ const Auth = ({ formOnly = false }: AuthProps) => {
       // valid saved sessions after a browser restart.
       await initializeAuth();
       if (!cancelled) {
-        const { user: restoredUser, isAuthenticated } = useAuthStore.getState();
+        const { user: restoredUser, isAuthenticated, pendingMfaKeyHash } = useAuthStore.getState();
         if (restoredUser && isAuthenticated) {
           await resizeWindowForApp();
           navigate(redirectTo || "/app", { replace: true });
+        } else if (pendingMfaKeyHash) {
+          setActiveTab("login");
+          setMfaRequired(true);
+          setMfaCode("");
         }
       }
     })();
