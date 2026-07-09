@@ -8,6 +8,7 @@ import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import {
   AVATAR_DECORATIONS,
   DEFAULT_AVATAR_DECORATION_TRANSFORM,
+  getAvailableAvatarDecorations,
   type AvatarDecorationTransform,
 } from "@/lib/avatarDecorations";
 import { Slider } from "@/components/ui/slider";
@@ -82,6 +83,10 @@ export const AvatarDecorationModal = ({ open, onOpenChange, onSelect }: AvatarDe
   );
   const isTunerEnabled = typeof window !== "undefined" && window.localStorage.getItem("kloak_deco_tuner") === "1";
   const isDev = import.meta.env.DEV || isTunerEnabled;
+  const availableDecorations = useMemo(
+    () => getAvailableAvatarDecorations(Boolean(user?.is_staff)),
+    [user?.is_staff],
+  );
   const baseTransformsById = useMemo(() => buildTransformMap(), []);
 
   // Sync state when modal opens or user changes
@@ -102,9 +107,15 @@ export const AvatarDecorationModal = ({ open, onOpenChange, onSelect }: AvatarDe
 
   // Check if user currently has a decoration applied (in database)
   const hasCurrentDecoration = Boolean(user?.avatar_decoration);
+  const selectedDecorationIsAvailable =
+    selectedDecoration === null || availableDecorations.some((decoration) => decoration.id === selectedDecoration);
 
   const handleSave = async () => {
     if (!user) return;
+    if (!selectedDecorationIsAvailable) {
+      toast.error("That avatar decoration is only available to staff.");
+      return;
+    }
 
     setIsSaving(true);
     try {
@@ -159,12 +170,12 @@ export const AvatarDecorationModal = ({ open, onOpenChange, onSelect }: AvatarDe
   }, [selectedDecoration, draftTransforms, baseTransformsById]);
 
   const changedTransformEntries = useMemo(() => {
-    return AVATAR_DECORATIONS.map((decoration) => {
+    return availableDecorations.map((decoration) => {
       const base = baseTransformsById[decoration.id] ?? DEFAULT_AVATAR_DECORATION_TRANSFORM;
       const current = draftTransforms[decoration.id] ?? base;
       return { id: decoration.id, base, current };
     }).filter((entry) => !areTransformsEqual(entry.base, entry.current));
-  }, [draftTransforms, baseTransformsById]);
+  }, [availableDecorations, draftTransforms, baseTransformsById]);
 
   const updateSelectedTransform = (patch: Partial<AvatarDecorationTransform>) => {
     if (!selectedDecoration) return;
@@ -362,7 +373,7 @@ export const AvatarDecorationModal = ({ open, onOpenChange, onSelect }: AvatarDe
             </button>
 
             {/* Available decorations */}
-            {AVATAR_DECORATIONS.map((decoration) => {
+            {availableDecorations.map((decoration) => {
               const previewTransform = draftTransforms[decoration.id] ?? decoration.transform;
               const baseTransform = baseTransformsById[decoration.id] ?? DEFAULT_AVATAR_DECORATION_TRANSFORM;
               const isTweaked = !areTransformsEqual(previewTransform, baseTransform);
@@ -423,7 +434,7 @@ export const AvatarDecorationModal = ({ open, onOpenChange, onSelect }: AvatarDe
 
             <Button
               onClick={handleSave}
-              disabled={isSaving || !hasChanges}
+              disabled={isSaving || !hasChanges || !selectedDecorationIsAvailable}
               className="flex-1 sm:flex-none rounded-xl bg-primary hover:bg-primary/90"
             >
               {isSaving ? "Saving..." : "Save Changes"}

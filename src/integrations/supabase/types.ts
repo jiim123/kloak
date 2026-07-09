@@ -4022,6 +4022,7 @@ export type Database = {
           display_name: string | null
           id: string
           is_bot: boolean
+          is_staff: boolean
           last_seen: string | null
           profile_effect: string | null
           profile_theme_accent: string | null
@@ -4043,6 +4044,7 @@ export type Database = {
           display_name?: string | null
           id?: string
           is_bot?: boolean
+          is_staff?: boolean
           last_seen?: string | null
           profile_effect?: string | null
           profile_theme_accent?: string | null
@@ -4064,6 +4066,7 @@ export type Database = {
           display_name?: string | null
           id?: string
           is_bot?: boolean
+          is_staff?: boolean
           last_seen?: string | null
           profile_effect?: string | null
           profile_theme_accent?: string | null

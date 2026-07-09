@@ -135,6 +135,7 @@ const mapAuthUser = (userData: Record<string, unknown>, fallbackStatus: UserStat
   last_seen: (userData.last_seen as string | null) ?? new Date().toISOString(),
   pronouns: (userData.pronouns as string | null) ?? null,
   is_bot: (userData.is_bot as boolean | null) ?? false,
+  is_staff: (userData.is_staff as boolean | null) ?? false,
   allow_nsfw: (userData.allow_nsfw as boolean | null) ?? false,
 });
 

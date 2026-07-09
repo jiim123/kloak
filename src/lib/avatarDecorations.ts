@@ -37,11 +37,14 @@ export const AVATAR_DECORATION_TRANSFORMS: Record<string, Partial<AvatarDecorati
   "fox": { scale: 1.38, offsetXPercent: 0, offsetYPercent: -6 },
   "frog": { scale: 1.49, offsetXPercent: 0, offsetYPercent: 6 },
   "rainbow": { scale: 1.48, offsetXPercent: 0, offsetYPercent: 1.5 },
-"pink-heart": { scale: 1.22, offsetXPercent: 0, offsetYPercent: 0 },
-"angel-ring": { scale: 1.33, offsetXPercent: -0.5, offsetYPercent: 3.75 },
-"stone": { scale: 1.18, offsetXPercent: 0, offsetYPercent: 0 },
-"blossom": { scale: 1.21, offsetXPercent: 0, offsetYPercent: 2 },
+  "pink-heart": { scale: 1.22, offsetXPercent: 0, offsetYPercent: 0 },
+  "angel-ring": { scale: 1.33, offsetXPercent: -0.5, offsetYPercent: 3.75 },
+  "stone": { scale: 1.18, offsetXPercent: 0, offsetYPercent: 0 },
+  "blossom": { scale: 1.21, offsetXPercent: 0, offsetYPercent: 2 },
+  "kloak-team": { scale: 1.16, offsetXPercent: 0, offsetYPercent: -2.5 },
 };
+
+const STAFF_ONLY_AVATAR_DECORATIONS = new Set(["kloak-team"]);
 
 const resolveAvatarDecorationTransform = (
   transform?: Partial<AvatarDecorationTransform>,
@@ -56,6 +59,7 @@ export type AvatarDecoration = {
   name: string; // human readable
   src: string; // resolved url
   transform: AvatarDecorationTransform; // per-decoration render adjustments
+  staffOnly: boolean; // whether only staff can select this decoration
 };
 
 export const AVATAR_DECORATIONS: AvatarDecoration[] = Object.entries(modules)
@@ -67,9 +71,13 @@ export const AVATAR_DECORATIONS: AvatarDecoration[] = Object.entries(modules)
       name: titleCase(id),
       src: mod.default,
       transform: resolveAvatarDecorationTransform(AVATAR_DECORATION_TRANSFORMS[id]),
+      staffOnly: STAFF_ONLY_AVATAR_DECORATIONS.has(id),
     };
   })
   .sort((a, b) => a.name.localeCompare(b.name));
+
+export const getAvailableAvatarDecorations = (isStaff: boolean): AvatarDecoration[] =>
+  AVATAR_DECORATIONS.filter((decoration) => isStaff || !decoration.staffOnly);
 
 export const getAvatarDecoration = (decorationId: string | null | undefined): AvatarDecoration | null => {
   if (!decorationId) return null;
