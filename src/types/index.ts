@@ -141,6 +141,7 @@ export interface Server {
   banner_url: string | null;
   is_published: boolean;
   is_verified?: boolean;
+  can_publish?: boolean;
   is_nsfw?: boolean;
   about: string | null;
   owner_id: string;

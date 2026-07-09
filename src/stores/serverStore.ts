@@ -484,6 +484,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
           banner_url: string | null;
           is_published?: boolean;
           is_verified?: boolean;
+          can_publish?: boolean;
           is_nsfw?: boolean;
           about?: string | null;
           system_channel_join_id?: string | null;
@@ -509,6 +510,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
           banner_url: item.banner_url,
           is_published: item.is_published ?? false,
           is_verified: item.is_verified ?? false,
+          can_publish: item.can_publish ?? true,
           is_nsfw: item.is_nsfw ?? false,
           about: item.about ?? null,
           system_channel_join_id: item.system_channel_join_id ?? null,
@@ -603,6 +605,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         banner_url: string | null;
         is_published?: boolean;
         is_verified?: boolean;
+        can_publish?: boolean;
         about?: string | null;
         created_at: string;
       };
@@ -616,6 +619,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         banner_url: serverData.banner_url,
         is_published: serverData.is_published ?? false,
         is_verified: serverData.is_verified ?? false,
+        can_publish: serverData.can_publish ?? true,
         about: serverData.about ?? null,
         created_at: serverData.created_at,
       };
@@ -690,6 +694,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
             system_channel_leave_id: result.server.system_channel_leave_id ?? null,
             enable_join_messages: result.server.enable_join_messages ?? false,
             enable_leave_messages: result.server.enable_leave_messages ?? false,
+            can_publish: result.server.can_publish ?? true,
             timezone: result.server.timezone ?? updates.timezone,
           }
         : updates;
@@ -758,6 +763,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         banner_url: string | null;
         is_published?: boolean;
         is_verified?: boolean;
+        can_publish?: boolean;
         about?: string | null;
         created_at: string;
         debug?: {
@@ -805,6 +811,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
         banner_url: serverData.banner_url,
         is_published: serverData.is_published ?? false,
         is_verified: serverData.is_verified ?? false,
+        can_publish: serverData.can_publish ?? true,
         about: serverData.about ?? null,
         created_at: serverData.created_at,
       };

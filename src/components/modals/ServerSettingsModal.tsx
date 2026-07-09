@@ -143,6 +143,7 @@ type PublicationRequirement = {
 type PublicationEligibility = {
   success: boolean;
   eligible?: boolean;
+  can_publish?: boolean;
   is_published?: boolean;
   requirements?: PublicationRequirement[];
   unmet_requirements?: string[];
@@ -513,9 +514,10 @@ export const ServerSettingsModal = () => {
   // For backward compatibility and specific checks
   const isOwner = !!user && !!server && server.owner_id === user.id;
   const isAdmin = canManageServer || canManageRoles || canManageChannels;
+  const canPublishServer = server?.can_publish !== false;
 
   const loadPublicationEligibility = async () => {
-    if (!server?.id || !user?.id || !isOwner) {
+    if (!server?.id || !user?.id || !isOwner || !canPublishServer) {
       setPublicationEligibility(null);
       return;
     }
@@ -665,7 +667,7 @@ export const ServerSettingsModal = () => {
   useEffect(() => {
     if (!isOpen) return;
     void loadPublicationEligibility();
-  }, [isOpen, server?.id, user?.id, isOwner]);
+  }, [isOpen, server?.id, user?.id, isOwner, canPublishServer]);
 
   // Fetch roles and initialize settings when modal opens
   useEffect(() => {
@@ -1653,7 +1655,7 @@ export const ServerSettingsModal = () => {
         </div>
       )}
 
-      {isOwner && (
+      {isOwner && canPublishServer && (
         <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4 space-y-3">
           <Label className="text-sm font-medium">Publish Server</Label>
           <div className="space-y-3 rounded-lg border border-border/30 bg-background/50 p-3">

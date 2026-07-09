@@ -2841,6 +2841,7 @@ export type Database = {
         Row: {
           about: string | null
           banner_url: string | null
+          can_publish: boolean
           created_at: string | null
           enable_join_messages: boolean | null
           enable_leave_messages: boolean | null
@@ -2861,6 +2862,7 @@ export type Database = {
         Insert: {
           about?: string | null
           banner_url?: string | null
+          can_publish?: boolean
           created_at?: string | null
           enable_join_messages?: boolean | null
           enable_leave_messages?: boolean | null
@@ -2881,6 +2883,7 @@ export type Database = {
         Update: {
           about?: string | null
           banner_url?: string | null
+          can_publish?: boolean
           created_at?: string | null
           enable_join_messages?: boolean | null
           enable_leave_messages?: boolean | null

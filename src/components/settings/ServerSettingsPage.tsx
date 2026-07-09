@@ -152,6 +152,7 @@ type PublicationRequirement = {
 type PublicationEligibility = {
   success: boolean;
   eligible?: boolean;
+  can_publish?: boolean;
   is_published?: boolean;
   requirements?: PublicationRequirement[];
   unmet_requirements?: string[];
@@ -1273,9 +1274,10 @@ export const ServerSettingsPage = () => {
   // For backward compatibility and specific checks
   const isOwner = userRole === "owner";
   const isAdmin = userRole === "admin";
+  const canPublishServer = server?.can_publish !== false;
 
   const loadPublicationEligibility = async () => {
-    if (!server?.id || !user?.id || !isOwner) {
+    if (!server?.id || !user?.id || !isOwner || !canPublishServer) {
       setPublicationEligibility(null);
       return;
     }
@@ -1675,7 +1677,7 @@ export const ServerSettingsPage = () => {
   useEffect(() => {
     if (!isServerSettingsOpen) return;
     void loadPublicationEligibility();
-  }, [isServerSettingsOpen, server?.id, user?.id, isOwner]);
+  }, [isServerSettingsOpen, server?.id, user?.id, isOwner, canPublishServer]);
 
   // Track the server ID when settings open to detect server switches
   const initialServerIdRef = useRef<string | null>(null);
@@ -2884,7 +2886,7 @@ export const ServerSettingsPage = () => {
                 )}
 
                 {/* Publish Server (owner-only) */}
-                {isOwner && (
+                {isOwner && canPublishServer && (
                   <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
                     <Label className="text-sm font-medium">Publish Server</Label>
                     <div className="space-y-3 rounded-lg border border-border/50 bg-secondary/30 p-3">

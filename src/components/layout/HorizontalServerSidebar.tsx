@@ -748,6 +748,7 @@ export const HorizontalServerSidebar = () => {
                   banner_url: updated.banner_url ?? null,
                   about: updated.about,
                   is_published: updated.is_published,
+                  can_publish: updated.can_publish ?? true,
                 }
               : s,
           ),
@@ -760,6 +761,7 @@ export const HorizontalServerSidebar = () => {
                   banner_url: updated.banner_url ?? null,
                   about: updated.about,
                   is_published: updated.is_published,
+                  can_publish: updated.can_publish ?? true,
                 }
               : state.currentServer,
         }));
