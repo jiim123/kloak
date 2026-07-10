@@ -267,6 +267,7 @@ export const getMemberPermissions = (
 
   const allPermissions: Permission[] = [
     "manage_server",
+    "view_audit_log",
     "manage_roles",
     "manage_channels",
     "manage_emojis",

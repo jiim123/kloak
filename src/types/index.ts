@@ -58,6 +58,7 @@ export interface CustomServerRole {
 
 export type Permission = 
   | 'manage_server'
+  | 'view_audit_log'
   | 'manage_roles'
   | 'manage_channels'
   | 'manage_emojis'
@@ -615,4 +616,3 @@ export interface SendMessageForm {
   attachments?: File[];
   reply_to_id?: string;
 }
-

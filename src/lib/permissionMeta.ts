@@ -28,6 +28,7 @@ export const PERMISSION_META: Record<Permission, PermissionMeta> = {
   pin_messages: { label: 'Pin Messages', description: 'Allows members to pin important messages in channels.', enabled: true },
   manage_threads: { label: 'Manage Threads', description: 'Allows members to manage and moderate forum threads.', enabled: false },
   manage_server: { label: 'Manage Server', description: 'Allows members to change the server name, icon, banner, and other settings.', enabled: true },
+  view_audit_log: { label: 'View Audit Log', description: 'Allows members to view server moderation and administration history.', enabled: true },
   manage_roles: { label: 'Manage Roles', description: 'Allows members to create, edit, and assign roles to other members.', enabled: true },
   manage_emojis: { label: 'Manage Emojis', description: 'Allows members to upload, edit, and delete custom server emojis.', enabled: true },
   manage_webhooks: { label: 'Manage Webhooks', description: 'Allows members to create, edit, and delete webhooks for integrations.', enabled: false },
@@ -81,7 +82,7 @@ export const PERMISSION_GROUPS: Array<{
   {
     label: 'Server Administration',
     description: 'Server-wide settings and configuration',
-    permissions: ['manage_server', 'manage_roles', 'manage_emojis', 'manage_webhooks', 'manage_invites', 'create_instant_invite', 'transfer_ownership'],
+    permissions: ['manage_server', 'view_audit_log', 'manage_roles', 'manage_emojis', 'manage_webhooks', 'manage_invites', 'create_instant_invite', 'transfer_ownership'],
   },
   {
     label: 'Voice',
