@@ -1262,6 +1262,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
   const canManageChannels = hasPermission("manage_channels");
   const canManageServer = hasPermission("manage_server");
   const canManageRoles = hasPermission("manage_roles");
+  const canViewAuditLog = hasPermission("view_audit_log");
   const canViewMembersShortcut =
     canManageServer ||
     canManageRoles ||
@@ -1507,6 +1508,7 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
 
   const isOverviewActive = !!currentServer && location.pathname === `/app/servers/${currentServer.id}/overview`;
   const isMembersActive = !!currentServer && location.pathname === `/app/servers/${currentServer.id}/members`;
+  const isAuditLogActive = !!currentServer && location.pathname === `/app/servers/${currentServer.id}/audit-log`;
 
   const handleSelectOverview = useCallback(() => {
     if (!currentServer) return;
@@ -1521,6 +1523,14 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
     setCurrentChannel(null);
     closeMobileSidebars();
     navigate(`/app/servers/${currentServer.id}/members`);
+  }, [onNavigate, currentServer, setCurrentChannel, closeMobileSidebars, navigate]);
+
+  const handleSelectAuditLogShortcut = useCallback(() => {
+    if (!currentServer) return;
+    onNavigate?.();
+    setCurrentChannel(null);
+    closeMobileSidebars();
+    navigate(`/app/servers/${currentServer.id}/audit-log`);
   }, [onNavigate, currentServer, setCurrentChannel, closeMobileSidebars, navigate]);
 
   const handleLeaveServer = useCallback(async () => {
@@ -1859,6 +1869,32 @@ export const ChannelSidebar = ({ onNavigate }: ChannelSidebarProps) => {
               <MembersIcon className={SIDEBAR_ITEM_ICON} />
             </div>
             <span className="truncate flex-1 text-left leading-5">Members</span>
+          </button>
+        )}
+        {canViewAuditLog && (
+          <button
+            onClick={handleSelectAuditLogShortcut}
+            aria-label="Open audit log"
+            className={cn(
+              "group relative w-full flex items-center gap-2 px-2.5 py-1.5 text-sm select-none",
+              "leading-5",
+              "transition-colors duration-150",
+              "hover:bg-foreground/[0.04]",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-1 rounded-sm",
+              isAuditLogActive && "bg-foreground/[0.06] text-foreground",
+              !isAuditLogActive && "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <div
+              className={cn(
+                "absolute left-1 top-1.5 bottom-1.5 w-0.5 bg-foreground rounded-full transition-opacity duration-150",
+                isAuditLogActive ? "opacity-100" : "opacity-0",
+              )}
+            />
+            <div className={SIDEBAR_ITEM_ICON_SLOT}>
+              <ClipboardListIcon className={SIDEBAR_ITEM_ICON} />
+            </div>
+            <span className="truncate flex-1 text-left leading-5">Audit Log</span>
           </button>
         )}
         <div className="mx-2 my-1 h-px bg-border/40" aria-hidden="true" />

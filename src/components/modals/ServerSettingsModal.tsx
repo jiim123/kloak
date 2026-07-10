@@ -26,7 +26,6 @@ import {
   Pencil,
   Search,
   Download,
-  FileClock,
   type LucideIcon,
 } from "lucide-react";
 import { useRateLimit } from "@/hooks/useRateLimit";
@@ -151,21 +150,6 @@ type PublicationEligibility = {
   error?: string;
 };
 
-type AuditLogEntry = {
-  id: string;
-  server_id: string;
-  actor_id: string | null;
-  action: string;
-  target_type: string | null;
-  target_id: string | null;
-  summary: string;
-  metadata: Record<string, unknown> | null;
-  created_at: string;
-  actor_username: string | null;
-  actor_display_name: string | null;
-  actor_avatar_url: string | null;
-};
-
 // Server initials helper
 const getServerInitials = (name: string) =>
   name
@@ -254,7 +238,7 @@ export const ServerSettingsModal = () => {
   const isMobile = useIsMobile();
   const checkModLimit = useRateLimit(10, 30_000);
 
-  type SettingsTabId = "overview" | "members" | "roles" | "bans" | "invites" | "emojis" | "integrations" | "audit" | "danger";
+  type SettingsTabId = "overview" | "members" | "roles" | "bans" | "invites" | "emojis" | "integrations" | "danger";
 
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -380,8 +364,6 @@ export const ServerSettingsModal = () => {
   const [isNsfwDraft, setIsNsfwDraft] = useState(false);
   const [minAccountAgeDraft, setMinAccountAgeDraft] = useState(0);
   const [serverTimezoneDraft, setServerTimezoneDraft] = useState("UTC");
-  const [auditLogEntries, setAuditLogEntries] = useState<AuditLogEntry[]>([]);
-  const [isLoadingAuditLog, setIsLoadingAuditLog] = useState(false);
 
   const isOpen = activeModal === "server-settings";
 
@@ -528,8 +510,6 @@ export const ServerSettingsModal = () => {
   const canManageChannels = hasPermission("manage_channels");
   const canManageInvites = hasPermission("manage_invites");
   const canManageEmojis = hasPermission("manage_emojis");
-  const canViewAuditLog = hasPermission("view_audit_log");
-
   // For backward compatibility and specific checks
   const isOwner = !!user && !!server && server.owner_id === user.id;
   const isAdmin = canManageServer || canManageRoles || canManageChannels;
@@ -578,10 +558,6 @@ export const ServerSettingsModal = () => {
       },
     ];
 
-    if (canViewAuditLog) {
-      categories[0].items.push({ id: "audit", label: "Audit Log", icon: FileClock });
-    }
-
     // Content category
     if (canManageEmojis) {
       categories.push({
@@ -613,7 +589,7 @@ export const ServerSettingsModal = () => {
     }
 
     return categories;
-  }, [canManageChannels, canManageEmojis, canManageInvites, canViewAuditLog, isOwner]);
+  }, [canManageChannels, canManageEmojis, canManageInvites, isOwner]);
 
   // Flattened navItems for backward compatibility (used in mobile view)
   const navItems = useMemo(() => {
@@ -829,34 +805,6 @@ export const ServerSettingsModal = () => {
       cancelled = true;
     };
   }, [isOpen, server?.id, user?.id, canManageInvites]);
-
-  const loadAuditLog = async () => {
-    if (!server?.id || !user?.id || !canViewAuditLog) return;
-
-    setIsLoadingAuditLog(true);
-    try {
-      const { data, error } = await (supabase.rpc as any)("get_server_audit_log", {
-        _server_id: server.id,
-        _user_id: user.id,
-        _limit: 100,
-        _before: null,
-      });
-
-      if (error) throw error;
-      setAuditLogEntries(Array.isArray(data) ? (data as AuditLogEntry[]) : []);
-    } catch (error) {
-      console.error("Failed to load audit log:", error);
-      setAuditLogEntries([]);
-      toast.error("Failed to load audit log");
-    } finally {
-      setIsLoadingAuditLog(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!isOpen || activeTab !== "audit") return;
-    void loadAuditLog();
-  }, [isOpen, activeTab, server?.id, user?.id, canViewAuditLog]);
 
   const createInvite = async () => {
     if (!server?.id || !user?.id) return;
@@ -1640,62 +1588,6 @@ export const ServerSettingsModal = () => {
 
   const displayIconUrl = iconRemoved ? null : iconPreview || server.icon_url;
   const displayBannerUrl = bannerRemoved ? null : bannerPreview || server.banner_url;
-  const getAuditMetadata = (entry: AuditLogEntry) => {
-    return entry.metadata && typeof entry.metadata === "object" ? entry.metadata : {};
-  };
-
-  const formatAuditValue = (value: unknown) => {
-    if (value === null || value === undefined || value === "") return "None";
-    if (typeof value === "boolean") return value ? "Enabled" : "Disabled";
-    return String(value);
-  };
-
-  const formatAuditField = (field: string) => {
-    return field
-      .replace(/^is_/, "")
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (char) => char.toUpperCase());
-  };
-
-  const getAuditRoleName = (metadata: Record<string, unknown>) => {
-    const roleName = metadata.role_name || metadata.role_display_name || metadata.name;
-    if (typeof roleName === "string" && roleName.trim()) return roleName;
-
-    const roleId = typeof metadata.role_id === "string" ? metadata.role_id : null;
-    return roleId ? roles.find((role) => role.id === roleId)?.name || roleId : "Unknown role";
-  };
-
-  const getAuditPermissionName = (metadata: Record<string, unknown>) => {
-    const permission = typeof metadata.permission === "string" ? metadata.permission : "";
-    return permission ? formatAuditField(permission) : "Unknown permission";
-  };
-
-  const getAuditDetailLines = (entry: AuditLogEntry) => {
-    const metadata = getAuditMetadata(entry);
-
-    if (entry.action.startsWith("role_permission_")) {
-      const allowed = metadata.allowed === null || metadata.allowed === undefined ? "Inherited" : formatAuditValue(metadata.allowed);
-      return [`Role: ${getAuditRoleName(metadata)}`, `Permission: ${getAuditPermissionName(metadata)}`, `State: ${allowed}`];
-    }
-
-    if (entry.action === "role_updated" || entry.action === "role_reordered") {
-      const before = metadata.before && typeof metadata.before === "object" ? (metadata.before as Record<string, unknown>) : null;
-      const after = metadata.after && typeof metadata.after === "object" ? (metadata.after as Record<string, unknown>) : null;
-      if (!before || !after) return [];
-
-      const fields = ["name", "color", "icon", "is_self_assignable", "position"];
-      return fields
-        .filter((field) => before[field] !== after[field])
-        .map((field) => `${formatAuditField(field)}: ${formatAuditValue(before[field])} -> ${formatAuditValue(after[field])}`);
-    }
-
-    if (entry.action === "server_updated") {
-      const changedFields = Array.isArray(metadata.changed_fields) ? metadata.changed_fields : [];
-      return changedFields.map((field) => `Changed: ${formatAuditField(String(field))}`);
-    }
-
-    return [];
-  };
   const overviewAdvancedSettings = (
     <>
       {canManageServer && (
@@ -1884,72 +1776,6 @@ export const ServerSettingsModal = () => {
       )}
     </>
   );
-  const auditLogContent = canViewAuditLog ? (
-    <div className="space-y-4">
-      <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4 space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h4 className="text-sm font-medium">Audit Log</h4>
-            <p className="text-xs text-muted-foreground mt-1">Recent server moderation and administration actions.</p>
-          </div>
-          <Button type="button" variant="outline" size="sm" rounded="lg" onClick={loadAuditLog} disabled={isLoadingAuditLog} className="h-8">
-            {isLoadingAuditLog ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Refresh"}
-          </Button>
-        </div>
-
-        {isLoadingAuditLog ? (
-          <div className="flex items-center justify-center py-10 text-muted-foreground">
-            <Loader2 className="w-5 h-5 animate-spin" />
-          </div>
-        ) : auditLogEntries.length > 0 ? (
-          <div className="max-h-[520px] overflow-y-auto overscroll-contain touch-pan-y divide-y divide-border/30 rounded-lg border border-border/30 bg-background/35">
-            {auditLogEntries.map((entry) => {
-              const actorName = entry.actor_display_name || entry.actor_username || "Unknown user";
-              const actionLabel = entry.action.replace(/_/g, " ");
-              const detailLines = getAuditDetailLines(entry);
-              return (
-                <div key={entry.id} className="flex gap-3 p-3">
-                  <Avatar className="w-8 h-8 flex-shrink-0">
-                    <AvatarImage src={entry.actor_avatar_url || undefined} />
-                    <AvatarFallback>{actorName[0]?.toUpperCase() || "?"}</AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="text-sm font-medium truncate">{actorName}</span>
-                      <Badge variant="outline" className="rounded-md px-1.5 py-0 text-[10px] capitalize">
-                        {actionLabel}
-                      </Badge>
-                    </div>
-                    <p className="mt-1 text-sm text-foreground">{entry.summary}</p>
-                    {detailLines.length > 0 && (
-                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                        {detailLines.map((line) => (
-                          <span key={line}>{line}</span>
-                        ))}
-                      </div>
-                    )}
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {new Date(entry.created_at).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-10 text-center">
-            <FileClock className="w-10 h-10 text-muted-foreground mb-3" />
-            <p className="text-sm text-muted-foreground">No audit log entries yet</p>
-          </div>
-        )}
-      </div>
-    </div>
-  ) : (
-    <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-6 flex flex-col items-center justify-center text-center">
-      <Shield className="w-10 h-10 text-muted-foreground mb-3" />
-      <p className="text-sm text-muted-foreground">You do not have permission to view the audit log</p>
-    </div>
-  );
   const integrationsContent = canManageChannels ? (
     <div className="space-y-4">
       <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4 space-y-3">
@@ -2108,7 +1934,6 @@ export const ServerSettingsModal = () => {
                   {activeTab === "invites" && "Manage invite links"}
                   {activeTab === "emojis" && "Manage custom emojis"}
                   {activeTab === "integrations" && "Connect external services"}
-                  {activeTab === "audit" && "Review server actions"}
                   {activeTab === "danger" && "Destructive server actions"}
                 </p>
               </div>
@@ -2277,8 +2102,6 @@ export const ServerSettingsModal = () => {
               )}
 
               {activeTab === "integrations" && integrationsContent}
-
-              {activeTab === "audit" && auditLogContent}
 
               {activeTab === "danger" && dangerContent}
 
@@ -3361,8 +3184,6 @@ export const ServerSettingsModal = () => {
                 )}
 
                 {activeTab === "integrations" && integrationsContent}
-
-                {activeTab === "audit" && auditLogContent}
 
                 {activeTab === "danger" && dangerContent}
 

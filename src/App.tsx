@@ -50,6 +50,7 @@ const AppContent = () => {
             <Route path="servers/:serverId" element={<Suspense fallback={null}><ServerAuthGuard><EmptyRoute /></ServerAuthGuard></Suspense>} />
             <Route path="servers/:serverId/overview" element={<Suspense fallback={null}><ServerAuthGuard><EmptyRoute /></ServerAuthGuard></Suspense>} />
             <Route path="servers/:serverId/members" element={<Suspense fallback={null}><ServerAuthGuard><EmptyRoute /></ServerAuthGuard></Suspense>} />
+            <Route path="servers/:serverId/audit-log" element={<Suspense fallback={null}><ServerAuthGuard><EmptyRoute /></ServerAuthGuard></Suspense>} />
             <Route path="servers/:serverId/channels/:channelId" element={<Suspense fallback={null}><ServerAuthGuard><EmptyRoute /></ServerAuthGuard></Suspense>} />
           </Route>
           <Route path="/terms" element={<Terms />} />
