@@ -13,6 +13,7 @@ import {
   Copy,
   Eye,
   EyeOff,
+  Ghost,
   Paperclip,
   Loader2,
   UserX,
@@ -1531,14 +1532,14 @@ export const MessageItem = memo(function MessageItem({
                     </div>
                   ) : (
                     <div className="w-10 flex-shrink-0">
-                      {!isGrouped && messageUser ? (
+                      {!isGrouped && (messageUser || showGhostIdentity) ? (
                         showGhostIdentity ? (
                           // Ghost avatar for anonymous users
                           <div
                             className="w-10 h-10 rounded-full bg-muted flex items-center justify-center cursor-default"
                             title="Anonymous"
                           >
-                            <Eye className="w-5 h-5 text-muted-foreground" />
+                            <Ghost className="w-5 h-5 text-muted-foreground" />
                           </div>
                         ) : hasModActions ? (
                           <ContextMenu>
