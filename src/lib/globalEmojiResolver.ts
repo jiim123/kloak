@@ -241,6 +241,7 @@ let flushTimer: ReturnType<typeof setTimeout> | null = null;
 
 type EmojiRenderVariantRow = {
   name: string;
+  server_id: string;
   server_name: string;
   file_path: string;
   created_at: string;
@@ -269,7 +270,7 @@ function getCachedQualifiedFallback(key: string): string | null | undefined {
 async function fetchEmojiRenderVariantsByNames(names: string[]): Promise<EmojiRenderVariantRow[] | null> {
   if (names.length === 0) return [];
   const { data, error } = await (supabase.from as any)('emoji_render_variants')
-    .select('name,server_name,file_path,created_at')
+    .select('name,server_id,server_name,file_path,created_at')
     .in('name', names)
     .order('created_at', { ascending: true });
   if (error || !data) return null;
@@ -509,13 +510,22 @@ export async function encodeCustomEmojisForTransport(content: string): Promise<s
 
   try {
     const filePathByKey = new Map<string, string>();
+    const preferredServerId = useServerStore.getState().currentServer?.id ?? null;
     const rows = await fetchEmojiRenderVariantsByNames(Array.from(names));
     if (rows) {
+      const rowsByName = new Map<string, EmojiRenderVariantRow[]>();
       for (const row of rows) {
         if (!row?.name || !row?.file_path) continue;
-        if (!filePathByKey.has(row.name)) {
-          filePathByKey.set(row.name, row.file_path);
-        }
+        const existing = rowsByName.get(row.name);
+        if (existing) existing.push(row);
+        else rowsByName.set(row.name, [row]);
+      }
+
+      for (const [name, variants] of rowsByName) {
+        const preferred = preferredServerId
+          ? variants.find((row) => row.server_id === preferredServerId)
+          : undefined;
+        filePathByKey.set(name, (preferred ?? variants[0]).file_path);
       }
     }
     const qualifiedRows = await fetchEmojiRenderVariantsByQualifiedKeys(Array.from(qualified));

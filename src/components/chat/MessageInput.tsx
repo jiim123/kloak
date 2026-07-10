@@ -321,6 +321,7 @@ const ActionBar = memo(
             onOpenChange={setShowEmojiPicker}
             onEmojiSelect={onEmojiSelect}
             serverId={currentServer?.id}
+            customEmojiFormat="inline_token"
             allowExternalEmojis={allowExternalEmojis}
           >
             <button
@@ -880,10 +881,10 @@ export const MessageInput = ({
       if (!trimmed) return;
       setIsSending(true);
       try {
+        const finalContent = await encodeCustomEmojisForTransport(convertMentionsForSend(trimmed));
         if (editingMessage.isDM) {
-          await dmEditMessage(editingMessage.id, user.id, convertMentionsForSend(trimmed));
+          await dmEditMessage(editingMessage.id, user.id, finalContent);
         } else {
-          const finalContent = convertMentionsForSend(trimmed);
           await channelEditMessage(editingMessage.id, finalContent, user.id);
         }
         cancelEditing();
@@ -931,16 +932,27 @@ export const MessageInput = ({
       }
       // Block external custom emojis before sending
       if (!canUseExternalEmojis) {
-        const customEmojiPattern = /:([a-z0-9_]{2,12})(?:~[^:]+)?:/gi;
+        const inlineCustomEmojiPattern = /:ce\[([a-z0-9_]{2,12})\|([a-z0-9/_\.-]{1,300})\]:/gi;
+        const legacyCustomEmojiPattern = /:([a-z0-9_]{2,12})(?:~[^:]+)?:/gi;
         const localEmojiNames = new Set<string>();
+        const localEmojiFilePaths = new Set<string>();
         try {
           const emojis = await fetchServerEmojis(currentServer?.id ?? '');
-          emojis.forEach(e => localEmojiNames.add(e.name));
+          emojis.forEach((e) => {
+            localEmojiNames.add(e.name);
+            localEmojiFilePaths.add(e.file_path);
+          });
         } catch { /* ignore */ }
 
         let match;
         let hasExternal = false;
-        while ((match = customEmojiPattern.exec(contentToSend)) !== null) {
+        while ((match = inlineCustomEmojiPattern.exec(contentToSend)) !== null) {
+          if (!localEmojiFilePaths.has(match[2])) {
+            hasExternal = true;
+            break;
+          }
+        }
+        while (!hasExternal && (match = legacyCustomEmojiPattern.exec(contentToSend)) !== null) {
           if (!localEmojiNames.has(match[1])) {
             hasExternal = true;
             break;
@@ -1150,6 +1162,8 @@ export const MessageInput = ({
     slowmodeSeconds,
     canMentionEveryone,
     canMentionRoles,
+    canUseExternalEmojis,
+    currentServer?.id,
   ]);
 
   const handlePaste = useCallback(
@@ -1497,14 +1511,14 @@ export const MessageInput = ({
         handleEmojiSelect={(emoji: string) => {
           // Block external custom emojis at insert time
           if (!canUseExternalEmojis) {
-            const customMatch = emoji.match(/^:([a-z0-9_]{2,12})(?:~.+)?:$/i);
-            if (customMatch) {
-              const emojiName = customMatch[1];
-              const localEmojis = serverEmojisForCheck;
-              if (!localEmojis.some((e: any) => e.name === emojiName)) {
-                toast.error("You don't have permission to use external emojis in this channel");
-                return;
-              }
+            const inlineCustomMatch = emoji.match(/^:ce\[([a-z0-9_]{2,12})\|([a-z0-9/_\.-]{1,300})\]:$/i);
+            const legacyCustomMatch = emoji.match(/^:([a-z0-9_]{2,12})(?:~.+)?:$/i);
+            const localEmojis = serverEmojisForCheck;
+            const isExternalInline = inlineCustomMatch && !localEmojis.some((e: any) => e.file_path === inlineCustomMatch[2]);
+            const isExternalLegacy = legacyCustomMatch && !localEmojis.some((e: any) => e.name === legacyCustomMatch[1]);
+            if (isExternalInline || isExternalLegacy) {
+              toast.error("You don't have permission to use external emojis in this channel");
+              return;
             }
           }
           const textarea = textareaRef.current;
