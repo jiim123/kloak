@@ -171,7 +171,7 @@ BEGIN
       AND bot_id = bot_record.id;
 
     IF flow_record.id IS NULL THEN
-      RAISE EXCEPTION 'Flow not found';
+      RAISE EXCEPTION 'Action not found';
     END IF;
 
     UPDATE public.server_bot_flows

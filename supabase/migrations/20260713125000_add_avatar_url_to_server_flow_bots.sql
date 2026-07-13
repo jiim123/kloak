@@ -1,4 +1,4 @@
--- Allow server flow bots to have editable profile names and avatars.
+-- Allow server action bots to have editable profile names and avatars.
 
 DROP FUNCTION IF EXISTS public.create_server_bot(uuid, uuid, text);
 DROP FUNCTION IF EXISTS public.update_server_bot(uuid, uuid, text, boolean);
@@ -140,7 +140,7 @@ BEGIN
   END IF;
 
   IF NOT public.check_user_server_permission(_user_id, _server_id, 'manage_webhooks'::public.permission_type) THEN
-    RAISE EXCEPTION 'You do not have permission to manage bots';
+    RAISE EXCEPTION 'You do not have permission to manage action bots';
   END IF;
 
   IF NOT public.check_rate_limit(_user_id::text, 'create_server_bot', 10, 3600) THEN
@@ -148,7 +148,7 @@ BEGIN
   END IF;
 
   IF clean_name = '' THEN
-    RAISE EXCEPTION 'Bot name is required';
+    RAISE EXCEPTION 'Action bot name is required';
   END IF;
 
   clean_avatar_url := public.validate_server_bot_avatar_url(clean_avatar_url);
@@ -233,7 +233,7 @@ BEGIN
   END IF;
 
   IF NOT public.check_user_server_permission(_user_id, bot_server_id, 'manage_webhooks'::public.permission_type) THEN
-    RAISE EXCEPTION 'You do not have permission to manage bots';
+    RAISE EXCEPTION 'You do not have permission to manage action bots';
   END IF;
 
   clean_name := NULLIF(left(trim(COALESCE(_name, '')), 32), '');

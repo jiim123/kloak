@@ -1,4 +1,4 @@
--- Queue-backed server Flow bots MVP.
+-- Queue-backed server Action bots MVP.
 --
 -- The user-facing chat/member write paths enqueue small event rows, run one
 -- bounded inline processing pass for low latency, and leave the same queue
@@ -521,11 +521,11 @@ BEGIN
   END IF;
 
   IF NOT public.check_user_server_permission(_user_id, _server_id, 'manage_webhooks'::public.permission_type) THEN
-    RAISE EXCEPTION 'You do not have permission to manage bots';
+    RAISE EXCEPTION 'You do not have permission to manage action bots';
   END IF;
 
   IF clean_name = '' THEN
-    RAISE EXCEPTION 'Bot name is required';
+    RAISE EXCEPTION 'Action bot name is required';
   END IF;
 
   clean_avatar_url := public.validate_server_bot_avatar_url(clean_avatar_url);
@@ -614,7 +614,7 @@ BEGIN
   END IF;
 
   IF NOT public.check_user_server_permission(_user_id, bot_server_id, 'manage_webhooks'::public.permission_type) THEN
-    RAISE EXCEPTION 'You do not have permission to manage bots';
+    RAISE EXCEPTION 'You do not have permission to manage action bots';
   END IF;
 
   clean_name := NULLIF(left(trim(COALESCE(_name, '')), 32), '');
@@ -660,7 +660,7 @@ BEGIN
   END IF;
 
   IF NOT public.check_user_server_permission(_user_id, bot_record.server_id, 'manage_webhooks'::public.permission_type) THEN
-    RAISE EXCEPTION 'You do not have permission to manage bots';
+    RAISE EXCEPTION 'You do not have permission to manage action bots';
   END IF;
 
   IF NOT public.check_rate_limit(_user_id::text, 'delete_server_bot', 20, 3600) THEN
@@ -725,7 +725,7 @@ BEGIN
   END IF;
 
   IF NOT public.check_user_server_permission(_user_id, bot_record.server_id, 'manage_webhooks'::public.permission_type) THEN
-    RAISE EXCEPTION 'You do not have permission to manage bots';
+    RAISE EXCEPTION 'You do not have permission to manage action bots';
   END IF;
 
   IF _trigger_type NOT IN ('member_joined', 'message_created') THEN
@@ -898,7 +898,7 @@ BEGIN
   END IF;
 
   IF NOT public.check_user_server_permission(_user_id, flow_server_id, 'manage_webhooks'::public.permission_type) THEN
-    RAISE EXCEPTION 'You do not have permission to manage bots';
+    RAISE EXCEPTION 'You do not have permission to manage action bots';
   END IF;
 
   DELETE FROM public.server_bot_flows

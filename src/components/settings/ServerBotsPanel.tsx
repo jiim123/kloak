@@ -32,6 +32,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { EmojiGifPicker } from "@/components/modals/EmojiGifPicker";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -81,6 +82,7 @@ type ServerBotFlow = {
   action_type: BotActionType;
   action_config: {
     channel_id?: string;
+    title?: string;
     content?: string;
     emoji?: string;
     role_id?: string;
@@ -125,14 +127,14 @@ type ServerBotsRpc = (
 type TriggerOption = {
   id: BotTriggerType;
   label: string;
-  category: "MEMBERSHIP" | "CHAT" | "CALENDAR" | "FORUM" | "LIST" | "MEDIA" | "ANNOUNCEMENT";
+  category: "MEMBERSHIP" | "CHAT" | "CALENDAR" | "FORUM" | "TASKS" | "MEDIA" | "ANNOUNCEMENT";
   description: string;
   icon: ComponentType<{ className?: string }>;
 };
 
 type ActionOption = {
   id: BotActionType;
-  category: "CHAT" | "MODERATION" | "MEMBERSHIP" | "FORUM" | "LIST";
+  category: "CHAT" | "MODERATION" | "MEMBERSHIP" | "FORUM" | "TASKS";
   label: string;
   description: string;
   icon: ComponentType<{ className?: string }>;
@@ -163,7 +165,7 @@ const getCategoryBadgeClass = (category?: string) => {
       return "border border-amber-400/30 bg-amber-500/15 text-amber-200";
     case "FORUM":
       return "border border-violet-400/30 bg-violet-500/15 text-violet-200";
-    case "LIST":
+    case "TASKS":
       return "border border-lime-400/30 bg-lime-500/15 text-lime-200";
     case "MEDIA":
       return "border border-rose-400/30 bg-rose-500/15 text-rose-200";
@@ -242,23 +244,23 @@ const TRIGGER_OPTIONS: TriggerOption[] = [
   },
   {
     id: "list_item_created",
-    label: "List item created",
-    category: "LIST",
-    description: "When a list item's content is created in a list channel",
+    label: "Task created",
+    category: "TASKS",
+    description: "When a task is created in a task channel",
     icon: ListChecks,
   },
   {
     id: "list_item_updated",
-    label: "List item updated",
-    category: "LIST",
-    description: "When a list item's content is updated in a list channel",
+    label: "Task updated",
+    category: "TASKS",
+    description: "When a task is updated in a task channel",
     icon: ListChecks,
   },
   {
     id: "list_item_deleted",
-    label: "List item deleted",
-    category: "LIST",
-    description: "When a list item's content is deleted in a list channel",
+    label: "Task deleted",
+    category: "TASKS",
+    description: "When a task is deleted in a task channel",
     icon: ListChecks,
   },
   {
@@ -317,21 +319,21 @@ const ACTION_OPTIONS: ActionOption[] = [
     id: "delete_message",
     category: "MODERATION",
     label: "Delete a message",
-    description: "Delete the message that triggered this flow",
+    description: "Delete the message that triggered this action",
     icon: MessageSquareX,
   },
   {
     id: "add_reaction",
     category: "CHAT",
     label: "Add a reaction",
-    description: "Add a reaction emoji to the message that triggered this flow",
+    description: "Add a reaction emoji to the message that triggered this action",
     icon: SmilePlus,
   },
   {
     id: "assign_role",
     category: "MEMBERSHIP",
     label: "Assign role",
-    description: "Assign a role to the user that triggered this flow",
+    description: "Assign a role to the user that triggered this action",
     icon: ShieldPlus,
   },
   {
@@ -343,16 +345,16 @@ const ACTION_OPTIONS: ActionOption[] = [
   },
   {
     id: "create_list_item",
-    category: "LIST",
-    label: "Create a list item",
-    description: "Create a list item in a list channel",
+    category: "TASKS",
+    label: "Create a task",
+    description: "Create a task in a task channel",
     icon: ListPlus,
   },
   {
     id: "remove_role",
     category: "MEMBERSHIP",
     label: "Remove role",
-    description: "Remove a role from the user that triggered this flow",
+    description: "Remove a role from the user that triggered this action",
     icon: ShieldMinus,
   },
 ];
@@ -377,9 +379,9 @@ const DEFAULT_ACTION_CONTENT_BY_TRIGGER: Record<BotTriggerType, string> = {
   forum_topic_created: "New forum topic in {channel}: {item}.",
   forum_topic_updated: "Forum topic updated in {channel}: {item}.",
   forum_topic_deleted: "Forum topic deleted in {channel}: {item}.",
-  list_item_created: "New list item in {channel}: {item}.",
-  list_item_updated: "List item updated in {channel}: {item}.",
-  list_item_deleted: "List item deleted in {channel}: {item}.",
+  list_item_created: "New task in {channel}: {item}.",
+  list_item_updated: "Task updated in {channel}: {item}.",
+  list_item_deleted: "Task deleted in {channel}: {item}.",
   media_created: "New media in {channel}: {item}.",
   media_updated: "Media updated in {channel}: {item}.",
   media_deleted: "Media deleted in {channel}: {item}.",
@@ -389,6 +391,7 @@ const DEFAULT_ACTION_CONTENT_BY_TRIGGER: Record<BotTriggerType, string> = {
 };
 
 const ALL_CHANNELS_VALUE = "all";
+const MAX_SERVER_BOTS = 2;
 const ANY_ROLE_VALUE = "any";
 const ANY_EMOJI_VALUE = "any";
 const CUSTOM_EMOJI_VALUE = "custom";
@@ -428,6 +431,14 @@ const triggerProvidesSourceMessage = (trigger: BotTriggerType) =>
   trigger === "announcement_created" ||
   trigger === "announcement_updated" ||
   trigger === "announcement_deleted";
+const triggerProvidesContent = (trigger: BotTriggerType) =>
+  triggerProvidesSourceMessage(trigger) ||
+  trigger === "list_item_created" ||
+  trigger === "list_item_updated" ||
+  trigger === "list_item_deleted" ||
+  trigger === "media_created" ||
+  trigger === "media_updated" ||
+  trigger === "media_deleted";
 const getActionChannelTypes = (action: BotActionType): Channel["type"][] => {
   switch (action) {
     case "send_channel_message":
@@ -449,7 +460,7 @@ const getTriggerChannelTypes = (trigger: BotTriggerType): Channel["type"][] => {
       return ["calendar"];
     case "FORUM":
       return ["forum"];
-    case "LIST":
+    case "TASKS":
       return ["tasks"];
     case "MEDIA":
       return ["media"];
@@ -472,6 +483,15 @@ const getTemplateVarsForTrigger = (trigger: BotTriggerType) => {
 
   if (getTriggerOption(trigger).category !== "CHAT" && trigger !== "member_joined") {
     vars.push({ token: "{item}", description: "Event, topic, item, media, or announcement title" });
+    vars.push({ token: "{title}", description: "Same as item title" });
+  }
+
+  if (triggerProvidesSourceMessage(trigger)) {
+    vars.push({ token: "{message}", description: "Source message text" });
+  }
+
+  if (triggerProvidesContent(trigger)) {
+    vars.push({ token: "{content}", description: "Source content or description" });
   }
 
   if (trigger === "reaction_added") {
@@ -573,7 +593,7 @@ export const ServerBotsPanel = ({
   const [isSaving, setIsSaving] = useState(false);
   const [view, setView] = useState<"list" | "detail">("list");
   const [selectedBotId, setSelectedBotId] = useState<string | null>(null);
-  const [createName, setCreateName] = useState("Test Bot");
+  const [createName, setCreateName] = useState("Action Bot");
   const [createAvatarFile, setCreateAvatarFile] = useState<File | null>(null);
   const [createAvatarPreview, setCreateAvatarPreview] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -598,6 +618,7 @@ export const ServerBotsPanel = ({
   const [draftContentMatchType, setDraftContentMatchType] = useState<ContentMatchType>("contains");
   const [draftContentMatchValue, setDraftContentMatchValue] = useState("");
   const [draftChannelId, setDraftChannelId] = useState("");
+  const [draftForumTopicTitle, setDraftForumTopicTitle] = useState("");
   const [draftContent, setDraftContent] = useState(DEFAULT_ACTION_CONTENT_BY_TRIGGER.member_joined);
   const [draftActionEmojiMode, setDraftActionEmojiMode] = useState(DEFAULT_REACTION_EMOJI);
   const [draftActionEmoji, setDraftActionEmoji] = useState("👍");
@@ -728,7 +749,7 @@ export const ServerBotsPanel = ({
   }, [draftTrigger, draftTriggerChannelId, triggerChannels]);
 
   const resetCreateBotForm = () => {
-    setCreateName("Test Bot");
+    setCreateName("Action Bot");
     setCreateAvatarFile(null);
     setCreateAvatarPreview(null);
   };
@@ -758,9 +779,10 @@ export const ServerBotsPanel = ({
   };
 
   const createBot = async (name = createName) => {
-    if (!canManageBots) return toast.error("You do not have permission to manage bots");
+    if (!canManageBots) return toast.error("You do not have permission to manage action bots");
+    if (bots.length >= MAX_SERVER_BOTS) return toast.error(`Servers can have up to ${MAX_SERVER_BOTS} action bots for now`);
     const cleanName = name.trim();
-    if (!cleanName) return toast.error("Bot name is required");
+    if (!cleanName) return toast.error("Action bot name is required");
 
     setIsSaving(true);
     try {
@@ -772,7 +794,7 @@ export const ServerBotsPanel = ({
         _avatar_url: avatarUrl,
       });
       if (error) throw error;
-      toast.success("Bot created");
+      toast.success("Action bot created");
       setIsCreateOpen(false);
       resetCreateBotForm();
       await loadBots();
@@ -785,7 +807,7 @@ export const ServerBotsPanel = ({
   };
 
   const updateBot = async (bot: ServerBot, updates: { name?: string; is_enabled?: boolean; avatar_url?: string | null }) => {
-    if (!canManageBots) return toast.error("You do not have permission to manage bots");
+    if (!canManageBots) return toast.error("You do not have permission to manage action bots");
     const previous = bots;
     setBots((current) =>
       current.map((item) =>
@@ -837,7 +859,7 @@ export const ServerBotsPanel = ({
     const bot = bots.find((item) => item.id === editingProfileBotId);
     if (!bot) return;
     const cleanName = editingProfileName.trim();
-    if (!cleanName) return toast.error("Bot name is required");
+    if (!cleanName) return toast.error("Action bot name is required");
 
     setIsSaving(true);
     try {
@@ -852,17 +874,17 @@ export const ServerBotsPanel = ({
       if (error) throw error;
       await loadBots();
       await fetchMembers(serverId, { force: true });
-      toast.success("Bot profile updated");
+      toast.success("Action bot profile updated");
       closeEditBotProfile();
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error, "Failed to update bot profile"));
+      toast.error(getErrorMessage(error, "Failed to update action bot profile"));
     } finally {
       setIsSaving(false);
     }
   };
 
   const deleteBot = async (bot: ServerBot) => {
-    if (!canManageBots) return toast.error("You do not have permission to manage bots");
+    if (!canManageBots) return toast.error("You do not have permission to manage action bots");
     setIsSaving(true);
     try {
       const { error } = await serverBotsRpc("delete_server_bot", {
@@ -870,7 +892,7 @@ export const ServerBotsPanel = ({
         _user_id: userId,
       });
       if (error) throw error;
-      toast.success("Bot deleted");
+      toast.success("Action bot deleted");
       await loadBots();
       await fetchMembers(serverId, { force: true });
     } catch (error: unknown) {
@@ -878,6 +900,14 @@ export const ServerBotsPanel = ({
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const openCreateBotModal = () => {
+    if (bots.length >= MAX_SERVER_BOTS) {
+      toast.error(`Servers can have up to ${MAX_SERVER_BOTS} action bots for now`);
+      return;
+    }
+    setIsCreateOpen(true);
   };
 
   const openFlowBuilder = (flow?: ServerBotFlow) => {
@@ -889,6 +919,10 @@ export const ServerBotsPanel = ({
     const triggerRoleId = typeof triggerConfig.role_id === "string" ? triggerConfig.role_id : ANY_ROLE_VALUE;
     const triggerEmoji = typeof triggerConfig.emoji === "string" ? triggerConfig.emoji : "";
     const actionEmoji = actionConfig.emoji ?? DEFAULT_REACTION_EMOJI;
+    const forumTopicTitle =
+      actionType === "create_forum_topic"
+        ? actionConfig.title ?? actionConfig.content ?? DEFAULT_ACTION_CONTENT_BY_ACTION.create_forum_topic
+        : "";
     const contentMatchType =
       triggerConfig.content_match_type === "any" ||
       triggerConfig.content_match_type === "contains" ||
@@ -910,6 +944,7 @@ export const ServerBotsPanel = ({
     setDraftContentMatchType(contentMatchType);
     setDraftContentMatchValue(contentMatchValue);
     setDraftChannelId(actionConfig.channel_id ?? textChannels[0]?.id ?? "");
+    setDraftForumTopicTitle(forumTopicTitle);
     setDraftContent(actionConfig.content ?? DEFAULT_ACTION_CONTENT_BY_TRIGGER[triggerType]);
     setDraftActionEmojiMode(getEmojiModeForValue(actionEmoji, DEFAULT_REACTION_EMOJI));
     setDraftActionEmoji(actionConfig.emoji ?? "👍");
@@ -928,7 +963,10 @@ export const ServerBotsPanel = ({
     if (!isTriggerConfigured) return toast.error("Add a trigger first");
     if (!isActionConfigured) return toast.error("Add an action first");
     if (actionNeedsChannel(draftAction) && !draftChannelId) return toast.error("Choose a channel for the action");
-    if (actionNeedsMessage(draftAction) && !draftContent.trim()) return toast.error("Add text for the action");
+    if (draftAction === "create_forum_topic" && !draftForumTopicTitle.trim()) return toast.error("Add a topic title");
+    if (draftAction !== "create_forum_topic" && actionNeedsMessage(draftAction) && !draftContent.trim()) {
+      return toast.error("Add text for the action");
+    }
     if (draftTrigger === "reaction_added" && draftTriggerEmojiMode === CUSTOM_EMOJI_VALUE && !draftTriggerEmoji.trim()) {
       return toast.error("Add an emoji for the trigger filter");
     }
@@ -958,6 +996,7 @@ export const ServerBotsPanel = ({
         _action_type: draftAction,
         _action_config: {
           channel_id: actionNeedsChannel(draftAction) ? draftChannelId : null,
+          title: draftAction === "create_forum_topic" ? draftForumTopicTitle.trim() : null,
           content: actionNeedsMessage(draftAction) ? draftContent.trim() : null,
           emoji: draftAction === "add_reaction" ? draftActionEmoji.trim() : null,
           role_id: actionNeedsRole(draftAction) ? draftActionRoleId : null,
@@ -966,13 +1005,13 @@ export const ServerBotsPanel = ({
         _cooldown_seconds: Number.parseInt(draftCooldown, 10) || 10,
       });
       if (error) throw error;
-      toast.success(editingFlowId ? "Flow updated" : "Flow added");
+      toast.success(editingFlowId ? "Action updated" : "Action added");
       setIsFlowOpen(false);
       setEditingFlowId(null);
       setFlowBuilderStep("overview");
       await loadBots();
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error, "Failed to save flow"));
+      toast.error(getErrorMessage(error, "Failed to save action"));
     } finally {
       setIsSaving(false);
     }
@@ -986,10 +1025,10 @@ export const ServerBotsPanel = ({
         _user_id: userId,
       });
       if (error) throw error;
-      toast.success("Flow deleted");
+      toast.success("Action deleted");
       await loadBots();
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error, "Failed to delete flow"));
+      toast.error(getErrorMessage(error, "Failed to delete action"));
     } finally {
       setIsSaving(false);
     }
@@ -1014,7 +1053,7 @@ export const ServerBotsPanel = ({
       if (error) throw error;
       await loadBots();
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error, "Failed to update flow"));
+      toast.error(getErrorMessage(error, "Failed to update action"));
     } finally {
       setIsSaving(false);
     }
@@ -1042,7 +1081,11 @@ export const ServerBotsPanel = ({
   const selectAction = (action: BotActionType) => {
     setDraftAction(action);
     if (!isActionConfigured) {
-      const nextContent = DEFAULT_ACTION_CONTENT_BY_ACTION[action] || DEFAULT_ACTION_CONTENT_BY_TRIGGER[draftTrigger];
+      const nextContent =
+        action === "create_forum_topic"
+          ? DEFAULT_ACTION_CONTENT_BY_TRIGGER[draftTrigger]
+          : DEFAULT_ACTION_CONTENT_BY_ACTION[action] || DEFAULT_ACTION_CONTENT_BY_TRIGGER[draftTrigger];
+      setDraftForumTopicTitle(action === "create_forum_topic" ? DEFAULT_ACTION_CONTENT_BY_ACTION.create_forum_topic : "");
       setDraftContent(nextContent);
     }
     if (action !== "add_reaction") setDraftActionEmoji("👍");
@@ -1074,8 +1117,8 @@ export const ServerBotsPanel = ({
           : flowBuilderStep === "action-details"
             ? "Action details"
             : editingFlowId
-              ? "Edit flow"
-              : "Add a flow";
+              ? "Edit action"
+              : "Add an action";
 
   const canGoBackInFlow =
     flowBuilderStep === "trigger-picker" ||
@@ -1112,37 +1155,37 @@ export const ServerBotsPanel = ({
 
   if (!canManageBots) {
     return (
-      <div className="flex max-w-3xl flex-col items-center justify-center py-14 text-center">
+      <div className="flex w-full flex-col items-center justify-center py-14 text-center">
         <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-secondary/60">
           <Bot className="h-5 w-5 text-muted-foreground" />
         </div>
-        <p className="text-sm text-muted-foreground">You do not have permission to manage bots</p>
+        <p className="text-sm text-muted-foreground">You do not have permission to manage action bots</p>
       </div>
     );
   }
 
   if (view === "detail" && selectedBot) {
     return (
-      <div className="max-w-4xl">
+      <div className="w-full">
         <button
           type="button"
           onClick={() => setView("list")}
           className="mb-6 flex items-center gap-2 text-sm font-medium text-foreground hover:text-foreground/80"
         >
           <ArrowLeft className="h-4 w-4" />
-          Create bot
+          Action bots
         </button>
 
           <div className="mb-7 flex items-center gap-4">
             <BotAvatar name={selectedBot.name} avatarUrl={selectedBot.avatar_url} className="h-16 w-16 shrink-0" iconClassName="h-7 w-7" />
             <div className="min-w-0">
-              <Label className="text-[10px] font-semibold leading-none text-muted-foreground">Bot</Label>
+              <Label className="text-[10px] font-semibold leading-none text-muted-foreground">Action bot</Label>
               <div className="mt-1 truncate text-lg font-medium leading-6 text-foreground">{selectedBot.name}</div>
             </div>
           </div>
 
         <div className="mb-4 flex items-center justify-between border-t border-border pt-5">
-          <h3 className="text-sm font-medium text-foreground">Flows</h3>
+          <h3 className="text-sm font-medium text-foreground">Actions</h3>
           <Button
             type="button"
             size="sm"
@@ -1155,7 +1198,7 @@ export const ServerBotsPanel = ({
         </div>
 
         {selectedBot.flows.length > 0 ? (
-          <div className="max-w-3xl space-y-2">
+          <div className="w-full space-y-2">
             {selectedBot.flows.map((flow) => {
               const trigger = getTriggerOption(flow.trigger_type);
               const action = getActionOption(flow.action_type);
@@ -1198,7 +1241,17 @@ export const ServerBotsPanel = ({
                         <FlowIcon type={flow.trigger_type} />
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate text-xs font-semibold leading-4 text-foreground">{trigger.label}</p>
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span
+                            className={cn(
+                              "inline-flex shrink-0 rounded-[3px] px-1.5 py-0.5 text-[9px] font-bold leading-none tracking-wide",
+                              getCategoryBadgeClass(trigger.category),
+                            )}
+                          >
+                            {trigger.category}
+                          </span>
+                          <p className="truncate text-xs font-semibold leading-4 text-foreground">{trigger.label}</p>
+                        </div>
                         <p className="truncate text-[11px] leading-4 text-muted-foreground">{triggerDescription}</p>
                       </div>
                     </div>
@@ -1210,8 +1263,18 @@ export const ServerBotsPanel = ({
                         <FlowIcon type={flow.action_type} />
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate text-xs font-semibold leading-4 text-foreground">{action.label}</p>
-                         <p className="truncate text-[11px] leading-4 text-muted-foreground">{actionDetailLabel}</p>
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span
+                            className={cn(
+                              "inline-flex shrink-0 rounded-[3px] px-1.5 py-0.5 text-[9px] font-bold leading-none tracking-wide",
+                              getCategoryBadgeClass(action.category),
+                            )}
+                          >
+                            {action.category}
+                          </span>
+                          <p className="truncate text-xs font-semibold leading-4 text-foreground">{action.label}</p>
+                        </div>
+                        <p className="truncate text-[11px] leading-4 text-muted-foreground">{actionDetailLabel}</p>
                       </div>
                     </div>
                   </div>
@@ -1231,12 +1294,12 @@ export const ServerBotsPanel = ({
                     <DropdownMenuContent align="end" className="w-56">
                       <DropdownMenuItem onClick={() => openFlowBuilder(flow)}>
                         <Pencil className="mr-2 h-4 w-4" />
-                        Edit flow
+                        Edit action
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => deleteFlow(flow)}>
                         <Trash2 className="mr-2 h-4 w-4" />
-                        Delete flow
+                        Delete action
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -1249,15 +1312,15 @@ export const ServerBotsPanel = ({
             <div className="mb-3 flex h-20 w-20 items-center justify-center text-muted-foreground/60">
               <Wand2 className="h-16 w-16" />
             </div>
-            <p className="text-sm font-medium text-foreground">No flows yet</p>
-            <p className="mt-1 text-xs text-muted-foreground">Add a flow to put your bot to work</p>
+            <p className="text-sm font-medium text-foreground">No actions yet</p>
+            <p className="mt-1 text-xs text-muted-foreground">Add an action to put your bot to work</p>
             <Button
               type="button"
               size="sm"
               onClick={() => openFlowBuilder()}
               className="mt-4 h-8 rounded-[3px] px-4 text-xs"
             >
-              Add a flow
+              Add an action
             </Button>
           </div>
         )}
@@ -1610,10 +1673,49 @@ export const ServerBotsPanel = ({
                     </div>
                   )}
 
-                  {actionNeedsMessage(draftAction) && (
+                  {draftAction === "create_forum_topic" && (
+                    <div className="space-y-4">
+                      <div>
+                        <Label className={BOT_MODAL_LABEL_CLASS}>Topic title</Label>
+                        <Input
+                          value={draftForumTopicTitle}
+                          onChange={(event) => setDraftForumTopicTitle(event.target.value.slice(0, 120))}
+                          maxLength={120}
+                          className={BOT_MODAL_INPUT_CLASS}
+                        />
+                      </div>
+                      <div>
+                        <Label className={BOT_MODAL_LABEL_CLASS}>Topic description</Label>
+                        <Textarea
+                          value={draftContent}
+                          onChange={(event) => setDraftContent(event.target.value.slice(0, 2000))}
+                          maxLength={2000}
+                          className="mt-2 min-h-[104px] resize-none rounded-[3px] border-border bg-card px-3 py-2 text-sm text-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
+                        />
+                      </div>
+                      <div className="rounded-[4px] border border-border bg-secondary/25 px-3 py-2">
+                        <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          Template variables
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {templateVars.map((item) => (
+                            <span
+                              key={item.token}
+                              title={item.description}
+                              className="inline-flex items-center rounded-[3px] border border-border bg-card px-2 py-1 text-[11px] font-medium text-foreground"
+                            >
+                              {item.token}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {actionNeedsMessage(draftAction) && draftAction !== "create_forum_topic" && (
                     <div>
                       <Label className={BOT_MODAL_LABEL_CLASS}>
-                        {draftAction === "create_forum_topic" ? "Topic" : draftAction === "create_list_item" ? "Item" : "Message"}
+                        {draftAction === "create_forum_topic" ? "Topic" : draftAction === "create_list_item" ? "Task" : "Message"}
                       </Label>
                       <Input
                         value={draftContent}
@@ -1730,12 +1832,13 @@ export const ServerBotsPanel = ({
                         !draftTriggerEmoji.trim()) ||
                       (actionNeedsSourceMessage(draftAction) && !triggerProvidesSourceMessage(draftTrigger)) ||
                       (draftAction === "add_reaction" && !draftActionEmoji.trim()) ||
+                      (draftAction === "create_forum_topic" && !draftForumTopicTitle.trim()) ||
                       (actionNeedsRole(draftAction) && !draftActionRoleId)
                     }
                     className={BOT_MODAL_PRIMARY_BUTTON_CLASS}
                   >
                     {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {editingFlowId ? "Save changes" : "Save flow"}
+                    {editingFlowId ? "Save changes" : "Save action"}
                   </Button>
                 )}
                 {flowBuilderStep === "trigger-details" && (
@@ -1770,6 +1873,10 @@ export const ServerBotsPanel = ({
                         toast.error("Add an emoji for the action");
                         return;
                       }
+                      if (draftAction === "create_forum_topic" && !draftForumTopicTitle.trim()) {
+                        toast.error("Add a topic title");
+                        return;
+                      }
                       setIsActionConfigured(true);
                       setFlowBuilderStep("overview");
                     }}
@@ -1787,7 +1894,7 @@ export const ServerBotsPanel = ({
   }
 
   return (
-    <div className="max-w-3xl text-foreground">
+    <div className="w-full text-foreground">
       <div className="mb-5 border-b border-border pb-5">
         <div className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
@@ -1795,7 +1902,7 @@ export const ServerBotsPanel = ({
               <Bot className="h-5 w-5 text-muted-foreground" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-xl font-medium leading-6">Bots</h2>
+              <h2 className="text-xl font-medium leading-6">Action Bots</h2>
               <p className="mt-1 max-w-xl text-sm text-muted-foreground">
                 Automate server activity with custom triggers and actions.
               </p>
@@ -1805,11 +1912,13 @@ export const ServerBotsPanel = ({
             type="button"
             size="sm"
             variant="outline"
-            onClick={() => setIsCreateOpen(true)}
+            onClick={openCreateBotModal}
+            disabled={bots.length >= MAX_SERVER_BOTS}
+            title={bots.length >= MAX_SERVER_BOTS ? `Servers can have up to ${MAX_SERVER_BOTS} action bots for now` : "Create action bot"}
             className="h-8 shrink-0 rounded-[3px] px-4 text-xs"
           >
             <Plus className="mr-2 h-3.5 w-3.5" />
-            Create bot
+            Create action bot
           </Button>
         </div>
       </div>
@@ -1819,20 +1928,25 @@ export const ServerBotsPanel = ({
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
       ) : bots.length > 0 ? (
-        <div className="mb-7">
+        <div className="mb-7 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {bots.map((bot) => (
-            <div key={bot.id} className="flex items-center gap-3 border-b border-border/50 py-3 last:border-b-0">
-              <BotAvatar name={bot.name} avatarUrl={bot.avatar_url} className="h-11 w-11" iconClassName="h-5 w-5" />
+            <div
+              key={bot.id}
+              className="flex min-w-0 items-center gap-3 rounded-[4px] border border-border bg-secondary/25 px-3 py-3"
+            >
               <button
                 type="button"
-                className="min-w-0 flex-1 text-left"
+                className="flex min-w-0 flex-1 items-center gap-3 text-left"
                 onClick={() => {
                   setSelectedBotId(bot.id);
                   setView("detail");
                 }}
               >
-                <p className="truncate text-sm font-medium text-foreground">{bot.name}</p>
-                <p className="truncate text-xs text-muted-foreground">{bot.flows.length} flow{bot.flows.length === 1 ? "" : "s"}</p>
+                <BotAvatar name={bot.name} avatarUrl={bot.avatar_url} className="h-11 w-11 shrink-0" iconClassName="h-5 w-5" />
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-medium text-foreground">{bot.name}</span>
+                  <span className="block truncate text-xs text-muted-foreground">{bot.flows.length} action{bot.flows.length === 1 ? "" : "s"}</span>
+                </span>
               </button>
               <Switch checked={bot.is_enabled} onCheckedChange={(checked) => updateBot(bot, { is_enabled: checked })} />
               <DropdownMenu>
@@ -1869,13 +1983,18 @@ export const ServerBotsPanel = ({
         </div>
       ) : (
         <div className="mb-7 flex h-20 items-center justify-center rounded-lg border border-border bg-secondary/20 text-sm text-muted-foreground">
-          No bots yet
+          No action bots yet
         </div>
       )}
 
       <Dialog
         open={isCreateOpen}
         onOpenChange={(open) => {
+          if (open && bots.length >= MAX_SERVER_BOTS) {
+            toast.error(`Servers can have up to ${MAX_SERVER_BOTS} action bots for now`);
+            setIsCreateOpen(false);
+            return;
+          }
           setIsCreateOpen(open);
           if (!open) resetCreateBotForm();
         }}
@@ -1889,7 +2008,7 @@ export const ServerBotsPanel = ({
             className="flex max-h-[82vh] flex-col overflow-hidden"
           >
             <div className="border-b border-border bg-secondary/40 px-5 py-3">
-              <div className="text-base font-medium leading-none tracking-tight">Create bot</div>
+              <div className="text-base font-medium leading-none tracking-tight">Create action bot</div>
             </div>
 
             <div className="space-y-5 overflow-y-auto px-6 py-4">
@@ -1902,7 +2021,7 @@ export const ServerBotsPanel = ({
 
               <div>
                 <Label htmlFor="bot-name" className={BOT_MODAL_LABEL_CLASS}>
-                  Bot name
+                  Action bot name
                 </Label>
                 <Input
                   id="bot-name"
@@ -1961,7 +2080,7 @@ export const ServerBotsPanel = ({
 
               <div>
                 <Label htmlFor="edit-bot-name" className={BOT_MODAL_LABEL_CLASS}>
-                  Bot name
+                  Action bot name
                 </Label>
                 <Input
                   id="edit-bot-name"

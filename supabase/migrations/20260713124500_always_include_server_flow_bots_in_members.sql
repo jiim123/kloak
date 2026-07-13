@@ -1,4 +1,4 @@
--- Server flow bots should remain visible in the member sidebar until the bot is
+-- Server action bots should remain visible in the member sidebar until the bot is
 -- deleted, even though they do not emit normal presence heartbeats.
 
 CREATE OR REPLACE FUNCTION public.get_server_members(_server_id uuid)

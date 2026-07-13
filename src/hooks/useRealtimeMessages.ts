@@ -14,6 +14,10 @@ const CHANNEL_SUBSCRIBE_CATCHUP_MAX_AGE_MS = 5 * 60_000;
 const MIN_CATCHUP_FETCH_GAP_MS = 30_000;
 const BROADCAST_RESYNC_INTERVAL_MS = 12_000;
 const MIN_BROADCAST_RESYNC_GAP_MS = 6_000;
+const ACTIVE_CHANNEL_CATCHUP_INTERVAL_MS = 10_000;
+const MIN_ACTIVE_CHANNEL_CATCHUP_GAP_MS = 10_000;
+const ACTIVE_CHANNEL_CATCHUP_IDLE_MS = 8_000;
+const ACTIVE_CHANNEL_CATCHUP_LIMIT = 20;
 const REPLY_HYDRATION_BATCH_DELAY_MS = 80;
 const MAX_REACTION_ID_CACHE_SIZE = 5000;
 
@@ -84,6 +88,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
   const lastCatchupFetchAtRef = useRef<number>(0);
   const isSubscribedRef = useRef(false);
   const lastBroadcastResyncAtRef = useRef<number>(0);
+  const lastActiveCatchupAtRef = useRef<number>(0);
   const listenerScopeRef = useRef(`messages-${Math.random().toString(36).slice(2)}`);
   const pendingReplyIdsRef = useRef(new Set<string>());
   const replyHydrationTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -758,6 +763,8 @@ export const useRealtimeMessages = (channelId: string | null) => {
     };
 
     setupSubscription();
+    const pendingReplyIds = pendingReplyIdsRef.current;
+    const reactionMessageIdByReactionId = reactionMessageIdByReactionIdRef.current;
 
     // Single bounded fallback sync: run only when subscription is unhealthy.
     const broadcastResyncInterval = setInterval(() => {
@@ -776,6 +783,26 @@ export const useRealtimeMessages = (channelId: string | null) => {
 
       void store.fetchMessages(channelId, 20, undefined, true, hasCached, true).catch(() => undefined);
     }, BROADCAST_RESYNC_INTERVAL_MS);
+
+    // Safety net for missed broadcasts while the subscription still reports as
+    // healthy. This keeps active bot/system inserts visible even when Realtime
+    // silently drops a broadcast event.
+    const activeChannelCatchupInterval = setInterval(() => {
+      if (!isActive) return;
+      if (document.visibilityState !== 'visible') return;
+      if (!isSubscribedRef.current) return;
+
+      const now = Date.now();
+      if (now - lastEventAtRef.current < ACTIVE_CHANNEL_CATCHUP_IDLE_MS) return;
+      if (now - lastActiveCatchupAtRef.current < MIN_ACTIVE_CHANNEL_CATCHUP_GAP_MS) return;
+      lastActiveCatchupAtRef.current = now;
+
+      const store = useMessageStore.getState();
+      const hasCached = (store.messagesByChannel[channelId]?.messages.length ?? 0) > 0;
+      void store
+        .fetchMessages(channelId, ACTIVE_CHANNEL_CATCHUP_LIMIT, undefined, true, hasCached, true)
+        .catch(() => undefined);
+    }, ACTIVE_CHANNEL_CATCHUP_INTERVAL_MS);
 
     // Handle visibility changes to ensure subscription stays active
     const handleVisibilityChange = () => {
@@ -820,10 +847,11 @@ export const useRealtimeMessages = (channelId: string | null) => {
         clearTimeout(replyHydrationTimerRef.current);
         replyHydrationTimerRef.current = null;
       }
-      pendingReplyIdsRef.current.clear();
+      pendingReplyIds.clear();
       replyHydrationInFlightRef.current = false;
-      reactionMessageIdByReactionIdRef.current.clear();
+      reactionMessageIdByReactionId.clear();
       clearInterval(broadcastResyncInterval);
+      clearInterval(activeChannelCatchupInterval);
       if (channel) {
         try {
           removeScopedBindings(channel);
