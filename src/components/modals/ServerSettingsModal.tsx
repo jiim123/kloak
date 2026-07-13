@@ -9,6 +9,7 @@ import {
   Trash2,
   Users,
   Settings,
+  Bot,
   Ban,
   Crown,
   Shield,
@@ -71,6 +72,7 @@ import { RoleColorPicker } from "./RoleColorPicker";
 import { RoleIconPreview } from "@/components/ui/role-icon-preview";
 import { EmojiGifPicker } from "./EmojiGifPicker";
 import { DockNavigation } from "@/components/ui/dock-navigation";
+import { ServerBotsPanel } from "@/components/settings/ServerBotsPanel";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -238,7 +240,7 @@ export const ServerSettingsModal = () => {
   const isMobile = useIsMobile();
   const checkModLimit = useRateLimit(10, 30_000);
 
-  type SettingsTabId = "overview" | "members" | "roles" | "bans" | "invites" | "emojis" | "integrations" | "danger";
+  type SettingsTabId = "overview" | "members" | "roles" | "bans" | "invites" | "emojis" | "integrations" | "bots" | "danger";
 
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -512,6 +514,7 @@ export const ServerSettingsModal = () => {
   const canManageEmojis = hasPermission("manage_emojis");
   // For backward compatibility and specific checks
   const isOwner = !!user && !!server && server.owner_id === user.id;
+  const canManageBots = isOwner || hasPermission("manage_webhooks");
   const isAdmin = canManageServer || canManageRoles || canManageChannels;
   const canPublishServer = server?.can_publish !== false;
 
@@ -567,10 +570,13 @@ export const ServerSettingsModal = () => {
     }
 
     // Integrations category
-    if (canManageInvites || canManageChannels) {
+    if (canManageInvites || canManageChannels || canManageBots) {
       const integrationItems: Array<{ id: SettingsTabId; label: string; icon: LucideIcon }> = [];
       if (canManageChannels) {
         integrationItems.push({ id: "integrations", label: "Integrations", icon: Download });
+      }
+      if (canManageBots) {
+        integrationItems.push({ id: "bots", label: "Bots", icon: Bot });
       }
       if (canManageInvites) {
         integrationItems.push({ id: "invites", label: "Invites", icon: Link2 });
@@ -589,7 +595,7 @@ export const ServerSettingsModal = () => {
     }
 
     return categories;
-  }, [canManageChannels, canManageEmojis, canManageInvites, isOwner]);
+  }, [canManageBots, canManageChannels, canManageEmojis, canManageInvites, isOwner]);
 
   // Flattened navItems for backward compatibility (used in mobile view)
   const navItems = useMemo(() => {
@@ -1934,6 +1940,7 @@ export const ServerSettingsModal = () => {
                   {activeTab === "invites" && "Manage invite links"}
                   {activeTab === "emojis" && "Manage custom emojis"}
                   {activeTab === "integrations" && "Connect external services"}
+                  {activeTab === "bots" && "Automate server actions"}
                   {activeTab === "danger" && "Destructive server actions"}
                 </p>
               </div>
@@ -2102,6 +2109,16 @@ export const ServerSettingsModal = () => {
               )}
 
               {activeTab === "integrations" && integrationsContent}
+
+              {activeTab === "bots" && user && server && (
+                <ServerBotsPanel
+                  serverId={server.id}
+                  userId={user.id}
+                  channels={channels}
+                  roles={roles}
+                  canManageBots={canManageBots}
+                />
+              )}
 
               {activeTab === "danger" && dangerContent}
 
@@ -3184,6 +3201,16 @@ export const ServerSettingsModal = () => {
                 )}
 
                 {activeTab === "integrations" && integrationsContent}
+
+                {activeTab === "bots" && user && server && (
+                  <ServerBotsPanel
+                    serverId={server.id}
+                    userId={user.id}
+                    channels={channels}
+                    roles={roles}
+                    canManageBots={canManageBots}
+                  />
+                )}
 
                 {activeTab === "danger" && dangerContent}
 
