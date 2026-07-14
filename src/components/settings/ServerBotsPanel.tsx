@@ -84,6 +84,9 @@ type ServerBotFlow = {
     channel_id?: string;
     title?: string;
     content?: string;
+    message_mode?: MessageSendMode;
+    reply_mode?: MessageReplyMode;
+    messages?: string[];
     emoji?: string;
     role_id?: string;
   };
@@ -110,6 +113,8 @@ type ServerBot = {
 };
 
 type ContentMatchType = "any" | "contains" | "exact";
+type MessageSendMode = "static" | "random";
+type MessageReplyMode = "normal" | "reply";
 
 type ServerBotsRpcName =
   | "get_server_bots"
@@ -401,7 +406,9 @@ const MAX_BOT_FLOWS = 20;
 const ANY_ROLE_VALUE = "any";
 const ANY_EMOJI_VALUE = "any";
 const CUSTOM_EMOJI_VALUE = "custom";
-const DEFAULT_REACTION_EMOJI = "👍";
+const DEFAULT_REACTION_EMOJI = "\u{1F44D}";
+const DEFAULT_MESSAGE_SEND_MODE: MessageSendMode = "static";
+const DEFAULT_MESSAGE_REPLY_MODE: MessageReplyMode = "normal";
 
 const BOT_MODAL_CONTENT_CLASS =
   "max-h-[90vh] max-w-[calc(100vw-1.5rem)] gap-0 overflow-hidden rounded-[4px] border border-border bg-card p-0 text-foreground shadow-2xl sm:max-w-[448px]";
@@ -541,6 +548,12 @@ const getActionContentLabel = (action: BotActionType) => {
   }
 };
 const getActionContentMaxLength = (action: BotActionType) => (action === "create_list_item" ? 120 : 2000);
+const normalizeRandomMessages = (value: string) =>
+  value
+    .split(/\r?\n/)
+    .map((message) => message.trim().slice(0, 2000))
+    .filter(Boolean)
+    .slice(0, 25);
 const getSourceMessageActionText = (action: BotActionType, trigger: BotTriggerType) => {
   if (!actionNeedsSourceMessage(action)) return "";
   if (!triggerProvidesSourceMessage(trigger)) return getActionTriggerRequirementLabel(action);
@@ -667,6 +680,9 @@ export const ServerBotsPanel = ({
   const [draftChannelId, setDraftChannelId] = useState("");
   const [draftForumTopicTitle, setDraftForumTopicTitle] = useState("");
   const [draftContent, setDraftContent] = useState(DEFAULT_ACTION_CONTENT_BY_TRIGGER.member_joined);
+  const [draftMessageSendMode, setDraftMessageSendMode] = useState<MessageSendMode>(DEFAULT_MESSAGE_SEND_MODE);
+  const [draftMessageReplyMode, setDraftMessageReplyMode] = useState<MessageReplyMode>(DEFAULT_MESSAGE_REPLY_MODE);
+  const [draftRandomMessages, setDraftRandomMessages] = useState(DEFAULT_ACTION_CONTENT_BY_TRIGGER.member_joined);
   const [draftActionEmojiMode, setDraftActionEmojiMode] = useState(DEFAULT_REACTION_EMOJI);
   const [draftActionEmoji, setDraftActionEmoji] = useState("👍");
   const [draftActionRoleId, setDraftActionRoleId] = useState("");
@@ -984,6 +1000,11 @@ export const ServerBotsPanel = ({
           ? "contains"
           : "any";
     const contentMatchValue = typeof triggerConfig.content_match_value === "string" ? triggerConfig.content_match_value : "";
+    const messageSendMode: MessageSendMode = actionConfig.message_mode === "random" ? "random" : "static";
+    const messageReplyMode: MessageReplyMode = actionConfig.reply_mode === "reply" ? "reply" : "normal";
+    const randomMessages = Array.isArray(actionConfig.messages)
+      ? actionConfig.messages.filter((message): message is string => typeof message === "string" && message.trim().length > 0)
+      : [];
 
     setEditingFlowId(flow?.id ?? null);
     setEditingFlowEnabled(flow?.is_enabled ?? true);
@@ -998,6 +1019,9 @@ export const ServerBotsPanel = ({
     setDraftChannelId(actionConfig.channel_id ?? textChannels[0]?.id ?? "");
     setDraftForumTopicTitle(forumTopicTitle);
     setDraftContent(actionConfig.content ?? DEFAULT_ACTION_CONTENT_BY_TRIGGER[triggerType]);
+    setDraftMessageSendMode(messageSendMode);
+    setDraftMessageReplyMode(messageReplyMode);
+    setDraftRandomMessages((randomMessages.length > 0 ? randomMessages : [actionConfig.content ?? DEFAULT_ACTION_CONTENT_BY_TRIGGER[triggerType]]).join("\n"));
     setDraftActionEmojiMode(getEmojiModeForValue(actionEmoji, DEFAULT_REACTION_EMOJI));
     setDraftActionEmoji(actionConfig.emoji ?? "👍");
     setDraftActionEmoji(actionEmoji);
@@ -1019,8 +1043,15 @@ export const ServerBotsPanel = ({
     }
     if (actionNeedsChannel(draftAction) && !draftChannelId) return toast.error("Choose a channel for the action");
     if (draftAction === "create_forum_topic" && !draftForumTopicTitle.trim()) return toast.error("Add a topic title");
-    if (draftAction !== "create_forum_topic" && actionNeedsMessage(draftAction) && !draftContent.trim()) {
+    if (draftAction !== "create_forum_topic" && actionNeedsMessage(draftAction) && draftAction !== "send_channel_message" && !draftContent.trim()) {
       return toast.error("Add text for the action");
+    }
+    const randomMessages = normalizeRandomMessages(draftRandomMessages);
+    if (draftAction === "send_channel_message" && draftMessageSendMode === "static" && !draftContent.trim()) {
+      return toast.error("Add text for the action");
+    }
+    if (draftAction === "send_channel_message" && draftMessageSendMode === "random" && randomMessages.length === 0) {
+      return toast.error("Add at least one random message");
     }
     if (draftTrigger === "reaction_added" && draftTriggerEmojiMode === CUSTOM_EMOJI_VALUE && !draftTriggerEmoji.trim()) {
       return toast.error("Add an emoji for the trigger filter");
@@ -1052,7 +1083,10 @@ export const ServerBotsPanel = ({
         _action_config: {
           channel_id: actionNeedsChannel(draftAction) ? draftChannelId : null,
           title: draftAction === "create_forum_topic" ? draftForumTopicTitle.trim() : null,
-          content: actionNeedsMessage(draftAction) ? draftContent.trim() : null,
+          content: actionNeedsMessage(draftAction) ? (draftAction === "send_channel_message" && draftMessageSendMode === "random" ? randomMessages[0] : draftContent.trim()) : null,
+          message_mode: draftAction === "send_channel_message" ? draftMessageSendMode : null,
+          reply_mode: draftAction === "send_channel_message" ? draftMessageReplyMode : null,
+          messages: draftAction === "send_channel_message" && draftMessageSendMode === "random" ? randomMessages : null,
           emoji: draftAction === "add_reaction" ? draftActionEmoji.trim() : null,
           role_id: actionNeedsRole(draftAction) ? draftActionRoleId : null,
         },
@@ -1145,6 +1179,9 @@ export const ServerBotsPanel = ({
           : DEFAULT_ACTION_CONTENT_BY_ACTION[action] || DEFAULT_ACTION_CONTENT_BY_TRIGGER[draftTrigger];
       setDraftForumTopicTitle(action === "create_forum_topic" ? DEFAULT_ACTION_CONTENT_BY_ACTION.create_forum_topic : "");
       setDraftContent(nextContent);
+      setDraftMessageSendMode(DEFAULT_MESSAGE_SEND_MODE);
+      setDraftMessageReplyMode(DEFAULT_MESSAGE_REPLY_MODE);
+      setDraftRandomMessages(nextContent);
     }
     if (action !== "add_reaction") setDraftActionEmoji("👍");
     if (action !== "add_reaction") {
@@ -1814,7 +1851,87 @@ export const ServerBotsPanel = ({
                     </div>
                   )}
 
-                  {actionNeedsMessage(draftAction) && draftAction !== "create_forum_topic" && (
+                  {draftAction === "send_channel_message" && (
+                    <div className="space-y-4">
+                      <div>
+                        <Label className={BOT_MODAL_LABEL_CLASS}>Message type</Label>
+                        <Select value={draftMessageSendMode} onValueChange={(value) => setDraftMessageSendMode(value as MessageSendMode)}>
+                          <SelectTrigger className="mt-2 h-9 rounded-none border-0 border-b border-border bg-transparent px-0 text-sm text-foreground shadow-none focus:ring-0 focus:ring-offset-0">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className={BOT_SELECT_CONTENT_CLASS}>
+                            <SelectItem value="static" className={BOT_SELECT_ITEM_CLASS}>Static message</SelectItem>
+                            <SelectItem value="random" className={BOT_SELECT_ITEM_CLASS}>Random message</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label className={BOT_MODAL_LABEL_CLASS}>Send as</Label>
+                        <Select
+                          value={draftMessageReplyMode}
+                          onValueChange={(value) => setDraftMessageReplyMode(value as MessageReplyMode)}
+                        >
+                          <SelectTrigger className="mt-2 h-9 rounded-none border-0 border-b border-border bg-transparent px-0 text-sm text-foreground shadow-none focus:ring-0 focus:ring-offset-0">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className={BOT_SELECT_CONTENT_CLASS}>
+                            <SelectItem value="normal" className={BOT_SELECT_ITEM_CLASS}>Normal message</SelectItem>
+                            <SelectItem
+                              value="reply"
+                              disabled={!triggerProvidesSourceMessage(draftTrigger)}
+                              className={BOT_SELECT_ITEM_CLASS}
+                            >
+                              Reply to trigger message
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {draftMessageSendMode === "static" ? (
+                        <div>
+                          <Label className={BOT_MODAL_LABEL_CLASS}>{getActionContentLabel(draftAction)}</Label>
+                          <Input
+                            value={draftContent}
+                            onChange={(event) => setDraftContent(event.target.value.slice(0, getActionContentMaxLength(draftAction)))}
+                            maxLength={getActionContentMaxLength(draftAction)}
+                            className={BOT_MODAL_INPUT_CLASS}
+                          />
+                          <p className="mt-2 text-xs text-muted-foreground">Can use variables from the selected trigger.</p>
+                        </div>
+                      ) : (
+                        <div>
+                          <Label className={BOT_MODAL_LABEL_CLASS}>Random messages</Label>
+                          <Textarea
+                            value={draftRandomMessages}
+                            onChange={(event) => setDraftRandomMessages(event.target.value.slice(0, 50000))}
+                            placeholder="One message per line"
+                            className="mt-2 min-h-[132px] resize-none rounded-[3px] border-border bg-card px-3 py-2 text-sm text-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
+                          />
+                          <p className="mt-2 text-xs text-muted-foreground">One non-empty line is selected at random. Each line can use trigger variables.</p>
+                        </div>
+                      )}
+
+                      <div className="rounded-[4px] border border-border bg-secondary/25 px-3 py-2">
+                        <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          Template variables
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {templateVars.map((item) => (
+                            <span
+                              key={item.token}
+                              title={item.description}
+                              className="inline-flex items-center rounded-[3px] border border-border bg-card px-2 py-1 text-[11px] font-medium text-foreground"
+                            >
+                              {item.token}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {actionNeedsMessage(draftAction) && draftAction !== "create_forum_topic" && draftAction !== "send_channel_message" && (
                     <div>
                       <Label className={BOT_MODAL_LABEL_CLASS}>{getActionContentLabel(draftAction)}</Label>
                       <Input
@@ -1938,6 +2055,8 @@ export const ServerBotsPanel = ({
                       !isTriggerCompatibleWithAction(draftTrigger, draftAction) ||
                       (draftAction === "add_reaction" && !draftActionEmoji.trim()) ||
                       (draftAction === "create_forum_topic" && !draftForumTopicTitle.trim()) ||
+                      (draftAction === "send_channel_message" && draftMessageSendMode === "static" && !draftContent.trim()) ||
+                      (draftAction === "send_channel_message" && draftMessageSendMode === "random" && normalizeRandomMessages(draftRandomMessages).length === 0) ||
                       (actionNeedsRole(draftAction) && !draftActionRoleId)
                     }
                     className={BOT_MODAL_PRIMARY_BUTTON_CLASS}
@@ -1984,6 +2103,14 @@ export const ServerBotsPanel = ({
                       }
                       if (draftAction === "create_forum_topic" && !draftForumTopicTitle.trim()) {
                         toast.error("Add a topic title");
+                        return;
+                      }
+                      if (draftAction === "send_channel_message" && draftMessageSendMode === "static" && !draftContent.trim()) {
+                        toast.error("Add text for the action");
+                        return;
+                      }
+                      if (draftAction === "send_channel_message" && draftMessageSendMode === "random" && normalizeRandomMessages(draftRandomMessages).length === 0) {
+                        toast.error("Add at least one random message");
                         return;
                       }
                       setIsActionConfigured(true);
