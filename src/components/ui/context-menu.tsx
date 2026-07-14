@@ -31,9 +31,10 @@ const ContextMenuSubTrigger = React.forwardRef<
   <ContextMenuPrimitive.SubTrigger
     ref={ref}
     className={cn(
-      "flex cursor-default select-none items-center gap-3 rounded-md px-3 py-2 text-sm !text-[hsl(var(--menu-foreground))] outline-none transition-colors hover:bg-[hsl(var(--menu-hover))] focus:bg-[hsl(var(--menu-focus))] data-[state=open]:bg-[hsl(var(--menu-focus))] [&>svg]:h-4 [&>svg]:w-4 [&>svg]:shrink-0",
+      "flex cursor-default select-none items-center gap-3 px-3 py-2 text-sm !text-[hsl(var(--menu-foreground))] outline-none transition-colors hover:bg-[hsl(var(--menu-hover))] focus:bg-[hsl(var(--menu-focus))] data-[state=open]:bg-[hsl(var(--menu-focus))] [&>svg]:h-4 [&>svg]:w-4 [&>svg]:shrink-0",
       inset && "pl-8",
       className,
+      "rounded-none",
     )}
     {...props}
   >
@@ -51,8 +52,9 @@ const ContextMenuSubContent = React.forwardRef<
     <ContextMenuPrimitive.SubContent
       ref={ref}
       className={cn(
-        "z-50 min-w-[10rem] overflow-hidden rounded-xl border border-[hsl(var(--menu-border))] bg-[hsl(var(--menu))] p-1 text-[hsl(var(--menu-foreground))] shadow-xl shadow-black/30 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+        "z-50 min-w-[10rem] overflow-hidden rounded-xl border border-[hsl(var(--menu-border))] bg-[hsl(var(--menu))] text-[hsl(var(--menu-foreground))] shadow-xl shadow-black/30 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
         className,
+        "p-0",
       )}
       {...props}
     />
@@ -68,8 +70,9 @@ const ContextMenuContent = React.forwardRef<
     <ContextMenuPrimitive.Content
       ref={ref}
       className={cn(
-        "z-50 min-w-[10rem] overflow-hidden rounded-xl border border-[hsl(var(--menu-border))] bg-[hsl(var(--menu))] p-1 text-[hsl(var(--menu-foreground))] shadow-xl shadow-black/30 animate-in fade-in-80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+        "z-50 min-w-[10rem] overflow-hidden rounded-xl border border-[hsl(var(--menu-border))] bg-[hsl(var(--menu))] text-[hsl(var(--menu-foreground))] shadow-xl shadow-black/30 animate-in fade-in-80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
         className,
+        "p-0",
       )}
       {...props}
     />
@@ -86,9 +89,10 @@ const ContextMenuItem = React.forwardRef<
   <ContextMenuPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center gap-3 rounded-lg px-3 py-1.5 text-sm !text-[hsl(var(--menu-foreground))] outline-none transition-colors hover:bg-[hsl(var(--menu-hover))] focus:bg-[hsl(var(--menu-focus))] data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&>svg]:h-4 [&>svg]:w-4 [&>svg]:shrink-0",
+      "relative flex cursor-default select-none items-center gap-3 px-3 py-1.5 text-sm !text-[hsl(var(--menu-foreground))] outline-none transition-colors hover:bg-[hsl(var(--menu-hover))] focus:bg-[hsl(var(--menu-focus))] data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&>svg]:h-4 [&>svg]:w-4 [&>svg]:shrink-0",
       inset && "pl-8",
       className,
+      "rounded-none",
     )}
     {...props}
   />
@@ -102,8 +106,9 @@ const ContextMenuCheckboxItem = React.forwardRef<
   <ContextMenuPrimitive.CheckboxItem
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center rounded-lg py-1.5 pl-9 pr-3 text-sm !text-[hsl(var(--menu-foreground))] outline-none transition-colors hover:bg-[hsl(var(--menu-hover))] focus:bg-[hsl(var(--menu-focus))] data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&>svg]:h-4 [&>svg]:w-4 [&>svg]:shrink-0",
+      "relative flex cursor-default select-none items-center py-1.5 pl-9 pr-3 text-sm !text-[hsl(var(--menu-foreground))] outline-none transition-colors hover:bg-[hsl(var(--menu-hover))] focus:bg-[hsl(var(--menu-focus))] data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&>svg]:h-4 [&>svg]:w-4 [&>svg]:shrink-0",
       className,
+      "rounded-none",
     )}
     checked={checked}
     {...props}
@@ -125,8 +130,9 @@ const ContextMenuRadioItem = React.forwardRef<
   <ContextMenuPrimitive.RadioItem
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center rounded-lg py-1.5 pl-9 pr-3 text-sm !text-[hsl(var(--menu-foreground))] outline-none transition-colors hover:bg-[hsl(var(--menu-hover))] focus:bg-[hsl(var(--menu-focus))] data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&>svg]:h-4 [&>svg]:w-4 [&>svg]:shrink-0",
+      "relative flex cursor-default select-none items-center py-1.5 pl-9 pr-3 text-sm !text-[hsl(var(--menu-foreground))] outline-none transition-colors hover:bg-[hsl(var(--menu-hover))] focus:bg-[hsl(var(--menu-focus))] data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&>svg]:h-4 [&>svg]:w-4 [&>svg]:shrink-0",
       className,
+      "rounded-none",
     )}
     {...props}
   >

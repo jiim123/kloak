@@ -77,7 +77,7 @@ const SelectContent = React.forwardRef<
       <SelectScrollUpButton />
       <SelectPrimitive.Viewport
         className={cn(
-          "p-1",
+          "p-0",
           position === "popper" &&
             "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]",
         )}
@@ -105,8 +105,9 @@ const SelectItem = React.forwardRef<
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex w-full cursor-default select-none items-center rounded-lg py-1.5 pl-8 pr-2 text-sm text-[hsl(var(--menu-foreground))] outline-none transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-[hsl(var(--menu-focus))] data-[highlighted]:text-[hsl(var(--menu-foreground))] focus:bg-[hsl(var(--menu-focus))] focus:text-[hsl(var(--menu-foreground))]",
+      "relative flex w-full cursor-default select-none items-center py-1.5 pl-8 pr-2 text-sm text-[hsl(var(--menu-foreground))] outline-none transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-[hsl(var(--menu-focus))] data-[highlighted]:text-[hsl(var(--menu-foreground))] focus:bg-[hsl(var(--menu-focus))] focus:text-[hsl(var(--menu-foreground))]",
       className,
+      "rounded-none",
     )}
     {...props}
   >
@@ -125,7 +126,7 @@ const SelectSeparator = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Separator>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Separator>
 >(({ className, ...props }, ref) => (
-  <SelectPrimitive.Separator ref={ref} className={cn("-mx-1 my-1 h-px bg-[hsl(var(--menu-separator))]", className)} {...props} />
+  <SelectPrimitive.Separator ref={ref} className={cn("mx-0 my-0 h-px bg-[hsl(var(--menu-separator))]", className, "mx-0 my-0")} {...props} />
 ));
 SelectSeparator.displayName = SelectPrimitive.Separator.displayName;
 
