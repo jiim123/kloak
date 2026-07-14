@@ -109,6 +109,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
     const RETRY_MAX_DELAY_MS = 15000;
     const messageFilter = { event: "messages", scope: listenerScopeRef.current };
     const reactionFilter = { event: "reactions", scope: listenerScopeRef.current };
+    const attachmentFilter = { event: "message_attachments", scope: listenerScopeRef.current };
 
     const rowToAttachment = (row: MessageAttachmentRealtimeRow): MessageAttachment => ({
       id: row.id || '',
@@ -181,6 +182,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
       if (!target) return;
       const internal = target as unknown as { _off?: (type: string, filter: Record<string, unknown>) => void };
       internal._off?.("broadcast", messageFilter);
+      internal._off?.("broadcast", attachmentFilter);
       internal._off?.("broadcast", reactionFilter);
     };
 
@@ -512,47 +514,18 @@ export const useRealtimeMessages = (channelId: string | null) => {
           }
         )
         .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'message_attachments',
-          },
-          (payload) => {
+          'broadcast',
+          attachmentFilter as { event: string },
+          ({ payload }) => {
             try {
-              mergeAttachmentIntoMessage(payload.new as MessageAttachmentRealtimeRow);
+              const eventPayload = payload as BroadcastMutationPayload<MessageAttachmentRealtimeRow>;
+              if (eventPayload?.op === 'DELETE') {
+                removeAttachmentFromMessage(eventPayload.old ?? {});
+                return;
+              }
+              mergeAttachmentIntoMessage(eventPayload.new ?? {});
             } catch (error) {
-              console.error('[Realtime] Error processing message attachment insert:', error);
-            }
-          },
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'message_attachments',
-          },
-          (payload) => {
-            try {
-              mergeAttachmentIntoMessage(payload.new as MessageAttachmentRealtimeRow);
-            } catch (error) {
-              console.error('[Realtime] Error processing message attachment update:', error);
-            }
-          },
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'DELETE',
-            schema: 'public',
-            table: 'message_attachments',
-          },
-          (payload) => {
-            try {
-              removeAttachmentFromMessage(payload.old as MessageAttachmentRealtimeRow);
-            } catch (error) {
-              console.error('[Realtime] Error processing message attachment delete:', error);
+              console.error('[Realtime] Error processing message attachment event:', error);
             }
           },
         )

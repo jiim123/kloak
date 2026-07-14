@@ -641,15 +641,15 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
     if (!selectedEventId) return;
     const channel = supabase
       .channel(`calendar-event:${selectedEventId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "calendar_event_rsvps", filter: `event_id=eq.${selectedEventId}` }, () => {
+      .on("broadcast", { event: "calendar_event_rsvps" }, () => {
         void loadSelectedEvent();
         void loadEvents();
       })
-      .on("postgres_changes", { event: "*", schema: "public", table: "calendar_event_comments", filter: `event_id=eq.${selectedEventId}` }, () => {
+      .on("broadcast", { event: "calendar_event_comments" }, () => {
         void loadEventComments();
         void loadSelectedEvent();
       })
-      .on("postgres_changes", { event: "*", schema: "public", table: "calendar_event_reactions", filter: `event_id=eq.${selectedEventId}` }, () => {
+      .on("broadcast", { event: "calendar_event_reactions" }, () => {
         void loadEventReactions();
       })
       .subscribe();

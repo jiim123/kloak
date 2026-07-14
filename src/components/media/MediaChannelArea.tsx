@@ -310,13 +310,6 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
       .on("broadcast", { event: "media_items" }, () => {
         void fetchMediaItems({ silent: true });
       })
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "media_items", filter: `channel_id=eq.${currentChannel.id}` },
-        () => {
-          void fetchMediaItems({ silent: true });
-        },
-      )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);

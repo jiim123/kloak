@@ -4,6 +4,7 @@ import { useDMStore, registerDMChannel, unregisterDMChannel } from '@/stores/dmS
 import { useAuthStore } from '@/stores/authStore';
 import type { DirectMessage, DMAttachment } from '@/types';
 import { getOrFetchUser, useUserCacheStore } from '@/stores/userCacheStore';
+import { acquireChannel, releaseChannel, subscribeChannel } from '@/lib/sharedChannel';
 
 
 interface UseRealtimeDMsOptions {
@@ -31,6 +32,13 @@ type DMAttachmentRealtimeRow = {
   file_size?: number | null;
   width?: number | null;
   height?: number | null;
+};
+
+type BroadcastMutationPayload<T> = {
+  op?: 'INSERT' | 'UPDATE' | 'DELETE';
+  new?: T;
+  old?: T;
+  conversation_id?: string;
 };
 
 
@@ -281,21 +289,16 @@ export const useRealtimeDMs = ({
       updateMessage(payload.conversation_id, payload.message_id, { reactions });
     });
 
-    channel.on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'dm_attachments',
-      },
-      (payload) => {
-        try {
-          mergeAttachmentIntoConversation(payload.new as DMAttachmentRealtimeRow);
-        } catch (error) {
-          console.error('[DM] Error processing attachment insert:', error);
+    channel.on('broadcast', { event: 'dm_attachments' }, ({ payload }) => {
+      try {
+        const eventPayload = payload as BroadcastMutationPayload<DMAttachmentRealtimeRow>;
+        if (eventPayload?.op !== 'DELETE') {
+          mergeAttachmentIntoConversation(eventPayload.new ?? {});
         }
-      },
-    );
+      } catch (error) {
+        console.error('[DM] Error processing attachment event:', error);
+      }
+    });
 
     channel.subscribe((status, err) => {
       if (status === 'SUBSCRIBED') {
@@ -311,62 +314,6 @@ export const useRealtimeDMs = ({
     };
   }, [userId, currentConversationId, handleNewMessage, handleMessageUpdate, handleMessageDelete, mergeAttachmentIntoConversation]);
 
-  // Subscribe to background conversations for unread indicators (up to 10 most recent)
-  useEffect(() => {
-    if (!userId) return;
-
-    const convIds = Array.from(conversationIdsRef.current);
-    if (convIds.length === 0) return;
-
-    // Only subscribe to non-active conversations, limit to 10
-    const backgroundIds = convIds
-      .filter((id) => id !== currentConversationId)
-      .slice(0, 10);
-
-    if (backgroundIds.length === 0) return;
-
-    const channels: ReturnType<typeof supabase.channel>[] = [];
-
-    for (const convId of backgroundIds) {
-      const ch = supabase.channel(`dm-notify:${convId}`, {
-        config: { broadcast: { self: false } },
-      });
-
-      ch.on('broadcast', { event: 'new_message' }, ({ payload }) => {
-        if (!payload?.message) return;
-        if (payload.message.sender_id === userId) return;
-
-        const message: DirectMessage = {
-          id: payload.message.id,
-          conversation_id: payload.message.conversation_id,
-          sender_id: payload.message.sender_id,
-          content: payload.message.content,
-          created_at: payload.message.created_at,
-          edited_at: payload.message.edited_at ?? null,
-          reply_to_id: payload.message.reply_to_id ?? null,
-          reply_to: null,
-          attachments: [],
-          reactions: [],
-        };
-
-        updateConversation(convId, { last_message: message });
-
-        if (onNewMessageRef.current) {
-          onNewMessageRef.current(message, convId);
-        }
-      });
-
-      ch.subscribe();
-      channels.push(ch);
-    }
-
-    return () => {
-      channels.forEach((ch) => supabase.removeChannel(ch));
-    };
-  }, [userId, currentConversationId, conversations.length, updateConversation]);
-
-
-  // Debounced fetchConversations to batch rapid dm_participants events
   const fetchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debouncedFetchConversations = useCallback(
     (uid: string) => {
@@ -384,49 +331,77 @@ export const useRealtimeDMs = ({
     };
   }, []);
 
-  // Also listen for new conversations
+  // Subscribe to user-scoped DM updates from database Broadcast triggers.
   useEffect(() => {
     if (!userId) return;
 
-    const channel = supabase
-      .channel(`dm-participants:${userId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'dm_participants',
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => {
-          const newConvId = payload.new?.conversation_id;
-          if (newConvId) {
-            conversationIdsRef.current.add(newConvId);
+    const topic = `user:${userId}`;
+    const channel = acquireChannel(topic);
+
+    channel.on(
+      'broadcast',
+      { event: 'direct_messages' },
+      ({ payload }) => {
+        const eventPayload = payload as BroadcastMutationPayload<DirectMessageRealtimeRow>;
+        const op = eventPayload?.op;
+        const row = op === 'DELETE' ? eventPayload.old : eventPayload.new;
+        if (!op || !row?.conversation_id) return;
+
+        if (op === 'INSERT') {
+          void handleNewMessage({ new: row });
+        } else if (op === 'UPDATE') {
+          handleMessageUpdate({ new: row });
+        } else if (op === 'DELETE') {
+          handleMessageDelete({ old: row });
+        }
+
+        debouncedFetchConversations(userId);
+      },
+    );
+
+    channel.on('broadcast', { event: 'dm_attachments' }, ({ payload }) => {
+      try {
+        const eventPayload = payload as BroadcastMutationPayload<DMAttachmentRealtimeRow>;
+        if (eventPayload?.op !== 'DELETE') {
+          mergeAttachmentIntoConversation(eventPayload.new ?? {});
+        }
+      } catch (error) {
+        console.error('[DM] Error processing user-scoped attachment event:', error);
+      }
+    });
+
+    channel.on(
+      'broadcast',
+      { event: 'dm_participants' },
+      ({ payload }) => {
+        const eventPayload = payload as BroadcastMutationPayload<{ conversation_id?: string }>;
+        const changedConvId =
+          eventPayload?.op === 'DELETE' ? eventPayload.old?.conversation_id : eventPayload.new?.conversation_id;
+
+        if (changedConvId) {
+          if (eventPayload?.op === 'DELETE') {
+            conversationIdsRef.current.delete(changedConvId);
+          } else {
+            conversationIdsRef.current.add(changedConvId);
           }
-          debouncedFetchConversations(userId);
-        },
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'dm_participants',
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => {
-          const removedConvId = payload.old?.conversation_id;
-          if (removedConvId) {
-            conversationIdsRef.current.delete(removedConvId);
-          }
-          debouncedFetchConversations(userId);
-        },
-      )
-      .subscribe();
+        }
+
+        debouncedFetchConversations(userId);
+      },
+    );
+
+    subscribeChannel(topic);
 
     return () => {
-      supabase.removeChannel(channel);
+      releaseChannel(topic);
     };
-  }, [userId, debouncedFetchConversations]);
+  }, [
+    userId,
+    debouncedFetchConversations,
+    handleNewMessage,
+    handleMessageUpdate,
+    handleMessageDelete,
+    mergeAttachmentIntoConversation,
+  ]);
 
 };

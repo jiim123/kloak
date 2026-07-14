@@ -745,40 +745,34 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
 
     const channel = supabase
       .channel(`tasks-realtime:${channelId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, (payload) => {
-        const record =
-          payload.new && typeof payload.new === "object"
-            ? payload.new
-            : payload.old && typeof payload.old === "object"
-              ? payload.old
-              : null;
+      .on("broadcast", { event: "tasks" }, ({ payload }) => {
+        const record = payload && typeof payload === "object" ? payload as Record<string, unknown> : null;
+        const taskId = typeof record?.task_id === "string" ? record.task_id : null;
+        const op = typeof record?.op === "string" ? record.op : null;
 
-        const eventChannelId = record && typeof (record as Record<string, unknown>).channel_id === "string" ? (record as Record<string, unknown>).channel_id as string : null;
-        const taskId = record && typeof (record as Record<string, unknown>).id === "string" ? (record as Record<string, unknown>).id as string : null;
-        if (eventChannelId && eventChannelId !== channelId) {
-          return;
-        }
-
-        if (payload.eventType === "DELETE" && taskId && taskIdsRef.current.has(taskId)) {
+        if (op === "DELETE" && taskId && taskIdsRef.current.has(taskId)) {
           commitTasks(tasksRef.current.filter((task) => task.id !== taskId));
           return;
         }
 
+        if (op === "INSERT") {
+          scheduleBoardRefresh();
+        }
+
         if (taskId) {
           scheduleTaskRefresh(taskId);
+        } else {
+          scheduleBoardRefresh();
         }
       })
-      .on("postgres_changes", { event: "*", schema: "public", table: "task_assignees" }, (payload) => {
-        const record =
-          payload.new && typeof payload.new === "object"
-            ? payload.new
-            : payload.old && typeof payload.old === "object"
-              ? payload.old
-              : null;
+      .on("broadcast", { event: "task_assignees" }, ({ payload }) => {
+        const record = payload && typeof payload === "object" ? payload as Record<string, unknown> : null;
+        const taskId = typeof record?.task_id === "string" ? record.task_id : null;
 
-        const taskId = record && typeof (record as Record<string, unknown>).task_id === "string" ? (record as Record<string, unknown>).task_id as string : null;
         if (taskId && taskIdsRef.current.has(taskId)) {
           scheduleTaskRefresh(taskId);
+        } else {
+          scheduleBoardRefresh();
         }
       })
       .subscribe((status) => {

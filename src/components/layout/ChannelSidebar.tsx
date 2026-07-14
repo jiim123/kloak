@@ -535,12 +535,18 @@ const SortableChannel = memo(({
   const showDesktopActions = !isMobile && !isSortingMode && (showOpenChatAction || isAdmin);
   const rowIsActive = isActive || !!isLinkedChatActive;
   const desktopActionCount = (showOpenChatAction ? 1 : 0) + (isAdmin ? 2 : 0);
+  const hasRightStatus =
+    (channel.is_private && !channel.icon && !isUnread && mentionCount === 0 && !(channel.type === "voice" && voiceCount > 0)) ||
+    (channel.is_nsfw && !isUnread && mentionCount === 0 && !(channel.type === "voice" && voiceCount > 0)) ||
+    (channel.type === "voice" && voiceCount > 0) ||
+    (isUnread && mentionCount === 0) ||
+    mentionCount > 0;
   const desktopActionPaddingClass =
     desktopActionCount >= 3
       ? "pr-24"
       : desktopActionCount === 2
         ? "pr-16"
-        : desktopActionCount === 1 || (channel.type === "voice" && voiceCount > 0)
+        : desktopActionCount === 1 || hasRightStatus
           ? "pr-10"
           : "";
 
@@ -649,8 +655,8 @@ const SortableChannel = memo(({
         {mentionCount > 0 && !isSortingMode && (
           <span
             className={cn(
-              "px-1.5 py-0.5 text-xs font-mono rounded-full bg-red-600 text-foreground flex-shrink-0 transition-opacity",
-              showDesktopActions && "group-hover:opacity-0",
+              "absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-xs font-mono rounded-full bg-red-600 text-foreground transition-opacity duration-150",
+              showDesktopActions && "group-hover:opacity-0 group-focus-visible:opacity-0",
             )}
           >
             {mentionCount > 99 ? "99+" : mentionCount}

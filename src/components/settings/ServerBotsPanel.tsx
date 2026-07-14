@@ -392,6 +392,7 @@ const DEFAULT_ACTION_CONTENT_BY_TRIGGER: Record<BotTriggerType, string> = {
 
 const ALL_CHANNELS_VALUE = "all";
 const MAX_SERVER_BOTS = 2;
+const MAX_BOT_FLOWS = 20;
 const ANY_ROLE_VALUE = "any";
 const ANY_EMOJI_VALUE = "any";
 const CUSTOM_EMOJI_VALUE = "custom";
@@ -422,6 +423,7 @@ const actionNeedsMessage = (action: BotActionType) =>
   action === "send_channel_message" || action === "create_forum_topic" || action === "create_list_item";
 const actionNeedsRole = (action: BotActionType) => action === "assign_role" || action === "remove_role";
 const actionNeedsSourceMessage = (action: BotActionType) => action === "delete_message" || action === "add_reaction";
+const actionNeedsTriggeringUser = (action: BotActionType) => action === "assign_role" || action === "remove_role";
 const triggerProvidesSourceMessage = (trigger: BotTriggerType) =>
   trigger === "reaction_added" ||
   trigger === "message_created" ||
@@ -431,6 +433,17 @@ const triggerProvidesSourceMessage = (trigger: BotTriggerType) =>
   trigger === "announcement_created" ||
   trigger === "announcement_updated" ||
   trigger === "announcement_deleted";
+const triggerProvidesTriggeringUser = (_trigger: BotTriggerType) => true;
+const isTriggerCompatibleWithAction = (trigger: BotTriggerType, action: BotActionType) => {
+  if (actionNeedsSourceMessage(action) && !triggerProvidesSourceMessage(trigger)) return false;
+  if (actionNeedsTriggeringUser(action) && !triggerProvidesTriggeringUser(trigger)) return false;
+  return true;
+};
+const getActionTriggerRequirementLabel = (action: BotActionType) => {
+  if (actionNeedsSourceMessage(action)) return "Requires a trigger with a source message";
+  if (actionNeedsTriggeringUser(action)) return "Requires a trigger with a member";
+  return "";
+};
 const triggerProvidesContent = (trigger: BotTriggerType) =>
   triggerProvidesSourceMessage(trigger) ||
   trigger === "list_item_created" ||
@@ -911,6 +924,11 @@ export const ServerBotsPanel = ({
   };
 
   const openFlowBuilder = (flow?: ServerBotFlow) => {
+    if (!flow && selectedBot && selectedBot.flows.length >= MAX_BOT_FLOWS) {
+      toast.error(`Action bots can have up to ${MAX_BOT_FLOWS} actions`);
+      return;
+    }
+
     const triggerType = flow?.trigger_type ?? "member_joined";
     const actionType = flow?.action_type ?? "send_channel_message";
     const triggerConfig = flow?.trigger_config ?? {};
@@ -962,6 +980,9 @@ export const ServerBotsPanel = ({
     if (!selectedBot) return;
     if (!isTriggerConfigured) return toast.error("Add a trigger first");
     if (!isActionConfigured) return toast.error("Add an action first");
+    if (!editingFlowId && selectedBot.flows.length >= MAX_BOT_FLOWS) {
+      return toast.error(`Action bots can have up to ${MAX_BOT_FLOWS} actions`);
+    }
     if (actionNeedsChannel(draftAction) && !draftChannelId) return toast.error("Choose a channel for the action");
     if (draftAction === "create_forum_topic" && !draftForumTopicTitle.trim()) return toast.error("Add a topic title");
     if (draftAction !== "create_forum_topic" && actionNeedsMessage(draftAction) && !draftContent.trim()) {
@@ -970,8 +991,8 @@ export const ServerBotsPanel = ({
     if (draftTrigger === "reaction_added" && draftTriggerEmojiMode === CUSTOM_EMOJI_VALUE && !draftTriggerEmoji.trim()) {
       return toast.error("Add an emoji for the trigger filter");
     }
-    if (actionNeedsSourceMessage(draftAction) && !triggerProvidesSourceMessage(draftTrigger)) {
-      return toast.error("Choose a trigger that includes a source message for this action");
+    if (!isTriggerCompatibleWithAction(draftTrigger, draftAction)) {
+      return toast.error(getActionTriggerRequirementLabel(draftAction) || "Choose a compatible trigger for this action");
     }
     if (draftAction === "add_reaction" && !draftActionEmoji.trim()) return toast.error("Add an emoji for the action");
     if (actionNeedsRole(draftAction) && !draftActionRoleId) return toast.error("Choose a role for the action");
@@ -1080,6 +1101,9 @@ export const ServerBotsPanel = ({
 
   const selectAction = (action: BotActionType) => {
     setDraftAction(action);
+    if (!isTriggerCompatibleWithAction(draftTrigger, action)) {
+      setIsTriggerConfigured(false);
+    }
     if (!isActionConfigured) {
       const nextContent =
         action === "create_forum_topic"
@@ -1148,6 +1172,7 @@ export const ServerBotsPanel = ({
   };
 
   const filteredTriggers = TRIGGER_OPTIONS.filter((option) => {
+    if (isActionConfigured && !isTriggerCompatibleWithAction(option.id, draftAction)) return false;
     const q = triggerSearch.trim().toLowerCase();
     if (!q) return true;
     return option.label.toLowerCase().includes(q) || option.description.toLowerCase().includes(q);
@@ -1185,12 +1210,28 @@ export const ServerBotsPanel = ({
           </div>
 
         <div className="mb-4 flex items-center justify-between border-t border-border pt-5">
-          <h3 className="text-sm font-medium text-foreground">Actions</h3>
+          <div className="min-w-0">
+            <h3 className="text-sm font-medium text-foreground">Actions</h3>
+            <p
+              className={cn(
+                "mt-1 text-xs text-muted-foreground",
+                selectedBot.flows.length >= MAX_BOT_FLOWS && "text-destructive",
+              )}
+            >
+              {selectedBot.flows.length} / {MAX_BOT_FLOWS} actions used
+            </p>
+          </div>
           <Button
             type="button"
             size="sm"
             variant="outline"
             onClick={() => openFlowBuilder()}
+            disabled={selectedBot.flows.length >= MAX_BOT_FLOWS}
+            title={
+              selectedBot.flows.length >= MAX_BOT_FLOWS
+                ? `Action bots can have up to ${MAX_BOT_FLOWS} actions`
+                : "Add action"
+            }
             className="h-8 rounded-[3px] px-4 text-xs"
           >
             Add
@@ -1318,6 +1359,12 @@ export const ServerBotsPanel = ({
               type="button"
               size="sm"
               onClick={() => openFlowBuilder()}
+              disabled={selectedBot.flows.length >= MAX_BOT_FLOWS}
+              title={
+                selectedBot.flows.length >= MAX_BOT_FLOWS
+                  ? `Action bots can have up to ${MAX_BOT_FLOWS} actions`
+                  : "Add action"
+              }
               className="mt-4 h-8 rounded-[3px] px-4 text-xs"
             >
               Add an action
@@ -1425,7 +1472,7 @@ export const ServerBotsPanel = ({
                     <Input
                       value={triggerSearch}
                       onChange={(event) => setTriggerSearch(event.target.value)}
-                      placeholder={`Search ${TRIGGER_OPTIONS.length} triggers`}
+                      placeholder={`Search ${filteredTriggers.length} triggers`}
                       className="h-8 border-0 bg-transparent px-0 text-sm text-foreground shadow-none placeholder:text-muted-foreground focus-visible:ring-0"
                     />
                   </div>
@@ -1462,6 +1509,11 @@ export const ServerBotsPanel = ({
                           </button>
                         );
                       })}
+                      {filteredTriggers.length === 0 && (
+                        <div className="border border-border bg-secondary/30 px-3 py-4 text-center text-xs text-muted-foreground">
+                          No compatible triggers for this action.
+                        </div>
+                      )}
                     </div>
                   </ScrollArea>
                 </div>
@@ -1575,24 +1627,26 @@ export const ServerBotsPanel = ({
                     </>
                   )}
 
-                  <div>
-                    <Label className={BOT_MODAL_LABEL_CLASS}>Performed by</Label>
-                    <Select value={draftTriggerRoleId} onValueChange={setDraftTriggerRoleId}>
-                      <SelectTrigger className="mt-2 h-9 rounded-none border-0 border-b border-border bg-transparent px-0 text-sm text-foreground shadow-none focus:ring-0 focus:ring-offset-0">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className={BOT_SELECT_CONTENT_CLASS}>
-                        <SelectItem value={ANY_ROLE_VALUE} className={BOT_SELECT_ITEM_CLASS}>
-                          Any member or role
-                        </SelectItem>
-                        {selectableRoles.map((role) => (
-                          <SelectItem key={role.id} value={role.id} className={BOT_SELECT_ITEM_CLASS}>
-                            {role.name}
+                  {triggerProvidesTriggeringUser(draftTrigger) && (
+                    <div>
+                      <Label className={BOT_MODAL_LABEL_CLASS}>Performed by</Label>
+                      <Select value={draftTriggerRoleId} onValueChange={setDraftTriggerRoleId}>
+                        <SelectTrigger className="mt-2 h-9 rounded-none border-0 border-b border-border bg-transparent px-0 text-sm text-foreground shadow-none focus:ring-0 focus:ring-offset-0">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className={BOT_SELECT_CONTENT_CLASS}>
+                          <SelectItem value={ANY_ROLE_VALUE} className={BOT_SELECT_ITEM_CLASS}>
+                            Any member or role
                           </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                          {selectableRoles.map((role) => (
+                            <SelectItem key={role.id} value={role.id} className={BOT_SELECT_ITEM_CLASS}>
+                              {role.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1601,8 +1655,7 @@ export const ServerBotsPanel = ({
                   {ACTION_OPTIONS.map((action) => {
                     const Icon = action.icon;
                     const isSelectedAction = isActionConfigured && draftAction === action.id;
-                    const isIncompatible =
-                      isTriggerConfigured && actionNeedsSourceMessage(action.id) && !triggerProvidesSourceMessage(draftTrigger);
+                    const isIncompatible = isTriggerConfigured && !isTriggerCompatibleWithAction(draftTrigger, action.id);
                     return (
                       <button
                         key={action.id}
@@ -1628,7 +1681,7 @@ export const ServerBotsPanel = ({
                             <span className="truncate text-sm font-medium text-foreground">{action.label}</span>
                           </span>
                           <span className="block truncate text-xs text-muted-foreground">
-                            {isIncompatible ? "Requires a trigger with a source message" : action.description}
+                            {isIncompatible ? getActionTriggerRequirementLabel(action.id) : action.description}
                           </span>
                         </span>
                         <span className="rounded-[3px] border border-border px-3 py-1 text-xs font-medium text-foreground">
@@ -1652,6 +1705,12 @@ export const ServerBotsPanel = ({
                   {actionNeedsSourceMessage(draftAction) && !triggerProvidesSourceMessage(draftTrigger) && (
                     <div className="rounded-[4px] border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
                       This action needs a trigger that includes a source message.
+                    </div>
+                  )}
+
+                  {actionNeedsTriggeringUser(draftAction) && !triggerProvidesTriggeringUser(draftTrigger) && (
+                    <div className="rounded-[4px] border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+                      This action needs a trigger that includes a member.
                     </div>
                   )}
 
@@ -1830,7 +1889,7 @@ export const ServerBotsPanel = ({
                       (draftTrigger === "reaction_added" &&
                         draftTriggerEmojiMode === CUSTOM_EMOJI_VALUE &&
                         !draftTriggerEmoji.trim()) ||
-                      (actionNeedsSourceMessage(draftAction) && !triggerProvidesSourceMessage(draftTrigger)) ||
+                      !isTriggerCompatibleWithAction(draftTrigger, draftAction) ||
                       (draftAction === "add_reaction" && !draftActionEmoji.trim()) ||
                       (draftAction === "create_forum_topic" && !draftForumTopicTitle.trim()) ||
                       (actionNeedsRole(draftAction) && !draftActionRoleId)
@@ -1867,6 +1926,10 @@ export const ServerBotsPanel = ({
                     onClick={() => {
                       if (actionNeedsRole(draftAction) && !draftActionRoleId) {
                         toast.error("Choose a role for the action");
+                        return;
+                      }
+                      if (!isTriggerCompatibleWithAction(draftTrigger, draftAction)) {
+                        toast.error(getActionTriggerRequirementLabel(draftAction) || "Choose a compatible trigger for this action");
                         return;
                       }
                       if (draftAction === "add_reaction" && !draftActionEmoji.trim()) {
