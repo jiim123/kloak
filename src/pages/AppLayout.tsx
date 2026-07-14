@@ -22,6 +22,7 @@ import KloakDrawLoader from "@/components/ui/KloakDrawLoader";
 import { DMSidebar, DMChatArea, FriendsList } from "@/components/dm";
 import { ChannelSettingsPage } from "@/components/settings";
 import { ExploreServers } from "@/components/home/ExploreServers";
+import { HomeLanding } from "@/components/home/HomeLanding";
 import { ServerAuditLogPage } from "@/components/members/ServerAuditLogPage";
 import { ServerMembersPage } from "@/components/members/ServerMembersPage";
 
@@ -767,9 +768,7 @@ const AppLayout = () => {
                     ) : isFriendsView ? (
                       <FriendsList onOpenDM={() => navigate("/app")} />
                     ) : (
-                      <div className="flex h-full items-center justify-center bg-layout-chat px-4 text-center text-muted-foreground">
-                        <p>Select a direct message or start one from the sidebar.</p>
-                      </div>
+                      <HomeLanding />
                     )
                   )}
                   {currentServer && (
@@ -988,9 +987,7 @@ const AppLayout = () => {
                                   <FriendsList onOpenDM={() => navigate("/app")} />
                                 </div>
                               ) : (
-                                <div className="flex h-full items-center justify-center rounded-2xl bg-layout-chat px-4 text-center text-muted-foreground">
-                                  <p>Select a direct message or start one from the sidebar.</p>
-                                </div>
+                                <HomeLanding />
                               )
                             )}
                             {currentServer && (

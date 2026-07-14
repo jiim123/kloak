@@ -28,6 +28,32 @@ BEFORE INSERT OR UPDATE OF bot_id ON public.server_bot_flows
 FOR EACH ROW
 EXECUTE FUNCTION public.enforce_server_bot_flow_limit();
 
+CREATE OR REPLACE FUNCTION public.render_bot_template(_template text, _payload jsonb)
+RETURNS text
+LANGUAGE plpgsql
+IMMUTABLE
+SET search_path TO 'public', 'pg_temp'
+AS $function$
+DECLARE
+  rendered text := COALESCE(_template, '');
+BEGIN
+  rendered := replace(rendered, '{user}', COALESCE(_payload->>'user_mention', _payload->>'username', 'someone'));
+  rendered := replace(rendered, '{username}', COALESCE(_payload->>'username', 'someone'));
+  rendered := replace(rendered, '{server}', COALESCE(_payload->>'server_name', 'this server'));
+  rendered := replace(rendered, '{channel}', COALESCE(_payload->>'channel_mention', _payload->>'channel_name', 'this channel'));
+  rendered := replace(rendered, '{item}', COALESCE(_payload->>'item_title', _payload->>'content', 'an item'));
+  rendered := replace(rendered, '{title}', COALESCE(_payload->>'item_title', _payload->>'content', 'an item'));
+  rendered := replace(rendered, '{message}', COALESCE(_payload->>'content', ''));
+  rendered := replace(rendered, '{content}', COALESCE(_payload->>'content', ''));
+  rendered := replace(rendered, '{emoji}', COALESCE(_payload->>'emoji', 'a reaction'));
+  rendered := replace(rendered, '{status}', COALESCE(_payload->>'status', ''));
+  rendered := replace(rendered, '{old_status}', COALESCE(_payload->>'old_status', ''));
+  rendered := replace(rendered, '{media_type}', COALESCE(_payload->>'media_type', ''));
+  rendered := replace(rendered, '$TriggeringUser', COALESCE(_payload->>'user_mention', _payload->>'username', 'someone'));
+  RETURN left(trim(rendered), 2000);
+END;
+$function$;
+
 CREATE OR REPLACE FUNCTION public.server_bot_supported_triggers_for_action(_action_type text)
 RETURNS text[]
 LANGUAGE sql
@@ -306,6 +332,7 @@ END;
 $function$;
 
 REVOKE ALL ON FUNCTION public.enforce_server_bot_flow_limit() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.render_bot_template(text, jsonb) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.server_bot_supported_triggers_for_action(text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.server_bot_trigger_supports_action(text, text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.upsert_server_bot_flow(uuid, uuid, uuid, text, jsonb, text, jsonb, boolean, integer) FROM PUBLIC;

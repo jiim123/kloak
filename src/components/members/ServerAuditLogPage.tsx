@@ -4,12 +4,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
+import { evaluatePermission } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
 import { toast } from "sonner";
-import type { CustomServerRole } from "@/types";
+import type { CustomServerRole, Permission } from "@/types";
 
 type AuditLogEntry = {
   id: string;
@@ -29,6 +30,33 @@ type AuditLogEntry = {
 };
 
 type DateFilter = "last_10m" | "last_1h" | "last_6h" | "last_24h" | "last_7d" | "last_31d" | "older_31d";
+
+const AUDIT_LOG_PAGE_SIZE = 30;
+
+const STAFF_AUDIT_PERMISSIONS: Permission[] = [
+  "view_audit_log",
+  "manage_server",
+  "manage_roles",
+  "manage_channels",
+  "manage_emojis",
+  "manage_webhooks",
+  "manage_invites",
+  "kick_members",
+  "ban_members",
+  "mute_members",
+  "deafen_members",
+  "move_members",
+  "manage_nicknames",
+  "manage_messages",
+  "pin_messages",
+  "manage_threads",
+  "transfer_ownership",
+  "edit_all_tasks",
+  "assign_tasks",
+  "delete_tasks",
+  "edit_all_events",
+  "delete_events",
+];
 
 const SYSTEM_ROLE_COLORS = {
   owner: "#F46B2B",
@@ -104,8 +132,10 @@ export const ServerAuditLogPage = () => {
   const currentServer = useServerStore((s) => s.currentServer);
   const members = useServerStore((s) => s.members);
   const roles = useServerStore((s) => s.roles);
+  const rolePermissions = useServerStore((s) => s.rolePermissions);
   const fetchMembers = useServerStore((s) => s.fetchMembers);
   const fetchRoles = useServerStore((s) => s.fetchRoles);
+  const fetchRolePermissions = useServerStore((s) => s.fetchRolePermissions);
   const userId = useAuthStore((s) => s.user?.id);
   const { hasPermission } = useMemberPermissions();
   const canViewAuditLog = hasPermission("view_audit_log");
@@ -116,6 +146,9 @@ export const ServerAuditLogPage = () => {
   const [actorFilters, setActorFilters] = useState<Set<string>>(new Set());
   const [actionFilters, setActionFilters] = useState<Set<string>>(new Set());
   const [dateFilters, setDateFilters] = useState<Set<DateFilter>>(new Set());
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageCursors, setPageCursors] = useState<Array<string | null>>([null]);
+  const [hasNextPage, setHasNextPage] = useState(false);
 
   const getAuditRoleName = useCallback(
     (metadata: Record<string, unknown>) => {
@@ -171,41 +204,74 @@ export const ServerAuditLogPage = () => {
       const { data, error } = await (supabase.rpc as any)("get_server_audit_log", {
         _server_id: currentServer.id,
         _user_id: userId,
-        _limit: 100,
-        _before: null,
+        _limit: AUDIT_LOG_PAGE_SIZE,
+        _before: pageCursors[pageIndex] ?? null,
       });
 
       if (error) throw error;
-      setEntries(Array.isArray(data) ? (data as AuditLogEntry[]) : []);
+      const nextEntries = Array.isArray(data) ? (data as AuditLogEntry[]) : [];
+      setEntries(nextEntries);
+      setHasNextPage(nextEntries.length === AUDIT_LOG_PAGE_SIZE);
+      setPageCursors((prev) => {
+        const next = prev.slice(0, pageIndex + 1);
+        if (nextEntries.length === AUDIT_LOG_PAGE_SIZE) {
+          next[pageIndex + 1] = nextEntries[nextEntries.length - 1]?.created_at ?? null;
+        }
+        if (next.length === prev.length && next.every((cursor, index) => cursor === prev[index])) {
+          return prev;
+        }
+        return next;
+      });
     } catch (error) {
       console.error("Failed to load audit log:", error);
       setEntries([]);
+      setHasNextPage(false);
       toast.error("Failed to load audit log");
     } finally {
       setIsLoading(false);
     }
-  }, [canViewAuditLog, currentServer?.id, userId]);
+  }, [canViewAuditLog, currentServer?.id, pageCursors, pageIndex, userId]);
 
   useEffect(() => {
     if (!currentServer?.id) return;
     void fetchMembers(currentServer.id);
     void fetchRoles(currentServer.id);
-  }, [currentServer?.id, fetchMembers, fetchRoles]);
+    void fetchRolePermissions(currentServer.id);
+  }, [currentServer?.id, fetchMembers, fetchRolePermissions, fetchRoles]);
 
   useEffect(() => {
     void loadAuditLog();
   }, [loadAuditLog]);
 
+  useEffect(() => {
+    setEntries([]);
+    setPageIndex(0);
+    setPageCursors([null]);
+    setHasNextPage(false);
+    setActorFilters(new Set());
+    setActionFilters(new Set());
+    setDateFilters(new Set());
+  }, [currentServer?.id]);
+
   const actorFilterOptions = useMemo(() => {
-    const actors = new Map<string, string>();
-    entries.forEach((entry) => {
-      const id = entry.actor_id || "unknown";
-      if (!actors.has(id)) actors.set(id, getActorName(entry));
-    });
-    return [...actors.entries()]
-      .map(([id, label]) => ({ id, label }))
+    if (!currentServer) return [];
+
+    return members
+      .filter((member) => {
+        if (member.is_banned) return false;
+        if (member.user?.is_bot) return false;
+
+        const isOwner = currentServer.owner_id === member.user_id;
+        return STAFF_AUDIT_PERMISSIONS.some((permission) =>
+          evaluatePermission(permission, isOwner, member.roles, rolePermissions, undefined, undefined, member.user_id, roles, member.role),
+        );
+      })
+      .map((member) => ({
+        id: member.user_id,
+        label: member.nickname || member.user?.display_name || member.user?.username || "Unknown user",
+      }))
       .sort((a, b) => a.label.localeCompare(b.label));
-  }, [entries]);
+  }, [currentServer, members, rolePermissions, roles]);
 
   const actionFilterOptions = useMemo(() => {
     const actions = new Set(entries.map((entry) => entry.action));
@@ -227,6 +293,15 @@ export const ServerAuditLogPage = () => {
   };
 
   const activeFilterCount = actorFilters.size + actionFilters.size + dateFilters.size;
+
+  const handlePreviousPage = () => {
+    setPageIndex((prev) => Math.max(0, prev - 1));
+  };
+
+  const handleNextPage = () => {
+    if (!hasNextPage || !pageCursors[pageIndex + 1]) return;
+    setPageIndex((prev) => prev + 1);
+  };
 
   const actorColorByUserId = useMemo(() => {
     const roleById = new Map(roles.map((role) => [role.id, role]));
@@ -329,7 +404,7 @@ export const ServerAuditLogPage = () => {
 
           <div className="ml-auto flex min-h-8 items-center gap-2 text-[12px] text-muted-foreground">
             <span>
-              {visibleEntries.length} {visibleEntries.length === 1 ? "entry" : "entries"}
+              Page {pageIndex + 1} - {visibleEntries.length} {visibleEntries.length === 1 ? "entry" : "entries"}
             </span>
             <Popover>
               <PopoverTrigger asChild>
@@ -478,6 +553,28 @@ export const ServerAuditLogPage = () => {
             )}
           </div>
         </div>
+
+        {(entries.length > 0 || pageIndex > 0) && (
+          <div className="mt-3 flex h-9 items-center justify-end gap-2 text-[12px] text-muted-foreground">
+            <button
+              type="button"
+              onClick={handlePreviousPage}
+              disabled={pageIndex === 0 || isLoading}
+              className="h-8 rounded-[4px] border border-white/10 px-3 font-medium text-foreground transition-colors hover:bg-white/8 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Previous
+            </button>
+            <span className="min-w-16 text-center">Page {pageIndex + 1}</span>
+            <button
+              type="button"
+              onClick={handleNextPage}
+              disabled={!hasNextPage || !pageCursors[pageIndex + 1] || isLoading}
+              className="h-8 rounded-[4px] border border-white/10 px-3 font-medium text-foreground transition-colors hover:bg-white/8 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

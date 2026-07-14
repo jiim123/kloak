@@ -140,6 +140,11 @@ type ActionOption = {
   icon: ComponentType<{ className?: string }>;
 };
 
+type TemplateVar = {
+  token: string;
+  description: string;
+};
+
 type FlowBuilderStep =
   | "overview"
   | "trigger-picker"
@@ -483,8 +488,8 @@ const getTriggerChannelTypes = (trigger: BotTriggerType): Channel["type"][] => {
       return [];
   }
 };
-const getTemplateVarsForTrigger = (trigger: BotTriggerType) => {
-  const vars = [
+const getTemplateVarsForTrigger = (trigger: BotTriggerType): TemplateVar[] => {
+  const vars: TemplateVar[] = [
     { token: "{user}", description: "Triggering member mention" },
     { token: "{username}", description: "Triggering member name" },
     { token: "{server}", description: "Server name" },
@@ -511,7 +516,36 @@ const getTemplateVarsForTrigger = (trigger: BotTriggerType) => {
     vars.push({ token: "{emoji}", description: "Reaction emoji" });
   }
 
+  if (trigger === "list_item_updated" || trigger === "list_item_deleted" || trigger === "list_item_created") {
+    vars.push({ token: "{status}", description: "Task status" });
+  }
+
+  if (trigger === "list_item_updated") {
+    vars.push({ token: "{old_status}", description: "Previous task status" });
+  }
+
+  if (trigger === "media_created" || trigger === "media_updated" || trigger === "media_deleted") {
+    vars.push({ token: "{media_type}", description: "Media type" });
+  }
+
   return vars;
+};
+const getActionContentLabel = (action: BotActionType) => {
+  switch (action) {
+    case "create_list_item":
+      return "Task title";
+    case "send_channel_message":
+      return "Message";
+    default:
+      return "Text";
+  }
+};
+const getActionContentMaxLength = (action: BotActionType) => (action === "create_list_item" ? 120 : 2000);
+const getSourceMessageActionText = (action: BotActionType, trigger: BotTriggerType) => {
+  if (!actionNeedsSourceMessage(action)) return "";
+  if (!triggerProvidesSourceMessage(trigger)) return getActionTriggerRequirementLabel(action);
+  if (action === "delete_message") return "This deletes the message supplied by the selected trigger.";
+  return "This reacts to the message supplied by the selected trigger.";
 };
 const serverBotsRpc: ServerBotsRpc = (fn, args) => (supabase.rpc as (name: string, args?: unknown) => unknown)(fn, args) as Promise<{ data: unknown; error: { message?: string } | null }>;
 const getErrorMessage = (error: unknown, fallback: string) =>
@@ -1708,6 +1742,12 @@ export const ServerBotsPanel = ({
                     </div>
                   )}
 
+                  {actionNeedsSourceMessage(draftAction) && triggerProvidesSourceMessage(draftTrigger) && (
+                    <div className="rounded-[4px] border border-border bg-secondary/25 px-3 py-2 text-xs text-muted-foreground">
+                      {getSourceMessageActionText(draftAction, draftTrigger)}
+                    </div>
+                  )}
+
                   {actionNeedsTriggeringUser(draftAction) && !triggerProvidesTriggeringUser(draftTrigger) && (
                     <div className="rounded-[4px] border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
                       This action needs a trigger that includes a member.
@@ -1742,6 +1782,9 @@ export const ServerBotsPanel = ({
                           maxLength={120}
                           className={BOT_MODAL_INPUT_CLASS}
                         />
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          Can use variables from the selected trigger.
+                        </p>
                       </div>
                       <div>
                         <Label className={BOT_MODAL_LABEL_CLASS}>Topic description</Label>
@@ -1773,15 +1816,18 @@ export const ServerBotsPanel = ({
 
                   {actionNeedsMessage(draftAction) && draftAction !== "create_forum_topic" && (
                     <div>
-                      <Label className={BOT_MODAL_LABEL_CLASS}>
-                        {draftAction === "create_forum_topic" ? "Topic" : draftAction === "create_list_item" ? "Task" : "Message"}
-                      </Label>
+                      <Label className={BOT_MODAL_LABEL_CLASS}>{getActionContentLabel(draftAction)}</Label>
                       <Input
                         value={draftContent}
-                        onChange={(event) => setDraftContent(event.target.value)}
-                        maxLength={500}
+                        onChange={(event) => setDraftContent(event.target.value.slice(0, getActionContentMaxLength(draftAction)))}
+                        maxLength={getActionContentMaxLength(draftAction)}
                         className={BOT_MODAL_INPUT_CLASS}
                       />
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        {draftAction === "create_list_item"
+                          ? "Rendered task titles are limited to 120 characters."
+                          : "Can use variables from the selected trigger."}
+                      </p>
                       <div className="mt-3 rounded-[4px] border border-border bg-secondary/25 px-3 py-2">
                         <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                           Template variables
