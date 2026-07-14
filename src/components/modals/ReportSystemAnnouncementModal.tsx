@@ -29,7 +29,7 @@ const ANNOUNCEMENTS: Announcement[] = [
     eyebrow: "",
     title: "Action Bots, roll out",
     description: "Meet Action Bots. Your server's new automation layer. Build powerful no-code workflows that welcome members, assign roles, send messages and more.",
-    body: "Automate your server with Action Bots. Welcome members, assign roles, respond to trigger phrases, post messages, and more. Just build your flow and let it run.",
+    body: "Create your own bot from the Server Settings -> Bots. Welcome members, assign roles, respond to trigger phrases, post messages, and more. Just build your flow and let it run.",
     buttonLabel: "Let's build one",
     videoEmbedUrl: "https://www.youtube.com/embed/CIq6q3vaLzE",
     videoTitle: "Action bots launch video",
