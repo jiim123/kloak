@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Kloak",
+    "slug": "kloak-mobile-webview",
+    "version": "1.0.0",
+    "scheme": "kloak",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#0f0f0f"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.kloak.mobile"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0f0f0f"
+      },
+      "package": "app.kloak.mobile",
+      "edgeToEdgeEnabled": true
+    },
+    "plugins": [
+      "expo-notifications"
+    ]
+  }
+}

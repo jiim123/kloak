@@ -35,6 +35,7 @@ key.pem
 !key.pub
 *.md
 !/mobileapps/README.md
+!/mobileapps-new/README.md
 
 .cursor/mcp.json
 /mobileapps
