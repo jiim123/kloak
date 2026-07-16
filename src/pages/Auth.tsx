@@ -90,6 +90,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
   const [usernameErrorType, setUsernameErrorType] = useState<string | null>(null);
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [isCreatingAccountFlow, setIsCreatingAccountFlow] = useState(false);
   const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([]);
   const [rateLimitCooldown, setRateLimitCooldown] = useState<number | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
@@ -143,14 +144,14 @@ const Auth = ({ formOnly = false }: AuthProps) => {
 
   // Redirect if already logged in (but not during onboarding)
   useEffect(() => {
-    if (user && !showWelcomeModal) {
+    if (user && !showWelcomeModal && !isCreatingAccountFlow) {
       // Use a small delay to ensure iOS Safari has completed any pending state updates
       const timeoutId = setTimeout(() => {
         navigate(redirectTo || "/app", { replace: true });
       }, 50);
       return () => clearTimeout(timeoutId);
     }
-  }, [user, navigate, redirectTo, showWelcomeModal]);
+  }, [user, navigate, redirectTo, showWelcomeModal, isCreatingAccountFlow]);
 
   // Reset state when switching tabs
   useEffect(() => {
@@ -162,6 +163,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
     setMfaRequired(false);
     setMfaCode("");
     setGeneratedKey(null);
+    setIsCreatingAccountFlow(false);
     setUsernameSuggestions([]);
     setCaptchaToken(null);
     setCaptchaError(null);
@@ -254,13 +256,15 @@ const Auth = ({ formOnly = false }: AuthProps) => {
     try {
       recordRegistrationAttempt();
 
-      // Set modal flag BEFORE createAccount so the redirect useEffect
-      // won't navigate away when the user is set in the store.
-      setShowWelcomeModal(true);
+      // Suppress auth redirects while the registration RPC decides whether the
+      // account was actually created.
+      setIsCreatingAccountFlow(true);
       const result = await createAccount(username.trim().toLowerCase(), captchaToken);
       if (result) {
         setGeneratedKey(result.secretKey);
+        setShowWelcomeModal(true);
       } else {
+        setIsCreatingAccountFlow(false);
         setShowWelcomeModal(false);
         setCaptchaToken(null);
         setCaptchaError(null);
@@ -268,6 +272,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
       }
     } catch (err) {
       console.error("Account creation error:", err);
+      setIsCreatingAccountFlow(false);
       setShowWelcomeModal(false);
       setCaptchaToken(null);
       setCaptchaError(null);
@@ -390,6 +395,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
     // Clear secretKey from memory — it should never persist beyond onboarding
     useAuthStore.getState().setSecretKey(null);
     setShowWelcomeModal(false);
+    setIsCreatingAccountFlow(false);
     // Resize Tauri window to app size, then navigate
     await resizeWindowForApp();
     navigate(redirectTo || "/app", { replace: true });
