@@ -93,6 +93,7 @@ interface UIState {
   // Mobile sidebar states
   isMobileSidebarOpen: boolean;
   isMobileChannelSidebarOpen: boolean;
+  isMobileMemberSidebarOpen: boolean;
 
   // Notification preferences
   desktopNotificationsEnabled: boolean;
@@ -132,6 +133,7 @@ interface UIState {
   // Mobile sidebar actions
   setMobileSidebarOpen: (open: boolean) => void;
   setMobileChannelSidebarOpen: (open: boolean) => void;
+  setMobileMemberSidebarOpen: (open: boolean) => void;
   closeMobileSidebars: () => void;
 
   // Modal actions
@@ -206,6 +208,7 @@ export const useUIStore = create<UIState>()(
       linkPreviewNoticeDismissed: false,
       isMobileSidebarOpen: false,
       isMobileChannelSidebarOpen: false,
+      isMobileMemberSidebarOpen: false,
 
       // Notification preferences
       desktopNotificationsEnabled: true,
@@ -270,8 +273,12 @@ export const useUIStore = create<UIState>()(
         set({ isMobileChannelSidebarOpen: open });
       },
 
+      setMobileMemberSidebarOpen: (open) => {
+        set({ isMobileMemberSidebarOpen: open });
+      },
+
       closeMobileSidebars: () => {
-        set({ isMobileSidebarOpen: false, isMobileChannelSidebarOpen: false });
+        set({ isMobileSidebarOpen: false, isMobileChannelSidebarOpen: false, isMobileMemberSidebarOpen: false });
       },
 
       openModal: (modal, data = null) => {
@@ -284,10 +291,17 @@ export const useUIStore = create<UIState>()(
             isSettingsOpen: false,
             isMobileSidebarOpen: false,
             isMobileChannelSidebarOpen: false,
+            isMobileMemberSidebarOpen: false,
           });
         } else if (modal === "edit-channel" || modal === "create-channel") {
           // Close mobile sidebars when opening channel modals so they appear on top
-          set({ activeModal: modal, modalData: data, isMobileSidebarOpen: false, isMobileChannelSidebarOpen: false });
+          set({
+            activeModal: modal,
+            modalData: data,
+            isMobileSidebarOpen: false,
+            isMobileChannelSidebarOpen: false,
+            isMobileMemberSidebarOpen: false,
+          });
         } else {
           set({ activeModal: modal, modalData: data });
         }
@@ -305,6 +319,7 @@ export const useUIStore = create<UIState>()(
           activeModal: "user-settings",
           isMobileSidebarOpen: false,
           isMobileChannelSidebarOpen: false,
+          isMobileMemberSidebarOpen: false,
         });
       },
 
@@ -320,6 +335,7 @@ export const useUIStore = create<UIState>()(
           activeModal: "server-settings",
           isMobileSidebarOpen: false,
           isMobileChannelSidebarOpen: false,
+          isMobileMemberSidebarOpen: false,
         });
       },
 

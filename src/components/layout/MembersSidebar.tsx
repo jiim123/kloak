@@ -423,6 +423,8 @@ export const MembersSidebar = () => {
   const openModal = useUIStore((s) => s.openModal);
   const isMemberSidebarOpen = useUIStore((s) => s.isMemberSidebarOpen);
   const setMemberSidebarOpen = useUIStore((s) => s.setMemberSidebarOpen);
+  const isMobileMemberSidebarOpen = useUIStore((s) => s.isMobileMemberSidebarOpen);
+  const setMobileMemberSidebarOpen = useUIStore((s) => s.setMobileMemberSidebarOpen);
 
   const openConversation = useDMStore((s) => s.openConversation);
   const blockedUserIds = useFriendStore((s) => s.visibilityBlockedUserIds);
@@ -490,7 +492,7 @@ export const MembersSidebar = () => {
   // Fetch total member count
   useEffect(() => {
     if (!currentServer?.id || !user?.id) return;
-    if (!isMemberSidebarOpen && isMobile) return;
+    if (!isMobileMemberSidebarOpen && isMobile) return;
 
     const cachedCount = readCachedMemberCount(currentServer.id, user.id);
     if (cachedCount !== null) {
@@ -530,7 +532,7 @@ export const MembersSidebar = () => {
       cancelled = true;
       clearTimeout(fetchTimer);
     };
-  }, [currentServer?.id, isMemberSidebarOpen, isMobile, user?.id]);
+  }, [currentServer?.id, isMobileMemberSidebarOpen, isMobile, user?.id]);
 
   // Filter out offline/invisible members
   const baseOnlineMembers = useMemo(() => {
@@ -1129,8 +1131,12 @@ export const MembersSidebar = () => {
   }, []);
 
   const handleCloseSidebar = useCallback(() => {
+    if (isMobile) {
+      setMobileMemberSidebarOpen(false);
+      return;
+    }
     setMemberSidebarOpen(false);
-  }, [setMemberSidebarOpen]);
+  }, [isMobile, setMemberSidebarOpen, setMobileMemberSidebarOpen]);
 
   const memberListRows = useMemo<MemberListRow[]>(() => {
     const rows: MemberListRow[] = [];
@@ -1479,9 +1485,9 @@ export const MembersSidebar = () => {
 
   if (isMobile) {
     return (
-      <Drawer direction="right" open={isMemberSidebarOpen} onOpenChange={setMemberSidebarOpen} modal={false}>
-        {isMemberSidebarOpen && <div className="fixed inset-0 z-50 bg-background/80" onClick={handleCloseSidebar} />}
-        <DrawerContent className="p-1.5 w-[100vw] max-w-[100vw] bg-background">
+      <Drawer direction="right" open={isMobileMemberSidebarOpen} onOpenChange={setMobileMemberSidebarOpen} modal={false}>
+        {isMobileMemberSidebarOpen && <div className="fixed inset-0 z-50 bg-background/80" onClick={handleCloseSidebar} />}
+        <DrawerContent className="!w-[calc(100vw-28px)] !max-w-[420px] p-1.5 bg-background">
           <DrawerHeader className="sr-only">
             <DrawerTitle>Members</DrawerTitle>
           </DrawerHeader>

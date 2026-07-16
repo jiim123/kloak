@@ -117,7 +117,7 @@ const selectCurrentChannel = (s: ReturnType<typeof useServerStore.getState>) => 
 const selectCurrentServer = (s: ReturnType<typeof useServerStore.getState>) => s.currentServer;
 const selectUser = (s: ReturnType<typeof useAuthStore.getState>) => s.user;
 const selectSetMobileSidebarOpen = (s: ReturnType<typeof useUIStore.getState>) => s.setMobileSidebarOpen;
-const selectSetMemberSidebarOpen = (s: ReturnType<typeof useUIStore.getState>) => s.setMemberSidebarOpen;
+const selectSetMobileMemberSidebarOpen = (s: ReturnType<typeof useUIStore.getState>) => s.setMobileMemberSidebarOpen;
 const selectOpenModal = (s: ReturnType<typeof useUIStore.getState>) => s.openModal;
 
 // ── Main component ──
@@ -131,7 +131,7 @@ export const AnnouncementChatArea = ({ showHeader = true }: AnnouncementChatArea
   const currentServer = useServerStore(selectCurrentServer);
   const user = useAuthStore(selectUser);
   const setMobileSidebarOpen = useUIStore(selectSetMobileSidebarOpen);
-  const setMemberSidebarOpen = useUIStore(selectSetMemberSidebarOpen);
+  const setMobileMemberSidebarOpen = useUIStore(selectSetMobileMemberSidebarOpen);
   const openModal = useUIStore(selectOpenModal);
 
   const channelId = currentChannel?.id ?? null;
@@ -193,13 +193,14 @@ export const AnnouncementChatArea = ({ showHeader = true }: AnnouncementChatArea
   }, [serverId]);
 
   const handleSwipeRight = useCallback(() => setMobileSidebarOpen(true), [setMobileSidebarOpen]);
-  const handleSwipeLeft = useCallback(() => setMemberSidebarOpen(true), [setMemberSidebarOpen]);
+  const handleSwipeLeft = useCallback(() => setMobileMemberSidebarOpen(true), [setMobileMemberSidebarOpen]);
 
   const swipeConfig = useMemo(
     () => ({
       onSwipeRight: handleSwipeRight,
       onSwipeLeft: handleSwipeLeft,
       threshold: 50,
+      edgeThreshold: 168,
       enabled: isMobile,
     }),
     [handleSwipeRight, handleSwipeLeft, isMobile],

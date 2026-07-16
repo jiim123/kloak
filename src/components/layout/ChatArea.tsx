@@ -55,7 +55,7 @@ const selectMembers = (s: ReturnType<typeof useServerStore.getState>) => s.membe
 const selectMembersServerId = (s: ReturnType<typeof useServerStore.getState>) => s.membersServerId;
 const selectUser = (s: ReturnType<typeof useAuthStore.getState>) => s.user;
 const selectSetMobileSidebarOpen = (s: ReturnType<typeof useUIStore.getState>) => s.setMobileSidebarOpen;
-const selectSetMemberSidebarOpen = (s: ReturnType<typeof useUIStore.getState>) => s.setMemberSidebarOpen;
+const selectSetMobileMemberSidebarOpen = (s: ReturnType<typeof useUIStore.getState>) => s.setMobileMemberSidebarOpen;
 const selectOpenModal = (s: ReturnType<typeof useUIStore.getState>) => s.openModal;
 const EMPTY_MESSAGES: Message[] = [];
 
@@ -211,7 +211,7 @@ export const ChatArea = ({ showHeader = true }: ChatAreaProps) => {
   const membersServerId = useServerStore(selectMembersServerId);
   const user = useAuthStore(selectUser);
   const setMobileSidebarOpen = useUIStore(selectSetMobileSidebarOpen);
-  const setMemberSidebarOpen = useUIStore(selectSetMemberSidebarOpen);
+  const setMobileMemberSidebarOpen = useUIStore(selectSetMobileMemberSidebarOpen);
   const openModal = useUIStore(selectOpenModal);
 
   // Derived primitives (stable across renders when values don't change)
@@ -299,13 +299,14 @@ export const ChatArea = ({ showHeader = true }: ChatAreaProps) => {
 
   // Stable swipe callbacks
   const handleSwipeRight = useCallback(() => setMobileSidebarOpen(true), [setMobileSidebarOpen]);
-  const handleSwipeLeft = useCallback(() => setMemberSidebarOpen(true), [setMemberSidebarOpen]);
+  const handleSwipeLeft = useCallback(() => setMobileMemberSidebarOpen(true), [setMobileMemberSidebarOpen]);
 
   const swipeConfig = useMemo(
     () => ({
       onSwipeRight: handleSwipeRight,
       onSwipeLeft: handleSwipeLeft,
       threshold: 50,
+      edgeThreshold: 168,
       enabled: isMobile,
     }),
     [handleSwipeRight, handleSwipeLeft, isMobile],

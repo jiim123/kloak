@@ -106,6 +106,7 @@ export const DMChatArea = () => {
   const swipeRef = useSwipeGestureRef({
     onSwipeRight: () => setMobileSidebarOpen(true),
     threshold: 50,
+    edgeThreshold: 168,
     enabled: isMobile,
   });
 

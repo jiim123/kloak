@@ -15,7 +15,7 @@ const safeAreaStyle = { paddingTop: "env(safe-area-inset-top, 0px)" } as const;
 export const MobileHeader = memo(({ isDMView }: MobileHeaderProps) => {
   const { currentServer, currentChannel } = useServerStore();
   const { currentConversation } = useDMStore();
-  const { setMobileSidebarOpen, isMemberSidebarOpen, setMemberSidebarOpen, openModal } = useUIStore();
+  const { setMobileSidebarOpen, isMobileMemberSidebarOpen, setMobileMemberSidebarOpen, openModal } = useUIStore();
 
   const title = useMemo(() => {
     if (isDMView) {
@@ -58,7 +58,10 @@ export const MobileHeader = memo(({ isDMView }: MobileHeaderProps) => {
   }, [isDMView, currentChannel]);
 
   const openSidebar = useCallback(() => setMobileSidebarOpen(true), [setMobileSidebarOpen]);
-  const toggleMembers = useCallback(() => setMemberSidebarOpen(!isMemberSidebarOpen), [setMemberSidebarOpen, isMemberSidebarOpen]);
+  const toggleMembers = useCallback(
+    () => setMobileMemberSidebarOpen(!isMobileMemberSidebarOpen),
+    [setMobileMemberSidebarOpen, isMobileMemberSidebarOpen],
+  );
 
   const showMembersToggle = !isDMView && currentServer;
 

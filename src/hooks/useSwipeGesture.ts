@@ -4,6 +4,7 @@ interface SwipeGestureOptions {
   onSwipeLeft?: () => void;
   onSwipeRight?: () => void;
   threshold?: number;
+  edgeThreshold?: number;
   enabled?: boolean;
 }
 
@@ -11,6 +12,7 @@ export const useSwipeGesture = ({
   onSwipeLeft,
   onSwipeRight,
   threshold = 70,
+  edgeThreshold,
   enabled = true,
 }: SwipeGestureOptions) => {
   const touchStartX = useRef<number | null>(null);
@@ -62,9 +64,20 @@ export const useSwipeGesture = ({
 
     // Only trigger if horizontal distance exceeds threshold AND is dominant over vertical
     if (absDeltaX >= threshold && absDeltaX > absDeltaY * 2) {
-      if (deltaX > 0 && onSwipeRight) {
+      let startedFromRequiredEdge = true;
+
+      if (edgeThreshold && typeof window !== 'undefined') {
+        const startsAtLeftEdge = touchStartX.current <= edgeThreshold;
+        const startsAtRightEdge = touchStartX.current >= window.innerWidth - edgeThreshold;
+
+        startedFromRequiredEdge =
+          (deltaX > 0 && startsAtLeftEdge) ||
+          (deltaX < 0 && startsAtRightEdge);
+      }
+
+      if (startedFromRequiredEdge && deltaX > 0 && onSwipeRight) {
         onSwipeRight();
-      } else if (deltaX < 0 && onSwipeLeft) {
+      } else if (startedFromRequiredEdge && deltaX < 0 && onSwipeLeft) {
         onSwipeLeft();
       }
     }
@@ -74,7 +87,7 @@ export const useSwipeGesture = ({
     touchEndX.current = null;
     touchEndY.current = null;
     isVerticalScroll.current = false;
-  }, [enabled, threshold, onSwipeLeft, onSwipeRight]);
+  }, [enabled, edgeThreshold, threshold, onSwipeLeft, onSwipeRight]);
 
   const bindSwipeHandlers = useCallback((element: HTMLElement | null) => {
     if (!element) return () => {};

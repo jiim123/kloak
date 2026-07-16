@@ -79,6 +79,7 @@ import { useUnread } from "@/hooks/useUnread";
 import { useServerUnreadSummary } from "@/hooks/useServerUnreadSummary";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useSwipeGestureRef } from "@/hooks/useSwipeGesture";
 import { useBackgroundSync } from "@/hooks/useBackgroundSync";
 import { usePreferencesSync } from "@/hooks/usePreferencesSync";
 import type { Channel, User } from "@/types";
@@ -120,6 +121,8 @@ const AppLayout = () => {
   const { loadSettings: loadVoiceSettings } = useVoiceSettingsStore();
   const isMemberSidebarOpen = useUIStore((s) => s.isMemberSidebarOpen);
   const closeMobileSidebars = useUIStore((s) => s.closeMobileSidebars);
+  const setMobileSidebarOpen = useUIStore((s) => s.setMobileSidebarOpen);
+  const setMobileMemberSidebarOpen = useUIStore((s) => s.setMobileMemberSidebarOpen);
   const activeModal = useUIStore((s) => s.activeModal);
   const openModal = useUIStore((s) => s.openModal);
   const currentServer = useServerStore((s) => s.currentServer);
@@ -680,6 +683,26 @@ const AppLayout = () => {
     setIsAddServerPanelOpen(false);
   }, []);
 
+  const openMobileNavigationFromEdge = useCallback(() => {
+    if (!currentServer) return;
+    setMobileMemberSidebarOpen(false);
+    setMobileSidebarOpen(true);
+  }, [currentServer, setMobileMemberSidebarOpen, setMobileSidebarOpen]);
+
+  const openMobileMembersFromEdge = useCallback(() => {
+    if (!currentServer) return;
+    setMobileSidebarOpen(false);
+    setMobileMemberSidebarOpen(true);
+  }, [currentServer, setMobileMemberSidebarOpen, setMobileSidebarOpen]);
+
+  const mobileServerSwipeRef = useSwipeGestureRef({
+    onSwipeRight: openMobileNavigationFromEdge,
+    onSwipeLeft: openMobileMembersFromEdge,
+    threshold: 48,
+    edgeThreshold: 168,
+    enabled: isMobile && Boolean(currentServer) && !activeModal,
+  });
+
   // Show loading state - AFTER all hooks
   // Only full-screen block when we truly don't have a user yet.
   if (isLoading && !user) {
@@ -747,7 +770,7 @@ const AppLayout = () => {
                 <MobileHeader isDMView={isDMView} />
 
                 {/* Mobile layout */}
-                <div className="flex-1 overflow-hidden bg-layout-chat relative w-full">
+                <div ref={mobileServerSwipeRef} className="flex-1 overflow-hidden bg-layout-chat relative w-full">
                   <VoicePersistentHost />
                   {/* Keep all views mounted, toggle visibility with CSS to prevent remount sluggishness */}
                   {isProfileView && (

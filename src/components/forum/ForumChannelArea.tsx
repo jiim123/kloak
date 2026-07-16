@@ -289,7 +289,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
   const { currentChannel, currentServer, members, roles } = useServerStore();
   const { user } = useAuthStore();
   const { sendMessage } = useMessageStore();
-  const { setMobileSidebarOpen, setMemberSidebarOpen, openModal } = useUIStore();
+  const { setMobileSidebarOpen, setMobileMemberSidebarOpen, openModal } = useUIStore();
   const { markAsRead } = useUnreadChannelsContext();
   const { typingUsers, startTyping, stopTyping } = useTyping(currentChannel?.id || null);
   const isMobile = useIsMobile();
@@ -462,8 +462,9 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
 
   const swipeRef = useSwipeGestureRef({
     onSwipeRight: () => setMobileSidebarOpen(true),
-    onSwipeLeft: () => setMemberSidebarOpen(true),
+    onSwipeLeft: () => setMobileMemberSidebarOpen(true),
     threshold: 50,
+    edgeThreshold: 168,
     enabled: false,
   });
 
