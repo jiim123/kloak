@@ -16,6 +16,25 @@ export const THEMES = [
 
 export type Theme = (typeof THEMES)[number]["id"];
 export type DmPrivacy = "everyone" | "shared_servers" | "friends" | "no_one";
+export type HomeBackground = "default" | "midnight" | "forest" | "ocean" | "rose" | "cyber";
+export type HomeBackgroundImageFit = "contain" | "cover";
+export type HomeQuickAction = "friends" | "explore" | "join" | "create" | "settings";
+
+export interface HomePreferences {
+  background: HomeBackground;
+  backgroundImageDataUrl: string;
+  backgroundImageOpacity: number;
+  backgroundImageFit: HomeBackgroundImageFit;
+  quickActions: HomeQuickAction[];
+}
+
+export const DEFAULT_HOME_PREFERENCES: HomePreferences = {
+  background: "default",
+  backgroundImageDataUrl: "",
+  backgroundImageOpacity: 0.28,
+  backgroundImageFit: "contain",
+  quickActions: ["friends", "explore", "join", "create"],
+};
 
 export type ModalType =
   | "create-server"
@@ -99,6 +118,7 @@ interface UIState {
   showTimestamps: boolean;
   animateEmojis: boolean;
   dmPrivacy: DmPrivacy;
+  homePreferences: HomePreferences;
 
   // Theme actions
   toggleTheme: () => void;
@@ -153,6 +173,8 @@ interface UIState {
   setShowTimestamps: (enabled: boolean) => void;
   setAnimateEmojis: (enabled: boolean) => void;
   setDmPrivacy: (value: DmPrivacy) => void;
+  setHomePreferences: (preferences: Partial<HomePreferences>) => void;
+  resetHomePreferences: () => void;
 }
 
 export const applyTheme = (theme: Theme) => {
@@ -209,6 +231,7 @@ export const useUIStore = create<UIState>()(
       showTimestamps: true,
       animateEmojis: true,
       dmPrivacy: "friends",
+      homePreferences: DEFAULT_HOME_PREFERENCES,
 
       toggleTheme: () => {
         const currentTheme = get().theme;
@@ -391,6 +414,19 @@ export const useUIStore = create<UIState>()(
       setDmPrivacy: (value) => {
         set({ dmPrivacy: value });
       },
+
+      setHomePreferences: (preferences) => {
+        set((state) => ({
+          homePreferences: {
+            ...state.homePreferences,
+            ...preferences,
+          },
+        }));
+      },
+
+      resetHomePreferences: () => {
+        set({ homePreferences: DEFAULT_HOME_PREFERENCES });
+      },
     }),
     {
       name: "kloak-ui",
@@ -418,6 +454,7 @@ export const useUIStore = create<UIState>()(
         showTimestamps: state.showTimestamps,
         animateEmojis: state.animateEmojis,
         dmPrivacy: state.dmPrivacy,
+        homePreferences: state.homePreferences,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
@@ -426,6 +463,21 @@ export const useUIStore = create<UIState>()(
           if (!validThemes.includes(state.theme)) {
             state.theme = "amoled";
           }
+          state.homePreferences = {
+            ...DEFAULT_HOME_PREFERENCES,
+            ...(state.homePreferences || {}),
+            backgroundImageDataUrl: state.homePreferences?.backgroundImageDataUrl || "",
+            backgroundImageOpacity:
+              typeof state.homePreferences?.backgroundImageOpacity === "number"
+                ? Math.max(0.12, Math.min(0.65, state.homePreferences.backgroundImageOpacity))
+                : DEFAULT_HOME_PREFERENCES.backgroundImageOpacity,
+            backgroundImageFit:
+              state.homePreferences?.backgroundImageFit === "cover" ? "cover" : DEFAULT_HOME_PREFERENCES.backgroundImageFit,
+            quickActions:
+              state.homePreferences?.quickActions?.length
+                ? state.homePreferences.quickActions
+                : DEFAULT_HOME_PREFERENCES.quickActions,
+          };
           applyTheme(state.theme);
         }
       },

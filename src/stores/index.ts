@@ -1,7 +1,13 @@
 // Export all stores
 export { useAuthStore, initializeAuth } from './authStore';
 export { useServerStore } from './serverStore';
-export { useUIStore, initializeTheme } from './uiStore';
+export {
+  DEFAULT_HOME_PREFERENCES,
+  useUIStore,
+  initializeTheme,
+  type HomeBackground,
+  type HomeQuickAction,
+} from './uiStore';
 export { useMessageStore } from './messageStore';
 export { useDMStore } from './dmStore';
 export { useFriendStore } from './friendStore';
