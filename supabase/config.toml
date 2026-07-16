@@ -9,9 +9,6 @@ verify_jwt = false
 [functions.register-with-captcha]
 verify_jwt = false
 
-[functions.check-username-availability]
-verify_jwt = false
-
 [functions.update-user-profile]
 verify_jwt = false
 

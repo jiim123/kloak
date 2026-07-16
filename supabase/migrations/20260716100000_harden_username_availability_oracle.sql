@@ -10,7 +10,10 @@ AS $$
 DECLARE
   _jwt_role text := nullif(current_setting('request.jwt.claim.role', true), '');
 BEGIN
-  IF COALESCE(_jwt_role, '') <> 'service_role' THEN
+  -- Supabase service-role JWTs set request.jwt.claim.role, while newer
+  -- sb_secret service keys can pass service_role grants without that GUC.
+  -- Public client roles still carry explicit anon/authenticated claims.
+  IF _jwt_role IS NOT NULL AND _jwt_role <> 'service_role' THEN
     RAISE EXCEPTION 'Direct username availability checks are forbidden'
       USING ERRCODE = '42501';
   END IF;
