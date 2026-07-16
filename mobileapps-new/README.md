@@ -2,13 +2,26 @@
 
 Thin Expo shell that loads the Kloak web app in a native WebView and owns phone push notification registration.
 
-## Run
+## Run With Expo
 
 ```powershell
 cd mobileapps-new
 npm install
 npx expo start
 ```
+
+## Build With Android Studio
+
+This app uses Expo with a generated native Android project. Open `mobileapps-new/android` in Android Studio, not the `mobileapps-new` root. The root is the Expo/React Native workspace; the `android` directory is the Gradle project Android Studio expects.
+
+If the native project ever needs to be regenerated after Expo config changes, run:
+
+```powershell
+cd mobileapps-new
+npx.cmd expo prebuild --platform android --no-install
+```
+
+Then sync Gradle in Android Studio and use the generated `app` run configuration.
 
 Set these environment variables in `.env`:
 
@@ -40,8 +53,8 @@ Notification taps route the WebView to the link sent in the notification payload
 If the app opens but the phone does not receive pushes:
 
 1. Make sure `.env` has `EXPO_PUBLIC_EAS_PROJECT_ID`. Without it the app cannot call `getExpoPushTokenAsync`.
-1. Apply the Supabase migration that grants anon access to `public.push_tokens` under RLS:
+2. Apply the Supabase migration that grants anon access to `public.push_tokens` under RLS:
    `supabase/migrations/20260715110000_allow_mobile_anon_push_token_registration.sql`
-2. Log in on the phone and wait a few seconds. If the bottom pill says `Push: not-authenticated`, the shell has the native token but the web session is not ready yet; it retries automatically.
-3. Confirm a row exists in `public.push_tokens` for the logged-in user with `enabled = true`.
-4. Test on a physical device using an Expo development build or production build. Remote push notifications do not work in Expo Go on Android from SDK 53 onward, so Expo Go is not a reliable push test surface.
+3. Log in on the phone and wait a few seconds. If the bottom pill says `Push: not-authenticated`, the shell has the native token but the web session is not ready yet; it retries automatically.
+4. Confirm a row exists in `public.push_tokens` for the logged-in user with `enabled = true`.
+5. Test on a physical device using an Expo development build or production build. Remote push notifications do not work in Expo Go on Android from SDK 53 onward, so Expo Go is not a reliable push test surface.

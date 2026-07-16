@@ -13,6 +13,12 @@ const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || "";
 const SUPABASE_KEY = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "";
 const APP_ORIGIN = new URL(WEB_URL).origin;
 const splashLogo = require("./assets/app-icon.png");
+const SPLASH_LOADING_LINES = [
+  "Warming things up",
+  "Getting your space ready",
+  "Polishing the UI",
+  "Almost there",
+];
 
 type PushRegistration = {
   token: string;
@@ -408,11 +414,10 @@ function AppShell() {
   const splashVisibleRef = useRef(true);
   const [pushRegistration, setPushRegistration] = useState<PushRegistration | null>(null);
   const [currentUrl, setCurrentUrl] = useState(WEB_URL);
-  const [lastPushStatus, setLastPushStatus] = useState<string | null>(__DEV__ ? "starting" : null);
-  const [lastDiagnostics, setLastDiagnostics] = useState<string | null>(null);
   const [pushStatus, setPushStatus] = useState<PushStatus>("idle");
   const [loadError, setLoadError] = useState(false);
   const [splashVisible, setSplashVisible] = useState(true);
+  const [splashLineIndex, setSplashLineIndex] = useState(0);
 
   const canRegisterInWebView = useMemo(() => Boolean(pushRegistration && SUPABASE_URL && SUPABASE_KEY), [pushRegistration]);
 
@@ -453,13 +458,11 @@ function AppShell() {
       setPushRegistration(registration);
       setPushStatus(registration ? "native-ready" : "failed");
       const message = registration ? `native ready ${registration.token.slice(0, 24)}` : "Native push unavailable";
-      setLastPushStatus(message);
       return { status: registration ? "native-ready" : "failed", message };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Native push failed";
       setPushRegistration(null);
       setPushStatus("failed");
-      setLastPushStatus(message);
       return { status: "failed", message };
     }
   }, []);
@@ -477,6 +480,14 @@ function AppShell() {
     const timeout = setTimeout(dismissSplash, 15_000);
     return () => clearTimeout(timeout);
   }, [dismissSplash, splashVisible]);
+
+  useEffect(() => {
+    if (!splashVisible) return;
+    const interval = setInterval(() => {
+      setSplashLineIndex((index) => (index + 1) % SPLASH_LOADING_LINES.length);
+    }, 1_600);
+    return () => clearInterval(interval);
+  }, [splashVisible]);
 
   useEffect(() => {
     if (!pushRegistration || pushStatus === "registered") return;
@@ -512,8 +523,6 @@ function AppShell() {
       if (message.type === "push-token-registration") {
         const reason = typeof message.reason === "string" ? message.reason : "Push not ready";
         setPushStatus(message.ok ? "registered" : reason === "not-authenticated" ? "not-authenticated" : "failed");
-        setLastPushStatus(message.ok ? `Push enabled ${message.tokenPrefix || ""}`.trim() : reason);
-        if (Array.isArray(message.diagnostics)) setLastDiagnostics(message.diagnostics.join(" | "));
       } else if (message.type === "site-ready") {
         dismissSplash();
       }
@@ -572,17 +581,10 @@ function AppShell() {
           </TouchableOpacity>
         </View>
       ) : null}
-      {lastPushStatus ? (
-        <View style={styles.statusPill}>
-          <Text style={styles.statusText}>Push: {lastPushStatus}</Text>
-          {lastDiagnostics ? <Text style={styles.diagnosticText} numberOfLines={2}>{lastDiagnostics}</Text> : null}
-        </View>
-      ) : null}
       {splashVisible ? (
         <Animated.View style={[styles.splash, { opacity: splashOpacity }]}>
           <Image source={splashLogo} style={styles.splashLogo} resizeMode="contain" />
-          <Text style={styles.splashTitle}>Kloak</Text>
-          <Text style={styles.splashCopy}>Loading</Text>
+          <Text style={styles.splashCopy}>{SPLASH_LOADING_LINES[splashLineIndex]}</Text>
         </Animated.View>
       ) : null}
     </SafeAreaView>
@@ -644,19 +646,12 @@ const styles = StyleSheet.create({
     height: 112,
     borderRadius: 28,
   },
-  splashTitle: {
-    color: "#f4f4f4",
-    fontSize: 28,
-    fontWeight: "900",
-    letterSpacing: 1.2,
-    marginTop: 18,
-  },
   splashCopy: {
     color: "#8f8f8f",
     fontSize: 13,
     fontWeight: "700",
     letterSpacing: 0.8,
-    marginTop: 8,
+    marginTop: 18,
     textTransform: "uppercase",
   },
   errorBar: {
@@ -683,30 +678,5 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 13,
     fontWeight: "800",
-  },
-  statusPill: {
-    position: "absolute",
-    left: 12,
-    right: 12,
-    bottom: 16,
-    minHeight: 40,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(20,20,20,.96)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,.12)",
-  },
-  statusText: {
-    color: "#cfcfcf",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  diagnosticText: {
-    color: "#8f8f8f",
-    fontSize: 10,
-    marginTop: 3,
-    textAlign: "center",
   },
 });
