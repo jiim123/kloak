@@ -3,7 +3,6 @@ import { useNavigate, Link, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import HCaptcha from "@hcaptcha/react-hcaptcha";
 import { useAuthStore, initializeAuth } from "@/stores/authStore";
-import { supabase } from "@/integrations/supabase/client";
 import { markWelcomeSeen } from "@/lib/storage";
 import {
   Key,
@@ -64,6 +63,8 @@ type AuthProps = {
   formOnly?: boolean;
 };
 
+type UsernameAvailabilityState = "idle" | "checking" | "available" | "taken" | "unknown";
+
 const Auth = ({ formOnly = false }: AuthProps) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -89,8 +90,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
   const [username, setUsername] = useState("");
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [usernameErrorType, setUsernameErrorType] = useState<string | null>(null);
-  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
-  const [isUsernameAvailable, setIsUsernameAvailable] = useState(false);
+  const [usernameAvailability, setUsernameAvailability] = useState<UsernameAvailabilityState>("idle");
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([]);
@@ -166,7 +166,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
     setMfaCode("");
     setGeneratedKey(null);
     setUsernameSuggestions([]);
-    setIsUsernameAvailable(false);
+    setUsernameAvailability("idle");
     setCaptchaToken(null);
     setCaptchaError(null);
     captchaRef.current?.resetCaptcha();
@@ -188,25 +188,23 @@ const Auth = ({ formOnly = false }: AuthProps) => {
     return () => clearInterval(interval);
   }, [rateLimitCooldown]);
 
-  // Validate username with comprehensive checks + debounced availability check
+  // Validate locally first, then ask the guarded edge endpoint after typing settles.
   useEffect(() => {
-    // Run comprehensive validation immediately
     if (!username) {
       setUsernameError(null);
       setUsernameErrorType(null);
       setUsernameSuggestions([]);
-      setIsUsernameAvailable(false);
-      setIsCheckingUsername(false);
+      setUsernameAvailability("idle");
       return;
     }
 
+    const normalizedUsername = username.trim().toLowerCase();
     const validation = validateUsernameComprehensive(username);
 
     if (!validation.isValid) {
       setUsernameError(validation.error || "Invalid username");
       setUsernameErrorType(validation.errorType || null);
-      setIsUsernameAvailable(false);
-      setIsCheckingUsername(false);
+      setUsernameAvailability("idle");
 
       // Log blocked username attempts for security monitoring
       if (validation.errorType === "reserved" || validation.errorType === "contains_restricted") {
@@ -220,47 +218,52 @@ const Auth = ({ formOnly = false }: AuthProps) => {
       return;
     }
 
-    // Clear error and suggestions if validation passed, start checking availability
     setUsernameError(null);
     setUsernameErrorType(null);
     setUsernameSuggestions([]);
-    setIsUsernameAvailable(false);
-    setIsCheckingUsername(true);
+    setUsernameAvailability("checking");
 
-    // Debounced availability check
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+      if (!supabaseUrl) {
+        setUsernameAvailability("unknown");
+        return;
+      }
+
       try {
-        const { data, error } = await supabase.rpc("check_username_available", {
-          _username: username.trim().toLowerCase(),
+        const res = await fetch(`${supabaseUrl}/functions/v1/check-username-availability`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: normalizedUsername }),
+          signal: controller.signal,
         });
 
-        // Only update if username hasn't changed during the async call
-        if (username === username) {
-          if (error) {
-            console.error("Username availability check failed:", error);
-            setIsCheckingUsername(false);
-            // Don't block registration on availability check failure
-            setIsUsernameAvailable(true);
-            return;
-          }
-
-          if (data === true) {
-            setIsUsernameAvailable(true);
-            setUsernameError(null);
-          } else {
-            setIsUsernameAvailable(false);
-            setUsernameError("Username is already taken");
-            setUsernameErrorType("format");
-          }
-          setIsCheckingUsername(false);
+        if (!res.ok) {
+          setUsernameAvailability("unknown");
+          return;
         }
-      } catch {
-        setIsCheckingUsername(false);
-        setIsUsernameAvailable(true); // Don't block on network errors
-      }
-    }, 500);
 
-    return () => clearTimeout(timer);
+        const json = (await res.json()) as { available?: boolean };
+        if (json.available === true) {
+          setUsernameAvailability("available");
+          setUsernameError(null);
+          setUsernameErrorType(null);
+        } else {
+          setUsernameAvailability("taken");
+          setUsernameError("Username is already taken");
+          setUsernameErrorType("format");
+        }
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        setUsernameAvailability("unknown");
+      }
+    }, 650);
+
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
   }, [username]);
 
   // Handle create account
@@ -451,9 +454,9 @@ const Auth = ({ formOnly = false }: AuthProps) => {
   const renderUsernameStatus = () => {
     if (!username) return null;
     if (usernameError) return <XCircle className="w-4 h-4 text-destructive" />;
-    if (isCheckingUsername) return <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />;
-    if (isUsernameAvailable) return <CheckCircle2 className="w-4 h-4 text-[hsl(var(--kloak-success))]" />;
-    return null;
+    if (usernameAvailability === "checking") return <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />;
+    if (usernameAvailability === "unknown") return <AlertCircle className="w-4 h-4 text-muted-foreground" />;
+    return <CheckCircle2 className="w-4 h-4 text-[hsl(var(--kloak-success))]" />;
   };
 
   // Get input className based on state - only use border color, not ring
@@ -461,7 +464,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
     if (usernameError) {
       return "pr-10 border-destructive focus-visible:border-destructive focus-visible:ring-destructive/30 bg-destructive/5";
     }
-    if (isUsernameAvailable) {
+    if (usernameAvailability === "available") {
       return "pr-10 border-[hsl(var(--kloak-success))] focus-visible:border-[hsl(var(--kloak-success))] focus-visible:ring-[hsl(var(--kloak-success))]/30 bg-[hsl(var(--kloak-success))]/5";
     }
     return "pr-10";
@@ -498,11 +501,14 @@ const Auth = ({ formOnly = false }: AuthProps) => {
     if (usernameError) {
       return <p className="text-xs text-destructive">{usernameError}</p>;
     }
-    if (isCheckingUsername && username) {
+    if (usernameAvailability === "checking") {
       return <p className="text-xs text-muted-foreground">Checking availability...</p>;
     }
-    if (isUsernameAvailable && username && !isCheckingUsername) {
-      return <p className="text-xs text-[hsl(var(--kloak-success))]">Username is available!</p>;
+    if (usernameAvailability === "available") {
+      return <p className="text-xs text-[hsl(var(--kloak-success))]">Username is available.</p>;
+    }
+    if (usernameAvailability === "unknown") {
+      
     }
     return null;
   };
@@ -683,8 +689,8 @@ const Auth = ({ formOnly = false }: AuthProps) => {
                                 MAINTENANCE_MODE ||
                                 isLoading ||
                                 !!usernameError ||
-                                !isUsernameAvailable ||
-                                isCheckingUsername ||
+                                !username ||
+                                usernameAvailability === "checking" ||
                                 !hcaptchaSiteKey ||
                                 !captchaToken ||
                                 (rateLimitCooldown !== null && rateLimitCooldown > 0)
