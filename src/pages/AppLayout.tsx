@@ -98,22 +98,46 @@ const addServerPanelTransition = {
   mass: 0.9,
 };
 
+const PRIVATE_ROUTE_STORAGE_KEY = "kloak:pending-private-route";
+
+function getPrivateRoutePath(pathname: string, search: string) {
+  const publicAppPaths = new Set(["/app/friends", "/app/explore"]);
+  if (
+    pathname.startsWith("/app") &&
+    pathname !== "/app" &&
+    !pathname.startsWith("/app/profiles/") &&
+    !publicAppPaths.has(pathname)
+  ) {
+    return `${pathname}${search}`;
+  }
+  return null;
+}
+
+function parseServerChannelPath(pathname: string) {
+  const match = pathname.match(/^\/app\/servers\/([^/]+)(?:\/channels\/([^/?#]+))?/);
+  return {
+    serverId: match?.[1] ? decodeURIComponent(match[1]) : undefined,
+    channelId: match?.[2] ? decodeURIComponent(match[2]) : undefined,
+  };
+}
+
 const AppLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [pendingPrivateRoute, setPendingPrivateRoute] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return window.sessionStorage.getItem(PRIVATE_ROUTE_STORAGE_KEY);
+  });
 
-  // Mask server/channel/DM IDs from the URL bar for privacy
+  // Mask server/channel/DM IDs from the URL bar for privacy after preserving them for routing.
   useEffect(() => {
-    const publicAppPaths = new Set(["/app/friends", "/app/explore"]);
-    if (
-      location.pathname.startsWith('/app') &&
-      location.pathname !== '/app' &&
-      !location.pathname.startsWith('/app/profiles/') &&
-      !publicAppPaths.has(location.pathname)
-    ) {
-      window.history.replaceState(null, '', '/app');
+    const privateRoute = getPrivateRoutePath(location.pathname, location.search);
+    if (privateRoute) {
+      window.sessionStorage.setItem(PRIVATE_ROUTE_STORAGE_KEY, privateRoute);
+      setPendingPrivateRoute(privateRoute);
+      window.history.replaceState(null, "", "/app");
     }
   }, [location.pathname, location.search]);
   const user = useAuthStore((s) => s.user);
@@ -161,12 +185,23 @@ const AppLayout = () => {
   }, [joinedVoiceChannelId, isMobileRaw]);
 
   const isMobile = lockedLayoutIsMobile ?? isMobileRaw;
+  const effectivePathname = useMemo(() => {
+    if (!pendingPrivateRoute || location.pathname !== "/app") return location.pathname;
+    try {
+      return new URL(pendingPrivateRoute, window.location.origin).pathname;
+    } catch {
+      return location.pathname;
+    }
+  }, [location.pathname, pendingPrivateRoute]);
+  const pendingRouteIds = useMemo(() => parseServerChannelPath(effectivePathname), [effectivePathname]);
+  const routeServerId = params.serverId ?? pendingRouteIds.serverId;
+  const routeChannelId = params.channelId ?? pendingRouteIds.channelId;
 
   // Determine current view based on route
-  const currentPath = location.pathname.replace("/app", "") || "/";
-  const isServerOverviewView = !!params.serverId && currentPath === `/servers/${params.serverId}/overview`;
-  const isServerMembersView = !!params.serverId && currentPath === `/servers/${params.serverId}/members`;
-  const isServerAuditLogView = !!params.serverId && currentPath === `/servers/${params.serverId}/audit-log`;
+  const currentPath = effectivePathname.replace("/app", "") || "/";
+  const isServerOverviewView = !!routeServerId && currentPath === `/servers/${routeServerId}/overview`;
+  const isServerMembersView = !!routeServerId && currentPath === `/servers/${routeServerId}/members`;
+  const isServerAuditLogView = !!routeServerId && currentPath === `/servers/${routeServerId}/audit-log`;
   const isProfileView = !!params.userId && currentPath === `/profiles/${params.userId}`;
   
   const isServerSpecialView = isServerOverviewView || isServerMembersView || isServerAuditLogView;
@@ -257,9 +292,9 @@ const AppLayout = () => {
     };
   }, [currentServer]);
 
-  // Extract serverId and channelId from URL params
-  const urlServerId = params.serverId;
-  const urlChannelId = params.channelId;
+  // Extract serverId and channelId from URL params or a preserved private route.
+  const urlServerId = routeServerId;
+  const urlChannelId = routeChannelId;
 
   // Handle native notification click deep-links in Tauri.
   useTauriNotificationActions();
@@ -423,6 +458,11 @@ const AppLayout = () => {
       const channel = channels.find((c) => c.id === urlChannelId && c.server_id === currentServer.id);
       if (channel && channel.id !== currentChannel?.id) {
         setCurrentChannel(channel);
+        window.sessionStorage.removeItem(PRIVATE_ROUTE_STORAGE_KEY);
+        setPendingPrivateRoute(null);
+      } else if (channel && pendingPrivateRoute) {
+        window.sessionStorage.removeItem(PRIVATE_ROUTE_STORAGE_KEY);
+        setPendingPrivateRoute(null);
       } else if (!channel) {
         // Channel not found, navigate to server without channel
         navigate(`/app/servers/${currentServer.id}`, { replace: true });
@@ -448,6 +488,7 @@ const AppLayout = () => {
     setCurrentChannel,
     navigate,
     isServerSpecialView,
+    pendingPrivateRoute,
   ]);
 
   // When visiting server special views, clear current channel selection (so sidebar highlights correctly)
@@ -533,7 +574,8 @@ const AppLayout = () => {
 
 
   // DM View (no server selected)
-  const isDMView = currentServer === null;
+  const hasServerRouteIntent = Boolean(urlServerId);
+  const isDMView = !hasServerRouteIntent && currentServer === null;
   const isExploreView = isDMView && currentPath === "/explore";
   const isFriendsView = isDMView && currentPath === "/friends";
   const canUseAdminPanel = isPlatformAdmin(user);
@@ -794,6 +836,11 @@ const AppLayout = () => {
                       <HomeLanding />
                     )
                   )}
+                  {!currentServer && hasServerRouteIntent && !isProfileView && (
+                    <div className="h-full flex items-center justify-center">
+                      <KloakDrawLoader />
+                    </div>
+                  )}
                   {currentServer && (
                     <>
                       {isServerOverviewView && <ServerOverviewView />}
@@ -1012,6 +1059,11 @@ const AppLayout = () => {
                               ) : (
                                 <HomeLanding />
                               )
+                            )}
+                            {!currentServer && hasServerRouteIntent && !isProfileView && (
+                              <div className="h-full flex items-center justify-center">
+                                <KloakDrawLoader />
+                              </div>
                             )}
                             {currentServer && (
                               <>

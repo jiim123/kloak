@@ -7,10 +7,18 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { WebView, type WebViewMessageEvent, type WebViewNavigation } from "react-native-webview";
 import type { WebView as WebViewType } from "react-native-webview";
+import type { WebViewErrorEvent } from "react-native-webview/lib/WebViewTypes";
 
-const WEB_URL = process.env.EXPO_PUBLIC_KLOAK_WEB_URL || "https://kloak.app/app";
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || "";
-const SUPABASE_KEY = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "";
+type MobileExtraConfig = {
+  webUrl?: string;
+  supabaseUrl?: string;
+  supabasePublishableKey?: string;
+};
+
+const mobileConfig = (Constants.expoConfig?.extra?.mobile ?? {}) as MobileExtraConfig;
+const WEB_URL = process.env.EXPO_PUBLIC_KLOAK_WEB_URL || mobileConfig.webUrl || "https://kloak.app/app";
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || mobileConfig.supabaseUrl || "";
+const SUPABASE_KEY = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY || mobileConfig.supabasePublishableKey || "";
 const APP_ORIGIN = new URL(WEB_URL).origin;
 const splashLogo = require("./assets/app-icon.png");
 const SPLASH_LOADING_LINES = [
@@ -46,6 +54,13 @@ Notifications.setNotificationHandler({
   }),
 });
 
+function logPush(message: string, details?: unknown) {
+  if (details === undefined) {
+    console.log(`[KloakPush] ${message}`);
+    return;
+  }
+  console.log(`[KloakPush] ${message}`, details);
+}
 function getProjectId() {
   return (
     process.env.EXPO_PUBLIC_EAS_PROJECT_ID ||
@@ -58,6 +73,15 @@ function toAppUrl(pathOrUrl: string) {
   try {
     const url = new URL(pathOrUrl, APP_ORIGIN);
     if (url.origin !== APP_ORIGIN) return WEB_URL;
+
+    const serverId = url.searchParams.get("server");
+    const channelId = url.searchParams.get("channel");
+    const messageId = url.searchParams.get("message");
+    if (url.pathname === "/app" && serverId && channelId) {
+      const params = messageId ? `?message=${encodeURIComponent(messageId)}` : "";
+      return `${APP_ORIGIN}/app/servers/${encodeURIComponent(serverId)}/channels/${encodeURIComponent(channelId)}${params}`;
+    }
+
     return url.toString();
   } catch {
     return WEB_URL;
@@ -65,6 +89,8 @@ function toAppUrl(pathOrUrl: string) {
 }
 
 function notificationUrl(data: Record<string, unknown>) {
+  if (data.type === "friend_request") return toAppUrl("/app/friends");
+
   const explicitLink = typeof data.link === "string" ? data.link : typeof data.url === "string" ? data.url : null;
   if (explicitLink) return toAppUrl(explicitLink);
 
@@ -79,7 +105,6 @@ function notificationUrl(data: Record<string, unknown>) {
     return toAppUrl(`/app/servers/${encodeURIComponent(serverId)}/channels/${encodeURIComponent(channelId)}${params}`);
   }
 
-  if (data.type === "friend_request") return toAppUrl("/app/friends");
   return WEB_URL;
 }
 
@@ -101,15 +126,20 @@ async function registerNativePush(): Promise<PushRegistration | null> {
     ? currentPermission
     : await Notifications.requestPermissionsAsync() as { status?: string; granted?: boolean };
 
-  if (!permission.granted && permission.status !== "granted") return null;
+  if (!permission.granted && permission.status !== "granted") {
+    logPush("notification permission not granted", permission);
+    return null;
+  }
 
   const projectId = getProjectId();
   if (!projectId) {
     throw new Error("No EAS project id found. Set EXPO_PUBLIC_EAS_PROJECT_ID in mobileapps-new/.env.");
   }
+  logPush("requesting Expo push token", { projectId, platform: Platform.OS });
   const token = projectId
     ? await Notifications.getExpoPushTokenAsync({ projectId })
     : await Notifications.getExpoPushTokenAsync();
+  logPush("received Expo push token", { tokenPrefix: token.data.slice(0, 24) });
 
   return {
     token: token.data,
@@ -400,8 +430,22 @@ function siteReadyScript() {
 function navigateScript(url: string) {
   return `
     (function () {
-      if (window.location.href !== ${JSON.stringify(url)}) {
-        window.location.href = ${JSON.stringify(url)};
+      var targetUrl = ${JSON.stringify(url)};
+      try {
+        var target = new URL(targetUrl, window.location.origin);
+        var publicAppPaths = { "/app/friends": true, "/app/explore": true };
+        if (
+          target.origin === window.location.origin &&
+          target.pathname.indexOf("/app") === 0 &&
+          target.pathname !== "/app" &&
+          target.pathname.indexOf("/app/profiles/") !== 0 &&
+          !publicAppPaths[target.pathname]
+        ) {
+          window.sessionStorage.setItem("kloak:pending-private-route", target.pathname + target.search);
+        }
+      } catch (_) {}
+      if (window.location.href !== targetUrl) {
+        window.location.href = targetUrl;
       }
     })();
     true;
@@ -422,7 +466,7 @@ function AppShell() {
   const canRegisterInWebView = useMemo(() => Boolean(pushRegistration && SUPABASE_URL && SUPABASE_KEY), [pushRegistration]);
 
   const showSplash = useCallback(() => {
-    splashVisibleRef.current = true;
+    if (!splashVisibleRef.current) return;
     splashOpacity.setValue(1);
     setSplashVisible(true);
   }, [splashOpacity]);
@@ -458,11 +502,13 @@ function AppShell() {
       setPushRegistration(registration);
       setPushStatus(registration ? "native-ready" : "failed");
       const message = registration ? `native ready ${registration.token.slice(0, 24)}` : "Native push unavailable";
+      logPush(registration ? "native token ready" : "native push unavailable", registration ? { tokenPrefix: registration.token.slice(0, 24) } : undefined);
       return { status: registration ? "native-ready" : "failed", message };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Native push failed";
       setPushRegistration(null);
       setPushStatus("failed");
+      logPush("native push failed", message);
       return { status: "failed", message };
     }
   }, []);
@@ -523,6 +569,13 @@ function AppShell() {
       if (message.type === "push-token-registration") {
         const reason = typeof message.reason === "string" ? message.reason : "Push not ready";
         setPushStatus(message.ok ? "registered" : reason === "not-authenticated" ? "not-authenticated" : "failed");
+        logPush("web registration result", {
+          ok: message.ok,
+          reason,
+          tokenPrefix: message.tokenPrefix,
+          userId: message.userId,
+          diagnostics: message.diagnostics,
+        });
       } else if (message.type === "site-ready") {
         dismissSplash();
       }
@@ -534,6 +587,16 @@ function AppShell() {
   const handleNavigationChange = (event: WebViewNavigation) => {
     setCurrentUrl(event.url);
     setTimeout(injectPushRegistration, 350);
+  };
+
+  const handleWebViewError = (event: WebViewErrorEvent) => {
+    const description = event.nativeEvent.description || "";
+    const isTransientProtocolError = description.includes("ERR_HTTP2_PROTOCOL_ERROR");
+    if (isTransientProtocolError) {
+      setTimeout(() => webViewRef.current?.reload(), 700);
+      return;
+    }
+    setLoadError(true);
   };
 
   if (!SUPABASE_URL || !SUPABASE_KEY) {
@@ -568,8 +631,9 @@ function AppShell() {
           injectPushRegistration();
         }}
         onNavigationStateChange={handleNavigationChange}
-        onError={() => setLoadError(true)}
+        onError={handleWebViewError}
         onLoad={() => setLoadError(false)}
+        renderError={() => <View style={styles.webviewErrorFallback} />}
         renderLoading={() => <View style={styles.hiddenLoader} />}
         startInLoadingState={false}
       />
@@ -612,6 +676,10 @@ const styles = StyleSheet.create({
     width: 0,
     height: 0,
     opacity: 0,
+  },
+  webviewErrorFallback: {
+    flex: 1,
+    backgroundColor: "#0f0f0f",
   },
   center: {
     flex: 1,

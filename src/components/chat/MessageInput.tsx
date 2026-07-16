@@ -506,18 +506,17 @@ export const MessageInput = ({
     prevEditingIdRef.current = currentEditId;
   }, [isEditMode, editingMessage?.id, editingMessage?.content]);
 
-  // Auto-focus text input when switching channels/conversations
+  // Keep desktop keyboard flow, but do not open the virtual keyboard on mobile navigation.
   useEffect(() => {
-    if (targetId) {
-      const t = textareaRef.current;
-      if (t) {
-        const id = requestAnimationFrame(() => {
-          t.focus();
-        });
-        return () => cancelAnimationFrame(id);
-      }
-    }
-  }, [targetId]);
+    if (!targetId || isMobile) return;
+    const t = textareaRef.current;
+    if (!t) return;
+
+    const id = requestAnimationFrame(() => {
+      t.focus();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [targetId, isMobile]);
 
   // Focus composer when user starts replying from a message action.
   useEffect(() => {

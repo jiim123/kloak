@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Kloak",
-    "slug": "kloak-mobile-webview",
+    "slug": "kloak",
     "version": "1.0.0",
     "scheme": "kloak",
     "orientation": "portrait",
@@ -19,6 +19,10 @@
         "backgroundColor": "#0f0f0f"
       },
       "package": "app.kloak.mobile",
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "POST_NOTIFICATIONS"
+      ],
       "edgeToEdgeEnabled": true
     },
     "plugins": [

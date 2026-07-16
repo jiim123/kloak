@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "394689630836",
+    "project_id": "kloak-7b902",
+    "storage_bucket": "kloak-7b902.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:394689630836:android:02dd9570aeed5c0caa3721",
+        "android_client_info": {
+          "package_name": "app.kloak.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDUc1aYOBvE2Q036Q9UNxdsyoXJ5Yyz6dI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
