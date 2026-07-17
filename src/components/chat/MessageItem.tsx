@@ -509,6 +509,7 @@ export const MessageItem = memo(function MessageItem({
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [isRowHovered, setIsRowHovered] = useState(false);
+  const [isTouchActionPressing, setIsTouchActionPressing] = useState(false);
   const customEmojiMap = sharedCustomEmojiMap ?? EMPTY_CUSTOM_EMOJI_MAP;
   const globalEmojiMap = sharedGlobalEmojiMap ?? EMPTY_GLOBAL_EMOJI_MAP;
   const [hoveredRoleIcon, setHoveredRoleIcon] = useState(false);
@@ -1174,18 +1175,40 @@ export const MessageItem = memo(function MessageItem({
     }
   }, [message.content, usersMap, channelsMap, messageLink]);
 
-  const handleTouchStart = useCallback(() => {
-    longPressTimerRef.current = setTimeout(() => {
-      setShowMobileActions(true);
-    }, 500);
+  const clearDocumentSelection = useCallback(() => {
+    if (typeof window === "undefined") return;
+    window.getSelection()?.removeAllRanges();
   }, []);
+
+  const handleTouchStart = useCallback(() => {
+    if (!isMobile) return;
+    setIsTouchActionPressing(true);
+    longPressTimerRef.current = setTimeout(() => {
+      clearDocumentSelection();
+      setShowMobileActions(true);
+      setIsTouchActionPressing(false);
+    }, 500);
+  }, [clearDocumentSelection, isMobile]);
 
   const clearLongPress = useCallback(() => {
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
+    setIsTouchActionPressing(false);
   }, []);
+
+  const handleMobileActionsOpenChange = useCallback(
+    (open: boolean) => {
+      setShowMobileActions(open);
+      if (open) {
+        clearDocumentSelection();
+      } else {
+        setIsTouchActionPressing(false);
+      }
+    },
+    [clearDocumentSelection],
+  );
 
   // Unified reply handler — delegates to dmActions in DM mode
   const handleReply = useCallback(() => {
@@ -1238,8 +1261,28 @@ export const MessageItem = memo(function MessageItem({
     if (isMentioned) classes.push("bg-primary/10 border-l-2 border-l-amber-500");
     if (isHighlighted) classes.push("animate-highlight-message bg-primary/20 ring-2 ring-primary/50");
     if (isPending) classes.push("opacity-70");
+    if (isMobile && (isTouchActionPressing || showMobileActions)) classes.push("select-none");
     return classes.join(" ");
-  }, [compactMode, isMentioned, isHighlighted, isPending, isAnnouncementChannel, isGrouped]);
+  }, [
+    compactMode,
+    isMentioned,
+    isHighlighted,
+    isPending,
+    isAnnouncementChannel,
+    isGrouped,
+    isMobile,
+    isTouchActionPressing,
+    showMobileActions,
+  ]);
+
+  const mobileSelectionLockStyle = useMemo<React.CSSProperties & { WebkitTouchCallout?: string }>(() => {
+    if (!isMobile || (!isTouchActionPressing && !showMobileActions)) return {};
+    return {
+      WebkitTouchCallout: "none",
+      WebkitUserSelect: "none",
+      userSelect: "none",
+    };
+  }, [isMobile, isTouchActionPressing, showMobileActions]);
 
   const messageContentClassName = useMemo(
     () =>
@@ -1516,6 +1559,11 @@ export const MessageItem = memo(function MessageItem({
               onTouchStart={handleTouchStart}
               onTouchEnd={clearLongPress}
               onTouchMove={clearLongPress}
+              onContextMenu={(event) => {
+                if (!isMobile) return;
+                event.preventDefault();
+              }}
+              style={mobileSelectionLockStyle}
             >
               {/* Avatar / Timestamp column - hidden for system messages */}
               {!message.is_system_message && (
@@ -2175,7 +2223,7 @@ export const MessageItem = memo(function MessageItem({
       </div>
 
       {/* Mobile action drawer */}
-      <Drawer open={showMobileActions} onOpenChange={setShowMobileActions}>
+      <Drawer open={showMobileActions} onOpenChange={handleMobileActionsOpenChange}>
         <DrawerContent className="max-h-[85vh]">
           <DrawerHeader className="pb-2">
             <DrawerTitle className="text-sm font-medium text-muted-foreground">Message Actions</DrawerTitle>
