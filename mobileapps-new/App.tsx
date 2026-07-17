@@ -7,7 +7,7 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { WebView, type WebViewMessageEvent, type WebViewNavigation } from "react-native-webview";
 import type { WebView as WebViewType } from "react-native-webview";
-import type { WebViewErrorEvent } from "react-native-webview/lib/WebViewTypes";
+import type { ShouldStartLoadRequest, WebViewErrorEvent } from "react-native-webview/lib/WebViewTypes";
 
 type MobileExtraConfig = {
   webUrl?: string;
@@ -87,7 +87,7 @@ function toAppUrl(pathOrUrl: string) {
       return withNativeMobileParam(`${APP_ORIGIN}/app/servers/${encodeURIComponent(serverId)}/channels/${encodeURIComponent(channelId)}${params}`);
     }
 
-    return withNativeMobileParam(url.toString());
+    return webViewTargetUrl(url.toString());
   } catch {
     return APP_HOME_URL;
   }
@@ -101,6 +101,22 @@ function withNativeMobileParam(urlValue: string) {
   } catch {
     return urlValue;
   }
+}
+
+function getPrivateAppRoute(urlValue: string) {
+  try {
+    const url = new URL(urlValue, APP_ORIGIN);
+    if (url.origin === APP_ORIGIN && url.pathname.startsWith("/app") && url.pathname !== "/app") {
+      return `${url.pathname}${url.search}`;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function webViewTargetUrl(urlValue: string) {
+  return getPrivateAppRoute(urlValue) ? APP_HOME_URL : withNativeMobileParam(urlValue);
 }
 
 function notificationUrl(data: Record<string, unknown>) {
@@ -455,20 +471,16 @@ function nativeMobileBootstrapScript() {
 }
 
 function navigateScript(url: string) {
+  const privateRoute = getPrivateAppRoute(url);
+  const targetUrl = privateRoute ? APP_HOME_URL : webViewTargetUrl(url);
+
   return `
     (function () {
-      var targetUrl = ${JSON.stringify(url)};
+      var targetUrl = ${JSON.stringify(targetUrl)};
+      var privateRoute = ${JSON.stringify(privateRoute)};
       try {
-        var target = new URL(targetUrl, window.location.origin);
-        var publicAppPaths = { "/app/friends": true, "/app/explore": true };
-        if (
-          target.origin === window.location.origin &&
-          target.pathname.indexOf("/app") === 0 &&
-          target.pathname !== "/app" &&
-          target.pathname.indexOf("/app/profiles/") !== 0 &&
-          !publicAppPaths[target.pathname]
-        ) {
-          window.sessionStorage.setItem("kloak:pending-private-route", target.pathname + target.search);
+        if (privateRoute) {
+          window.sessionStorage.setItem("kloak:pending-private-route", privateRoute);
         }
       } catch (_) {}
       if (window.location.href !== targetUrl) {
@@ -519,7 +531,7 @@ function AppShell() {
 
   const routeToNotification = useCallback((data: Record<string, unknown>) => {
     const nextUrl = notificationUrl(data);
-    setCurrentUrl(nextUrl);
+    setCurrentUrl(webViewTargetUrl(nextUrl));
     webViewRef.current?.injectJavaScript(navigateScript(nextUrl));
   }, []);
 
@@ -612,15 +624,29 @@ function AppShell() {
   };
 
   const handleNavigationChange = (event: WebViewNavigation) => {
-    setCurrentUrl(event.url);
+    setCurrentUrl(webViewTargetUrl(event.url));
     setTimeout(injectPushRegistration, 350);
   };
 
+  const handleShouldStartLoadWithRequest = (request: ShouldStartLoadRequest) => {
+    if (!request.isTopFrame || !getPrivateAppRoute(request.url)) return true;
+    setCurrentUrl(APP_HOME_URL);
+    webViewRef.current?.injectJavaScript(navigateScript(request.url));
+    return false;
+  };
+
+  const recoverWebView = (url: string) => {
+    setLoadError(false);
+    setCurrentUrl(webViewTargetUrl(url));
+    setTimeout(() => webViewRef.current?.injectJavaScript(navigateScript(url)), 50);
+  };
+
   const handleWebViewError = (event: WebViewErrorEvent) => {
+    const failedUrl = event.nativeEvent.url || currentUrl;
     const description = event.nativeEvent.description || "";
     const isTransientProtocolError = description.includes("ERR_HTTP2_PROTOCOL_ERROR");
-    if (isTransientProtocolError) {
-      setTimeout(() => webViewRef.current?.reload(), 700);
+    if (isTransientProtocolError || getPrivateAppRoute(failedUrl)) {
+      recoverWebView(failedUrl);
       return;
     }
     setLoadError(true);
@@ -653,6 +679,7 @@ function AppShell() {
         pullToRefreshEnabled
         setSupportMultipleWindows={false}
         onMessage={handleMessage}
+        onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
         onLoadStart={showSplash}
         onLoadEnd={() => {
           injectSiteReadyWatcher();
@@ -668,7 +695,7 @@ function AppShell() {
       {loadError ? (
         <View style={styles.errorBar}>
           <Text style={styles.errorText}>Kloak could not load.</Text>
-          <TouchableOpacity onPress={() => webViewRef.current?.reload()}>
+          <TouchableOpacity onPress={() => recoverWebView(currentUrl)}>
             <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
