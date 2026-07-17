@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils";
 import { OnboardingModal } from "@/components/modals/OnboardingModal";
 import { NavigationMenu } from "@/components/layout/NavigationMenu";
 import { Footer } from "@/components/ui/footer-section";
-import { resizeWindowForApp } from "@/lib/tauriRuntime";
+import { isNativeMobileShell, resizeWindowForApp } from "@/lib/tauriRuntime";
 import { SEO } from "@/components/seo";
 import { SEO_CONFIG } from "@/lib/seo";
 import kloakLogo from "@/assets/kloak-logo.svg";
@@ -67,7 +67,7 @@ const Auth = ({ formOnly = false }: AuthProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isLoading, error, createAccount, login, verifyLoginMfa, setError } = useAuthStore();
-  
+  const mobileAppAuth = useMemo(() => isNativeMobileShell(), [location.search]);
 
   const redirectParam = useMemo(() => new URLSearchParams(location.search).get("redirect"), [location.search]);
 
@@ -462,8 +462,8 @@ const Auth = ({ formOnly = false }: AuthProps) => {
     return null;
   };
 
-  // Compact auth-only layout (used by DesktopAuth route)
-  const useFormOnlyLayout = formOnly;
+  // Compact auth-only layout (used by DesktopAuth and native mobile auth).
+  const useFormOnlyLayout = formOnly || mobileAppAuth;
 
   const maintenanceBanner = MAINTENANCE_MODE ? (
     <div className="w-full py-2.5 px-4 bg-amber-500/20 border-b border-amber-500/30 flex items-center justify-center gap-2 text-amber-700 dark:text-amber-400 text-sm font-medium shrink-0">
@@ -474,12 +474,12 @@ const Auth = ({ formOnly = false }: AuthProps) => {
 
   if (useFormOnlyLayout) {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
+      <div className={cn("min-h-screen flex flex-col", mobileAppAuth ? "bg-transparent" : "bg-background")}>
         {maintenanceBanner}
         <div className="flex-1 flex items-center justify-center p-6">
           <div className="w-full max-w-md">
             {/* Auth card */}
-            <div className="bg-card border border-border rounded-xl p-6 shadow-xl">
+            <div className={cn("p-6", mobileAppAuth ? "bg-transparent" : "bg-card border border-border rounded-xl shadow-xl")}> 
               <div className="flex items-center justify-center mb-6">
                 <img src={kloakLogo} alt="Kloak" className="h-7" />
               </div>

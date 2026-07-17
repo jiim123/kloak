@@ -85,7 +85,7 @@ import { usePreferencesSync } from "@/hooks/usePreferencesSync";
 import type { Channel, User } from "@/types";
 import { PresenceDebugOverlay } from "@/components/debug/PresenceDebugOverlay";
 import { SEO } from "@/components/seo";
-import { getAuthEntryPath, resizeWindowForApp } from "@/lib/tauriRuntime";
+import { getAuthEntryPath, isNativeMobileShell, resizeWindowForApp } from "@/lib/tauriRuntime";
 import { MAINTENANCE_MODE } from "@/lib/maintenance";
 import { AlphaNoticeBanner } from "@/components/layout/AlphaNoticeBanner";
 import { ChannelHeader } from "@/components/chat/ChannelHeader";
@@ -172,6 +172,7 @@ const AppLayout = () => {
   const isMobileRaw = useIsMobile();
   const joinedVoiceChannelId = useVoiceStore((s) => s.joinedChannelId);
   const authEntryPath = getAuthEntryPath();
+  const authLoginUrl = `${authEntryPath}?mode=login${isNativeMobileShell() ? "&mobile=1" : ""}`;
   const [lockedLayoutIsMobile, setLockedLayoutIsMobile] = useState<boolean | null>(null);
   const [isAddServerPanelOpen, setIsAddServerPanelOpen] = useState(false);
   const [isAuthInitialized, setIsAuthInitialized] = useState(false);
@@ -532,14 +533,14 @@ const AppLayout = () => {
       // Force a re-render after auth init completes
       const state = useAuthStore.getState();
       if (!state.isLoading && !state.user) {
-        navigate(`${authEntryPath}?mode=login`);
+        navigate(authLoginUrl);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [navigate, authEntryPath]);
+  }, [navigate, authEntryPath, authLoginUrl]);
 
   // Only redirect if we've finished loading and still no user
   useEffect(() => {
@@ -549,12 +550,12 @@ const AppLayout = () => {
       const timer = setTimeout(() => {
         const state = useAuthStore.getState();
         if (!state.user && !state.isLoading) {
-          navigate(`${authEntryPath}?mode=login`);
+          navigate(authLoginUrl);
         }
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [user, isLoading, isAuthInitialized, navigate, authEntryPath]);
+  }, [user, isLoading, isAuthInitialized, navigate, authEntryPath, authLoginUrl]);
 
   // Maximize window once when user is authenticated (for Tauri)
   // Use a ref to ensure it only runs once
@@ -734,10 +735,9 @@ const AppLayout = () => {
   }, []);
 
   const openMobileNavigationFromEdge = useCallback(() => {
-    if (!currentServer) return;
     setMobileMemberSidebarOpen(false);
     setMobileSidebarOpen(true);
-  }, [currentServer, setMobileMemberSidebarOpen, setMobileSidebarOpen]);
+  }, [setMobileMemberSidebarOpen, setMobileSidebarOpen]);
 
   const openMobileMembersFromEdge = useCallback(() => {
     if (!currentServer) return;
@@ -750,7 +750,7 @@ const AppLayout = () => {
     onSwipeLeft: openMobileMembersFromEdge,
     threshold: 48,
     edgeThreshold: 168,
-    enabled: isMobile && Boolean(currentServer) && !activeModal,
+    enabled: isMobile && !activeModal,
   });
 
   // Show loading state - AFTER all hooks

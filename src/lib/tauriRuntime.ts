@@ -66,6 +66,22 @@ export function isElectron(): boolean {
   return /\belectron\b/i.test(ua);
 }
 
+
+export function isNativeMobileShell(): boolean {
+  if (typeof window === "undefined") return false;
+
+  const params = new URLSearchParams(window.location?.search || "");
+  if (params.get("mobile") === "1" || params.get("native") === "1") return true;
+
+  const w = window as unknown as Record<string, unknown>;
+  if ("ReactNativeWebView" in w) return true;
+
+  try {
+    return window.localStorage.getItem("kloak:native-mobile") === "1";
+  } catch {
+    return false;
+  }
+}
 export function getAuthEntryPath(): "/auth" | "/desktop-auth" {
   return isTauri() || isElectron() ? "/desktop-auth" : "/auth";
 }

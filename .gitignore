@@ -40,3 +40,4 @@ key.pem
 .cursor/mcp.json
 /mobileapps
 /bots
+mobileapps-new/android/app/release/app-release.apk

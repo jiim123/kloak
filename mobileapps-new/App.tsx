@@ -20,12 +20,17 @@ const WEB_URL = process.env.EXPO_PUBLIC_KLOAK_WEB_URL || mobileConfig.webUrl || 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || mobileConfig.supabaseUrl || "";
 const SUPABASE_KEY = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY || mobileConfig.supabasePublishableKey || "";
 const APP_ORIGIN = new URL(WEB_URL).origin;
+const APP_HOME_URL = withNativeMobileParam(WEB_URL);
+const MOBILE_AUTH_URL = `${APP_ORIGIN}/auth?mode=login&mobile=1`;
 const splashLogo = require("./assets/app-icon.png");
 const SPLASH_LOADING_LINES = [
-  "Warming things up",
-  "Getting your space ready",
-  "Polishing the UI",
-  "Almost there",
+  "Doing the thing…",
+  "One sec, don't panic",
+  "Please enjoy this loading screen",
+  "Nearly done-ish",
+  "Give it a tiny second",
+  "Pretending to be fast…",
+  "Almost there!",
 ];
 
 type PushRegistration = {
@@ -79,12 +84,22 @@ function toAppUrl(pathOrUrl: string) {
     const messageId = url.searchParams.get("message");
     if (url.pathname === "/app" && serverId && channelId) {
       const params = messageId ? `?message=${encodeURIComponent(messageId)}` : "";
-      return `${APP_ORIGIN}/app/servers/${encodeURIComponent(serverId)}/channels/${encodeURIComponent(channelId)}${params}`;
+      return withNativeMobileParam(`${APP_ORIGIN}/app/servers/${encodeURIComponent(serverId)}/channels/${encodeURIComponent(channelId)}${params}`);
     }
 
+    return withNativeMobileParam(url.toString());
+  } catch {
+    return APP_HOME_URL;
+  }
+}
+
+function withNativeMobileParam(urlValue: string) {
+  try {
+    const url = new URL(urlValue, APP_ORIGIN);
+    if (url.origin === APP_ORIGIN) url.searchParams.set("native", "1");
     return url.toString();
   } catch {
-    return WEB_URL;
+    return urlValue;
   }
 }
 
@@ -105,7 +120,7 @@ function notificationUrl(data: Record<string, unknown>) {
     return toAppUrl(`/app/servers/${encodeURIComponent(serverId)}/channels/${encodeURIComponent(channelId)}${params}`);
   }
 
-  return WEB_URL;
+  return APP_HOME_URL;
 }
 
 async function registerNativePush(): Promise<PushRegistration | null> {
@@ -427,6 +442,18 @@ function siteReadyScript() {
   `;
 }
 
+function nativeMobileBootstrapScript() {
+  return `
+    (function () {
+      try {
+        window.localStorage.setItem("kloak:native-mobile", "1");
+        document.documentElement.classList.add("kloak-native-mobile");
+      } catch (_) {}
+    })();
+    true;
+  `;
+}
+
 function navigateScript(url: string) {
   return `
     (function () {
@@ -457,7 +484,7 @@ function AppShell() {
   const splashOpacity = useRef(new Animated.Value(1)).current;
   const splashVisibleRef = useRef(true);
   const [pushRegistration, setPushRegistration] = useState<PushRegistration | null>(null);
-  const [currentUrl, setCurrentUrl] = useState(WEB_URL);
+  const [currentUrl, setCurrentUrl] = useState(MOBILE_AUTH_URL);
   const [pushStatus, setPushStatus] = useState<PushStatus>("idle");
   const [loadError, setLoadError] = useState(false);
   const [splashVisible, setSplashVisible] = useState(true);
@@ -617,6 +644,7 @@ function AppShell() {
         source={{ uri: currentUrl }}
         style={styles.webview}
         originWhitelist={[APP_ORIGIN, "https://*.supabase.co", "https://*.b-cdn.net"]}
+        injectedJavaScriptBeforeContentLoaded={nativeMobileBootstrapScript()}
         javaScriptEnabled
         domStorageEnabled
         sharedCookiesEnabled
