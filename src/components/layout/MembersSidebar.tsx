@@ -1481,13 +1481,41 @@ export const MembersSidebar = () => {
     </div>
   );
 
+  const memberDrawerTouchStart = useRef<{ x: number; y: number } | null>(null);
+  const memberDrawerTouchEnd = useRef<{ x: number; y: number } | null>(null);
+
+  const handleMemberDrawerTouchStart = useCallback((event: React.TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    memberDrawerTouchStart.current = { x: touch.clientX, y: touch.clientY };
+    memberDrawerTouchEnd.current = null;
+  }, []);
+
+  const handleMemberDrawerTouchMove = useCallback((event: React.TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    memberDrawerTouchEnd.current = { x: touch.clientX, y: touch.clientY };
+  }, []);
+
+  const handleMemberDrawerTouchEnd = useCallback(() => {
+    const start = memberDrawerTouchStart.current;
+    const end = memberDrawerTouchEnd.current;
+    memberDrawerTouchStart.current = null;
+    memberDrawerTouchEnd.current = null;
+
+    if (!start || !end) return;
+
+    const deltaX = end.x - start.x;
+    const deltaY = Math.abs(end.y - start.y);
+    if (deltaX >= 48 && Math.abs(deltaX) > deltaY * 2) {
+      setMobileMemberSidebarOpen(false);
+    }
+  }, [setMobileMemberSidebarOpen]);
   const body = isLoadingSkeleton ? <MembersSidebarSkeleton /> : sidebarContent;
 
   if (isMobile) {
     return (
       <Drawer direction="right" open={isMobileMemberSidebarOpen} onOpenChange={setMobileMemberSidebarOpen} modal={false}>
         {isMobileMemberSidebarOpen && <div className="fixed inset-0 z-50 bg-background/80" onClick={handleCloseSidebar} />}
-        <DrawerContent className="!w-[calc(100vw-28px)] !max-w-[420px] p-1.5 bg-background">
+        <DrawerContent className="!w-[calc(100vw-28px)] !max-w-[420px] p-1.5 bg-background" onTouchStart={handleMemberDrawerTouchStart} onTouchMove={handleMemberDrawerTouchMove} onTouchEnd={handleMemberDrawerTouchEnd}>
           <DrawerHeader className="sr-only">
             <DrawerTitle>Members</DrawerTitle>
           </DrawerHeader>
