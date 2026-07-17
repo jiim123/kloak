@@ -187,7 +187,19 @@ export const useAuthStore = create<AuthState>()(
             _key_hash: keyHash,
           } as never);
 
-          if (error || !data) {
+          if (error) {
+            set({
+              isAuthenticated: false,
+              user: null,
+              keyHash,
+              mfaSessionToken,
+              isLoading: false,
+              error: "Could not restore your session. Check your connection and try again.",
+            });
+            return false;
+          }
+
+          if (!data) {
             setKeyHashHeader(null);
             setMfaSessionHeader(null);
             set({ isAuthenticated: false, user: null, keyHash: null, mfaSessionToken: null, isLoading: false });
@@ -220,9 +232,16 @@ export const useAuthStore = create<AuthState>()(
           return true;
         } catch (error) {
           console.error("checkAuth error:", error);
-          setKeyHashHeader(null);
-          setMfaSessionHeader(null);
-          set({ isAuthenticated: false, user: null, keyHash: null, mfaSessionToken: null, isLoading: false });
+          setKeyHashHeader(keyHash);
+          setMfaSessionHeader(mfaSessionToken);
+          set({
+            isAuthenticated: false,
+            user: null,
+            keyHash,
+            mfaSessionToken,
+            isLoading: false,
+            error: "Could not restore your session. Check your connection and try again.",
+          });
           return false;
         }
       },
