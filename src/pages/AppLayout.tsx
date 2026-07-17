@@ -140,6 +140,7 @@ const AppLayout = () => {
       window.history.replaceState(null, "", "/app");
     }
   }, [location.pathname, location.search]);
+
   const user = useAuthStore((s) => s.user);
   const isLoading = useAuthStore((s) => s.isLoading);
   const { loadSettings: loadVoiceSettings } = useVoiceSettingsStore();
@@ -151,6 +152,12 @@ const AppLayout = () => {
   const openModal = useUIStore((s) => s.openModal);
   const currentServer = useServerStore((s) => s.currentServer);
   const currentChannel = useServerStore((s) => s.currentChannel);
+
+  useEffect(() => {
+    if (!pendingPrivateRoute || location.pathname !== "/app") return;
+    if (window.sessionStorage.getItem(PRIVATE_ROUTE_STORAGE_KEY)) return;
+    setPendingPrivateRoute(null);
+  }, [currentServer?.id, location.pathname, pendingPrivateRoute]);
   const setCurrentChannel = useServerStore((s) => s.setCurrentChannel);
   const setCurrentServer = useServerStore((s) => s.setCurrentServer);
   const fetchChannels = useServerStore((s) => s.fetchChannels);
@@ -187,6 +194,7 @@ const AppLayout = () => {
   const isMobile = lockedLayoutIsMobile ?? isMobileRaw;
   const effectivePathname = useMemo(() => {
     if (!pendingPrivateRoute || location.pathname !== "/app") return location.pathname;
+    if (window.sessionStorage.getItem(PRIVATE_ROUTE_STORAGE_KEY) !== pendingPrivateRoute) return location.pathname;
     try {
       return new URL(pendingPrivateRoute, window.location.origin).pathname;
     } catch {

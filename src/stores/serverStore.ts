@@ -34,6 +34,7 @@ const SERVER_SURFACE_TTL_MS = 5 * 60_000;
 const SERVER_ROLES_TTL_MS = 5 * 60_000;
 const SERVER_SURFACE_STORAGE_PREFIX = "kloak:server-surface:";
 const SERVER_ROLES_STORAGE_PREFIX = "kloak:server-roles:";
+const PRIVATE_ROUTE_STORAGE_KEY = "kloak:pending-private-route";
 
 const isMissingRpcError = (error: unknown) => {
   const typedError = error as { code?: string; message?: string } | null | undefined;
@@ -79,6 +80,15 @@ const writeSessionCache = (key: string, value: unknown) => {
     window.sessionStorage.setItem(key, JSON.stringify(value));
   } catch {
     // ignore storage pressure/quota issues
+  }
+};
+
+const clearPendingPrivateRoute = () => {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(PRIVATE_ROUTE_STORAGE_KEY);
+  } catch {
+    // ignore storage failures
   }
 };
 
@@ -914,7 +924,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
   setCurrentServer: (server) => {
     const { currentServer } = get();
     // If clicking the same server, don't clear state
-    if (server?.id === currentServer?.id) {
+    if (server && server.id === currentServer?.id) {
       return;
     }
     // Persist to localStorage
@@ -925,6 +935,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
     } else {
       // Going to DM view - set a flag so fetchServers knows not to auto-select
       localStorage.setItem("kloak-dm-view-active", "true");
+      clearPendingPrivateRoute();
     }
 
     // Only clear channel state when switching TO a different server (not when going to null/DM)
