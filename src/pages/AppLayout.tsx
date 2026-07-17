@@ -149,6 +149,8 @@ const AppLayout = () => {
   const setMobileSidebarOpen = useUIStore((s) => s.setMobileSidebarOpen);
   const setMobileMemberSidebarOpen = useUIStore((s) => s.setMobileMemberSidebarOpen);
   const activeModal = useUIStore((s) => s.activeModal);
+  const isMobileSidebarOpen = useUIStore((s) => s.isMobileSidebarOpen);
+  const isMobileMemberSidebarOpen = useUIStore((s) => s.isMobileMemberSidebarOpen);
   const openModal = useUIStore((s) => s.openModal);
   const currentServer = useServerStore((s) => s.currentServer);
   const currentChannel = useServerStore((s) => s.currentChannel);
@@ -750,7 +752,7 @@ const AppLayout = () => {
     onSwipeLeft: openMobileMembersFromEdge,
     threshold: 48,
     edgeThreshold: 168,
-    enabled: isMobile && !activeModal,
+    enabled: isMobile && !activeModal && !isMobileSidebarOpen && !isMobileMemberSidebarOpen,
   });
 
   // Show loading state - AFTER all hooks
