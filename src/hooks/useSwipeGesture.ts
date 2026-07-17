@@ -126,8 +126,17 @@ export const useSwipeGestureRef = (options: SwipeGestureOptions) => {
   }, [bindSwipeHandlers]);
 
   useEffect(() => {
+    const startedInsideDrawer = (target: EventTarget | null) => {
+      if (!(target instanceof Element)) return false;
+      return Boolean(
+        target.closest(
+          '[data-vaul-drawer], [data-vaul-overlay], [data-radix-dialog-content], [role="dialog"]',
+        ),
+      );
+    };
+
     const handleTouchStart = (e: TouchEvent) => {
-      if (optionsRef.current.enabled === false || e.touches.length !== 1) return;
+      if (optionsRef.current.enabled === false || e.touches.length !== 1 || startedInsideDrawer(e.target)) return;
       touchStartX.current = e.touches[0].clientX;
       touchStartY.current = e.touches[0].clientY;
       touchEndX.current = null;
