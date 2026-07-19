@@ -25,6 +25,11 @@ export const SEO_CONFIG = {
     title: 'Cookie Policy',
     description: 'Kloak Cookie Policy. Only essential cookies for authentication and preferences. No tracking, no ads, no third-party analytics. Just what\'s necessary.',
   },
+
+  childSafety: {
+    title: 'Child Safety Standards',
+    description: 'Kloak Child Safety Standards. Zero tolerance for CSAM, grooming, and exploitation. Reporting tools, enforcement actions, and cooperation with authorities.',
+  },
   
   about: {
     title: 'About Us',

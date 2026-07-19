@@ -19,6 +19,7 @@ const ServerAuthGuard = lazy(() => import("./components/auth/ServerAuthGuard").t
 const Terms = lazy(() => import("./pages/Terms"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Cookies = lazy(() => import("./pages/Cookies"));
+const ChildSafety = lazy(() => import("./pages/ChildSafety"));
 const Join = lazy(() => import("./pages/Join"));
 const FAQ = lazy(() => import("./pages/FAQ"));
 const Brand = lazy(() => import("./pages/Brand"));
@@ -56,7 +57,7 @@ const AppContent = () => {
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/cookies" element={<Cookies />} />
-          
+          <Route path="/child-safety" element={<ChildSafety />} />
           <Route path="/join" element={<Join />} />
           <Route path="/faq" element={<FAQ />} />
           <Route path="/brand" element={<Brand />} />

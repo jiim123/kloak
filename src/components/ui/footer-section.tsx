@@ -8,6 +8,7 @@ const footerLinks = [
   { title: 'FAQ', href: '/faq' },
   { title: 'Terms', href: '/terms' },
   { title: 'Privacy', href: '/privacy' },
+  { title: 'Child Safety', href: '/child-safety' },
   { title: 'Cookies', href: '/cookies' },
 ];
 
