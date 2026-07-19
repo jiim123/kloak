@@ -45,7 +45,7 @@ type ShellMessage =
   | { type: string; [key: string]: unknown };
 
 type PushStatus = "idle" | "native-ready" | "registered" | "not-authenticated" | "failed";
-type ConnectivityStatus = "checking" | "online" | "offline";
+type ConnectivityStatus = "online" | "offline";
 type NativePushState = {
   status: PushStatus;
   message: string;
@@ -550,7 +550,7 @@ function AppShell() {
   const [pushRegistration, setPushRegistration] = useState<PushRegistration | null>(null);
   const [currentUrl, setCurrentUrl] = useState(MOBILE_AUTH_URL);
   const [pushStatus, setPushStatus] = useState<PushStatus>("idle");
-  const [connectivityStatus, setConnectivityStatus] = useState<ConnectivityStatus>("checking");
+  const [connectivityStatus, setConnectivityStatus] = useState<ConnectivityStatus>("online");
   const [loadError, setLoadError] = useState(false);
   const [splashVisible, setSplashVisible] = useState(true);
   const [splashLineIndex, setSplashLineIndex] = useState(0);
@@ -605,8 +605,7 @@ function AppShell() {
     }
   }, []);
 
-  const refreshConnectivity = useCallback(async (showChecking = false) => {
-    if (showChecking) setConnectivityStatus("checking");
+  const refreshConnectivity = useCallback(async () => {
     const reachable = await checkAppReachable();
     setConnectivityStatus(reachable ? "online" : "offline");
     if (!reachable) setLoadError(false);
@@ -618,7 +617,7 @@ function AppShell() {
   }, [refreshNativePush]);
 
   useEffect(() => {
-    void refreshConnectivity(true);
+    void refreshConnectivity();
   }, [refreshConnectivity]);
 
   useEffect(() => {
@@ -733,29 +732,22 @@ function AppShell() {
   };
 
   const handleRetryConnection = async () => {
-    const reachable = await refreshConnectivity(true);
+    const reachable = await refreshConnectivity();
     if (!reachable) return;
     setLoadError(false);
     recoverWebView(currentUrl);
   };
 
-  if (connectivityStatus !== "online") {
-    const isChecking = connectivityStatus === "checking";
+  if (connectivityStatus === "offline") {
     return (
       <SafeAreaView style={styles.center}>
         <StatusBar style="light" />
         <Image source={splashLogo} style={styles.offlineLogo} resizeMode="contain" />
-        <Text style={styles.title}>{isChecking ? "Checking connection" : "No internet connection"}</Text>
-        <Text style={styles.copy}>
-          {isChecking
-            ? "Making sure Kloak is reachable before opening the app."
-            : "Connect to the internet, then try again."}
-        </Text>
-        {!isChecking ? (
-          <TouchableOpacity style={styles.primaryButton} onPress={handleRetryConnection}>
-            <Text style={styles.primaryButtonText}>Try again</Text>
-          </TouchableOpacity>
-        ) : null}
+        <Text style={styles.title}>No internet connection</Text>
+        <Text style={styles.copy}>Connect to the internet, then try again.</Text>
+        <TouchableOpacity style={styles.primaryButton} onPress={handleRetryConnection}>
+          <Text style={styles.primaryButtonText}>Try again</Text>
+        </TouchableOpacity>
       </SafeAreaView>
     );
   }
