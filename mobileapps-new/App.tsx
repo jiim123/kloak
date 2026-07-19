@@ -24,12 +24,12 @@ const APP_HOME_URL = withNativeMobileParam(WEB_URL);
 const MOBILE_AUTH_URL = `${APP_ORIGIN}/auth?mode=login&mobile=1`;
 const splashLogo = require("./assets/app-icon.png");
 const SPLASH_LOADING_LINES = [
-  "Doing the thing…",
+  "Doing the thing...",
   "One sec, don't panic",
   "Please enjoy this loading screen",
   "Nearly done-ish",
   "Give it a tiny second",
-  "Pretending to be fast…",
+  "Pretending to be fast...",
   "Almost there!",
 ];
 
@@ -45,6 +45,7 @@ type ShellMessage =
   | { type: string; [key: string]: unknown };
 
 type PushStatus = "idle" | "native-ready" | "registered" | "not-authenticated" | "failed";
+type ConnectivityStatus = "checking" | "online" | "offline";
 type NativePushState = {
   status: PushStatus;
   message: string;
@@ -117,6 +118,35 @@ function getPrivateAppRoute(urlValue: string) {
 
 function webViewTargetUrl(urlValue: string) {
   return getPrivateAppRoute(urlValue) ? APP_HOME_URL : withNativeMobileParam(urlValue);
+}
+
+async function checkAppReachable(timeoutMs = 4500) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(APP_ORIGIN, {
+      method: "GET",
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    return response.status < 500;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function isConnectivityWebViewError(description: string) {
+  return [
+    "ERR_INTERNET_DISCONNECTED",
+    "ERR_NAME_NOT_RESOLVED",
+    "ERR_NETWORK_CHANGED",
+    "ERR_ADDRESS_UNREACHABLE",
+    "NSURLErrorNotConnectedToInternet",
+    "NSURLErrorNetworkConnectionLost",
+    "The Internet connection appears to be offline",
+  ].some((needle) => description.includes(needle));
 }
 
 function notificationUrl(data: Record<string, unknown>) {
@@ -387,8 +417,12 @@ function siteReadyScript() {
       var startedAt = Date.now();
       var timer = null;
       var observer = null;
+      var checkQueued = false;
+      var posted = false;
 
       function postReady(reason) {
+        if (posted) return;
+        posted = true;
         try {
           window.ReactNativeWebView && window.ReactNativeWebView.postMessage(JSON.stringify({
             type: "site-ready",
@@ -398,7 +432,7 @@ function siteReadyScript() {
       }
 
       function visibleText() {
-        return ((document.body && document.body.innerText) || "").replace(/\\s+/g, " ").trim();
+        return ((document.body && document.body.textContent) || "").slice(0, 4000).replace(/\\s+/g, " ").trim();
       }
 
       function isVisible(element) {
@@ -410,9 +444,6 @@ function siteReadyScript() {
       }
 
       function hasBlockingLoader() {
-        var text = visibleText().toLowerCase();
-        if (/loading\\s+kloak|loading kloak/.test(text)) return true;
-
         var selectors = [
           '[aria-busy="true"]',
           '[data-loading="true"]',
@@ -423,7 +454,7 @@ function siteReadyScript() {
         ];
         return selectors.some(function (selector) {
           return Array.prototype.some.call(document.querySelectorAll(selector), isVisible);
-        });
+        }) || /loading\\s+kloak|loading kloak/.test(visibleText().toLowerCase());
       }
 
       function hasUsablePage() {
@@ -437,10 +468,12 @@ function siteReadyScript() {
       function cleanup() {
         if (timer) window.clearInterval(timer);
         if (observer) observer.disconnect();
-        window.removeEventListener("load", check);
+        window.removeEventListener("load", scheduleCheck);
+        window.__KLOAK_NATIVE_READY_WATCHER = false;
       }
 
       function check() {
+        checkQueued = false;
         var timedOut = Date.now() - startedAt > 12000;
         if (timedOut || (hasUsablePage() && !hasBlockingLoader())) {
           cleanup();
@@ -448,11 +481,17 @@ function siteReadyScript() {
         }
       }
 
-      timer = window.setInterval(check, 250);
-      observer = new MutationObserver(check);
-      observer.observe(document.documentElement, { attributes: true, childList: true, subtree: true });
-      window.addEventListener("load", check);
-      check();
+      function scheduleCheck() {
+        if (checkQueued || posted) return;
+        checkQueued = true;
+        window.requestAnimationFrame(check);
+      }
+
+      timer = window.setInterval(scheduleCheck, 500);
+      observer = new MutationObserver(scheduleCheck);
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+      window.addEventListener("load", scheduleCheck);
+      scheduleCheck();
     })();
     true;
   `;
@@ -465,6 +504,19 @@ function nativeMobileBootstrapScript() {
         window.localStorage.setItem("kloak:native-mobile", "1");
         document.documentElement.classList.add("kloak-native-mobile");
       } catch (_) {}
+
+      function postConnectivity(online) {
+        try {
+          window.ReactNativeWebView && window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: "connectivity-change",
+            online: online
+          }));
+        } catch (_) {}
+      }
+
+      window.addEventListener("online", function () { postConnectivity(true); });
+      window.addEventListener("offline", function () { postConnectivity(false); });
+      if (navigator && navigator.onLine === false) postConnectivity(false);
     })();
     true;
   `;
@@ -498,6 +550,7 @@ function AppShell() {
   const [pushRegistration, setPushRegistration] = useState<PushRegistration | null>(null);
   const [currentUrl, setCurrentUrl] = useState(MOBILE_AUTH_URL);
   const [pushStatus, setPushStatus] = useState<PushStatus>("idle");
+  const [connectivityStatus, setConnectivityStatus] = useState<ConnectivityStatus>("checking");
   const [loadError, setLoadError] = useState(false);
   const [splashVisible, setSplashVisible] = useState(true);
   const [splashLineIndex, setSplashLineIndex] = useState(0);
@@ -552,9 +605,21 @@ function AppShell() {
     }
   }, []);
 
+  const refreshConnectivity = useCallback(async (showChecking = false) => {
+    if (showChecking) setConnectivityStatus("checking");
+    const reachable = await checkAppReachable();
+    setConnectivityStatus(reachable ? "online" : "offline");
+    if (!reachable) setLoadError(false);
+    return reachable;
+  }, []);
+
   useEffect(() => {
     void refreshNativePush();
   }, [refreshNativePush]);
+
+  useEffect(() => {
+    void refreshConnectivity(true);
+  }, [refreshConnectivity]);
 
   useEffect(() => {
     if (pushRegistration) injectPushRegistration();
@@ -583,13 +648,14 @@ function AppShell() {
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (state) => {
       if (state === "active") {
+        void refreshConnectivity();
         void refreshNativePush().then((result) => {
           if (result.status === "native-ready") setTimeout(injectPushRegistration, 500);
         });
       }
     });
     return () => subscription.remove();
-  }, [injectPushRegistration]);
+  }, [injectPushRegistration, refreshConnectivity, refreshNativePush]);
 
   useEffect(() => {
     const handleResponse = (response: Notifications.NotificationResponse | null) => {
@@ -617,6 +683,13 @@ function AppShell() {
         });
       } else if (message.type === "site-ready") {
         dismissSplash();
+      } else if (message.type === "connectivity-change") {
+        const online = message.online === true;
+        setConnectivityStatus(online ? "online" : "offline");
+        if (!online) {
+          setLoadError(false);
+          dismissSplash();
+        }
       }
     } catch {
       // Ignore ordinary app messages; this shell only consumes its own envelope.
@@ -644,6 +717,13 @@ function AppShell() {
   const handleWebViewError = (event: WebViewErrorEvent) => {
     const failedUrl = event.nativeEvent.url || currentUrl;
     const description = event.nativeEvent.description || "";
+    if (isConnectivityWebViewError(description)) {
+      setConnectivityStatus("offline");
+      setLoadError(false);
+      dismissSplash();
+      return;
+    }
+
     const isTransientProtocolError = description.includes("ERR_HTTP2_PROTOCOL_ERROR");
     if (isTransientProtocolError || getPrivateAppRoute(failedUrl)) {
       recoverWebView(failedUrl);
@@ -651,6 +731,34 @@ function AppShell() {
     }
     setLoadError(true);
   };
+
+  const handleRetryConnection = async () => {
+    const reachable = await refreshConnectivity(true);
+    if (!reachable) return;
+    setLoadError(false);
+    recoverWebView(currentUrl);
+  };
+
+  if (connectivityStatus !== "online") {
+    const isChecking = connectivityStatus === "checking";
+    return (
+      <SafeAreaView style={styles.center}>
+        <StatusBar style="light" />
+        <Image source={splashLogo} style={styles.offlineLogo} resizeMode="contain" />
+        <Text style={styles.title}>{isChecking ? "Checking connection" : "No internet connection"}</Text>
+        <Text style={styles.copy}>
+          {isChecking
+            ? "Making sure Kloak is reachable before opening the app."
+            : "Connect to the internet, then try again."}
+        </Text>
+        {!isChecking ? (
+          <TouchableOpacity style={styles.primaryButton} onPress={handleRetryConnection}>
+            <Text style={styles.primaryButtonText}>Try again</Text>
+          </TouchableOpacity>
+        ) : null}
+      </SafeAreaView>
+    );
+  }
 
   if (!SUPABASE_URL || !SUPABASE_KEY) {
     return (
@@ -769,6 +877,12 @@ const styles = StyleSheet.create({
     height: 112,
     borderRadius: 28,
   },
+  offlineLogo: {
+    width: 84,
+    height: 84,
+    borderRadius: 22,
+    marginBottom: 18,
+  },
   splashCopy: {
     color: "#8f8f8f",
     fontSize: 13,
@@ -800,6 +914,21 @@ const styles = StyleSheet.create({
   retryText: {
     color: "#fff",
     fontSize: 13,
+    fontWeight: "800",
+  },
+  primaryButton: {
+    minHeight: 44,
+    minWidth: 132,
+    marginTop: 22,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#ededed",
+    paddingHorizontal: 18,
+  },
+  primaryButtonText: {
+    color: "#0f0f0f",
+    fontSize: 14,
     fontWeight: "800",
   },
 });

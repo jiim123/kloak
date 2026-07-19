@@ -43,9 +43,9 @@ export const MobileSidebar = ({ isDMView }: MobileSidebarProps) => {
   }, [isMobileSidebarOpen]);
 
   return (
-    <Drawer direction="left" open={isMobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
+    <Drawer direction="left" open={isMobileSidebarOpen} onOpenChange={setMobileSidebarOpen} shouldScaleBackground={false}>
       <DrawerContent
-        className="!w-[calc(100vw-28px)] !max-w-[420px] p-0 gap-0 bg-background shadow-lg border-r border-border/30 flex flex-row h-full"
+        className="!w-[calc(100vw-28px)] !max-w-[420px] p-0 gap-0 bg-background shadow-lg border-r border-border/30 flex flex-row h-full outline-none focus:outline-none focus-visible:outline-none"
       >
         <DrawerHeader className="sr-only">
           <DrawerTitle>Navigation</DrawerTitle>
