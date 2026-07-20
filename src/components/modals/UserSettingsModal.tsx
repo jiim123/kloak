@@ -691,8 +691,8 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     }
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     closeModal();
     navigate(`${authEntryPath}?mode=login`);
   };
@@ -703,7 +703,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
   const confirmLogout = () => {
     setShowLogoutConfirm(false);
-    handleLogout();
+    void handleLogout();
   };
 
   const handleDeleteAccount = async () => {
@@ -714,7 +714,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         _user_id: user.id,
       });
       if (error) throw error;
-      logout();
+      await logout();
       closeModal();
       navigate(`${authEntryPath}?mode=signup`);
       toast.success("Account deleted");

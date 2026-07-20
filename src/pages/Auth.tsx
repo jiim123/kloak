@@ -11,7 +11,6 @@ import {
   Eye,
   EyeOff,
   Loader2,
-  CheckCircle2,
   XCircle,
   CircleUserRound,
   Sparkles,
@@ -411,16 +410,13 @@ const Auth = ({ formOnly = false }: AuthProps) => {
   const renderUsernameStatus = () => {
     if (!username) return null;
     if (usernameError) return <XCircle className="w-4 h-4 text-destructive" />;
-    return <CheckCircle2 className="w-4 h-4 text-[hsl(var(--kloak-success))]" />;
+    return null;
   };
 
-  // Get input className based on state - only use border color, not ring
+  // Get input className based on state - only use error styling until registration confirms availability.
   const getInputClassName = () => {
     if (usernameError) {
       return "pr-10 border-destructive focus-visible:border-destructive focus-visible:ring-destructive/30 bg-destructive/5";
-    }
-    if (username && !usernameError) {
-      return "pr-10 border-[hsl(var(--kloak-success))] focus-visible:border-[hsl(var(--kloak-success))] focus-visible:ring-[hsl(var(--kloak-success))]/30 bg-[hsl(var(--kloak-success))]/5";
     }
     return "pr-10";
   };
@@ -455,9 +451,6 @@ const Auth = ({ formOnly = false }: AuthProps) => {
   const renderUsernameHelperText = () => {
     if (usernameError) {
       return <p className="text-xs text-destructive">{usernameError}</p>;
-    }
-    if (username) {
-      return <p className="text-xs text-muted-foreground">Availability will be confirmed when you create the account.</p>;
     }
     return null;
   };

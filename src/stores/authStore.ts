@@ -24,6 +24,7 @@ const statusInFlight = new Map<UserStatus, Promise<void>>();
 const LAST_SEEN_INTERVAL = 60_000; // 60 seconds minimum between calls
 const LAST_SEEN_STORAGE_PREFIX = "kloak:last-seen:";
 let initializeAuthInFlight: Promise<void> | null = null;
+let authSessionGeneration = 0;
 
 async function getFunctionErrorMessage(error: Error & { context?: unknown }): Promise<string> {
   const { context } = error;
@@ -107,7 +108,7 @@ interface AuthState {
   createAccount: (username: string, hcaptchaResponse: string) => Promise<{ secretKey: string; user: User } | null>;
   login: (secretKey: string) => Promise<boolean | "mfa_required">;
   verifyLoginMfa: (code: string) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
   updateUser: (updates: Partial<User>) => Promise<void>;
   updateStatus: (status: UserStatus, options?: { source?: "manual" | "auto" }) => Promise<void>;
   updateLastSeen: () => Promise<void>;
@@ -169,6 +170,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       checkAuth: async () => {
+        const generationAtStart = authSessionGeneration;
         const { keyHash, mfaSessionToken } = get();
         if (!keyHash) {
           set({ isAuthenticated: false, user: null, keyHash: null, mfaSessionToken: null });
@@ -186,6 +188,8 @@ export const useAuthStore = create<AuthState>()(
           const { data, error } = await supabase.rpc("restore_user_session", {
             _key_hash: keyHash,
           } as never);
+
+          if (generationAtStart !== authSessionGeneration) return false;
 
           if (error) {
             set({
@@ -231,6 +235,7 @@ export const useAuthStore = create<AuthState>()(
           useUserCacheStore.getState().upsertUser(user);
           return true;
         } catch (error) {
+          if (generationAtStart !== authSessionGeneration) return false;
           console.error("checkAuth error:", error);
           setKeyHashHeader(keyHash);
           setMfaSessionHeader(mfaSessionToken);
@@ -516,21 +521,34 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      logout: () => {
+      logout: async () => {
+        authSessionGeneration += 1;
         const { user } = get();
-        if (user) {
-          supabase
-            .rpc("update_user_status", {
-              _user_id: user.id,
-              _status: "offline",
-            })
-            .then(() => {});
-          useUserCacheStore.getState().invalidate(user.id);
-        }
         setKeyHashHeader(null);
         setMfaSessionHeader(null);
-        clearDeviceCredentials();
-        set({ user: null, secretKey: null, keyHash: null, mfaSessionToken: null, pendingMfaKeyHash: null, isAuthenticated: false, error: null });
+        set({
+          user: null,
+          secretKey: null,
+          keyHash: null,
+          mfaSessionToken: null,
+          pendingMfaKeyHash: null,
+          isAuthenticated: false,
+          isLoading: false,
+          error: null,
+        });
+
+        const cleanupTasks: Promise<unknown>[] = [clearDeviceCredentials()];
+        if (user) {
+          useUserCacheStore.getState().invalidate(user.id);
+          cleanupTasks.push(
+            supabase.rpc("update_user_status", {
+              _user_id: user.id,
+              _status: "offline",
+            }),
+          );
+        }
+
+        await Promise.allSettled(cleanupTasks);
       },
 
       updateUser: async (updates) => {
@@ -816,12 +834,15 @@ export const useAuthStore = create<AuthState>()(
 
 // Initialize auth on app load
 export const initializeAuth = async () => {
+  const generationAtStart = authSessionGeneration;
   // Run migration first (moves plaintext keyHash to encrypted IndexedDB)
   await migrateToEncryptedStorage();
 
   // Decrypt keyHash from IndexedDB into memory
   const decryptedKeyHash = await decryptKeyHash();
   const decryptedMfaSession = await decryptMfaSession();
+
+  if (generationAtStart !== authSessionGeneration) return;
 
   if (decryptedKeyHash) {
     setKeyHashHeader(decryptedKeyHash);

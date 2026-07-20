@@ -146,7 +146,7 @@ export const PunishmentNoticeModal = () => {
       setNotices([]);
 
       if (hasLogoutPunishment) {
-        logout();
+        void logout();
         navigate("/auth?mode=login", { replace: true });
       }
     } catch (error) {
