@@ -452,6 +452,8 @@ const AppLayout = () => {
               console.warn("[AppLayout] User is banned from server, redirecting");
             }
           });
+        window.sessionStorage.removeItem(PRIVATE_ROUTE_STORAGE_KEY);
+        setPendingPrivateRoute(null);
         navigate("/app", { replace: true });
       }
     }

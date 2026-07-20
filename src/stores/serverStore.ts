@@ -862,6 +862,10 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
       if (error) throw error;
 
+      clearPendingPrivateRoute();
+      localStorage.removeItem("kloak-current-server-id");
+      localStorage.removeItem("kloak-current-channel-id");
+
       set((state) => ({
         servers: state.servers.filter((s) => s.id !== serverId),
         currentServer: state.currentServer?.id === serverId ? null : state.currentServer,
@@ -918,6 +922,7 @@ export const useServerStore = create<ServerState>((set, get) => ({
     } catch (error) {
       console.error("Failed to delete server:", error);
       set({ error: "Failed to delete server" });
+      throw error;
     }
   },
 

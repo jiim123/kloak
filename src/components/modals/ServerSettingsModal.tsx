@@ -54,6 +54,7 @@ import { Switch } from "@/components/ui/switch";
 import { useUIStore } from "@/stores/uiStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
+import { useNavigate } from "react-router-dom";
 import { useRealtimeMembers } from "@/hooks";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -211,6 +212,7 @@ const parseColorValue = (
 };
 
 export const ServerSettingsModal = () => {
+  const navigate = useNavigate();
   const { activeModal, modalData, closeModal, openModal } = useUIStore();
   const {
     currentServer,
@@ -1362,6 +1364,7 @@ export const ServerSettingsModal = () => {
       toast.success("Server deleted");
       setShowDeleteConfirm(false);
       closeModal();
+      navigate("/app", { replace: true });
     } catch (error) {
       toast.error("Failed to delete server");
     } finally {

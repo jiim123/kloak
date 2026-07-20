@@ -1,4 +1,5 @@
 import { forwardRef, useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -957,6 +958,7 @@ const parseColorValue = (
 };
 
 export const ServerSettingsPage = () => {
+  const navigate = useNavigate();
   const { closeServerSettings, isServerSettingsOpen, openModal } = useUIStore();
   const {
     currentServer,
@@ -2364,6 +2366,7 @@ export const ServerSettingsPage = () => {
       toast.success("Server deleted");
       setShowDeleteConfirm(false);
       closeServerSettings();
+      navigate("/app", { replace: true });
     } catch (error) {
       toast.error("Failed to delete server");
     } finally {
