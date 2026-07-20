@@ -7,6 +7,8 @@ const baseCorsHeaders: Record<string, string> = {
 };
 
 const HCAPTCHA_VERIFY_URL = "https://hcaptcha.com/siteverify";
+const REGISTRATION_GATEWAY_HEADER = "x-kloak-registration-gateway";
+const REGISTRATION_GATEWAY_SECRET_HEADER = "x-kloak-registration-secret";
 const LOCAL_DEV_ORIGINS = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
@@ -117,6 +119,12 @@ function jsonResponse(status: number, body: Record<string, unknown>, origin: str
   });
 }
 
+function hasValidGatewaySecret(req: Request, expectedSecret: string): boolean {
+  const gateway = req.headers.get(REGISTRATION_GATEWAY_HEADER)?.trim() ?? "";
+  const suppliedSecret = req.headers.get(REGISTRATION_GATEWAY_SECRET_HEADER)?.trim() ?? "";
+  return gateway === "cloudflare-worker" && suppliedSecret.length > 0 && suppliedSecret === expectedSecret;
+}
+
 function getCanonicalClientIp(req: Request): string | null {
   const xForwardedFor = req.headers.get("x-forwarded-for")?.trim() ?? "";
   if (xForwardedFor) {
@@ -184,8 +192,9 @@ Deno.serve(async (req) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceRoleKey =
     uniqueNonEmpty([Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"), Deno.env.get("SERVICE_ROLE_KEY")])[0] ?? "";
+  const registrationGatewaySecret = Deno.env.get("REGISTRATION_GATEWAY_SECRET")?.trim() ?? "";
 
-  if (!secret || !supabaseUrl || !serviceRoleKey) {
+  if (!secret || !supabaseUrl || !serviceRoleKey || !registrationGatewaySecret) {
     console.error("[register-with-captcha] Missing runtime env", {
       debugId,
       envVisible: {
@@ -196,6 +205,7 @@ Deno.serve(async (req) => {
         SUPABASE_URL: !!Deno.env.get("SUPABASE_URL"),
         SUPABASE_SERVICE_ROLE_KEY: !!Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
         SERVICE_ROLE_KEY: !!Deno.env.get("SERVICE_ROLE_KEY"),
+        REGISTRATION_GATEWAY_SECRET: !!Deno.env.get("REGISTRATION_GATEWAY_SECRET"),
       },
       expectedAnyOf: [
         "SUPABASE_HCAPTCHA_SECRET_KEY",
@@ -205,9 +215,20 @@ Deno.serve(async (req) => {
         "SUPABASE_URL",
         "SUPABASE_SERVICE_ROLE_KEY",
         "SERVICE_ROLE_KEY",
+        "REGISTRATION_GATEWAY_SECRET",
       ],
     });
     return jsonResponse(500, { error: "Server configuration error" }, requestOrigin);
+  }
+
+  if (!hasValidGatewaySecret(req, registrationGatewaySecret)) {
+    console.warn("[register-with-captcha] Blocked non-gateway registration request", {
+      debugId,
+      origin: requestOrigin,
+      hasGatewayHeader: !!req.headers.get(REGISTRATION_GATEWAY_HEADER),
+      hasSecretHeader: !!req.headers.get(REGISTRATION_GATEWAY_SECRET_HEADER),
+    });
+    return jsonResponse(403, { error: "Registration gateway required" }, requestOrigin);
   }
 
   try {

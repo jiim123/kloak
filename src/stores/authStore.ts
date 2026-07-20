@@ -277,8 +277,11 @@ export const useAuthStore = create<AuthState>()(
           const bannerColor = "#5865F2";
 
           const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-          if (!supabaseUrl) {
-            set({ error: "Registration is not configured. Missing VITE_SUPABASE_URL.", isLoading: false });
+          const registrationUrl =
+            (import.meta.env.VITE_REGISTRATION_URL as string | undefined)?.trim() ||
+            (supabaseUrl ? `${supabaseUrl}/functions/v1/register-with-captcha` : "");
+          if (!registrationUrl) {
+            set({ error: "Registration is not configured. Missing VITE_REGISTRATION_URL.", isLoading: false });
             return null;
           }
 
@@ -286,7 +289,7 @@ export const useAuthStore = create<AuthState>()(
           let errorMessage: string | null = null;
           let res: Response;
           try {
-            res = await fetch(`${supabaseUrl}/functions/v1/register-with-captcha`, {
+            res = await fetch(registrationUrl, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
