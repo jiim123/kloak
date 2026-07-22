@@ -78,7 +78,8 @@ export async function registerWebPushSubscription(options: { requestPermission?:
   let subscription: PushSubscription;
 
   try {
-    registration = await navigator.serviceWorker.register("/web-push-sw.js");
+    await navigator.serviceWorker.register("/web-push-sw.js");
+    registration = await navigator.serviceWorker.ready;
     const existing = await registration.pushManager.getSubscription();
     subscription =
       existing ??
