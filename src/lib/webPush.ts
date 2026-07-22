@@ -6,13 +6,22 @@ type WebPushAction = "register" | "unregister";
 const VAPID_PUBLIC_KEY = (import.meta.env.VITE_WEB_PUSH_PUBLIC_KEY as string | undefined)?.trim() || "";
 
 function urlBase64ToUint8Array(value: string): Uint8Array {
-  const padding = "=".repeat((4 - (value.length % 4)) % 4);
-  const base64 = (value + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const normalized = value.trim();
+  if (!/^[A-Za-z0-9_-]+={0,2}$/.test(normalized)) {
+    throw new Error("VITE_WEB_PUSH_PUBLIC_KEY must be the VAPID public key, not the private key or a labelled value.");
+  }
+
+  const padding = "=".repeat((4 - (normalized.length % 4)) % 4);
+  const base64 = (normalized + padding).replace(/-/g, "+").replace(/_/g, "/");
   const rawData = window.atob(base64);
   const output = new Uint8Array(rawData.length);
 
   for (let i = 0; i < rawData.length; i += 1) {
     output[i] = rawData.charCodeAt(i);
+  }
+
+  if (output.byteLength !== 65) {
+    throw new Error("VITE_WEB_PUSH_PUBLIC_KEY is not a valid VAPID public key. Generate a new web-push key pair and use the public key.");
   }
 
   return output;
