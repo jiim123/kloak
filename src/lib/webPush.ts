@@ -1,0 +1,93 @@
+import { supabase } from "@/integrations/supabase/client";
+import { isTauri } from "@/lib/tauriRuntime";
+
+type WebPushAction = "register" | "unregister";
+
+const VAPID_PUBLIC_KEY = (import.meta.env.VITE_WEB_PUSH_PUBLIC_KEY as string | undefined)?.trim() || "";
+
+function urlBase64ToUint8Array(value: string): Uint8Array {
+  const padding = "=".repeat((4 - (value.length % 4)) % 4);
+  const base64 = (value + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  const output = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; i += 1) {
+    output[i] = rawData.charCodeAt(i);
+  }
+
+  return output;
+}
+
+function isWebPushSupported(): boolean {
+  return (
+    !isTauri() &&
+    typeof window !== "undefined" &&
+    "Notification" in window &&
+    "serviceWorker" in navigator &&
+    "PushManager" in window
+  );
+}
+
+async function postSubscription(action: WebPushAction, subscription: PushSubscription): Promise<void> {
+  const serialized = subscription.toJSON();
+  const endpoint = typeof serialized.endpoint === "string" ? serialized.endpoint : "";
+  const p256dh = typeof serialized.keys?.p256dh === "string" ? serialized.keys.p256dh : "";
+  const auth = typeof serialized.keys?.auth === "string" ? serialized.keys.auth : "";
+
+  const { error } = await supabase.functions.invoke("register-web-push", {
+    body: {
+      action,
+      endpoint,
+      p256dh,
+      auth,
+      user_agent: navigator.userAgent,
+    },
+  });
+
+  if (error) throw error;
+}
+
+export async function registerWebPushSubscription(options: { requestPermission?: boolean } = {}): Promise<boolean> {
+  if (!isWebPushSupported()) return false;
+  if (!VAPID_PUBLIC_KEY) {
+    throw new Error("Missing VITE_WEB_PUSH_PUBLIC_KEY");
+  }
+
+  const shouldRequestPermission = options.requestPermission ?? true;
+  let permission = Notification.permission;
+
+  if (permission === "default" && shouldRequestPermission) {
+    permission = await Notification.requestPermission();
+  }
+
+  if (permission !== "granted") return false;
+
+  const registration = await navigator.serviceWorker.register("/web-push-sw.js");
+  const existing = await registration.pushManager.getSubscription();
+  const subscription =
+    existing ??
+    (await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+    }));
+
+  await postSubscription("register", subscription);
+  return true;
+}
+
+export async function unregisterWebPushSubscription(): Promise<void> {
+  if (!isWebPushSupported()) return;
+
+  const registration = await navigator.serviceWorker.getRegistration("/web-push-sw.js");
+  const subscription = await registration?.pushManager.getSubscription();
+  if (!subscription) return;
+
+  await postSubscription("unregister", subscription);
+  await subscription.unsubscribe();
+}
+
+export function getWebPushSupportStatus(): "supported" | "missing-vapid-key" | "unsupported" {
+  if (!isWebPushSupported()) return "unsupported";
+  if (!VAPID_PUBLIC_KEY) return "missing-vapid-key";
+  return "supported";
+}

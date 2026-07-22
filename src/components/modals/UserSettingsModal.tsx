@@ -84,6 +84,11 @@ import { VoiceSettingsPanel } from "@/components/voice/VoiceSettingsPanel";
 import type { User as UserType } from "@/types";
 import { useAppUpdater } from "@/hooks/useAppUpdater";
 import { sanitizeDisplayName, validateDisplayName } from "@/lib/displayNameValidation";
+import {
+  getWebPushSupportStatus,
+  registerWebPushSubscription,
+  unregisterWebPushSubscription,
+} from "@/lib/webPush";
 
 
 type UserSettingsVariant = "modal" | "page";
@@ -214,7 +219,9 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const [showAvatarDecorationModal, setShowAvatarDecorationModal] = useState(false);
   const [showProfileEffectModal, setShowProfileEffectModal] = useState(false);
   const [isBannerUploading, setIsBannerUploading] = useState(false);
-  const [browserPermissionStatus, setBrowserPermissionStatus] = useState<NotificationPermission | "unsupported">(
+  const [browserPermissionStatus, setBrowserPermissionStatus] = useState<
+    NotificationPermission | "unsupported" | "missing-vapid-key"
+  >(
     "default",
   );
   const [mfaEnabled, setMfaEnabled] = useState(false);
@@ -232,8 +239,14 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
   // Sync browser notification toggle with actual browser permission on mount
   useEffect(() => {
-    if (typeof Notification === "undefined") {
+    const webPushSupport = getWebPushSupportStatus();
+    if (webPushSupport === "unsupported") {
       setBrowserPermissionStatus("unsupported");
+      return;
+    }
+    if (webPushSupport === "missing-vapid-key") {
+      setBrowserPermissionStatus("missing-vapid-key");
+      setBrowserNotificationsEnabled(false);
       return;
     }
 
@@ -1874,6 +1887,8 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           description={
             browserPermissionStatus === "unsupported"
               ? "Not supported on this device"
+              : browserPermissionStatus === "missing-vapid-key"
+                ? "Web push is not configured for this deployment"
               : browserPermissionStatus === "denied"
                 ? "Blocked in browser settings. Please enable in your browser's site settings."
                 : browserPermissionStatus === "default"
@@ -1881,12 +1896,29 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                   : "Show browser notifications for new messages"
           }
           checked={browserNotificationsEnabled && browserPermissionStatus === "granted"}
-          disabled={browserPermissionStatus === "unsupported" || browserPermissionStatus === "denied"}
+          disabled={
+            browserPermissionStatus === "unsupported" ||
+            browserPermissionStatus === "missing-vapid-key" ||
+            browserPermissionStatus === "denied"
+          }
           onCheckedChange={async (checked) => {
-            if (!checked) return setBrowserNotificationsEnabled(false);
+            if (!checked) {
+              setBrowserNotificationsEnabled(false);
+              try {
+                await unregisterWebPushSubscription();
+              } catch {
+                // Best effort only; the server will ignore disabled browser notifications.
+              }
+              return;
+            }
 
             if (browserPermissionStatus === "unsupported") {
               toast.error("Browser notifications are not supported on this device.");
+              return;
+            }
+
+            if (browserPermissionStatus === "missing-vapid-key") {
+              toast.error("Web push is not configured for this deployment.");
               return;
             }
 
@@ -1900,8 +1932,13 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 const permission = await Notification.requestPermission();
                 setBrowserPermissionStatus(permission);
                 if (permission === "granted") {
-                  setBrowserNotificationsEnabled(true);
-                  toast.success("Browser notifications enabled!");
+                  const registered = await registerWebPushSubscription({ requestPermission: false });
+                  if (registered) {
+                    setBrowserNotificationsEnabled(true);
+                    toast.success("Browser notifications enabled!");
+                  } else {
+                    toast.error("Unable to register browser push notifications.");
+                  }
                 } else if (permission === "denied") {
                   toast.error(
                     "Notification permission denied. You can enable it later in your browser's site settings.",
@@ -1912,7 +1949,17 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
               }
               return;
             }
-            setBrowserNotificationsEnabled(true);
+            try {
+              const registered = await registerWebPushSubscription({ requestPermission: false });
+              if (registered) {
+                setBrowserNotificationsEnabled(true);
+                toast.success("Browser notifications enabled!");
+              } else {
+                toast.error("Unable to register browser push notifications.");
+              }
+            } catch {
+              toast.error("Unable to register browser push notifications.");
+            }
           }}
         />
         {browserPermissionStatus === "denied" && (

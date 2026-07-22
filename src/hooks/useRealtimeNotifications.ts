@@ -5,6 +5,7 @@ import { useServerStore } from '@/stores/serverStore';
 import { useUIStore } from '@/stores/uiStore';
 import type { Notification, NotificationType as DBNotificationType } from '@/types';
 import { isTauri } from '@/lib/tauriRuntime';
+import { registerWebPushSubscription } from '@/lib/webPush';
 import { playNotificationSound, type NotificationType as SoundNotificationType } from './useNotificationSound';
 
 const isNotificationTypeEnabled = (type: DBNotificationType): boolean => {
@@ -66,6 +67,19 @@ export const useRealtimeNotifications = (userId: string | null) => {
       if (kh) storeRef.current.fetchNotifications(userId);
     };
     void initFetch();
+
+    const initWebPush = async () => {
+      const ui = useUIStore.getState();
+      if (!ui.browserNotificationsEnabled) return;
+      if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+
+      try {
+        await registerWebPushSubscription({ requestPermission: false });
+      } catch (err) {
+        console.warn('[NotificationsRealtime] Failed to register web push subscription:', err);
+      }
+    };
+    void initWebPush();
 
     const processIncomingNotification = (notification: Notification) => {
       const existing = useNotificationStore.getState().notifications.some((n) => n.id === notification.id);
@@ -157,6 +171,7 @@ export const useRealtimeNotifications = (userId: string | null) => {
     channel.subscribe((status, err) => {
       if (status === 'SUBSCRIBED') {
         isSubscribedRef.current = true;
+        storeRef.current.fetchNotifications(userId);
         return;
       }
 
@@ -167,6 +182,11 @@ export const useRealtimeNotifications = (userId: string | null) => {
         }
       }
     });
+
+    const handleNetworkRecovery = () => {
+      storeRef.current.fetchNotifications(userId);
+    };
+    window.addEventListener('kloak:network-recovery', handleNetworkRecovery);
 
     const pollInterval = window.setInterval(async () => {
       // Skip poll if auth key hash is unavailable (prevents 401s).
@@ -193,6 +213,7 @@ export const useRealtimeNotifications = (userId: string | null) => {
     return () => {
       isSubscribedRef.current = false;
       window.clearInterval(pollInterval);
+      window.removeEventListener('kloak:network-recovery', handleNetworkRecovery);
       supabase.removeChannel(channel);
     };
   }, [userId]);
@@ -221,7 +242,15 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
     if (Notification.permission === 'granted') return true;
     if (Notification.permission === 'denied') return false;
     const permission = await Notification.requestPermission();
-    return permission === 'granted';
+    if (permission !== 'granted') return false;
+
+    try {
+      await registerWebPushSubscription({ requestPermission: false });
+    } catch {
+      // Local browser notifications can still work while the app is open.
+    }
+
+    return true;
   } catch {
     return false;
   }
