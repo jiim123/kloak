@@ -44,7 +44,10 @@ async function postSubscription(action: WebPushAction, subscription: PushSubscri
     },
   });
 
-  if (error) throw error;
+  if (error) {
+    console.error("[WebPush] register-web-push failed:", error);
+    throw new Error(error.message || "register-web-push failed");
+  }
 }
 
 export async function registerWebPushSubscription(options: { requestPermission?: boolean } = {}): Promise<boolean> {
@@ -62,14 +65,23 @@ export async function registerWebPushSubscription(options: { requestPermission?:
 
   if (permission !== "granted") return false;
 
-  const registration = await navigator.serviceWorker.register("/web-push-sw.js");
-  const existing = await registration.pushManager.getSubscription();
-  const subscription =
-    existing ??
-    (await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-    }));
+  let registration: ServiceWorkerRegistration;
+  let subscription: PushSubscription;
+
+  try {
+    registration = await navigator.serviceWorker.register("/web-push-sw.js");
+    const existing = await registration.pushManager.getSubscription();
+    subscription =
+      existing ??
+      (await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      }));
+  } catch (error) {
+    console.error("[WebPush] Browser subscription failed:", error);
+    const message = error instanceof Error ? error.message : "Browser push subscription failed";
+    throw new Error(message);
+  }
 
   await postSubscription("register", subscription);
   return true;

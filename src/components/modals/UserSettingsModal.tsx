@@ -1944,9 +1944,10 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                     "Notification permission denied. You can enable it later in your browser's site settings.",
                   );
                 }
-              } catch {
-                toast.error("Unable to request notification permission.");
-              }
+                } catch (error) {
+                  const message = error instanceof Error ? error.message : "Unable to request notification permission.";
+                  toast.error(message);
+                }
               return;
             }
             try {
@@ -1957,8 +1958,9 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
               } else {
                 toast.error("Unable to register browser push notifications.");
               }
-            } catch {
-              toast.error("Unable to register browser push notifications.");
+            } catch (error) {
+              const message = error instanceof Error ? error.message : "Unable to register browser push notifications.";
+              toast.error(message);
             }
           }}
         />
