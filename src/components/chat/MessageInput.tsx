@@ -24,6 +24,7 @@ import { useMessageStore } from "@/stores/messageStore";
 import { useDMStore } from "@/stores/dmStore";
 import { useEditStore } from "@/stores/editStore";
 import { useServerStore } from "@/stores/serverStore";
+import { useUIStore } from "@/stores/uiStore";
 import { useChannelSettingsStore } from "@/stores/channelSettingsStore";
 import { useOfflineQueueStore } from "@/stores/offlineQueueStore";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
@@ -148,6 +149,22 @@ const TYPING_STOP_DELAY = 2000;
 const KLOAK_ATTACHMENT_PREFIX = "kloak-attachment://";
 const ATTACHMENT_READY_RETRY_DELAYS_MS = [800, 1500, 2500, 4000, 6000];
 const ATTACHMENT_INSERT_RETRY_DELAYS_MS = [1200, 2500, 5000];
+const BROWSER_CONTENT_DRAG_TYPES = new Set(["text/html", "text/uri-list", "text/plain"]);
+const OVERLAY_DRAG_TARGET_SELECTOR =
+  '[role="dialog"], [role="menu"], [data-radix-dialog-content], [data-radix-popper-content-wrapper], [data-vaul-drawer]';
+
+const hasExternalFileDragPayload = (event: DragEvent) => {
+  const types = Array.from(event.dataTransfer?.types ?? []);
+  return types.includes("Files") && !types.some((type) => BROWSER_CONTENT_DRAG_TYPES.has(type));
+};
+
+const isDragBlockedByOverlay = (event: DragEvent) => {
+  const target = event.target;
+  return (
+    (target instanceof Element && !!target.closest(OVERLAY_DRAG_TARGET_SELECTOR)) ||
+    document.querySelector(OVERLAY_DRAG_TARGET_SELECTOR) !== null
+  );
+};
 
 const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
@@ -409,6 +426,7 @@ export const MessageInput = ({
   const { editingMessage, cancelEditing } = useEditStore();
   const { members, currentServer, currentChannel, channels, fetchRolePermissions } = useServerStore();
   const { getQueuedForChannel } = useOfflineQueueStore();
+  const activeModal = useUIStore((state) => state.activeModal);
   const isMobile = useIsMobile();
 
   // Is this input currently in edit mode?
@@ -573,6 +591,7 @@ export const MessageInput = ({
   const dragDropEnabled =
     effectiveCanAttach &&
     canSendMessage &&
+    !activeModal &&
     !isEditMode &&
     !isComposerLockedByNotice &&
     !forumConfig?.isClosed;
@@ -658,22 +677,28 @@ export const MessageInput = ({
       return;
     }
 
-    const containsFiles = (event: DragEvent) =>
-      Array.from(event.dataTransfer?.types ?? []).includes("Files");
+    const shouldHandleDragEvent = (event: DragEvent) =>
+      hasExternalFileDragPayload(event) && !isOverlayDragTarget(event);
 
     const handleDragEnter = (event: DragEvent) => {
-      if (!containsFiles(event)) return;
+      if (!shouldHandleDragEvent(event)) {
+        resetDragState();
+        return;
+      }
       event.preventDefault();
       dragDepthRef.current += 1;
       setIsDraggingFiles(true);
     };
     const handleDragOver = (event: DragEvent) => {
-      if (!containsFiles(event)) return;
+      if (!shouldHandleDragEvent(event)) {
+        resetDragState();
+        return;
+      }
       event.preventDefault();
       if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
     };
     const handleDragLeave = (event: DragEvent) => {
-      if (!containsFiles(event)) return;
+      if (!shouldHandleDragEvent(event)) return;
       event.preventDefault();
       dragDepthRef.current = event.relatedTarget === null
         ? 0
@@ -685,7 +710,10 @@ export const MessageInput = ({
       setIsDraggingFiles(false);
     };
     const handleDrop = (event: DragEvent) => {
-      if (!containsFiles(event)) return;
+      if (!shouldHandleDragEvent(event)) {
+        resetDragState();
+        return;
+      }
       event.preventDefault();
       resetDragState();
       const files = Array.from(event.dataTransfer?.files ?? []);
