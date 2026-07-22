@@ -90,6 +90,7 @@ import { MAINTENANCE_MODE } from "@/lib/maintenance";
 import { AlphaNoticeBanner } from "@/components/layout/AlphaNoticeBanner";
 import { ChannelHeader } from "@/components/chat/ChannelHeader";
 import { isPlatformAdmin } from "@/lib/adminAccess";
+import { KloakCompanion } from "@/components/companion/KloakCompanion";
 
 const addServerPanelTransition = {
   type: "spring" as const,
@@ -1151,6 +1152,8 @@ const AppLayout = () => {
 
         {/* Persistent embed container for Twitch/Kick streams */}
         <PersistentEmbedContainer />
+
+        {!isMobile && !isFullscreenSettingsOverlayOpen && <KloakCompanion />}
 
         {/* Dev-only presence diagnostics overlay (toggle via localStorage) */}
         <PresenceDebugOverlay />
