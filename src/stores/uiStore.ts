@@ -120,6 +120,7 @@ interface UIState {
   animateEmojis: boolean;
   dmPrivacy: DmPrivacy;
   homePreferences: HomePreferences;
+  companionEnabled: boolean;
 
   // Theme actions
   toggleTheme: () => void;
@@ -177,6 +178,7 @@ interface UIState {
   setDmPrivacy: (value: DmPrivacy) => void;
   setHomePreferences: (preferences: Partial<HomePreferences>) => void;
   resetHomePreferences: () => void;
+  setCompanionEnabled: (enabled: boolean) => void;
 }
 
 export const applyTheme = (theme: Theme) => {
@@ -235,6 +237,7 @@ export const useUIStore = create<UIState>()(
       animateEmojis: true,
       dmPrivacy: "friends",
       homePreferences: DEFAULT_HOME_PREFERENCES,
+      companionEnabled: true,
 
       toggleTheme: () => {
         const currentTheme = get().theme;
@@ -443,6 +446,10 @@ export const useUIStore = create<UIState>()(
       resetHomePreferences: () => {
         set({ homePreferences: DEFAULT_HOME_PREFERENCES });
       },
+
+      setCompanionEnabled: (enabled) => {
+        set({ companionEnabled: enabled });
+      },
     }),
     {
       name: "kloak-ui",
@@ -471,6 +478,7 @@ export const useUIStore = create<UIState>()(
         animateEmojis: state.animateEmojis,
         dmPrivacy: state.dmPrivacy,
         homePreferences: state.homePreferences,
+        companionEnabled: state.companionEnabled,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {

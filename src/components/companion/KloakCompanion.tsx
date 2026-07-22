@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties, PointerEvent } from "react";
 
-type CompanionMode = "idle" | "walk" | "sleep" | "drag" | "fall" | "hurt";
+type CompanionMode = "idle" | "walk" | "sleep" | "drag" | "fall" | "hurt" | "carrot";
 
 type Point = {
   x: number;
@@ -12,22 +12,24 @@ type PointerSample = Point & {
   time: number;
 };
 
-const COMPANION_WIDTH = 96;
-const COMPANION_HEIGHT = 96;
+const COMPANION_WIDTH = 84;
+const COMPANION_HEIGHT = 84;
 const FLOOR_GAP = 8;
 const WALL_GAP = 10;
 const GRAVITY = 2600;
 const HARD_LANDING_SPEED = 1120;
 const THROW_DEAD_ZONE = 420;
 const THROW_DAMPING = 0.24;
+const CLICK_MOVE_TOLERANCE = 7;
 const POSITION_STORAGE_KEY = "kloak:companion-position";
 const COMPANION_SPRITES: Record<CompanionMode, { url: string; frames: number; frameMs: number; footDrop: number }> = {
-  idle: { url: "/companion/BunnyIdle-Sheet.png", frames: 8, frameMs: 140, footDrop: 15 },
-  walk: { url: "/companion/BunnyRun-Sheet.png", frames: 5, frameMs: 78, footDrop: 15 },
+  idle: { url: "/companion/BunnyIdle-Sheet.png", frames: 8, frameMs: 140, footDrop: 13 },
+  walk: { url: "/companion/BunnyRun-Sheet.png", frames: 5, frameMs: 78, footDrop: 13 },
   sleep: { url: "/companion/BunnySleep-Sheet.png", frames: 2, frameMs: 420, footDrop: 0 },
   drag: { url: "/companion/BunnyAttack-Sheet.png", frames: 7, frameMs: 58, footDrop: 0 },
-  fall: { url: "/companion/BunnyIdle-Sheet.png", frames: 8, frameMs: 120, footDrop: 15 },
+  fall: { url: "/companion/BunnyIdle-Sheet.png", frames: 8, frameMs: 120, footDrop: 13 },
   hurt: { url: "/companion/BunnyDead-Sheet.png", frames: 9, frameMs: 140, footDrop: 0 },
+  carrot: { url: "/companion/BunnyCarrotSkill-Sheet.png", frames: 15, frameMs: 72, footDrop: 0 },
 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
@@ -77,6 +79,7 @@ export function KloakCompanion() {
   const frameRef = useRef(0);
   const velocityRef = useRef<Point>({ x: 0, y: 0 });
   const modeRef = useRef<CompanionMode>("idle");
+  const modeStartedAtRef = useRef(0);
   const facingRef = useRef<"left" | "right">("left");
   const pointerOffsetRef = useRef<Point>({ x: 0, y: 0 });
   const pointerSamplesRef = useRef<PointerSample[]>([]);
@@ -90,6 +93,7 @@ export function KloakCompanion() {
   const updateMode = useCallback((nextMode: CompanionMode) => {
     if (modeRef.current === nextMode) return;
     modeRef.current = nextMode;
+    modeStartedAtRef.current = typeof performance === "undefined" ? 0 : performance.now();
     frameRef.current = 0;
     setFrame(0);
     setMode(nextMode);
@@ -174,6 +178,12 @@ export function KloakCompanion() {
             nextDecisionAtRef.current = time + 900;
             updateMode("idle");
           }
+        } else if (modeRef.current === "carrot") {
+          vel.x = 0;
+          if (time >= actionUntilRef.current) {
+            nextDecisionAtRef.current = time + 900;
+            updateMode("idle");
+          }
         } else if (reducedMotionRef.current) {
           updateMode("idle");
         } else {
@@ -225,7 +235,12 @@ export function KloakCompanion() {
       }
 
       const sprite = COMPANION_SPRITES[modeRef.current];
-      const nextFrame = reducedMotionRef.current ? 0 : Math.floor(time / sprite.frameMs) % sprite.frames;
+      const frameElapsed = Math.max(time - modeStartedAtRef.current, 0);
+      const nextFrame = reducedMotionRef.current
+        ? 0
+        : modeRef.current === "carrot"
+          ? Math.min(Math.floor(frameElapsed / sprite.frameMs), sprite.frames - 1)
+          : Math.floor(frameElapsed / sprite.frameMs) % sprite.frames;
       if (frameRef.current !== nextFrame) {
         frameRef.current = nextFrame;
         setFrame(nextFrame);
@@ -291,11 +306,19 @@ export function KloakCompanion() {
     const samples = pointerSamplesRef.current;
     const first = samples[0];
     const last = samples[samples.length - 1];
+    const clickDistance = first ? Math.hypot(event.clientX - first.x, event.clientY - first.y) : Infinity;
     const elapsed = first && last ? Math.max((last.time - first.time) / 1000, 0.016) : 0.016;
     const vx = first && last ? (last.x - first.x) / elapsed : 0;
     const vy = first && last ? (last.y - first.y) / elapsed : 0;
     const releaseSpeed = Math.hypot(vx, vy);
     const bounds = getBounds();
+
+    if (clickDistance <= CLICK_MOVE_TOLERANCE) {
+      velocityRef.current = { x: 0, y: 0 };
+      actionUntilRef.current = event.timeStamp + COMPANION_SPRITES.carrot.frames * COMPANION_SPRITES.carrot.frameMs;
+      updateMode("carrot");
+      return;
+    }
 
     if (releaseSpeed < THROW_DEAD_ZONE) {
       velocityRef.current = { x: 0, y: 0 };

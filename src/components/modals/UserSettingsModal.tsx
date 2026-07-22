@@ -34,6 +34,7 @@ import {
   Download,
   Shield,
   Trophy,
+  Rabbit,
 } from "lucide-react";
 // Rate limit utilities
 import { useRateLimit } from "@/hooks/useRateLimit";
@@ -188,6 +189,8 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     setAnimateEmojis,
     dmPrivacy,
     setDmPrivacy,
+    companionEnabled,
+    setCompanionEnabled,
   } = useUIStore();
   const { playTestSound } = useNotificationSound();
   const { user, secretKey, updateUser, logout, resetSecretKey, setSecretKey, setMfaSessionToken } = useAuthStore();
@@ -2171,6 +2174,18 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
             </button>
           )})}
         </div>
+      </div>
+
+      <div className="space-y-2 pt-6 border-t border-border/50">
+        <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Companion</Label>
+
+        <SettingsToggle
+          icon={Rabbit}
+          label="Show Companion"
+          description="Display the desktop companion mascot"
+          checked={companionEnabled}
+          onCheckedChange={setCompanionEnabled}
+        />
       </div>
 
       {/* Message Display Section */}

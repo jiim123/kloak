@@ -153,6 +153,7 @@ const AppLayout = () => {
   const isMobileSidebarOpen = useUIStore((s) => s.isMobileSidebarOpen);
   const isMobileMemberSidebarOpen = useUIStore((s) => s.isMobileMemberSidebarOpen);
   const openModal = useUIStore((s) => s.openModal);
+  const companionEnabled = useUIStore((s) => s.companionEnabled);
   const currentServer = useServerStore((s) => s.currentServer);
   const currentChannel = useServerStore((s) => s.currentChannel);
 
@@ -1153,7 +1154,7 @@ const AppLayout = () => {
         {/* Persistent embed container for Twitch/Kick streams */}
         <PersistentEmbedContainer />
 
-        {!isMobile && !isFullscreenSettingsOverlayOpen && <KloakCompanion />}
+        {companionEnabled && !isMobile && !isFullscreenSettingsOverlayOpen && <KloakCompanion />}
 
         {/* Dev-only presence diagnostics overlay (toggle via localStorage) */}
         <PresenceDebugOverlay />
