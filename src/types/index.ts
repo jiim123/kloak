@@ -342,6 +342,7 @@ export interface Message {
   user_id: string;
   is_own?: boolean;
   reply_to_id: string | null;
+  reply_to_ids?: string[];
   content: string;
   is_pinned: boolean;
   is_system_message?: boolean;
@@ -353,6 +354,7 @@ export interface Message {
   attachments?: MessageAttachment[];
   reactions?: ReactionGroup[];
   reply_to?: MessageReply;
+  reply_to_list?: MessageReply[];
   mentions?: Mention[];
 }
 

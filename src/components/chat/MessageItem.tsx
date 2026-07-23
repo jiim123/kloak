@@ -20,6 +20,7 @@ import {
   Ban,
   Flag,
   X,
+  Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -471,6 +472,8 @@ export const MessageItem = memo(function MessageItem({
   const user = useAuthStore((state) => state.user);
   // Extract each message store function separately to avoid re-renders on unrelated changes
   const setReplyingTo = useMessageStore((state) => state.setReplyingTo);
+  const replyTargets = useMessageStore((state) => state.replyTargets);
+  const addReplyTarget = useMessageStore((state) => state.addReplyTarget);
   const channelEditMessage = useMessageStore((state) => state.editMessage);
   const pinMessage = useMessageStore((state) => state.pinMessage);
   const channelAddReaction = useMessageStore((state) => state.addReaction);
@@ -1214,10 +1217,16 @@ export const MessageItem = memo(function MessageItem({
   const handleReply = useCallback(() => {
     if (isDM) {
       dmActions!.onReply(message);
+    } else if (replyTargets.length > 0) {
+      addReplyTarget(message);
     } else {
       setReplyingTo(message);
     }
-  }, [isDM, dmActions, message, setReplyingTo]);
+  }, [isDM, dmActions, message, replyTargets, addReplyTarget, setReplyingTo]);
+
+  const isReplyListActive = !isDM && replyTargets.length > 0;
+  const isInReplyList = isReplyListActive && replyTargets.some((target) => target.id === message.id);
+  const replyActionLabel = isReplyListActive && !isInReplyList ? "Add to replies" : "Reply";
 
   const MESSAGE_CHAR_LIMIT = 2000;
 
@@ -1468,7 +1477,81 @@ export const MessageItem = memo(function MessageItem({
     [message.reply_to?.id],
   );
 
-  const replyReferenceNode = message.reply_to ? (
+  const handleReplyListClick = useCallback((replyId: string) => {
+    window.dispatchEvent(new CustomEvent("scrollToMessage", { detail: { messageId: replyId } }));
+  }, []);
+
+  const replyReferences = message.reply_to_list?.length ? message.reply_to_list : message.reply_to ? [message.reply_to] : [];
+  const stackedReplyAvatarOffsetStyle = useMemo<React.CSSProperties | undefined>(() => {
+    if (compactMode || replyReferences.length <= 1) return undefined;
+    return { paddingTop: `${replyReferences.length * 20}px` };
+  }, [compactMode, replyReferences.length]);
+
+  const replyReferenceNode = replyReferences.length > 1 ? (
+    <div className="mb-1 flex max-w-full flex-col gap-1">
+      {replyReferences.map((reply) => {
+        const replyAuthor = reply.user_id ? getUserFromCache(reply.user_id) : null;
+        const canShowReplyAuthor = canRevealGhostIdentityForUser({
+          isGhostMode,
+          authorUserId: reply.user_id,
+          members: membersList,
+          ownerId: currentServer?.owner_id,
+        });
+        const replyContent = reply.content;
+        const attachmentUrlPattern =
+          /https?:\/\/[^\s]*(?:supabase\.co\/storage\/v1\/|\.(?:jpg|jpeg|png|gif|webp|mp4|mov|pdf|zip|rar|doc|docx|xls|xlsx))(?:[^\s]*)/gi;
+        const kloakAttachmentPattern = /kloak-attachment:\/\/[^\s]*/g;
+        const textOnly = replyContent
+          .split("\n")
+          .map((line) => line.replace(attachmentUrlPattern, "").replace(kloakAttachmentPattern, "").trim())
+          .filter((line) => line.length > 0)
+          .join(" ");
+        const authorName = replyAuthor?.display_name || replyAuthor?.username || "unknown";
+
+        return (
+          <button
+            key={reply.id}
+            type="button"
+            className="flex max-w-full cursor-pointer items-center gap-1.5 overflow-hidden text-left text-[11px] leading-4 text-muted-foreground transition-colors duration-150 hover:text-foreground/90 sm:text-[12px]"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              handleReplyListClick(reply.id);
+            }}
+            onTouchStart={stopTouchPropagation}
+            onTouchEnd={stopTouchPropagation}
+          >
+            <ReplyConnector />
+            <AvatarWithDecoration
+              user={canShowReplyAuthor ? replyAuthor : null}
+              className="h-4 w-4 shrink-0 text-[8px]"
+              freezeGifUntilHover
+            />
+            <span className="flex-shrink-0 font-medium">
+              {canShowReplyAuthor ? authorName : <span className="italic">Anonymous</span>}
+            </span>
+            {isPollMessageContent(replyContent) ? (
+              <span className="truncate italic text-muted-foreground/90 sm:max-w-[320px] max-w-[190px]">poll</span>
+            ) : !textOnly || isImageOnlyMessage(replyContent) ? (
+              <span className="flex flex-shrink-0 items-center gap-1 italic">
+                <Paperclip className="h-3 w-3" />
+                attachment
+              </span>
+            ) : (
+              <span className="truncate text-muted-foreground/90 sm:max-w-[320px] max-w-[190px]">
+                <ReplyPreview
+                  content={textOnly}
+                  maxLength={50}
+                  customEmojiMap={customEmojiMap}
+                  globalEmojiMap={globalEmojiMap}
+                />
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  ) : message.reply_to ? (
     <button
       type="button"
       className="mb-0.5 flex max-w-full cursor-pointer items-center gap-1.5 overflow-hidden text-left text-[11px] leading-4 text-muted-foreground transition-colors duration-150 hover:text-foreground/90 sm:text-[12px]"
@@ -1579,7 +1662,7 @@ export const MessageItem = memo(function MessageItem({
                       </span>
                     </div>
                   ) : (
-                    <div className="w-10 flex-shrink-0">
+                    <div className="w-10 flex-shrink-0" style={stackedReplyAvatarOffsetStyle}>
                       {!isGrouped && (messageUser || showGhostIdentity) ? (
                         showGhostIdentity ? (
                           // Ghost avatar for anonymous users
@@ -1941,10 +2024,13 @@ export const MessageItem = memo(function MessageItem({
                     <button
                        className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-transparent text-[hsl(var(--menu-foreground))]/70 transition-colors hover:bg-[hsl(var(--menu-hover))] hover:text-[hsl(var(--menu-foreground))]"
                       onClick={handleReply}
-                      aria-label="Reply"
-                      title="Reply"
+                      aria-label={replyActionLabel}
+                      title={replyActionLabel}
                     >
                       <Reply className="w-4 h-4" />
+                      {isReplyListActive && !isInReplyList && (
+                        <Plus className="-ml-1 h-3 w-3" />
+                      )}
                     </button>
                   )}
 
@@ -2029,7 +2115,8 @@ export const MessageItem = memo(function MessageItem({
             {!isBlockedUser && (
               <ContextMenuItem onClick={handleReply}>
                 <Reply className="w-4 h-4" />
-                Reply
+                {isReplyListActive && !isInReplyList && <Plus className="-ml-2 h-3 w-3" />}
+                {replyActionLabel}
               </ContextMenuItem>
             )}
             <ContextMenuItem onClick={handleCopyText}>
@@ -2271,7 +2358,7 @@ export const MessageItem = memo(function MessageItem({
                   onClick={handleMobileReply}
                 >
                   <Reply className="w-5 h-5 text-muted-foreground" />
-                  <span className="font-medium">Reply</span>
+                  <span className="font-medium">{replyActionLabel}</span>
                 </button>
               )}
               {/* Edit (own messages) */}

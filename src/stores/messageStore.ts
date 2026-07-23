@@ -53,6 +53,7 @@ interface MessageState {
   fetchingChannels: Record<string, boolean>;
 
   replyingTo: Message | null;
+  replyTargets: Message[];
 
   // Computed getter for current channel messages
   getMessages: () => Message[];
@@ -101,6 +102,9 @@ interface MessageState {
 
   // Reply actions
   setReplyingTo: (message: Message | null) => void;
+  addReplyTarget: (message: Message) => void;
+  removeReplyTarget: (messageId: string) => void;
+  clearReplyTargets: () => void;
 
   // Realtime actions (need channelId for cache)
   addMessage: (message: Message) => void;
@@ -113,6 +117,7 @@ interface MessageState {
 
 interface SendMessageOptions {
   optimisticAttachments?: Message["attachments"];
+  replyToIds?: string[];
 }
 
 const isTemporaryAttachment = (attachment: MessageAttachment) =>
@@ -194,6 +199,7 @@ const PREFETCH_CACHE_EXPIRY_MS = 2 * 60 * 1000;
 const MAX_CACHED_CHANNELS = 5;
 const MAX_MESSAGES_PER_CHANNEL = 150;
 const MAX_REPLY_CACHE_ITEMS = 800;
+const MAX_REPLY_TARGETS = 5;
 const MESSAGE_CACHE_STORAGE_KEY = "kloak:message-cache:v1";
 const INFLIGHT_STALE_MS = 35_000;
 
@@ -647,6 +653,8 @@ const loadChannelMessagePageUncached = async ({
     }
   }
 
+  await hydrateReplyTargetRows(messageRows, requestUserId, blockedUserIds);
+
   const replyMap: Record<string, MessageReply> = {};
   const missingReplyIds: string[] = [];
   messageRows.forEach((msg: any) => {
@@ -712,34 +720,53 @@ const loadChannelMessagePageUncached = async ({
     if (msg.reply_to?.user && typeof msg.reply_to.user === "object" && msg.reply_to.user.id) {
       uniqueUsers.set(msg.reply_to.user.id, msg.reply_to.user as User);
     }
+    if (Array.isArray(msg.reply_to_list)) {
+      msg.reply_to_list.forEach((reply: any) => {
+        if (reply?.user && typeof reply.user === "object" && reply.user.id) {
+          uniqueUsers.set(reply.user.id, reply.user as User);
+        }
+      });
+    }
   }
   if (uniqueUsers.size > 0) {
     bulkSetUsersInCache(Array.from(uniqueUsers.values()));
   }
 
-  const messages: Message[] = messageRows.reverse().map((msg: any) => ({
-    id: msg.id,
-    channel_id: msg.channel_id,
-    user_id: msg.user_id,
-    is_own: msg.is_own ?? (msg.user_id === currentUserId),
-    reply_to_id: msg.reply_to_id ?? null,
-    content: msg.content,
-    is_pinned: msg.is_pinned ?? false,
-    is_system_message: msg.is_system_message ?? false,
-    embed_hidden: msg.embed_hidden ?? false,
-    edited_at: msg.edited_at ?? null,
-    created_at: msg.created_at,
-    reply_to: msg.reply_to_id
-      ? replyMap[msg.reply_to_id] ?? toMessageReply(msg.reply_to)
-      : undefined,
-    attachments: msg.attachments || [],
-    reactions: groupReactions(
-      blockedUserIds.length > 0
-        ? (msg.reactions || []).filter((r: any) => !blockedUserIds.includes(r.user_id))
-        : msg.reactions || [],
-      currentUserId,
-    ),
-  }));
+  const messages: Message[] = messageRows.reverse().map((msg: any) => {
+    const replyToIds = Array.isArray(msg.reply_to_ids)
+      ? msg.reply_to_ids.filter((id: unknown): id is string => typeof id === "string")
+      : msg.reply_to_id
+        ? [msg.reply_to_id]
+        : [];
+    const replyToList = Array.isArray(msg.reply_to_list)
+      ? msg.reply_to_list.map(toMessageReply).filter((reply): reply is MessageReply => !!reply)
+      : [];
+    const primaryReply = msg.reply_to_id ? replyMap[msg.reply_to_id] ?? toMessageReply(msg.reply_to) : undefined;
+
+    return {
+      id: msg.id,
+      channel_id: msg.channel_id,
+      user_id: msg.user_id,
+      is_own: msg.is_own ?? (msg.user_id === currentUserId),
+      reply_to_id: msg.reply_to_id ?? null,
+      reply_to_ids: replyToIds,
+      content: msg.content,
+      is_pinned: msg.is_pinned ?? false,
+      is_system_message: msg.is_system_message ?? false,
+      embed_hidden: msg.embed_hidden ?? false,
+      edited_at: msg.edited_at ?? null,
+      created_at: msg.created_at,
+      reply_to: primaryReply,
+      reply_to_list: replyToList.length > 0 ? replyToList : primaryReply ? [primaryReply] : undefined,
+      attachments: msg.attachments || [],
+      reactions: groupReactions(
+        blockedUserIds.length > 0
+          ? (msg.reactions || []).filter((r: any) => !blockedUserIds.includes(r.user_id))
+          : msg.reactions || [],
+        currentUserId,
+      ),
+    };
+  });
 
   const hasMore = messages.length === limit;
   const oldestLoadedAt = messages[0]?.created_at ?? null;
@@ -793,12 +820,82 @@ const loadChannelMessagePage = async (args: {
   return p;
 };
 
+const hydrateReplyTargetRows = async (
+  messageRows: any[],
+  requestUserId: string,
+  blockedUserIds: string[],
+) => {
+  const messageIds = messageRows
+    .map((message) => (typeof message?.id === "string" ? message.id : null))
+    .filter((id): id is string => !!id);
+  if (messageIds.length === 0) return;
+
+  try {
+    const { data, error } = await supabase.rpc("get_message_reply_targets_secure" as any, {
+      _message_ids: messageIds,
+      _user_id: requestUserId,
+      _blocked_user_ids: blockedUserIds,
+    });
+    if (error) {
+      if (!isMissingRpcError(error)) {
+        console.error("Failed to hydrate multiple reply targets:", error);
+      }
+      return;
+    }
+    if (!Array.isArray(data) || data.length === 0) return;
+
+    const targetsByMessageId = new Map<string, MessageReply[]>();
+    const idsByMessageId = new Map<string, string[]>();
+    for (const row of data as any[]) {
+      const messageId = typeof row?.message_id === "string" ? row.message_id : null;
+      const replyToId = typeof row?.reply_to_id === "string" ? row.reply_to_id : null;
+      const reply = toMessageReply(row?.reply_to);
+      if (!messageId || !replyToId || !reply) continue;
+
+      const replies = targetsByMessageId.get(messageId) ?? [];
+      replies.push(reply);
+      targetsByMessageId.set(messageId, replies);
+
+      const ids = idsByMessageId.get(messageId) ?? [];
+      ids.push(replyToId);
+      idsByMessageId.set(messageId, ids);
+    }
+
+    if (targetsByMessageId.size === 0) return;
+
+    messageRows.forEach((message) => {
+      const replies = targetsByMessageId.get(message.id);
+      if (!replies?.length) return;
+      message.reply_to_list = replies;
+      message.reply_to_ids = idsByMessageId.get(message.id) ?? replies.map((reply) => reply.id);
+      if (!message.reply_to && replies[0]) {
+        message.reply_to = replies[0];
+      }
+      if (!message.reply_to_id && replies[0]) {
+        message.reply_to_id = replies[0].id;
+      }
+    });
+  } catch (error) {
+    console.error("Failed to hydrate multiple reply targets:", error);
+  }
+};
+
+const resolveReplyPreviews = (
+  messagesByChannel: Record<string, ChannelMessages>,
+  channelId: string,
+  replyToIds: string[],
+): MessageReply[] =>
+  replyToIds
+    .map((replyToId) => resolveReplyPreview(messagesByChannel, channelId, replyToId))
+    .filter((reply): reply is MessageReply => !!reply);
+
 export const useMessageStore = create<MessageState>((set, get) => ({
   messagesByChannel: readPersistedMessagesByChannel(),
   currentChannelId: null,
   isLoading: false,
   fetchingChannels: {},
   replyingTo: null,
+  replyTargets: [],
 
   getMessages: () => {
     const { currentChannelId, messagesByChannel } = get();
@@ -817,7 +914,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
   },
 
   setCurrentChannel: (channelId) => {
-    set({ currentChannelId: channelId, replyingTo: null });
+    set({ currentChannelId: channelId, replyingTo: null, replyTargets: [] });
   },
 
   fetchMessages: async (
@@ -1204,7 +1301,12 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     });
     const syncStore = useSyncStore.getState();
     const currentUser = useAuthStore.getState().user;
-    const replyData = resolveReplyPreview(get().messagesByChannel, channelId, replyToId);
+    const replyToIds = Array.from(
+      new Set((options?.replyToIds && options.replyToIds.length > 0 ? options.replyToIds : replyToId ? [replyToId] : []).filter(Boolean)),
+    );
+    const primaryReplyToId = replyToIds[0] ?? replyToId;
+    const replyData = resolveReplyPreview(get().messagesByChannel, channelId, primaryReplyToId);
+    const replyList = resolveReplyPreviews(get().messagesByChannel, channelId, replyToIds);
 
     if (currentUser) {
       useUserCacheStore.getState().upsertUser(currentUser as unknown as User);
@@ -1217,7 +1319,8 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         channel_id: channelId,
         user_id: userId,
         is_own: true,
-        reply_to_id: replyToId ?? null,
+        reply_to_id: primaryReplyToId ?? null,
+        reply_to_ids: replyToIds,
         content,
         is_pinned: false,
         is_system_message: false,
@@ -1225,10 +1328,12 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         edited_at: null,
         created_at: new Date().toISOString(),
         reply_to: replyData,
+        reply_to_list: replyList,
         attachments: options?.optimisticAttachments ?? [],
         reactions: [],
       }),
       replyingTo: null,
+      replyTargets: [],
     }));
     afterNextPaint(() => {
       markChatPerf(perfId, "local-render");
@@ -1236,12 +1341,22 @@ export const useMessageStore = create<MessageState>((set, get) => ({
 
     try {
       // Use hardened RPC path; direct table INSERT may be intentionally blocked for anon clients.
-      const { data, error } = await supabase.rpc("send_message" as any, {
-        _channel_id: channelId,
-        _user_id: userId,
-        _content: content,
-        _reply_to_id: replyToId || null,
-      });
+      const rpcArgs =
+        replyToIds.length > 0
+          ? {
+              _channel_id: channelId,
+              _user_id: userId,
+              _content: content,
+              _reply_to_id: primaryReplyToId || null,
+              _reply_to_ids: replyToIds,
+            }
+          : {
+              _channel_id: channelId,
+              _user_id: userId,
+              _content: content,
+              _reply_to_id: null,
+            };
+      const { data, error } = await supabase.rpc("send_message" as any, rpcArgs);
 
       if (error) {
         if (error.message.includes("muted")) {
@@ -1251,19 +1366,26 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       }
 
       // Map RPC response to Message type; author data still resolves from the user cache.
+      const returnedReplyList = Array.isArray((data as any).reply_to_list)
+        ? (data as any).reply_to_list.map(toMessageReply).filter((reply: MessageReply | null): reply is MessageReply => !!reply)
+        : [];
+      const effectiveReplyList = returnedReplyList.length > 0 ? returnedReplyList : replyList;
+
       const message: Message = {
         id: (data as any).id,
         channel_id: (data as any).channel_id,
         user_id: (data as any).user_id,
         is_own: true,
         reply_to_id: (data as any).reply_to_id ?? null,
+        reply_to_ids: Array.isArray((data as any).reply_to_ids) ? (data as any).reply_to_ids : replyToIds,
         content: (data as any).content,
         is_pinned: (data as any).is_pinned ?? false,
         is_system_message: (data as any).is_system_message ?? false,
         embed_hidden: (data as any).embed_hidden ?? false,
         edited_at: (data as any).edited_at ?? null,
         created_at: (data as any).created_at,
-        reply_to: replyData,
+        reply_to: effectiveReplyList[0] ?? replyData,
+        reply_to_list: effectiveReplyList,
         attachments: [],
         reactions: [],
       };
@@ -1272,6 +1394,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       set((state) => ({
         messagesByChannel: mergeMessageIntoChannelCache(state.messagesByChannel, channelId, message, tempId),
         replyingTo: null,
+        replyTargets: [],
       }));
       endChatPerf(perfId, "server-reconcile");
 
@@ -1588,7 +1711,23 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     }
   },
 
-  setReplyingTo: (message) => set({ replyingTo: message }),
+  setReplyingTo: (message) => set({ replyingTo: message, replyTargets: message ? [message] : [] }),
+  addReplyTarget: (message) =>
+    set((state) => {
+      if (state.replyTargets.some((target) => target.id === message.id)) return state;
+      if (state.replyTargets.length >= MAX_REPLY_TARGETS) {
+        toast.warning(`You can reply to up to ${MAX_REPLY_TARGETS} messages at once.`);
+        return state;
+      }
+      const replyTargets = [...state.replyTargets, message];
+      return { replyingTo: replyTargets[0] ?? null, replyTargets };
+    }),
+  removeReplyTarget: (messageId) =>
+    set((state) => {
+      const replyTargets = state.replyTargets.filter((target) => target.id !== messageId);
+      return { replyingTo: replyTargets[0] ?? null, replyTargets };
+    }),
+  clearReplyTargets: () => set({ replyingTo: null, replyTargets: [] }),
 
   addMessage: (message) => {
     const channelId = message.channel_id;
@@ -1683,7 +1822,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
 
   clearMessages: () => {
     bootstrapPrefetchCache.clear();
-    set({ messagesByChannel: {}, replyingTo: null });
+    set({ messagesByChannel: {}, replyingTo: null, replyTargets: [] });
   },
 
   clearChannelCache: (channelId: string) => {

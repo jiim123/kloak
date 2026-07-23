@@ -50,6 +50,7 @@ import { useServerEmojis } from "@/hooks/useServerEmojis";
 import { checkAttachmentExists } from "@/lib/signedUrl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,6 +58,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { MessageAttachment } from "@/types";
+import type { Message } from "@/types";
 
 export interface DMInputConfig {
   conversationId: string;
@@ -180,6 +182,68 @@ const GifPickerIcon = ({ className }: { className?: string }) => (
     <path d="M18.75 3.50054C20.5449 3.50054 22 4.95562 22 6.75054V17.2531C22 19.048 20.5449 20.5031 18.75 20.5031H5.25C3.45507 20.5031 2 19.048 2 17.2531V6.75054C2 4.95562 3.45507 3.50054 5.25 3.50054H18.75ZM18.75 5.00054H5.25C4.2835 5.00054 3.5 5.78404 3.5 6.75054V17.2531C3.5 18.2196 4.2835 19.0031 5.25 19.0031H18.75C19.7165 19.0031 20.5 18.2196 20.5 17.2531V6.75054C20.5 5.78404 19.7165 5.00054 18.75 5.00054ZM8.0146 8.87194C8.6115 8.87194 9.03353 8.95326 9.51677 9.18533C9.82793 9.33475 9.95904 9.70813 9.80962 10.0193C9.66019 10.3304 9.28682 10.4616 8.97566 10.3121C8.67583 10.1681 8.43601 10.1219 8.0146 10.1219C7.14789 10.1219 6.51104 10.9183 6.51104 11.9943C6.51104 13.0713 7.14873 13.8703 8.0146 13.8703C8.44322 13.8703 8.80607 13.6904 8.99484 13.3695L9.001 13.3545V12.6205L8.62522 12.6212C8.31142 12.6212 8.05164 12.3899 8.00699 12.0886L8.00022 11.9962C8.00022 11.6824 8.23148 11.4226 8.53286 11.378L8.62522 11.3712H9.62682C9.94062 11.3712 10.2004 11.6025 10.245 11.9038L10.2518 11.9962L10.2505 13.5439L10.2441 13.5992L10.223 13.6891L10.2025 13.7442C9.82607 14.6343 8.96156 15.1203 8.0146 15.1203C6.38858 15.1203 5.26104 13.7076 5.26104 11.9943C5.26104 10.2817 6.38839 8.87194 8.0146 8.87194ZM12.6289 8.99393C12.9427 8.99393 13.2025 9.22519 13.2472 9.52658L13.2539 9.61893V14.3811C13.2539 14.7262 12.9741 15.0061 12.6289 15.0061C12.3151 15.0061 12.0554 14.7748 12.0107 14.4734L12.0039 14.3811V9.61893C12.0039 9.27376 12.2838 8.99393 12.6289 8.99393ZM15.6248 8.99393L17.6222 9.00083C17.9673 9.00203 18.2462 9.28281 18.245 9.62799C18.2439 9.94179 18.0118 10.2008 17.7102 10.2444L17.6178 10.2508L16.247 10.2455V11.9995L17.37 12.0004C17.6838 12.0004 17.9436 12.2317 17.9882 12.533L17.995 12.6254C17.995 12.9392 17.7637 13.199 17.4624 13.2436L17.37 13.2504L16.247 13.2495L16.2476 14.365C16.2476 14.6788 16.0163 14.9386 15.715 14.9832L15.6226 14.99C15.3088 14.99 15.049 14.7587 15.0044 14.4573L14.9976 14.365V9.61678C14.9987 9.30298 15.2308 9.044 15.5324 9.00039L15.6248 8.99393Z" />
   </svg>
 );
+
+const getReplySnippet = (content: string) => {
+  if (isImageOnlyMessage(content)) return "attachment";
+  const attachmentUrlPattern =
+    /https?:\/\/[^\s]*(?:supabase\.co\/storage\/v1\/|\.(?:jpg|jpeg|png|gif|webp|mp4|mov|pdf|zip|rar|doc|docx|xls|xlsx))(?:[^\s]*)/gi;
+  const kloakAttachmentPattern = /kloak-attachment:\/\/[^\s]*/g;
+  return (
+    content
+      .split("\n")
+      .map((line) => line.replace(attachmentUrlPattern, "").replace(kloakAttachmentPattern, "").trim())
+      .filter((line) => line.length > 0)
+      .join(" ") || "attachment"
+  );
+};
+
+const ChannelReplyTarget = memo(function ChannelReplyTarget({
+  target,
+  isGhostMode,
+  members,
+  ownerId,
+  onRemove,
+}: {
+  target: Message;
+  isGhostMode: boolean;
+  members: ReturnType<typeof useServerStore.getState>["members"];
+  ownerId?: string | null;
+  onRemove: (messageId: string) => void;
+}) {
+  const targetUser = useMessageUser(target.user_id);
+  const showIdentity = canRevealGhostIdentityForUser({
+    isGhostMode,
+    authorUserId: target.user_id,
+    members,
+    ownerId,
+  });
+  const displayName = targetUser?.display_name || targetUser?.username || "unknown";
+  const snippet = getReplySnippet(target.content);
+
+  return (
+    <div className="flex min-w-0 items-center gap-2 rounded-lg bg-background/45 px-2 py-1.5">
+      <AvatarWithDecoration
+        user={showIdentity ? targetUser : null}
+        className="h-6 w-6 shrink-0 text-[10px]"
+        freezeGifUntilHover
+      />
+      <span className="min-w-0 shrink-0 text-xs font-medium text-primary">
+        {showIdentity ? displayName : <span className="italic">Anonymous</span>}
+      </span>
+      <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+        <ReplyPreview content={snippet} maxLength={90} />
+      </span>
+      <button
+        type="button"
+        onClick={() => onRemove(target.id)}
+        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
+        aria-label={`Remove reply to ${showIdentity ? displayName : "Anonymous"}`}
+      >
+        <X className="h-4 w-4" />
+      </button>
+    </div>
+  );
+});
 
 async function waitForAttachmentReady(storagePath: string): Promise<boolean> {
   for (let attempt = 0; attempt <= ATTACHMENT_READY_RETRY_DELAYS_MS.length; attempt += 1) {
@@ -421,7 +485,14 @@ export const MessageInput = ({
   const isDM = !isForum && !!dmConfig;
   const targetId = isForum ? forumConfig!.threadId : isDM ? dmConfig!.conversationId : channelId!;
   const { user } = useAuthStore();
-  const { replyingTo: channelReplyingTo, setReplyingTo: channelSetReplyingTo, sendMessage: channelSendMessage, editMessage: channelEditMessage } = useMessageStore();
+  const {
+    replyingTo: channelReplyingTo,
+    replyTargets: channelReplyTargets,
+    setReplyingTo: channelSetReplyingTo,
+    removeReplyTarget: channelRemoveReplyTarget,
+    sendMessage: channelSendMessage,
+    editMessage: channelEditMessage,
+  } = useMessageStore();
   const { sendMessage: dmSendMessage, editMessage: dmEditMessage } = useDMStore();
   const { editingMessage, cancelEditing } = useEditStore();
   const { members, currentServer, currentChannel, channels, fetchRolePermissions } = useServerStore();
@@ -435,6 +506,7 @@ export const MessageInput = ({
   // Unified reply state
   const replyingTo = isForum ? forumConfig?.replyingTo : isDM ? dmConfig?.replyingTo : channelReplyingTo;
   const setReplyingTo = isForum ? ((_: any) => {}) : isDM ? ((_: any) => {}) : channelSetReplyingTo;
+  const activeReplyTargets = !isDM && !isForum ? channelReplyTargets : replyingTo ? [replyingTo as any] : [];
   const sendMessage = isDM ? dmSendMessage : channelSendMessage;
   const forumConfigRef = useRef(forumConfig);
   forumConfigRef.current = forumConfig;
@@ -1039,9 +1111,11 @@ export const MessageInput = ({
         }
 
         // Channel / DM mode
-        const replyToId = isDM ? dmConfig?.replyingTo?.id : channelReplyingTo?.id;
+        const channelReplyToIds = channelReplyTargets.map((target) => target.id);
+        const replyToId = isDM ? dmConfig?.replyingTo?.id : channelReplyToIds[0];
         const sentMessage = await sendMessage(targetId, user.id, finalContent, replyToId, {
           optimisticAttachments: preparedAttachments.map((attachment) => attachment.optimisticAttachment),
+          replyToIds: isDM ? undefined : channelReplyToIds,
         });
         if (!sentMessage) return;
         if ((sentMessage as any)._mass_mentions_queued) {
@@ -1445,7 +1519,7 @@ export const MessageInput = ({
       </AnimatePresence>
 
       <AnimatePresence>
-        {replyingTo && (
+        {activeReplyTargets.length > 0 && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
@@ -1453,24 +1527,38 @@ export const MessageInput = ({
             transition={{ duration: 0.15, ease: "easeOut" }}
             className="overflow-hidden"
           >
-            <div className="flex items-center gap-2 px-3.5 py-1.5 bg-foreground/5 border-b border-border/50 rounded-t-[14px]">
-              <span className="text-xs text-muted-foreground">
-                Replying to{" "}
-                {isDM ? (
-                  <span className="text-primary">
-                    @{dmConfig?.replyingTo?.sender?.display_name || dmConfig?.replyingTo?.sender?.username || "unknown"}
-                  </span>
-                ) : showReplyAuthorIdentity ? (
-                  <span className="text-primary">
+            <div className="bg-foreground/5 border-b border-border/50 rounded-t-[14px] px-3.5 py-2">
+              <div className="mb-1.5 flex items-center gap-2">
+                <span className="shrink-0 text-xs font-medium text-muted-foreground">
+                  Replying to{activeReplyTargets.length > 1 ? ` ${activeReplyTargets.length}/5` : ""}
+                </span>
+              </div>
+              {isDM ? (
+                <div className="truncate text-xs text-primary">
+                  @{dmConfig?.replyingTo?.sender?.display_name || dmConfig?.replyingTo?.sender?.username || "unknown"}
+                </div>
+              ) : isForum ? (
+                showReplyAuthorIdentity ? (
+                  <div className="truncate text-xs text-primary">
                     @{replyingToUser?.display_name || replyingToUser?.username || "unknown"}
-                  </span>
+                  </div>
                 ) : (
-                  <span className="text-primary italic">Anonymous</span>
-                )}
-              </span>
-              <button onClick={() => isForum ? forumConfig?.onCancelReply?.() : isDM ? dmConfig?.onCancelReply?.() : channelSetReplyingTo(null)} className="ml-auto p-1">
-                <X className="w-4 h-4" />
-              </button>
+                  <div className="text-xs text-primary italic">Anonymous</div>
+                )
+              ) : (
+                <div className="flex min-w-0 flex-col gap-1">
+                  {channelReplyTargets.map((target) => (
+                    <ChannelReplyTarget
+                      key={target.id}
+                      target={target}
+                      isGhostMode={isGhostMode}
+                      members={members}
+                      ownerId={currentServer?.owner_id}
+                      onRemove={channelRemoveReplyTarget}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           </motion.div>
         )}
@@ -1504,7 +1592,7 @@ export const MessageInput = ({
       <MobileOptimizedInput
         content={content}
         isFocused={isFocused}
-        replyingTo={replyingTo}
+        replyingTo={activeReplyTargets.length > 0 ? activeReplyTargets[0] : null}
         isEditMode={isEditMode}
         canSendMessage={canSendMessage}
         canSubmitMessage={canSubmitMessage}

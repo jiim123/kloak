@@ -71,6 +71,12 @@ type MessageReplyRealtimeRow = {
   user?: User;
 };
 
+type MessageReplyTargetRealtimeRow = {
+  message_id?: string;
+  reply_to_id?: string;
+  reply_to?: MessageReplyRealtimeRow;
+};
+
 const getCacheCatchupState = (
   cacheEntry: { messages?: Array<unknown>; lastFetched?: number } | undefined,
   now: number,
@@ -91,6 +97,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
   const lastActiveCatchupAtRef = useRef<number>(0);
   const listenerScopeRef = useRef(`messages-${Math.random().toString(36).slice(2)}`);
   const pendingReplyIdsRef = useRef(new Set<string>());
+  const pendingReplyTargetMessageIdsRef = useRef(new Set<string>());
   const replyHydrationTimerRef = useRef<NodeJS.Timeout | null>(null);
   const replyHydrationInFlightRef = useRef(false);
   const reactionMessageIdByReactionIdRef = useRef(new Map<string, string>());
@@ -226,11 +233,15 @@ export const useRealtimeMessages = (channelId: string | null) => {
 
         const messages = useMessageStore.getState().messagesByChannel[channelId]?.messages || [];
         for (const message of messages) {
-          if (!message.reply_to_id || message.reply_to) continue;
-          const replyPreview = replyMap.get(message.reply_to_id);
+          const replyIds = message.reply_to_ids?.length ? message.reply_to_ids : message.reply_to_id ? [message.reply_to_id] : [];
+          if (replyIds.length === 0) continue;
+          const replyList = replyIds.map((replyId) => replyMap.get(replyId)).filter((reply): reply is MessageReply => !!reply);
+          if (replyList.length === 0) continue;
+          const replyPreview = replyList[0];
           if (!replyPreview) continue;
           useMessageStore.getState().updateMessage(message.id, {
             reply_to: replyPreview,
+            reply_to_list: replyList.length > 1 ? replyList : message.reply_to_list ?? replyList,
             channel_id: channelId,
           } as Partial<Message>);
         }
@@ -247,12 +258,82 @@ export const useRealtimeMessages = (channelId: string | null) => {
       }
     };
 
+    const hydrateReplyTargetsForMessages = async () => {
+      const messageIds = Array.from(pendingReplyTargetMessageIdsRef.current);
+      if (messageIds.length === 0) return;
+      pendingReplyTargetMessageIdsRef.current.clear();
+
+      try {
+        const currentUserId = useAuthStore.getState().user?.id;
+        if (!currentUserId) return;
+
+        const blocked = useFriendStore.getState().visibilityBlockedUserIds;
+        const { data, error } = await supabase.rpc("get_message_reply_targets_secure" as any, {
+          _message_ids: messageIds,
+          _user_id: currentUserId,
+          _blocked_user_ids: Array.isArray(blocked) ? blocked : [],
+        });
+        if (error) return;
+        if (!Array.isArray(data) || data.length === 0) return;
+
+        const repliesByMessageId = new Map<string, MessageReply[]>();
+        const idsByMessageId = new Map<string, string[]>();
+        for (const row of data as MessageReplyTargetRealtimeRow[]) {
+          const messageId = row?.message_id;
+          const replyToId = row?.reply_to_id;
+          const replyRow = row?.reply_to;
+          if (!messageId || !replyToId || !replyRow?.id || typeof replyRow.content !== "string") continue;
+
+          if (replyRow.user && typeof replyRow.user === "object" && replyRow.user.id) {
+            useUserCacheStore.getState().upsertUser(replyRow.user as User);
+          }
+
+          const reply: MessageReply = {
+            id: replyRow.id,
+            content: replyRow.content,
+            user_id: replyRow.user_id ?? replyRow.user?.id,
+            user: replyRow.user,
+          };
+
+          const replies = repliesByMessageId.get(messageId) ?? [];
+          replies.push(reply);
+          repliesByMessageId.set(messageId, replies);
+
+          const ids = idsByMessageId.get(messageId) ?? [];
+          ids.push(replyToId);
+          idsByMessageId.set(messageId, ids);
+        }
+
+        const store = useMessageStore.getState();
+        for (const [messageId, replyList] of repliesByMessageId) {
+          if (replyList.length === 0) continue;
+          store.updateMessage(messageId, {
+            channel_id: channelId,
+            reply_to_id: replyList[0]?.id ?? null,
+            reply_to_ids: idsByMessageId.get(messageId) ?? replyList.map((reply) => reply.id),
+            reply_to: replyList[0],
+            reply_to_list: replyList,
+          } as Partial<Message>);
+        }
+      } catch (error) {
+        console.error('[Realtime] Failed to hydrate multiple reply targets:', error);
+      }
+    };
+
     const scheduleReplyHydration = (replyId: string) => {
       pendingReplyIdsRef.current.add(replyId);
       if (replyHydrationTimerRef.current || replyHydrationInFlightRef.current) return;
       replyHydrationTimerRef.current = setTimeout(() => {
         replyHydrationTimerRef.current = null;
         void flushPendingReplies();
+      }, REPLY_HYDRATION_BATCH_DELAY_MS);
+    };
+
+    const scheduleReplyTargetHydration = (messageId: string) => {
+      pendingReplyTargetMessageIdsRef.current.add(messageId);
+      setTimeout(() => {
+        if (!isActive) return;
+        void hydrateReplyTargetsForMessages();
       }, REPLY_HYDRATION_BATCH_DELAY_MS);
     };
 
@@ -473,12 +554,17 @@ export const useRealtimeMessages = (channelId: string | null) => {
                       content: replyMsg.content,
                       user_id: replyMsg.user_id,
                     };
+                    message.reply_to_list = [message.reply_to];
+                    message.reply_to_ids = [replyMsg.id];
                   } else {
                     scheduleReplyHydration(newMsg.reply_to_id);
                   }
                 }
                 
                 useMessageStore.getState().addMessage(message);
+                if (newMsg.reply_to_id) {
+                  scheduleReplyTargetHydration(newMsg.id);
+                }
 
                 // Hydrate author info into cache asynchronously (no UI delay).
                 if (revealIdentity && !cachedUser && localUser?.id !== newMsg.user_id) {
@@ -821,6 +907,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
         replyHydrationTimerRef.current = null;
       }
       pendingReplyIds.clear();
+      pendingReplyTargetMessageIdsRef.current.clear();
       replyHydrationInFlightRef.current = false;
       reactionMessageIdByReactionId.clear();
       clearInterval(broadcastResyncInterval);
