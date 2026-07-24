@@ -83,6 +83,36 @@ type CalendarEventComment = {
   user?: User;
 };
 
+type CalendarEventRsvpRow = {
+  id?: string;
+  event_id: string;
+  user_id: string;
+  status: string;
+};
+
+type CalendarEventReactionRow = {
+  id: string;
+  event_id: string;
+  user_id: string;
+  emoji: string;
+};
+
+type CalendarRsvpCounts = {
+  going_count?: number;
+  maybe_count?: number;
+  declined_count?: number;
+  rsvp_count?: number;
+};
+
+type BroadcastMutationPayload<T> = {
+  op?: "INSERT" | "UPDATE" | "DELETE";
+  event_id?: string;
+  new?: T;
+  old?: T;
+  event?: CalendarEvent;
+  counts?: CalendarRsvpCounts;
+};
+
 type CalendarChannelAreaProps = {
   showHeader?: boolean;
 };
@@ -417,6 +447,157 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
     }
   }, [channelId, serverId, user?.id, visibleMonth]);
 
+  const eventIsInLoadedWindow = useCallback(
+    (event: CalendarEvent) => {
+      const monthStart = startOfMonth(subMonths(visibleMonth, 1));
+      const monthEnd = endOfMonth(addMonths(visibleMonth, 2));
+      return new Date(event.ends_at) >= monthStart && new Date(event.starts_at) <= monthEnd;
+    },
+    [visibleMonth],
+  );
+
+  const upsertCalendarEvent = useCallback(
+    (event: CalendarEvent) => {
+      setEvents((current) => {
+        const withoutEvent = current.filter((entry) => entry.id !== event.id);
+        if (!eventIsInLoadedWindow(event)) return withoutEvent;
+        return [...withoutEvent, event].sort(
+          (a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime(),
+        );
+      });
+      setSelectedEvent((current) => (current?.id === event.id ? { ...current, ...event } : current));
+    },
+    [eventIsInLoadedWindow],
+  );
+
+  const removeCalendarEvent = useCallback((eventId: string) => {
+    setEvents((current) => current.filter((entry) => entry.id !== eventId));
+    setSelectedEvent((current) => (current?.id === eventId ? null : current));
+    setSelectedEventId((current) => (current === eventId ? null : current));
+  }, []);
+
+  const applyCalendarEventBroadcast = useCallback(
+    (payload: BroadcastMutationPayload<CalendarEvent>) => {
+      const event = payload.event ?? payload.new;
+      const deleted = payload.old ?? payload.new;
+      if (payload.op === "DELETE") {
+        if (deleted?.id) removeCalendarEvent(deleted.id);
+        return;
+      }
+      if (event?.id) upsertCalendarEvent(event);
+    },
+    [removeCalendarEvent, upsertCalendarEvent],
+  );
+
+  const applyCalendarRsvpBroadcast = useCallback(
+    (payload: BroadcastMutationPayload<CalendarEventRsvpRow>) => {
+      const next = payload.new;
+      const previous = payload.old;
+      const eventId = payload.event_id ?? next?.event_id ?? previous?.event_id;
+      if (!eventId) return;
+
+      const goingDelta = (next?.status === "going" ? 1 : 0) - (previous?.status === "going" ? 1 : 0);
+      const statusForViewer = next?.user_id === user?.id ? next.status : previous?.user_id === user?.id ? null : undefined;
+
+      setEvents((current) =>
+        current.map((event) => {
+          if (event.id !== eventId) return event;
+          const rsvp_count = payload.counts?.rsvp_count ?? Math.max(0, event.rsvp_count + goingDelta);
+          return {
+            ...event,
+            rsvp_count,
+            ...(statusForViewer !== undefined ? { viewer_rsvp_status: statusForViewer } : {}),
+          };
+        }),
+      );
+
+      if (payload.event) upsertCalendarEvent(payload.event);
+
+      setSelectedEvent((current) => {
+        if (!current || current.id !== eventId) return current;
+        const countDelta = (status: string) =>
+          (next?.status === status ? 1 : 0) - (previous?.status === status ? 1 : 0);
+        return {
+          ...current,
+          going_count: payload.counts?.going_count ?? Math.max(0, current.going_count + countDelta("going")),
+          maybe_count: payload.counts?.maybe_count ?? Math.max(0, current.maybe_count + countDelta("maybe")),
+          declined_count: payload.counts?.declined_count ?? Math.max(0, current.declined_count + countDelta("declined")),
+          rsvp_count: payload.counts?.rsvp_count ?? Math.max(0, current.rsvp_count + goingDelta),
+          ...(statusForViewer !== undefined ? { viewer_rsvp_status: statusForViewer } : {}),
+        };
+      });
+    },
+    [upsertCalendarEvent, user?.id],
+  );
+
+  const applyCalendarCommentBroadcast = useCallback((payload: BroadcastMutationPayload<CalendarEventComment>) => {
+    const comment = payload.new;
+    const deleted = payload.old;
+    const eventId = payload.event_id ?? comment?.event_id ?? deleted?.event_id;
+    if (!eventId) return;
+
+    if (payload.op === "DELETE") {
+      if (deleted?.id) setEventComments((current) => current.filter((entry) => entry.id !== deleted.id));
+      setSelectedEvent((current) =>
+        current?.id === eventId ? { ...current, comment_count: Math.max(0, current.comment_count - 1) } : current,
+      );
+      return;
+    }
+
+    if (!comment?.id) return;
+    setEventComments((current) => {
+      const exists = current.some((entry) => entry.id === comment.id);
+      const next = exists
+        ? current.map((entry) => (entry.id === comment.id ? { ...entry, ...comment } : entry))
+        : [...current, comment];
+      return next.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    });
+    if (payload.op === "INSERT") {
+      setSelectedEvent((current) =>
+        current?.id === eventId ? { ...current, comment_count: current.comment_count + 1 } : current,
+      );
+    }
+  }, []);
+
+  const applyCalendarReactionBroadcast = useCallback(
+    (payload: BroadcastMutationPayload<CalendarEventReactionRow>) => {
+      const reaction = payload.op === "DELETE" ? payload.old : payload.new;
+      if (!reaction?.emoji || !reaction.user_id) return;
+
+      setEventReactions((current) => {
+        const groups = current.map((group) => ({ ...group, users: [...group.users] }));
+        const index = groups.findIndex((group) => group.emoji === reaction.emoji);
+
+        if (payload.op === "DELETE") {
+          if (index === -1) return current;
+          const users = groups[index].users.filter((id) => id !== reaction.user_id);
+          groups[index] = {
+            ...groups[index],
+            users,
+            count: users.length,
+            hasReacted: users.includes(user?.id ?? ""),
+          };
+          return groups.filter((group) => group.count > 0);
+        }
+
+        if (index === -1) {
+          return [
+            ...groups,
+            { emoji: reaction.emoji, count: 1, users: [reaction.user_id], hasReacted: reaction.user_id === user?.id },
+          ];
+        }
+        if (!groups[index].users.includes(reaction.user_id)) groups[index].users.push(reaction.user_id);
+        groups[index] = {
+          ...groups[index],
+          count: groups[index].users.length,
+          hasReacted: groups[index].users.includes(user?.id ?? ""),
+        };
+        return groups;
+      });
+    },
+    [user?.id],
+  );
+
   useEffect(() => {
     void loadEvents();
   }, [loadEvents]);
@@ -538,14 +719,12 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
       if (error) throw error;
       const result = data as { success?: boolean; error?: string } | null;
       if (result && result.success === false) throw new Error(result.error || `Failed to ${isEditingEvent ? "update" : "create"} event`);
+      const returnedEvent = (result as any)?.event as CalendarEvent | undefined;
+      if (returnedEvent?.id) upsertCalendarEvent(returnedEvent);
       toast.success(isEditingEvent ? "Event updated" : "Event created");
       setIsCreateOpen(false);
       setEditingEventId(null);
       setIsEditingEvent(false);
-      await loadEvents();
-      if (isEditingEvent) {
-        await loadSelectedEvent();
-      }
     } catch (error: any) {
       toast.error(error?.message || `Failed to ${isEditingEvent ? "update" : "create"} event`);
     } finally {
@@ -575,7 +754,6 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
       if (error) throw error;
       const result = data as { success?: boolean; error?: string } | null;
       if (result && result.success === false) throw new Error(result.error || "Failed to update RSVP");
-      await loadEvents();
     } catch (error: any) {
       toast.error(error?.message || "Failed to update RSVP");
     }
@@ -638,26 +816,41 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
   }, [selectedEventId, loadSelectedEvent, loadEventComments, loadEventReactions]);
 
   useEffect(() => {
-    if (!selectedEventId) return;
+    if (!channelId) return;
     const channel = supabase
-      .channel(`calendar-event:${selectedEventId}`)
-      .on("broadcast", { event: "calendar_event_rsvps" }, () => {
-        void loadSelectedEvent();
-        void loadEvents();
+      .channel(`calendar-events:${channelId}`, { config: { broadcast: { self: true } } })
+      .on("broadcast", { event: "calendar_events" }, ({ payload }) => {
+        applyCalendarEventBroadcast(payload as BroadcastMutationPayload<CalendarEvent>);
       })
-      .on("broadcast", { event: "calendar_event_comments" }, () => {
-        void loadEventComments();
-        void loadSelectedEvent();
-      })
-      .on("broadcast", { event: "calendar_event_reactions" }, () => {
-        void loadEventReactions();
+      .on("broadcast", { event: "calendar_event_rsvps" }, ({ payload }) => {
+        applyCalendarRsvpBroadcast(payload as BroadcastMutationPayload<CalendarEventRsvpRow>);
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [selectedEventId, loadEventComments, loadEventReactions, loadSelectedEvent]);
+  }, [channelId, applyCalendarEventBroadcast, applyCalendarRsvpBroadcast]);
+
+  useEffect(() => {
+    if (!selectedEventId) return;
+    const channel = supabase
+      .channel(`calendar-event:${selectedEventId}`, { config: { broadcast: { self: true } } })
+      .on("broadcast", { event: "calendar_event_rsvps" }, ({ payload }) => {
+        applyCalendarRsvpBroadcast(payload as BroadcastMutationPayload<CalendarEventRsvpRow>);
+      })
+      .on("broadcast", { event: "calendar_event_comments" }, ({ payload }) => {
+        applyCalendarCommentBroadcast(payload as BroadcastMutationPayload<CalendarEventComment>);
+      })
+      .on("broadcast", { event: "calendar_event_reactions" }, ({ payload }) => {
+        applyCalendarReactionBroadcast(payload as BroadcastMutationPayload<CalendarEventReactionRow>);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedEventId, applyCalendarCommentBroadcast, applyCalendarReactionBroadcast, applyCalendarRsvpBroadcast]);
 
   const openEvent = useCallback((eventId: string) => {
     setSelectedEventId(eventId);
@@ -685,8 +878,6 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
   const handleSelectedEventRsvp = async (nextStatus: string | null) => {
     if (!selectedEvent) return;
     await handleRsvp(selectedEvent, nextStatus);
-    await loadSelectedEvent();
-    await loadEvents();
   };
 
   const handleDeleteEvent = async () => {
@@ -705,7 +896,7 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
       setIsDeleteEventDialogOpen(false);
       setEventPendingDelete(null);
       closeEventDetail();
-      await loadEvents();
+      removeCalendarEvent(eventIdToDelete);
     } catch (error: any) {
       toast.error(error?.message || "Failed to delete event");
     } finally {
@@ -726,8 +917,6 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
         _content: encodedContent,
       });
       if (error) throw error;
-      await loadEventComments();
-      await loadSelectedEvent();
     } catch (error: any) {
       setEventReply(content);
       toast.error(error?.message || "Failed to post comment");
@@ -744,8 +933,6 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
         _user_id: user.id,
       });
       if (error) throw error;
-      await loadEventComments();
-      await loadSelectedEvent();
     } catch (error: any) {
       toast.error(error?.message || "Failed to delete comment");
     }
@@ -760,7 +947,6 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
         _emoji: emoji,
       });
       if (error) throw error;
-      await loadEventReactions();
     } catch (error: any) {
       toast.error(error?.message || "Failed to update reaction");
     }
@@ -787,10 +973,7 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
               variant="ghost"
               size="icon-sm"
               className="h-8 w-8 rounded-[3px] text-muted-foreground hover:bg-secondary"
-              onClick={() => {
-                closeEventDetail();
-                void loadEvents();
-              }}
+              onClick={closeEventDetail}
               aria-label="Back to calendar"
             >
               <ArrowLeft className="h-4 w-4" />

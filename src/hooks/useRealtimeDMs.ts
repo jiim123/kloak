@@ -2,7 +2,7 @@ import { useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useDMStore, registerDMChannel, unregisterDMChannel } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
-import type { DirectMessage, DMAttachment } from '@/types';
+import type { DirectMessage, DMAttachment, DMConversation } from '@/types';
 import { getOrFetchUser, useUserCacheStore } from '@/stores/userCacheStore';
 import { acquireChannel, releaseChannel, subscribeChannel } from '@/lib/sharedChannel';
 
@@ -34,11 +34,25 @@ type DMAttachmentRealtimeRow = {
   height?: number | null;
 };
 
+type DMConversationSummaryPayload = {
+  conversation?: {
+    id?: string;
+    created_at?: string;
+    is_group?: boolean;
+    name?: string | null;
+    created_by?: string | null;
+  };
+  participants?: any[];
+  last_message?: DirectMessage | null;
+};
+
 type BroadcastMutationPayload<T> = {
   op?: 'INSERT' | 'UPDATE' | 'DELETE';
   new?: T;
   old?: T;
   conversation_id?: string;
+  conversation?: DMConversationSummaryPayload | null;
+  removed?: boolean;
 };
 
 
@@ -47,7 +61,7 @@ export const useRealtimeDMs = ({
   currentConversationId,
   onNewMessage,
 }: UseRealtimeDMsOptions) => {
-  const { addMessage, updateMessage, removeMessage, updateConversation, fetchConversations, fetchMessages } =
+  const { addMessage, updateMessage, removeMessage, updateConversation, fetchMessages } =
     useDMStore();
   const conversationIdsRef = useRef<Set<string>>(new Set());
   const conversations = useDMStore((state) => state.conversations);
@@ -67,6 +81,67 @@ export const useRealtimeDMs = ({
     }
     conversationIdsRef.current = next;
   }, [conversations, currentConversationId]);
+
+  const applyConversationSummary = useCallback((summary?: DMConversationSummaryPayload | null, removed?: boolean) => {
+    const conversationId = summary?.conversation?.id;
+    if (!conversationId) return false;
+
+    if (removed) {
+      useDMStore.setState((state) => ({
+        conversations: state.conversations.filter((conversation) => conversation.id !== conversationId),
+        currentConversation:
+          state.currentConversation?.id === conversationId ? null : state.currentConversation,
+      }));
+      conversationIdsRef.current.delete(conversationId);
+      return true;
+    }
+
+    const participants = Array.isArray(summary.participants) ? summary.participants : [];
+    const otherParticipant = participants.find((participant: any) => participant.user_id !== userId);
+    const nextConversation: DMConversation = {
+      id: conversationId,
+      created_at: summary.conversation?.created_at ?? '',
+      is_group: summary.conversation?.is_group ?? false,
+      name: summary.conversation?.name ?? null,
+      created_by: summary.conversation?.created_by ?? null,
+      participants,
+      other_user: otherParticipant?.user,
+      last_message: summary.last_message ?? undefined,
+    };
+
+    const users = [nextConversation.other_user, ...participants.map((participant: any) => participant.user)].filter(
+      (entry: any) => !!entry?.id,
+    );
+    for (const cachedUser of users) {
+      useUserCacheStore.getState().upsertUser(cachedUser);
+    }
+
+    useDMStore.setState((state) => {
+      const exists = state.conversations.some((conversation) => conversation.id === conversationId);
+      const conversations = exists
+        ? state.conversations.map((conversation) =>
+            conversation.id === conversationId ? { ...conversation, ...nextConversation } : conversation,
+          )
+        : [nextConversation, ...state.conversations];
+
+      conversations.sort((a, b) => {
+        const aTime = new Date(a.last_message?.created_at ?? a.created_at ?? 0).getTime();
+        const bTime = new Date(b.last_message?.created_at ?? b.created_at ?? 0).getTime();
+        return bTime - aTime;
+      });
+
+      return {
+        conversations,
+        currentConversation:
+          state.currentConversation?.id === conversationId
+            ? { ...state.currentConversation, ...nextConversation }
+            : state.currentConversation,
+      };
+    });
+
+    conversationIdsRef.current.add(conversationId);
+    return true;
+  }, [userId]);
 
   const hydrateMessageRow = useCallback(
     async (row: DirectMessageRealtimeRow): Promise<DirectMessageRealtimeRow> => {
@@ -314,23 +389,6 @@ export const useRealtimeDMs = ({
     };
   }, [userId, currentConversationId, handleNewMessage, handleMessageUpdate, handleMessageDelete, mergeAttachmentIntoConversation]);
 
-  const fetchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const debouncedFetchConversations = useCallback(
-    (uid: string) => {
-      if (fetchDebounceRef.current) clearTimeout(fetchDebounceRef.current);
-      fetchDebounceRef.current = setTimeout(() => {
-        fetchConversations(uid);
-      }, 500);
-    },
-    [fetchConversations],
-  );
-
-  useEffect(() => {
-    return () => {
-      if (fetchDebounceRef.current) clearTimeout(fetchDebounceRef.current);
-    };
-  }, []);
-
   // Subscribe to user-scoped DM updates from database Broadcast triggers.
   useEffect(() => {
     if (!userId) return;
@@ -347,15 +405,31 @@ export const useRealtimeDMs = ({
         const row = op === 'DELETE' ? eventPayload.old : eventPayload.new;
         if (!op || !row?.conversation_id) return;
 
+        const isKnownConversation = conversationIdsRef.current.has(row.conversation_id);
+        const lastMessage = useDMStore
+          .getState()
+          .conversations.find((conversation) => conversation.id === row.conversation_id)?.last_message;
+
         if (op === 'INSERT') {
           void handleNewMessage({ new: row });
         } else if (op === 'UPDATE') {
           handleMessageUpdate({ new: row });
+          if (lastMessage?.id === row.id) {
+            updateConversation(row.conversation_id, {
+              last_message: {
+                ...lastMessage,
+                content: row.content ?? lastMessage.content,
+                edited_at: row.edited_at ?? lastMessage.edited_at,
+              },
+            });
+          }
         } else if (op === 'DELETE') {
           handleMessageDelete({ old: row });
         }
 
-        debouncedFetchConversations(userId);
+        if (!isKnownConversation || (op === 'DELETE' && lastMessage?.id === row.id) || eventPayload.conversation) {
+          applyConversationSummary(eventPayload.conversation, eventPayload.removed);
+        }
       },
     );
 
@@ -378,6 +452,11 @@ export const useRealtimeDMs = ({
         const changedConvId =
           eventPayload?.op === 'DELETE' ? eventPayload.old?.conversation_id : eventPayload.new?.conversation_id;
 
+        if (eventPayload.conversation) {
+          applyConversationSummary(eventPayload.conversation, eventPayload.removed);
+          return;
+        }
+
         if (changedConvId) {
           if (eventPayload?.op === 'DELETE') {
             conversationIdsRef.current.delete(changedConvId);
@@ -385,8 +464,6 @@ export const useRealtimeDMs = ({
             conversationIdsRef.current.add(changedConvId);
           }
         }
-
-        debouncedFetchConversations(userId);
       },
     );
 
@@ -397,11 +474,11 @@ export const useRealtimeDMs = ({
     };
   }, [
     userId,
-    debouncedFetchConversations,
     handleNewMessage,
     handleMessageUpdate,
     handleMessageDelete,
     mergeAttachmentIntoConversation,
+    applyConversationSummary,
   ]);
 
 };

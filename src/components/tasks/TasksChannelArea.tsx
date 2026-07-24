@@ -713,85 +713,50 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
   useEffect(() => {
     if (currentChannel?.type !== "tasks" || !channelId || !canViewTasks) return;
 
-    let stopped = false;
     let hasSeenSubscribed = false;
-    let boardRefreshTimer: ReturnType<typeof setTimeout> | null = null;
-    let taskRefreshTimer: ReturnType<typeof setTimeout> | null = null;
-    const pendingTaskRefreshIds = new Set<string>();
-
-    const scheduleBoardRefresh = () => {
-      if (boardRefreshTimer) return;
-
-      boardRefreshTimer = setTimeout(() => {
-        boardRefreshTimer = null;
-        if (!stopped) {
-          void loadBoard(false);
-        }
-      }, 120);
-    };
-
-    const scheduleTaskRefresh = (taskId: string) => {
-      pendingTaskRefreshIds.add(taskId);
-      if (taskRefreshTimer) return;
-
-      taskRefreshTimer = setTimeout(() => {
-        const taskIds = Array.from(pendingTaskRefreshIds);
-        pendingTaskRefreshIds.clear();
-        taskRefreshTimer = null;
-        if (stopped) return;
-        void refreshTasksById(taskIds);
-      }, 120);
-    };
-
     const channel = supabase
-      .channel(`tasks-realtime:${channelId}`)
+      .channel(`tasks-realtime:${channelId}`, { config: { broadcast: { self: true } } })
       .on("broadcast", { event: "tasks" }, ({ payload }) => {
         const record = payload && typeof payload === "object" ? payload as Record<string, unknown> : null;
         const taskId = typeof record?.task_id === "string" ? record.task_id : null;
         const op = typeof record?.op === "string" ? record.op : null;
+        const taskPayload = record?.task && typeof record.task === "object" ? record.task : null;
 
         if (op === "DELETE" && taskId && taskIdsRef.current.has(taskId)) {
           commitTasks(tasksRef.current.filter((task) => task.id !== taskId));
           return;
         }
 
-        if (op === "INSERT") {
-          scheduleBoardRefresh();
+        if (taskPayload) {
+          upsertTaskLocally(normalizeTask(taskPayload));
+          return;
         }
 
-        if (taskId) {
-          scheduleTaskRefresh(taskId);
-        } else {
-          scheduleBoardRefresh();
-        }
+        // Ignore legacy thin payloads; expanded broadcasts carry `task`.
       })
       .on("broadcast", { event: "task_assignees" }, ({ payload }) => {
         const record = payload && typeof payload === "object" ? payload as Record<string, unknown> : null;
-        const taskId = typeof record?.task_id === "string" ? record.task_id : null;
+        const taskPayload = record?.task && typeof record.task === "object" ? record.task : null;
 
-        if (taskId && taskIdsRef.current.has(taskId)) {
-          scheduleTaskRefresh(taskId);
-        } else {
-          scheduleBoardRefresh();
+        if (taskPayload) {
+          upsertTaskLocally(normalizeTask(taskPayload));
+          return;
         }
+
+        // Ignore legacy thin payloads; expanded broadcasts carry `task`.
       })
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
           if (!hasSeenSubscribed) {
             hasSeenSubscribed = true;
-            return;
           }
-          scheduleBoardRefresh();
         }
       });
 
     return () => {
-      stopped = true;
-      if (boardRefreshTimer) clearTimeout(boardRefreshTimer);
-      if (taskRefreshTimer) clearTimeout(taskRefreshTimer);
       supabase.removeChannel(channel);
     };
-  }, [canViewTasks, channelId, commitTasks, currentChannel?.type, loadBoard, refreshTasksById]);
+  }, [canViewTasks, channelId, commitTasks, currentChannel?.type, upsertTaskLocally]);
 
   const resetInlineCreate = () => {
     setInlineCreateOpen(false);
@@ -906,8 +871,6 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
       const createdTask = data && typeof data === "object" ? normalizeTask({ ...data, creator: user, assignees: [] }) : null;
       if (createdTask) {
         upsertTaskLocally(createdTask);
-      } else {
-        void loadBoard(false);
       }
       resetInlineCreate();
     } catch (error) {
@@ -932,7 +895,7 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
         throw new Error(String((data as Record<string, unknown>).error));
       }
 
-      await loadBoard(false);
+      commitTasks(tasksRef.current.filter((entry) => entry.id !== task.id));
     } catch (error) {
       console.error("Failed to delete task:", error);
       toast.error(error instanceof Error ? error.message : "Failed to delete task");
@@ -997,7 +960,6 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
           _clear_parent: true,
         });
         if (error) throw error;
-        void loadBoard(false);
       } catch (error) {
         console.error("Failed to reorder tasks:", error);
         toast.error(error instanceof Error ? error.message : "Failed to reorder tasks");
@@ -1005,7 +967,7 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
         setReorderingTaskId(null);
       }
     },
-    [loadBoard, mainTaskOrder, user],
+    [mainTaskOrder, user],
   );
 
   const handleMainTaskDragStart = useCallback(

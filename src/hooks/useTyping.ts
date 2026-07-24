@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { getKeyHash, supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { useServerStore } from '@/stores/serverStore';
 import { getUserFromCache, getOrFetchUser } from '@/stores/userCacheStore';
@@ -8,7 +8,6 @@ import type { TypingUser } from '@/types';
 
 const TYPING_DEBOUNCE_MS = 4500;
 const TYPING_TIMEOUT_MS = 5000;
-const STALE_CLEANUP_INTERVAL_MS = 1000;
 const UUID_V4ish_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 type TypingEvent = 'typing' | 'stop_typing';
 
@@ -20,22 +19,27 @@ export const useTyping = (channelId: string | null) => {
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
-  // Clean up stale typing indicators
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = Date.now();
-      setTypingUsers((prev) => {
-        const filtered = prev.filter((u) => now - u.started_at < TYPING_TIMEOUT_MS);
-        if (filtered.length === prev.length) return prev; // No change — skip re-render
-        return filtered;
-      });
-    }, STALE_CLEANUP_INTERVAL_MS);
+  const staleTypingTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
-    return () => clearInterval(interval);
+  const clearTypingTimer = useCallback((userId: string) => {
+    const timer = staleTypingTimersRef.current.get(userId);
+    if (timer) clearTimeout(timer);
+    staleTypingTimersRef.current.delete(userId);
   }, []);
+
+  const scheduleTypingExpiry = useCallback((userId: string) => {
+    clearTypingTimer(userId);
+    const timer = setTimeout(() => {
+      staleTypingTimersRef.current.delete(userId);
+      setTypingUsers((prev) => prev.filter((u) => u.user_id !== userId));
+    }, TYPING_TIMEOUT_MS);
+    staleTypingTimersRef.current.set(userId, timer);
+  }, [clearTypingTimer]);
 
   // Clear typing users when channel changes
   useEffect(() => {
+    staleTypingTimersRef.current.forEach((timer) => clearTimeout(timer));
+    staleTypingTimersRef.current.clear();
     setTypingUsers([]);
     hasAnnouncedTypingRef.current = false;
   }, [channelId]);
@@ -88,6 +92,8 @@ export const useTyping = (channelId: string | null) => {
           ];
         });
 
+        scheduleTypingExpiry(incomingUserId);
+
         // Resolve a trusted profile name when not available locally (common on DM/cold cache paths).
         if (!memberUser && !cachedUser) {
           void getOrFetchUser(incomingUserId).then((fetched) => {
@@ -109,6 +115,7 @@ export const useTyping = (channelId: string | null) => {
       .on('broadcast', stopTypingFilter as { event: string }, ({ payload }) => {
         const incomingUserId = typeof payload?.user_id === 'string' ? payload.user_id : '';
         if (!UUID_V4ish_RE.test(incomingUserId)) return;
+        clearTypingTimer(incomingUserId);
         setTypingUsers((prev) =>
           prev.filter((u) => u.user_id !== incomingUserId)
         );
@@ -125,20 +132,30 @@ export const useTyping = (channelId: string | null) => {
         stopTypingFilter,
       );
       releaseChannel(topic);
+      staleTypingTimersRef.current.forEach((timer) => clearTimeout(timer));
+      staleTypingTimersRef.current.clear();
       channelRef.current = null;
     };
-  }, [channelId, user]);
+  }, [channelId, user, scheduleTypingExpiry, clearTypingTimer]);
 
   const publishTypingEvent = useCallback(async (event: TypingEvent) => {
     if (!channelId || !user || !UUID_V4ish_RE.test(channelId)) return;
-    const keyHash = getKeyHash();
-    if (!keyHash) return;
+    const channel = channelRef.current;
+    if (!channel) return;
 
-    const { error } = await supabase.functions.invoke('broadcast-typing', {
-      body: { channel_id: channelId, event },
-      headers: { 'x-key-hash': keyHash },
+    const result = await channel.send({
+      type: 'broadcast',
+      event,
+      payload: {
+        user_id: user.id,
+        channel_id: channelId,
+        started_at: Date.now(),
+      },
     });
-    if (error) throw error;
+
+    if (result !== 'ok') {
+      throw new Error(`Typing broadcast failed: ${result}`);
+    }
   }, [channelId, user]);
 
   const stopTyping = useCallback(() => {

@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { useFriendStore } from '@/stores/friendStore';
-import { acquireChannel, subscribeChannel, releaseChannel } from '@/lib/sharedChannel';
+import { acquireChannel, subscribeChannel, releaseChannel, isChannelSubscribed } from '@/lib/sharedChannel';
 
 interface ChannelUnreadInfo {
   unreadCount: number;
@@ -29,6 +29,7 @@ type ChannelReadBroadcastRow = {
   channel_id?: string;
   last_read_message_id?: string | null;
   last_read_at?: string | null;
+  mention_count?: number | null;
 };
 
 type ChannelReadEventDetail = {
@@ -44,13 +45,7 @@ type BroadcastMutationPayload<T> = {
   old?: T;
 };
 
-const extractFirstMessageId = (rows: unknown): string | null => {
-  if (!Array.isArray(rows) || rows.length === 0) return null;
-  const first = rows[0] as { id?: unknown };
-  return typeof first.id === 'string' ? first.id : null;
-};
-
-const UNREAD_POLL_INTERVAL_MS = 90000;
+const UNREAD_SNAPSHOT_TTL_MS = 90_000;
 const UNREAD_FETCH_COOLDOWN_MS = 3000;
 const CHANNEL_READ_EVENT = 'kloak:channel-read';
 const UNREAD_STORAGE_PREFIX = 'kloak:channel-unread:';
@@ -58,7 +53,7 @@ const sharedUnreadSnapshotByUser = new Map<string, { unreadState: UnreadState; c
 
 const readPersistedUnreadState = (userId: string): { unreadState: UnreadState; cachedAt: number } | null => {
   const existing = sharedUnreadSnapshotByUser.get(userId);
-  if (existing && Date.now() - existing.cachedAt < UNREAD_POLL_INTERVAL_MS) {
+  if (existing && Date.now() - existing.cachedAt < UNREAD_SNAPSHOT_TTL_MS) {
     return existing;
   }
   if (typeof window === 'undefined') return null;
@@ -67,7 +62,7 @@ const readPersistedUnreadState = (userId: string): { unreadState: UnreadState; c
     if (!raw) return null;
     const parsed = JSON.parse(raw) as { unreadState?: UnreadState; cachedAt?: number };
     if (!parsed?.unreadState || typeof parsed.cachedAt !== 'number') return null;
-    if (Date.now() - parsed.cachedAt >= UNREAD_POLL_INTERVAL_MS) return null;
+    if (Date.now() - parsed.cachedAt >= UNREAD_SNAPSHOT_TTL_MS) return null;
     const snapshot = { unreadState: parsed.unreadState, cachedAt: parsed.cachedAt };
     sharedUnreadSnapshotByUser.set(userId, snapshot);
     return snapshot;
@@ -259,13 +254,76 @@ export const useUnread = (serverChannelIds: string[] = []) => {
     fetchUnreadCountsRef.current = fetchUnreadCounts;
   }, [fetchUnreadCounts]);
 
+  const publishChannelRead = useCallback((channelId: string, lastReadMessageId: string | null, lastReadAt: string) => {
+    if (!userId) return;
+    const topic = `user:${userId}`;
+    const channel = acquireChannel(topic);
+    let didSendOrRelease = false;
+    let unsubscribeStatus: (() => void) | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const releaseOnce = () => {
+      if (didSendOrRelease) return;
+      didSendOrRelease = true;
+      if (timeoutId) clearTimeout(timeoutId);
+      unsubscribeStatus?.();
+      releaseChannel(topic);
+    };
+
+    const send = () => {
+      void channel.send({
+        type: 'broadcast',
+        event: 'channel_reads',
+        payload: {
+          op: 'UPDATE',
+          new: {
+            user_id: userId,
+            channel_id: channelId,
+            last_read_message_id: lastReadMessageId,
+            last_read_at: lastReadAt,
+            mention_count: 0,
+          },
+        },
+      }).finally(releaseOnce);
+    };
+
+    if (isChannelSubscribed(topic)) {
+      send();
+      return;
+    }
+
+    unsubscribeStatus = subscribeChannel(topic, (status) => {
+      if (status === 'SUBSCRIBED') {
+        send();
+      } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        releaseOnce();
+      }
+    });
+
+    timeoutId = setTimeout(releaseOnce, 5000);
+  }, [userId]);
+
+  const dispatchLocalChannelRead = useCallback((channelId: string, at: string) => {
+    const previousUnread = unreadStateRef.current[channelId];
+    window.dispatchEvent(
+      new CustomEvent<ChannelReadEventDetail>(CHANNEL_READ_EVENT, {
+        detail: {
+          channelId,
+          at,
+          unreadCount: previousUnread?.unreadCount ?? 0,
+          mentionCount: previousUnread?.mentionCount ?? 0,
+        },
+      }),
+    );
+  }, []);
+
   // Mark channel as read
   const markAsRead = useCallback(
     async (channelId: string, lastMessageId?: string) => {
       if (!user) return;
 
-      // If we already consider this channel read up to the same message id, skip the RPC.
-      // This avoids extra `mark_channel_read` when revisiting a channel you already read.
+      // If we already consider this channel read up to the same message id, skip
+      // the duplicate socket read receipt when revisiting a channel already read.
       if (lastMessageId) {
         const local = unreadStateRef.current[channelId];
         if (local?.lastReadMessageId === lastMessageId && local.unreadCount === 0 && local.mentionCount === 0) {
@@ -279,95 +337,21 @@ export const useUnread = (serverChannelIds: string[] = []) => {
       const p = (async () => {
         try {
           const now = new Date().toISOString();
+          const optimisticLastReadMessageId = lastMessageId ?? unreadStateRef.current[channelId]?.lastReadMessageId ?? null;
 
-          if (lastMessageId) {
-            // Fast path: caller already knows the last visible message id.
-            const { error: rpcError } = await supabase.rpc('mark_channel_read', {
-              _channel_id: channelId,
-              _user_id: user.id,
-              _last_read_message_id: lastMessageId,
-              _last_read_at: now,
-            });
+          setUnreadState((prev) => ({
+            ...prev,
+            [channelId]: {
+              unreadCount: 0,
+              mentionCount: 0,
+              lastReadMessageId: optimisticLastReadMessageId,
+              lastReadAt: now,
+              firstUnreadMessageId: null,
+            },
+          }));
+          publishChannelRead(channelId, optimisticLastReadMessageId, now);
+          dispatchLocalChannelRead(channelId, now);
 
-            if (rpcError) {
-              console.warn('mark_channel_read RPC failed:', rpcError.message);
-            }
-
-            setUnreadState((prev) => ({
-              ...prev,
-              [channelId]: {
-                unreadCount: 0,
-                mentionCount: 0,
-                lastReadMessageId: lastMessageId,
-                lastReadAt: now,
-                firstUnreadMessageId: null,
-              },
-            }));
-          } else {
-            // Avoid a client-side "latest message" query (causes request spam).
-            // Let the DB compute the latest message id per channel in a single RPC.
-            const { error: rpcError } = await supabase.rpc('mark_channels_read' as never, {
-              _channel_ids: [channelId],
-              _user_id: user.id,
-              _last_read_at: now,
-            } as never);
-
-            let fallbackMessageId: string | null = null;
-
-            if (rpcError) {
-              console.warn('mark_channels_read RPC failed:', rpcError.message);
-
-              // Back-compat fallback (in case migration hasn't been applied yet).
-              // This reintroduces the extra query, but only until the RPC exists.
-              const { data: latestMessages } = await supabase.rpc('get_channel_messages_secure', {
-                _channel_id: channelId,
-                _user_id: user.id,
-                _limit: 1,
-                _before: null,
-                _blocked_user_ids: [],
-              });
-
-              fallbackMessageId = extractFirstMessageId(latestMessages);
-
-              if (fallbackMessageId) {
-                const { error: fallbackError } = await supabase.rpc('mark_channel_read', {
-                  _channel_id: channelId,
-                  _user_id: user.id,
-                  _last_read_message_id: fallbackMessageId,
-                  _last_read_at: now,
-                });
-
-                if (fallbackError) {
-                  console.warn('mark_channel_read fallback failed:', fallbackError.message);
-                }
-              }
-            }
-
-            setUnreadState((prev) => ({
-              ...prev,
-              [channelId]: {
-                unreadCount: 0,
-                mentionCount: 0,
-                lastReadMessageId: fallbackMessageId ?? prev[channelId]?.lastReadMessageId ?? null,
-                lastReadAt: now,
-                firstUnreadMessageId: null,
-              },
-            }));
-          }
-
-          // Broadcast locally so other `useUnread()` instances (ServerSidebar, etc.)
-          // update immediately without waiting for realtime/poll.
-          const previousUnread = unreadStateRef.current[channelId];
-          window.dispatchEvent(
-            new CustomEvent<ChannelReadEventDetail>(CHANNEL_READ_EVENT, {
-              detail: {
-                channelId,
-                at: now,
-                unreadCount: previousUnread?.unreadCount ?? 0,
-                mentionCount: previousUnread?.mentionCount ?? 0,
-              },
-            }),
-          );
         } catch (error) {
           console.error('Error marking channel as read:', error);
         } finally {
@@ -379,7 +363,7 @@ export const useUnread = (serverChannelIds: string[] = []) => {
       markInFlightRef.current.set(channelId, p);
       return p;
     },
-    [user]
+    [dispatchLocalChannelRead, publishChannelRead, user]
   );
 
   // Get unread info for a specific channel
@@ -434,97 +418,35 @@ export const useUnread = (serverChannelIds: string[] = []) => {
 
       const now = new Date().toISOString();
 
-      try {
-        // One RPC instead of N calls (+ avoids "latest message" lookups on the client).
-        const { error: rpcError } = await supabase.rpc('mark_channels_read' as never, {
-          _channel_ids: channelIds,
-          _user_id: user.id,
-          _last_read_at: now,
-        } as never);
-
-        if (rpcError) {
-          console.warn('mark_channels_read RPC failed:', rpcError.message);
-
-          // Back-compat fallback (in case migration hasn't been applied yet).
-          // Note: this is N+1, but only used during rollout.
-          await Promise.all(
-            channelIds.map(async (channelId) => {
-              const { data: latestMessages } = await supabase.rpc('get_channel_messages_secure', {
-                _channel_id: channelId,
-                _user_id: user.id,
-                _limit: 1,
-                _before: null,
-                _blocked_user_ids: [],
-              });
-
-              const messageId = extractFirstMessageId(latestMessages);
-              if (!messageId) return;
-
-              const { error: fallbackError } = await supabase.rpc('mark_channel_read', {
-                _channel_id: channelId,
-                _user_id: user.id,
-                _last_read_message_id: messageId,
-                _last_read_at: now,
-              });
-
-              if (fallbackError) {
-                console.warn('mark_channel_read fallback failed:', fallbackError.message);
-              }
-            })
-          );
-        }
-      } catch (error) {
-        console.error('Error marking server as read:', error);
-      }
-
-      // Optimistically clear unread state locally.
+      // Optimistically clear unread state locally and across this user's websocket sessions.
       setUnreadState((prev) => {
         const next = { ...prev };
         for (const channelId of channelIds) {
+          const lastReadMessageId = prev[channelId]?.lastReadMessageId ?? null;
           next[channelId] = {
             unreadCount: 0,
             mentionCount: 0,
-            lastReadMessageId: prev[channelId]?.lastReadMessageId ?? null,
+            lastReadMessageId,
             lastReadAt: now,
             firstUnreadMessageId: null,
           };
+          publishChannelRead(channelId, lastReadMessageId, now);
         }
         return next;
       });
 
-      // Broadcast locally for cross-component sync.
       for (const channelId of channelIds) {
-        const previousUnread = unreadStateRef.current[channelId];
-        window.dispatchEvent(
-          new CustomEvent<ChannelReadEventDetail>(CHANNEL_READ_EVENT, {
-            detail: {
-              channelId,
-              at: now,
-              unreadCount: previousUnread?.unreadCount ?? 0,
-              mentionCount: previousUnread?.mentionCount ?? 0,
-            },
-          }),
-        );
+        dispatchLocalChannelRead(channelId, now);
       }
+
     },
-    [user]
+    [dispatchLocalChannelRead, publishChannelRead, user]
   );
 
   // Fetch on mount and when channel IDs change
   useEffect(() => {
     fetchUnreadCounts();
   }, [fetchUnreadCounts, channelIdsKey]);
-
-  // Poll periodically to keep unread indicators consistent even when realtime misses events.
-  useEffect(() => {
-    if (!user || serverChannelIds.length === 0) return;
-    const interval = setInterval(() => {
-      if (document.visibilityState !== 'visible') return;
-      fetchUnreadCounts();
-    }, UNREAD_POLL_INTERVAL_MS);
-
-    return () => clearInterval(interval);
-  }, [user, channelIdsKey, fetchUnreadCounts, serverChannelIds.length]);
 
   // Subscribe to broadcast updates for current user's channel reads.
   useEffect(() => {

@@ -2,14 +2,12 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { patchUserAcrossStores } from './useRealtimeUsers';
 
-const LAST_SEEN_INTERVAL_MS = 90000; // 90 seconds
 const IDLE_TIMEOUT_MS = 300000; // 5 minutes
 
 export const usePresence = () => {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const manualStatus = useAuthStore((s) => s.manualStatus);
   const idleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastSeenIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isIdleRef = useRef(false);
 
   // Use refs for values that change frequently but shouldn't trigger effect re-runs
@@ -80,33 +78,6 @@ export const usePresence = () => {
       }
     };
   }, [isAuthenticated, resetIdleTimer]);
-
-  // Update last_seen periodically
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    // If user chose Invisible, do not heartbeat last_seen (preserves "appear offline").
-    if (manualStatus === 'offline') return;
-
-    // Get the function directly to avoid dependency issues
-    const { updateLastSeen } = useAuthStore.getState();
-
-    // Update immediately only when visible.
-    if (document.visibilityState === 'visible') {
-      updateLastSeen();
-    }
-
-    // Then update periodically while visible.
-    lastSeenIntervalRef.current = setInterval(() => {
-      if (document.visibilityState !== 'visible') return;
-      useAuthStore.getState().updateLastSeen();
-    }, LAST_SEEN_INTERVAL_MS);
-
-    return () => {
-      if (lastSeenIntervalRef.current) {
-        clearInterval(lastSeenIntervalRef.current);
-      }
-    };
-  }, [isAuthenticated, manualStatus]);
 
   // Visibility-based presence: only reset idle timer on tab return.
   // Do NOT force status changes on tab hide — the 5-minute idle timeout handles that naturally.

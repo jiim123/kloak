@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { acquireChannel, releaseChannel, subscribeChannel } from "@/lib/sharedChannel";
 import { usePollStore } from "@/stores/pollStore";
 
 interface PollWithVotes {
@@ -70,31 +70,36 @@ export const useRealtimePolls = (channelId: string | null) => {
   useEffect(() => {
     if (!channelId) return;
 
-    const hasKnownOpenPollsInChannel = () => {
-      const pollsById = usePollStore.getState().pollsById;
-      return Object.values(pollsById).some((p) => p.channel_id === channelId && !p.is_closed);
+    let expiryTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const scheduleNextExpiry = () => {
+      if (expiryTimer) {
+        clearTimeout(expiryTimer);
+        expiryTimer = null;
+      }
+
+      const now = Date.now();
+      const openPolls = Object.values(usePollStore.getState().pollsById).filter(
+        (poll) => poll.channel_id === channelId && !poll.is_closed && poll.ends_at,
+      );
+      if (openPolls.length === 0) return;
+
+      const nextExpiry = Math.min(...openPolls.map((poll) => new Date(poll.ends_at).getTime()));
+      const delay = Math.max(0, nextExpiry - now + 250);
+      expiryTimer = setTimeout(() => {
+        if (document.visibilityState === "visible") {
+          void usePollStore.getState().closeExpiredPolls(channelId).catch(() => undefined);
+        }
+        scheduleNextExpiry();
+      }, delay);
     };
 
-    // Close any expired polls when entering a channel (best-effort)
-    const closeExpired = () => {
-      if (document.visibilityState !== "visible") return;
-      if (!hasKnownOpenPollsInChannel()) return;
-      usePollStore
-        .getState()
-        .closeExpiredPolls(channelId)
-        .catch(() => undefined);
-    };
-
-    // Avoid an RPC on every channel switch when the channel has no known polls.
-    closeExpired();
-
-    // Also run every 30s to catch polls that expire while user is in the channel
-    // but the PollMessage component may have unmounted (e.g. scrolled away)
-    const interval = setInterval(closeExpired, 30_000);
+    scheduleNextExpiry();
+    const unsubscribePolls = usePollStore.subscribe(scheduleNextExpiry);
 
     const topic = `chat:${channelId}`;
     const filter = { event: "polls", scope: listenerScopeRef.current };
-    const channel = supabase.channel(topic).on(
+    const channel = acquireChannel(topic).on(
       "broadcast",
       filter as { event: string },
       ({ payload }) => {
@@ -126,15 +131,16 @@ export const useRealtimePolls = (channelId: string | null) => {
         }
       },
     );
-    // NOTE: `chat:${channelId}` is shared and subscribed by `useRealtimeMessages`.
-    // Do not call `.subscribe()` or `removeChannel()` here to avoid channel-ownership thrash.
+    subscribeChannel(topic);
 
     return () => {
-      clearInterval(interval);
+      if (expiryTimer) clearTimeout(expiryTimer);
+      unsubscribePolls();
       (channel as unknown as { _off?: (type: string, filter: Record<string, unknown>) => void })._off?.(
         "broadcast",
         filter,
       );
+      releaseChannel(topic);
     };
   }, [channelId]);
 };

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { acquireChannel, releaseChannel, subscribeChannel } from '@/lib/sharedChannel';
 import { useMessageStore } from '@/stores/messageStore';
 import { useFriendStore } from '@/stores/friendStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -12,12 +13,6 @@ import { canRevealGhostIdentityForUser, getGhostPseudonymousUserId } from '@/lib
 
 const CHANNEL_SUBSCRIBE_CATCHUP_MAX_AGE_MS = 5 * 60_000;
 const MIN_CATCHUP_FETCH_GAP_MS = 30_000;
-const BROADCAST_RESYNC_INTERVAL_MS = 12_000;
-const MIN_BROADCAST_RESYNC_GAP_MS = 6_000;
-const ACTIVE_CHANNEL_CATCHUP_INTERVAL_MS = 10_000;
-const MIN_ACTIVE_CHANNEL_CATCHUP_GAP_MS = 10_000;
-const ACTIVE_CHANNEL_CATCHUP_IDLE_MS = 8_000;
-const ACTIVE_CHANNEL_CATCHUP_LIMIT = 20;
 const REPLY_HYDRATION_BATCH_DELAY_MS = 80;
 const MAX_REACTION_ID_CACHE_SIZE = 5000;
 
@@ -31,6 +26,7 @@ type MessageBroadcastRow = {
   content: string;
   is_pinned?: boolean | null;
   is_system_message?: boolean | null;
+  embed_hidden?: boolean | null;
   edited_at?: string | null;
   created_at: string;
 };
@@ -93,8 +89,6 @@ export const useRealtimeMessages = (channelId: string | null) => {
   const lastEventAtRef = useRef<number>(0);
   const lastCatchupFetchAtRef = useRef<number>(0);
   const isSubscribedRef = useRef(false);
-  const lastBroadcastResyncAtRef = useRef<number>(0);
-  const lastActiveCatchupAtRef = useRef<number>(0);
   const listenerScopeRef = useRef(`messages-${Math.random().toString(36).slice(2)}`);
   const pendingReplyIdsRef = useRef(new Set<string>());
   const pendingReplyTargetMessageIdsRef = useRef(new Set<string>());
@@ -110,6 +104,8 @@ export const useRealtimeMessages = (channelId: string | null) => {
     let isActive = true;
     let isIntentionalClose = false;
     let channel: ReturnType<typeof supabase.channel> | null = null;
+    let unsubscribeStatus: (() => void) | null = null;
+    const topic = `chat:${channelId}`;
     let retryTimeout: NodeJS.Timeout | null = null;
     let retryCount = 0;
     const RETRY_BASE_DELAY_MS = 2000;
@@ -451,8 +447,9 @@ export const useRealtimeMessages = (channelId: string | null) => {
           // Shared topic: remove only this hook's listeners.
           removeScopedBindings(channel);
           if (replaceExisting) {
-            isIntentionalClose = true;
-            supabase.removeChannel(channel);
+            unsubscribeStatus?.();
+            unsubscribeStatus = null;
+            releaseChannel(topic);
             channel = null;
             isSubscribedRef.current = false;
           }
@@ -463,12 +460,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
 
       console.log('[Realtime] Setting up chat broadcast subscription for channel:', channelId);
 
-      channel = supabase
-        .channel(`chat:${channelId}`, {
-          config: {
-            broadcast: { self: false },
-          },
-        })
+      channel = acquireChannel(topic)
         .on(
           'broadcast',
           messageFilter as { event: string },
@@ -534,6 +526,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
                   content: newMsg.content,
                   is_pinned: newMsg.is_pinned || false,
                   is_system_message: newMsg.is_system_message || false,
+                  embed_hidden: newMsg.embed_hidden ?? false,
                   edited_at: newMsg.edited_at,
                   created_at: newMsg.created_at,
                   // user data lives in cache, not on message
@@ -586,6 +579,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
                   content: updated.content,
                   edited_at: updated.edited_at,
                   is_pinned: updated.is_pinned ?? false,
+                  embed_hidden: updated.embed_hidden ?? false,
                 });
               } else if (eventType === 'DELETE') {
                 const oldData = eventPayload.old as { id?: string; channel_id?: string } | undefined;
@@ -765,7 +759,8 @@ export const useRealtimeMessages = (channelId: string | null) => {
         return;
       }
 
-      channel.subscribe((status, err) => {
+      unsubscribeStatus?.();
+      unsubscribeStatus = subscribeChannel(topic, (status, err) => {
         if (!isActive) return;
         isSettingUpRef.current = false;
         
@@ -825,44 +820,6 @@ export const useRealtimeMessages = (channelId: string | null) => {
     const pendingReplyIds = pendingReplyIdsRef.current;
     const reactionMessageIdByReactionId = reactionMessageIdByReactionIdRef.current;
 
-    // Single bounded fallback sync: run only when subscription is unhealthy.
-    const broadcastResyncInterval = setInterval(() => {
-      if (!isActive) return;
-      if (document.visibilityState !== 'visible') return;
-      if (isSubscribedRef.current) return;
-
-      const now = Date.now();
-      if (now - lastBroadcastResyncAtRef.current < MIN_BROADCAST_RESYNC_GAP_MS) return;
-      lastBroadcastResyncAtRef.current = now;
-
-      const store = useMessageStore.getState();
-      const cacheEntry = store.messagesByChannel[channelId];
-      const { hasCached, isFreshEnough } = getCacheCatchupState(cacheEntry, now);
-      if (hasCached && isFreshEnough) return;
-
-      void store.fetchMessages(channelId, 20, undefined, true, hasCached, true).catch(() => undefined);
-    }, BROADCAST_RESYNC_INTERVAL_MS);
-
-    // Safety net for missed broadcasts while the subscription still reports as
-    // healthy. This keeps active bot/system inserts visible even when Realtime
-    // silently drops a broadcast event.
-    const activeChannelCatchupInterval = setInterval(() => {
-      if (!isActive) return;
-      if (document.visibilityState !== 'visible') return;
-      if (!isSubscribedRef.current) return;
-
-      const now = Date.now();
-      if (now - lastEventAtRef.current < ACTIVE_CHANNEL_CATCHUP_IDLE_MS) return;
-      if (now - lastActiveCatchupAtRef.current < MIN_ACTIVE_CHANNEL_CATCHUP_GAP_MS) return;
-      lastActiveCatchupAtRef.current = now;
-
-      const store = useMessageStore.getState();
-      const hasCached = (store.messagesByChannel[channelId]?.messages.length ?? 0) > 0;
-      void store
-        .fetchMessages(channelId, ACTIVE_CHANNEL_CATCHUP_LIMIT, undefined, true, hasCached, true)
-        .catch(() => undefined);
-    }, ACTIVE_CHANNEL_CATCHUP_INTERVAL_MS);
-
     // Handle visibility changes to ensure subscription stays active
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && channel) {
@@ -902,6 +859,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
       if (retryTimeout) {
         clearTimeout(retryTimeout);
       }
+      unsubscribeStatus?.();
       if (replyHydrationTimerRef.current) {
         clearTimeout(replyHydrationTimerRef.current);
         replyHydrationTimerRef.current = null;
@@ -910,12 +868,10 @@ export const useRealtimeMessages = (channelId: string | null) => {
       pendingReplyTargetMessageIdsRef.current.clear();
       replyHydrationInFlightRef.current = false;
       reactionMessageIdByReactionId.clear();
-      clearInterval(broadcastResyncInterval);
-      clearInterval(activeChannelCatchupInterval);
       if (channel) {
         try {
           removeScopedBindings(channel);
-          supabase.removeChannel(channel);
+          releaseChannel(topic);
         } catch (e) {
           // Ignore cleanup errors
         }

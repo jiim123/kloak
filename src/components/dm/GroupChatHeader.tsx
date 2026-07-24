@@ -30,7 +30,7 @@ export const GroupChatHeader = ({ conversation, participants }: GroupChatHeaderP
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { setMobileSidebarOpen } = useUIStore();
-  const { leaveGroup, setCurrentConversation, fetchConversations } = useDMStore();
+  const { leaveGroup, setCurrentConversation } = useDMStore();
   
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
@@ -60,7 +60,6 @@ export const GroupChatHeader = ({ conversation, participants }: GroupChatHeaderP
     if (success) {
       toast.success("You have left the group");
       setCurrentConversation(null);
-      fetchConversations(user.id);
       navigate("/app");
     } else {
       toast.error("Failed to leave group");

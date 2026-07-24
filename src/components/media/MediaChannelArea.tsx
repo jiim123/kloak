@@ -253,6 +253,12 @@ interface MediaChannelAreaProps {
   showHeader?: boolean;
 }
 
+type BroadcastMutationPayload<T> = {
+  op?: "INSERT" | "UPDATE" | "DELETE";
+  new?: T;
+  old?: Partial<T>;
+};
+
 export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) => {
   const { currentChannel } = useServerStore();
   const { user } = useAuthStore();
@@ -303,18 +309,49 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
     fetchMediaItems();
   }, [fetchMediaItems]);
 
+  const applyMediaItemBroadcast = useCallback((eventPayload: BroadcastMutationPayload<MediaItem>) => {
+    const op = eventPayload.op;
+    if (!op) return false;
+
+    if (op === "DELETE") {
+      const deletedId = eventPayload.old?.id;
+      if (!deletedId) return false;
+      setMediaItems((current) => current.filter((item) => item.id !== deletedId));
+      setSelectedMedia((current) => (current?.id === deletedId ? null : current));
+      return true;
+    }
+
+    const item = eventPayload.new;
+    if (!item?.id || !item.channel_id || !item.media_url || !item.media_type || !item.created_at) {
+      return false;
+    }
+
+    setMediaItems((current) => {
+      const existingIndex = current.findIndex((entry) => entry.id === item.id);
+      if (existingIndex >= 0) {
+        const next = current.slice();
+        next[existingIndex] = { ...next[existingIndex], ...item };
+        return next.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      }
+
+      return [item, ...current].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    });
+    setSelectedMedia((current) => (current?.id === item.id ? { ...current, ...item } : current));
+    return true;
+  }, []);
+
   useEffect(() => {
     if (!currentChannel) return;
     const channel = supabase
-      .channel(`media_items:${currentChannel.id}`, { config: { broadcast: { self: false } } })
-      .on("broadcast", { event: "media_items" }, () => {
-        void fetchMediaItems({ silent: true });
+      .channel(`media_items:${currentChannel.id}`, { config: { broadcast: { self: true } } })
+      .on("broadcast", { event: "media_items" }, ({ payload }) => {
+        applyMediaItemBroadcast(payload as BroadcastMutationPayload<MediaItem>);
       })
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentChannel, fetchMediaItems]);
+  }, [applyMediaItemBroadcast, currentChannel]);
 
   // ── File selection ──────────────────────────────────────────────────────────
 
@@ -465,7 +502,6 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
       toast.success("Media uploaded successfully!");
       setIsUploadModalOpen(false);
       resetUploadForm();
-      await fetchMediaItems({ silent: true });
     } catch (err) {
       console.error("Upload failed:", err);
       toast.error("Failed to upload media");
@@ -484,7 +520,6 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
       });
       if (error) throw error;
       toast.success("Media deleted");
-      await fetchMediaItems({ silent: true });
     } catch (err) {
       console.error("Failed to delete:", err);
       toast.error("Failed to delete media");

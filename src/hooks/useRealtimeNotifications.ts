@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNotificationStore } from '@/stores/notificationStore';
-import { useServerStore } from '@/stores/serverStore';
 import { useUIStore } from '@/stores/uiStore';
 import type { Notification, NotificationType as DBNotificationType } from '@/types';
 import { isTauri } from '@/lib/tauriRuntime';
@@ -88,10 +87,6 @@ export const useRealtimeNotifications = (userId: string | null) => {
       if (!isNotificationTypeEnabled(notification.type)) return;
 
       storeRef.current.addNotification(notification);
-
-      if (notification.title === 'You have been kicked' || notification.title === 'You have been banned') {
-        useServerStore.getState().fetchServers(userId);
-      }
 
       const soundType = mapNotificationTypeToSoundType(notification.type);
       playNotificationSound(soundType);
@@ -188,31 +183,8 @@ export const useRealtimeNotifications = (userId: string | null) => {
     };
     window.addEventListener('kloak:network-recovery', handleNetworkRecovery);
 
-    const pollInterval = window.setInterval(async () => {
-      // Skip poll if auth key hash is unavailable (prevents 401s).
-      const { getKeyHash } = await import('@/integrations/supabase/client');
-      if (!getKeyHash()) return;
-
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('id, user_id, type, title, body, link, is_read, created_at')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(20);
-
-      if (error || !data?.length) return;
-
-      const existingIds = new Set(useNotificationStore.getState().notifications.map((n) => n.id));
-      const unseen = (data as Notification[])
-        .filter((n) => !existingIds.has(n.id))
-        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-
-      unseen.forEach(processIncomingNotification);
-    }, 60_000);
-
     return () => {
       isSubscribedRef.current = false;
-      window.clearInterval(pollInterval);
       window.removeEventListener('kloak:network-recovery', handleNetworkRecovery);
       supabase.removeChannel(channel);
     };

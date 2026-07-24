@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { acquireChannel, releaseChannel, subscribeChannel } from '@/lib/sharedChannel';
 import { useAuthStore } from '@/stores/authStore';
 import { useFriendStore } from '@/stores/friendStore';
 import { useUserCacheStore, bulkSetUsersInCache } from '@/stores/userCacheStore';
@@ -148,7 +148,7 @@ export const useRealtimePinnedMessages = (channelId: string | null) => {
 
     const topic = `chat:${channelId}`;
     const filter = { event: "messages", scope: listenerScopeRef.current };
-    const channel = supabase.channel(topic).on(
+    const channel = acquireChannel(topic).on(
       "broadcast",
       filter as { event: string },
       ({ payload }) => {
@@ -180,14 +180,14 @@ export const useRealtimePinnedMessages = (channelId: string | null) => {
         }
       },
     );
-    // NOTE: `chat:${channelId}` is shared and subscribed by `useRealtimeMessages`.
-    // Do not call `.subscribe()` or `removeChannel()` here to avoid channel ownership conflicts.
+    subscribeChannel(topic);
 
     return () => {
       (channel as unknown as { _off?: (type: string, filter: Record<string, unknown>) => void })._off?.(
         "broadcast",
         filter,
       );
+      releaseChannel(topic);
     };
   }, [channelId, fetchPinnedMessages]);
 

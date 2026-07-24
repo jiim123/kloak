@@ -56,6 +56,20 @@ interface MediaCommentsProps {
   channelId: string;
 }
 
+type MediaCommentReactionRow = {
+  id: string;
+  comment_id: string;
+  user_id: string;
+  emoji: string;
+  created_at?: string;
+};
+
+type BroadcastMutationPayload<T> = {
+  op?: "INSERT" | "UPDATE" | "DELETE";
+  new?: T;
+  old?: Partial<T>;
+};
+
 const ROLE_COLORS: Record<ServerRole, string> = {
   owner: "text-yellow-400",
   admin: "text-red-400",
@@ -414,27 +428,120 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
     }
   }, [mediaId, user?.id, groupReactions]);
 
+  const applyCommentBroadcast = useCallback((eventPayload: BroadcastMutationPayload<MediaComment>) => {
+    const op = eventPayload.op;
+    if (!op) return false;
+
+    if (op === "DELETE") {
+      const deletedId = eventPayload.old?.id;
+      if (!deletedId) return false;
+      setComments((current) => current.filter((comment) => comment.id !== deletedId));
+      if (replyingToComment === deletedId) setReplyingToComment(null);
+      if (editingCommentId === deletedId) {
+        setEditingCommentId(null);
+        setEditContent("");
+      }
+      return true;
+    }
+
+    const comment = eventPayload.new;
+    if (!comment?.id || !comment.media_id || !comment.user_id || typeof comment.content !== "string") {
+      return false;
+    }
+
+    setComments((current) => {
+      const existingIndex = current.findIndex((entry) => entry.id === comment.id);
+      if (existingIndex >= 0) {
+        const next = current.slice();
+        next[existingIndex] = {
+          ...next[existingIndex],
+          ...comment,
+          reactions: comment.reactions ?? next[existingIndex].reactions ?? [],
+        };
+        return next.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      }
+
+      return [...current, { ...comment, reactions: comment.reactions ?? [] }].sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+      );
+    });
+    return true;
+  }, [editingCommentId, replyingToComment]);
+
+  const applyReactionBroadcast = useCallback((eventPayload: BroadcastMutationPayload<MediaCommentReactionRow>) => {
+    const op = eventPayload.op;
+    const row = op === "DELETE" ? eventPayload.old : eventPayload.new;
+    if (!op || !row?.comment_id || !row.user_id || !row.emoji) return false;
+
+    setComments((current) =>
+      current.map((comment) => {
+        if (comment.id !== row.comment_id) return comment;
+
+        const reactions = [...(comment.reactions ?? [])];
+        const reactionIndex = reactions.findIndex((reaction) => reaction.emoji === row.emoji);
+
+        if (op === "DELETE") {
+          if (reactionIndex < 0) return comment;
+          const reaction = reactions[reactionIndex];
+          const users = reaction.users.filter((entry) => entry !== row.user_id);
+          if (users.length === 0) {
+            reactions.splice(reactionIndex, 1);
+          } else {
+            reactions[reactionIndex] = {
+              ...reaction,
+              users,
+              count: users.length,
+              hasReacted: reaction.hasReacted && row.user_id !== user?.id,
+            };
+          }
+          return { ...comment, reactions };
+        }
+
+        if (reactionIndex >= 0) {
+          const reaction = reactions[reactionIndex];
+          const users = reaction.users.includes(row.user_id) ? reaction.users : [...reaction.users, row.user_id];
+          reactions[reactionIndex] = {
+            ...reaction,
+            users,
+            count: users.length,
+            hasReacted: reaction.hasReacted || row.user_id === user?.id,
+          };
+        } else {
+          reactions.push({
+            emoji: row.emoji,
+            count: 1,
+            users: [row.user_id],
+            hasReacted: row.user_id === user?.id,
+          });
+        }
+
+        return { ...comment, reactions };
+      }),
+    );
+    return true;
+  }, [user?.id]);
+
   useEffect(() => {
     fetchComments();
 
     const channel = supabase
       .channel(`media-comments:${mediaId}`, {
         config: {
-          broadcast: { self: false },
+          broadcast: { self: true },
         },
       })
       .on(
         "broadcast",
         { event: "media_comments" },
-        () => {
-          void fetchComments({ silent: true });
+        ({ payload }) => {
+          applyCommentBroadcast(payload as BroadcastMutationPayload<MediaComment>);
         }
       )
       .on(
         "broadcast",
         { event: "media_comment_reactions" },
-        () => {
-          void fetchComments({ silent: true });
+        ({ payload }) => {
+          applyReactionBroadcast(payload as BroadcastMutationPayload<MediaCommentReactionRow>);
         }
       )
       .subscribe();
@@ -442,7 +549,7 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [mediaId, fetchComments, user?.id, groupReactions]);
+  }, [applyCommentBroadcast, applyReactionBroadcast, mediaId]);
 
   const handleReply = useCallback(
     async () => {
@@ -465,7 +572,6 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
         });
 
         if (error) throw error;
-        await fetchComments({ silent: true });
       } catch (error) {
         handleError(error, "Failed to send comment");
         setReplyContent(content);
@@ -490,7 +596,6 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
       });
 
       if (error) throw error;
-      await fetchComments({ silent: true });
 
       setEditingCommentId(null);
       setEditContent("");
@@ -506,7 +611,6 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
         _user_id: user?.id
       });
       if (error) throw error;
-      await fetchComments({ silent: true });
     } catch (error) {
       handleError(error, "Failed to delete comment");
     }

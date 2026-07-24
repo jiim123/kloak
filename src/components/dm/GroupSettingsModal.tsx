@@ -30,7 +30,7 @@ export const GroupSettingsModal = ({
 }: GroupSettingsModalProps) => {
   const { user } = useAuthStore();
   const { friends, fetchFriends } = useFriendStore();
-  const { updateGroupName, addGroupMembers, kickGroupMember, fetchConversations } = useDMStore();
+  const { updateGroupName, addGroupMembers, kickGroupMember } = useDMStore();
   const { openModal } = useUIStore();
 
   const [groupName, setGroupName] = useState(conversation.name || "");
@@ -85,7 +85,6 @@ export const GroupSettingsModal = ({
 
     if (success) {
       toast.success(groupName.trim() ? "Group name updated" : "Group name removed");
-      fetchConversations(user.id);
     } else {
       toast.error("Failed to update group name");
     }
@@ -101,7 +100,6 @@ export const GroupSettingsModal = ({
     if (success) {
       toast.success(`Added ${selectedFriends.length} member(s) to the group`);
       setSelectedFriends([]);
-      fetchConversations(user.id);
     } else {
       toast.error("Failed to add members");
     }
@@ -116,7 +114,6 @@ export const GroupSettingsModal = ({
 
     if (success) {
       toast.success("Member removed from group");
-      fetchConversations(user.id);
     } else {
       toast.error("Failed to remove member");
     }

@@ -28,7 +28,6 @@ type BroadcastMutationPayload<T> = {
   old?: T;
 };
 
-const SUMMARY_POLL_INTERVAL_MS = 90_000;
 const SUMMARY_FETCH_COOLDOWN_MS = 3_000;
 const CHANNEL_READ_EVENT = "kloak:channel-read";
 
@@ -182,16 +181,6 @@ export const useServerUnreadSummary = (userId: string | null, serverIds: string[
   useEffect(() => {
     void fetchSummary();
   }, [fetchSummary, serverIdsKey]);
-
-  useEffect(() => {
-    if (!userId || serverIds.length === 0) return;
-    const interval = setInterval(() => {
-      if (document.visibilityState !== "visible") return;
-      void fetchSummaryRef.current();
-    }, SUMMARY_POLL_INTERVAL_MS);
-
-    return () => clearInterval(interval);
-  }, [serverIds.length, userId]);
 
   useEffect(() => {
     if (!userId) return;

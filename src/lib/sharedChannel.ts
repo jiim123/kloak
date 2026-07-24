@@ -13,11 +13,14 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
+type ChannelStatusListener = (status: string, err?: unknown) => void;
+
 interface SharedChannelEntry {
   channel: RealtimeChannel;
   refCount: number;
   subscribed: boolean;
   pendingSubscribe: boolean;
+  statusListeners: Set<ChannelStatusListener>;
 }
 
 const channels = new Map<string, SharedChannelEntry>();
@@ -40,6 +43,7 @@ export function acquireChannel(topic: string): RealtimeChannel {
     refCount: 1,
     subscribed: false,
     pendingSubscribe: false,
+    statusListeners: new Set(),
   };
   channels.set(topic, entry);
   return channel;
@@ -49,23 +53,38 @@ export function acquireChannel(topic: string): RealtimeChannel {
  * Subscribe the shared channel if not already subscribed.
  * Safe to call multiple times — only the first call triggers .subscribe().
  */
-export function subscribeChannel(topic: string): void {
+export function subscribeChannel(topic: string, onStatus?: ChannelStatusListener): () => void {
   const entry = channels.get(topic);
-  if (!entry || entry.subscribed || entry.pendingSubscribe) return;
+  if (!entry) return () => undefined;
 
-  entry.pendingSubscribe = true;
-  entry.channel.subscribe((status, err) => {
-    if (status === 'SUBSCRIBED') {
-      entry.subscribed = true;
-      entry.pendingSubscribe = false;
-    } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-      entry.subscribed = false;
-      entry.pendingSubscribe = false;
-      if (err) {
-        console.warn(`[SharedChannel] ${topic} error:`, err);
-      }
+  if (onStatus) {
+    entry.statusListeners.add(onStatus);
+    if (entry.subscribed) {
+      queueMicrotask(() => onStatus('SUBSCRIBED'));
     }
-  });
+  }
+
+  if (!entry.subscribed && !entry.pendingSubscribe) {
+    entry.pendingSubscribe = true;
+    entry.channel.subscribe((status, err) => {
+      if (status === 'SUBSCRIBED') {
+        entry.subscribed = true;
+        entry.pendingSubscribe = false;
+      } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        entry.subscribed = false;
+        entry.pendingSubscribe = false;
+        if (err) {
+          console.warn(`[SharedChannel] ${topic} error:`, err);
+        }
+      }
+
+      entry.statusListeners.forEach((listener) => listener(status, err));
+    });
+  }
+
+  return () => {
+    if (onStatus) entry.statusListeners.delete(onStatus);
+  };
 }
 
 /**

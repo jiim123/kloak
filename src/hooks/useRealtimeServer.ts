@@ -7,11 +7,22 @@ import { toast } from 'sonner';
 import { acquireChannel, subscribeChannel, releaseChannel } from '@/lib/sharedChannel';
 type RealtimeRow = Record<string, unknown>;
 type RealtimeErrorLike = { message?: string; name?: string; cause?: unknown };
+type ServerSurfaceSnapshot = {
+  categories?: RealtimeRow[];
+  channels?: RealtimeRow[];
+  roles?: RealtimeRow[];
+  members_lite?: RealtimeRow[];
+  current_member?: RealtimeRow | null;
+};
+
 type ServerSurfaceBroadcastPayload = {
   table?: string;
   op?: 'INSERT' | 'UPDATE' | 'DELETE';
+  server_id?: string;
   new?: RealtimeRow | null;
   old?: RealtimeRow | null;
+  surface?: ServerSurfaceSnapshot | null;
+  removed?: boolean;
 };
 
 function makeDebouncedFn(fn: () => void, ms: number) {
@@ -28,6 +39,82 @@ function makeDebouncedFn(fn: () => void, ms: number) {
   };
   return debounced;
 }
+
+const applyUserScopedServerSurface = (serverId: string, event: ServerSurfaceBroadcastPayload) => {
+  if (event.removed || event.op === 'DELETE' && !event.surface) {
+    useServerStore.setState((state) => ({
+      servers: state.servers.filter((server) => server.id !== serverId),
+      currentServer: state.currentServer?.id === serverId ? null : state.currentServer,
+      currentChannel: state.currentServer?.id === serverId ? null : state.currentChannel,
+      channels: state.currentServer?.id === serverId ? [] : state.channels,
+      categories: state.currentServer?.id === serverId ? [] : state.categories,
+      members: state.currentServer?.id === serverId ? [] : state.members,
+      membersServerId: state.currentServer?.id === serverId ? null : state.membersServerId,
+      membersFetchMode: state.currentServer?.id === serverId ? null : state.membersFetchMode,
+      roles: state.currentServer?.id === serverId ? [] : state.roles,
+    }));
+    return true;
+  }
+
+  const surface = event.surface;
+  if (!surface) return false;
+
+  const categories = Array.isArray(surface.categories) ? surface.categories : [];
+  const channels = Array.isArray(surface.channels) ? surface.channels : [];
+  const roles = Array.isArray(surface.roles) ? surface.roles : undefined;
+  const membersLite = Array.isArray(surface.members_lite) ? surface.members_lite : undefined;
+
+  useServerStore.setState((state) => {
+    const isActiveServer = state.currentServer?.id === serverId;
+    const nextCurrentChannel =
+      isActiveServer && state.currentChannel && !channels.some((channel) => channel.id === state.currentChannel?.id)
+        ? ((channels[0] as any) ?? null)
+        : state.currentChannel;
+
+    return {
+      categories: isActiveServer ? (categories as any) : state.categories,
+      channels: isActiveServer ? (channels as any) : state.channels,
+      currentChannel: nextCurrentChannel as any,
+      roles: isActiveServer && roles ? (roles as any) : state.roles,
+      members:
+        isActiveServer && membersLite && state.membersFetchMode !== 'full'
+          ? (membersLite as any)
+          : state.members,
+      membersServerId:
+        isActiveServer && membersLite && state.membersFetchMode !== 'full' ? serverId : state.membersServerId,
+      membersFetchMode:
+        isActiveServer && membersLite && state.membersFetchMode !== 'full' ? 'lite' : state.membersFetchMode,
+      isMembersLoading: isActiveServer && membersLite ? false : state.isMembersLoading,
+    };
+  });
+
+  return true;
+};
+
+const applyServerRowBroadcast = (serverId: string, event: ServerSurfaceBroadcastPayload) => {
+  if (event.op === 'DELETE') {
+    useServerStore.setState((state) => ({
+      servers: state.servers.filter((server) => server.id !== serverId),
+      currentServer: state.currentServer?.id === serverId ? null : state.currentServer,
+      currentChannel: state.currentServer?.id === serverId ? null : state.currentChannel,
+      channels: state.currentServer?.id === serverId ? [] : state.channels,
+      categories: state.currentServer?.id === serverId ? [] : state.categories,
+      members: state.currentServer?.id === serverId ? [] : state.members,
+      membersServerId: state.currentServer?.id === serverId ? null : state.membersServerId,
+      membersFetchMode: state.currentServer?.id === serverId ? null : state.membersFetchMode,
+    }));
+    return true;
+  }
+
+  const row = event.new;
+  if (!row?.id) return false;
+
+  useServerStore.setState((state) => ({
+    servers: state.servers.map((server) => (server.id === row.id ? { ...server, ...row } : server)),
+    currentServer: state.currentServer?.id === row.id ? { ...state.currentServer, ...row } : state.currentServer,
+  }));
+  return true;
+};
 
 export const useRealtimeServer = (serverId: string | null) => {
   const { isConnected } = useConnectionStatus();
@@ -56,56 +143,24 @@ export const useRealtimeServer = (serverId: string | null) => {
     toast.warning(message);
   }, []);
 
-  const refreshAccessibleState = useCallback((sid: string, accessLostMessage: string) => {
-    const store = serverStoreRef.current;
-    console.log('[Realtime] Refreshing channels & permissions for server', sid);
-
-    store.fetchChannels(sid, { force: true }).then(() => {
-      const { currentChannel, channels } = useServerStore.getState();
-      if (currentChannel && !channels.some((c) => c.id === currentChannel.id)) {
-        handleChannelAccessLost(sid, accessLostMessage);
-      }
-    });
-  }, [handleChannelAccessLost]);
-
-  const refreshMemberSnapshot = useCallback((sid: string) => {
-    const storeState = useServerStore.getState();
-    const shouldUseFull = storeState.membersServerId === sid && storeState.membersFetchMode === 'full';
-    return serverStoreRef.current.fetchMembers(sid, { force: true, full: shouldUseFull });
-  }, []);
-
-  const refreshRoleMetadata = useCallback((sid: string) => {
-    return serverStoreRef.current.fetchRoles(sid, { force: true });
-  }, []);
-
   const debouncedRefreshRef = useRef<ReturnType<typeof makeDebouncedFn> | null>(null);
 
   useEffect(() => {
     if (!serverId) return;
-
     if (prevConnectedRef.current === false && isConnected) {
-      console.log('[Realtime] Reconnected - refreshing server state for', serverId);
-      refreshAccessibleState(serverId, 'A channel you were viewing is no longer available');
-      void refreshRoleMetadata(serverId);
-      void refreshMemberSnapshot(serverId);
+      console.log('[Realtime] Reconnected - waiting for user-scoped server surface', serverId);
     }
-
     prevConnectedRef.current = isConnected;
-  }, [isConnected, refreshAccessibleState, refreshMemberSnapshot, refreshRoleMetadata, serverId]);
+  }, [isConnected, serverId]);
 
   useEffect(() => {
     if (!serverId) return;
-
-    const debounced = makeDebouncedFn(() => {
-      console.log('[Realtime] Permission change detected - refreshing channels & roles for', serverId);
-      refreshAccessibleState(serverId, 'You no longer have access to that channel');
-    }, 500);
-
+    const debounced = makeDebouncedFn(() => undefined, 500);
     debouncedRefreshRef.current = debounced;
     return () => {
       debounced.cancel();
     };
-  }, [refreshAccessibleState, serverId]);
+  }, [serverId]);
 
   useEffect(() => {
     if (!serverId) return;
@@ -120,45 +175,10 @@ export const useRealtimeServer = (serverId: string | null) => {
         if (!event?.table) return;
 
         if (event.table === 'servers') {
-          const user = authStoreRef.current.user;
-          if (user?.id) {
-            void serverStoreRef.current.fetchServers(user.id);
-          }
+          applyServerRowBroadcast(serverId, event);
         }
 
-        if (
-          event.table === 'channels' ||
-          event.table === 'channel_categories' ||
-          event.table === 'channel_permissions' ||
-          event.table === 'role_permissions' ||
-          event.table === 'channel_members' ||
-          event.table === 'servers'
-        ) {
-          debouncedRefreshRef.current?.();
-        }
-
-        if (
-          event.table === 'server_roles' ||
-          event.table === 'server_member_roles' ||
-          event.table === 'server_members'
-        ) {
-          // Capture current member user IDs before refresh
-          const prevMemberUserIds = new Set(
-            serverStoreRef.current.members.map((m) => m.user_id)
-          );
-
-          void refreshRoleMetadata(serverId);
-          void refreshMemberSnapshot(serverId).then(() => {
-            // After refresh, detect removed members and purge their messages
-            const currentMembers = useServerStore.getState().members;
-            const currentMemberUserIds = new Set(currentMembers.map((m) => m.user_id));
-            for (const uid of prevMemberUserIds) {
-              if (!currentMemberUserIds.has(uid)) {
-                useMessageStore.getState().removeMessagesByUser(uid);
-              }
-            }
-          });
-        }
+        // Full private channel/member/role updates now arrive on the user-scoped `user:<id>` topic.
       },
     );
     subscribeChannel(topic);
@@ -166,5 +186,33 @@ export const useRealtimeServer = (serverId: string | null) => {
     return () => {
       releaseChannel(topic);
     };
-  }, [refreshMemberSnapshot, refreshRoleMetadata, serverId]);
+  }, [serverId]);
+
+  useEffect(() => {
+    const userId = authStoreRef.current.user?.id;
+    if (!serverId || !userId) return;
+
+    const topic = `user:${userId}`;
+    const channel = acquireChannel(topic);
+    channel.on('broadcast', { event: 'server_surface' }, ({ payload }) => {
+      const event = payload as ServerSurfaceBroadcastPayload | null;
+      if (!event || event.server_id !== serverId) return;
+
+      const previousMemberUserIds = new Set(useServerStore.getState().members.map((member) => member.user_id));
+      const applied = applyUserScopedServerSurface(serverId, event);
+      if (!applied) return;
+
+      const currentMemberUserIds = new Set(useServerStore.getState().members.map((member) => member.user_id));
+      for (const memberUserId of previousMemberUserIds) {
+        if (!currentMemberUserIds.has(memberUserId)) {
+          useMessageStore.getState().removeMessagesByUser(memberUserId);
+        }
+      }
+    });
+    subscribeChannel(topic);
+
+    return () => {
+      releaseChannel(topic);
+    };
+  }, [serverId]);
 };

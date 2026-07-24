@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { supabase } from "@/integrations/supabase/client";
+import { getChannel } from "@/lib/sharedChannel";
 import { useAuthStore } from "@/stores/authStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useServerStore } from "@/stores/serverStore";
@@ -1397,6 +1398,29 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         replyTargets: [],
       }));
       endChatPerf(perfId, "server-reconcile");
+
+      const realtimeChannel = getChannel(`chat:${channelId}`);
+      if (realtimeChannel) {
+        void realtimeChannel.send({
+          type: "broadcast",
+          event: "messages",
+          payload: {
+            op: "INSERT",
+            new: {
+              id: message.id,
+              channel_id: message.channel_id,
+              user_id: message.user_id,
+              reply_to_id: message.reply_to_id,
+              content: message.content,
+              is_pinned: message.is_pinned,
+              is_system_message: message.is_system_message ?? false,
+              embed_hidden: message.embed_hidden ?? false,
+              edited_at: message.edited_at,
+              created_at: message.created_at,
+            },
+          },
+        }).catch(() => undefined);
+      }
 
       // Attach mass-mention delivery metadata for the caller.
       (message as any)._mentions_suppressed = (data as any).mentions_suppressed;

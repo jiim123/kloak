@@ -28,7 +28,6 @@ type BroadcastMutationPayload<T> = {
 };
 
 const REFETCH_COOLDOWN_MS = 5000;
-const DM_UNREAD_POLL_INTERVAL_MS = 120000;
 
 export const useUnreadDMs = (userId: string | null) => {
   const [unreadState, setUnreadState] = useState<UnreadDMState>({});
@@ -235,16 +234,6 @@ export const useUnreadDMs = (userId: string | null) => {
     return () => {
       releaseChannel(topic);
     };
-  }, [userId, fetchUnreadCounts]);
-
-  // Periodic refresh (safety net if events are missed)
-  useEffect(() => {
-    if (!userId) return;
-    const interval = setInterval(() => {
-      if (document.visibilityState !== 'visible') return;
-      fetchUnreadCounts();
-    }, DM_UNREAD_POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
   }, [userId, fetchUnreadCounts]);
 
   return {

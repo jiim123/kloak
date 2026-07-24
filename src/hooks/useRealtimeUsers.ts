@@ -6,7 +6,6 @@ import { useDMStore } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useUserCacheStore } from '@/stores/userCacheStore';
 import { useUIStore } from '@/stores/uiStore';
-import { fetchUsersPresence } from '@/lib/presenceBatch';
 import type { User, UserStatus } from '@/types';
 
 /**
@@ -208,16 +207,10 @@ type GlobalPresenceMeta = {
   ts?: number;
 };
 
-// Fallback polling only; targeted realtime listeners should handle most updates.
 const GLOBAL_USERS_PRESENCE_TOPIC = 'presence:users-global';
-const PRESENCE_POLL_INTERVAL_MS = 90_000;
-const PRESENCE_FETCH_COOLDOWN_MS = 60_000;
-const PRESENCE_MIN_HIDDEN_MS_FOR_REFETCH = 15_000;
-const PRESENCE_BACKSTOP_POLL_INTERVAL_MS = 300_000;
 const PRESENCE_ABSENT_GRACE_MS = 30_000;
-const RECENT_PRESENCE_WINDOW_MS = 2 * PRESENCE_POLL_INTERVAL_MS;
+const RECENT_PRESENCE_WINDOW_MS = 180_000;
 const TARGET_CHANGE_APPLY_DEBOUNCE_MS = 120;
-const INITIAL_PRESENCE_BACKFILL_DELAY_MS = 250;
 
 const recentRealtimePresenceByUser = new Map<string, number>();
 
@@ -257,10 +250,6 @@ const collectPresenceTargetUserIds = (): string[] => {
   return Array.from(userIds);
 };
 
-const collectPollTargetUserIds = (): string[] => {
-  return collectPresenceTargetUserIds();
-};
-
 const buildOwnPresencePayload = (): GlobalPresenceMeta | null => {
   const { user, manualStatus } = useAuthStore.getState();
   if (!user) return null;
@@ -269,7 +258,7 @@ const buildOwnPresencePayload = (): GlobalPresenceMeta | null => {
     user_id: user.id,
     status,
     custom_status: user.custom_status ?? null,
-    last_seen: user.last_seen ?? null,
+    last_seen: new Date().toISOString(),
     ts: Date.now(),
   };
 };
@@ -289,16 +278,12 @@ const buildOwnPresencePayload = (): GlobalPresenceMeta | null => {
 export const useRealtimeUsers = () => {
   const authUser = useAuthStore((s) => s.user);
   const manualStatus = useAuthStore((s) => s.manualStatus);
-  const lastPollRef = useRef<number>(0);
-  const lastBackstopPollRef = useRef<number>(0);
-  const lastPresenceSnapshotAtRef = useRef<number>(0);
   const presenceChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const presenceConnectedRef = useRef(false);
   const presenceSigByUserRef = useRef<Map<string, string>>(new Map());
   const absenceStartedAtByUserRef = useRef<Map<string, number>>(new Map());
   const tabIdRef = useRef<string>(Math.random().toString(36).slice(2, 10));
   const applyPresenceRef = useRef<(() => void) | null>(null);
-  const pollPresenceRef = useRef<((opts?: { force?: boolean; bypassCooldown?: boolean }) => void) | null>(null);
 
   useEffect(() => {
     const userId = authUser?.id;
@@ -310,7 +295,6 @@ export const useRealtimeUsers = () => {
       absenceStartedAtByUserRef.current.clear();
       recentRealtimePresenceByUser.clear();
       applyPresenceRef.current = null;
-      pollPresenceRef.current = null;
       if (existing) {
         try {
           void existing.untrack();
@@ -363,7 +347,6 @@ export const useRealtimeUsers = () => {
 
       const applyPresenceSnapshot = () => {
         const nowMs = Date.now();
-        lastPresenceSnapshotAtRef.current = nowMs;
         const targetIds = collectPresenceTargetUserIds();
         if (targetIds.length === 0) return;
 
@@ -450,7 +433,6 @@ export const useRealtimeUsers = () => {
               void channel.track(payload).catch(() => undefined);
             }
             applyPresenceSnapshot();
-            void pollPresenceRef.current?.({ force: true, bypassCooldown: true });
             return;
           }
 
@@ -503,7 +485,6 @@ export const useRealtimeUsers = () => {
         lastTargetIdsKey = currentKey;
         lastTargetIdsSet = new Set(currentIds);
         applyPresenceRef.current?.();
-        void pollPresenceRef.current?.({ force: true, bypassCooldown: true });
       }, TARGET_CHANGE_APPLY_DEBOUNCE_MS);
     };
     const unsubFriends = useFriendStore.subscribe(throttledApply);
@@ -566,91 +547,7 @@ export const useRealtimeUsers = () => {
     if (!payload) return;
     void channel.track(payload).catch(() => undefined);
   }, [authUser?.id, authUser?.status, authUser?.custom_status, authUser?.last_seen, manualStatus]);
-
-  useEffect(() => {
-    // Targeted polling: only fetch presence for users we care about
-    const pollPresence = async (opts?: { force?: boolean; bypassCooldown?: boolean }) => {
-      const userId = useAuthStore.getState().user?.id;
-      if (!userId) return;
-
-      applyPresenceRef.current?.();
-      const targetUserIds = collectPollTargetUserIds();
-      if (targetUserIds.length === 0) return;
-
-      // Throttle burst polling.
-      const now = Date.now();
-      if (presenceConnectedRef.current && !opts?.force) {
-        if (now - lastBackstopPollRef.current < PRESENCE_BACKSTOP_POLL_INTERVAL_MS) return;
-        lastBackstopPollRef.current = now;
-      }
-      if (!opts?.bypassCooldown && now - lastPollRef.current < PRESENCE_FETCH_COOLDOWN_MS) return;
-      lastPollRef.current = now;
-
-      // Patch each user's presence
-      const rows = await fetchUsersPresence(userId, targetUserIds);
-      const nowMs = Date.now();
-      rows.forEach((presence) => {
-        // Don't overwrite status from realtime Presence with stale DB data
-        if (hasRecentRealtimePresence(presence.id, nowMs)) return;
-        // Never overwrite own status from poll — usePresence manages it
-        if (presence.id === userId) return;
-        patchUserAcrossStores({
-          id: presence.id,
-          status: toUserStatus(presence.status, 'offline'),
-          last_seen: presence.last_seen,
-        });
-      });
-    };
-
-    pollPresenceRef.current = (opts) => {
-      void pollPresence(opts);
-    };
-
-    let initialPollTimer: ReturnType<typeof setTimeout> | null = null;
-    if (document.visibilityState === 'visible') {
-      initialPollTimer = setTimeout(() => {
-        const lastSnapshotAt = lastPresenceSnapshotAtRef.current;
-        const hasRecentSnapshot = lastSnapshotAt > 0 && Date.now() - lastSnapshotAt < 15_000;
-        if (!hasRecentSnapshot) {
-          void pollPresence({ force: true, bypassCooldown: true });
-        }
-      }, INITIAL_PRESENCE_BACKFILL_DELAY_MS);
-    }
-
-    // Poll at reduced frequency while the tab is visible.
-    const pollInterval = setInterval(() => {
-      if (document.visibilityState !== 'visible') return;
-      pollPresence();
-    }, PRESENCE_POLL_INTERVAL_MS);
-
-    // Poll on tab restore only if it was hidden for a while.
-    let hiddenAt: number | null = null;
-    const handleVisibility = () => {
-      if (document.visibilityState === 'hidden') {
-        hiddenAt = Date.now();
-        return;
-      }
-      if (document.visibilityState !== 'visible') return;
-      if (hiddenAt) {
-        const hiddenFor = Date.now() - hiddenAt;
-        hiddenAt = null;
-        if (hiddenFor > 0 && hiddenFor < PRESENCE_MIN_HIDDEN_MS_FOR_REFETCH) return;
-      }
-      void pollPresence({ force: true, bypassCooldown: true });
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
-
-    return () => {
-      if (pollPresenceRef.current) {
-        pollPresenceRef.current = null;
-      }
-      if (initialPollTimer) clearTimeout(initialPollTimer);
-      clearInterval(pollInterval);
-      document.removeEventListener('visibilitychange', handleVisibility);
-    };
-  }, []);
 };
-
 /**
  * Hook to subscribe to real-time updates for a specific user.
  * Useful for user profile popups and other single-user views.
@@ -682,11 +579,6 @@ export const useRealtimeSingleUser = (
 
     void fetchUser();
 
-    const intervalId = setInterval(() => {
-      if (document.visibilityState !== 'visible') return;
-      void fetchUser();
-    }, 90_000); // 90s (was 45s) — reduced to lower egress
-
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         void fetchUser();
@@ -696,7 +588,6 @@ export const useRealtimeSingleUser = (
 
     return () => {
       mounted = false;
-      clearInterval(intervalId);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [userId, viewerId]);
