@@ -21,7 +21,7 @@ export const UserBadges = ({ badges, className = '' }: UserBadgesProps) => {
               <img
                 src={badge.icon_url}
                 alt={badge.name}
-                className="w-5 h-5 object-contain cursor-pointer hover:scale-110 transition-transform"
+                className="h-6 w-6 object-contain cursor-pointer transition-transform hover:scale-110"
               />
             </TooltipTrigger>
             <TooltipContent side="top" className="max-w-xs">

@@ -999,16 +999,20 @@ export const UserProfilePopup = () => {
                   </button>
                 )}
               </div>
-              {userBadges.length > 0 && (
-                <div className="shrink-0 pt-0.5">
-                  <UserBadges badges={userBadges} />
-                </div>
-              )}
             </div>
 
             {renderActionRow(divider, muted)}
 
             <div className="mt-4 space-y-3.5">
+              {userBadges.length > 0 && (
+                <section>
+                  <div className="mb-2 text-[12px] font-bold uppercase tracking-normal text-[color:var(--profile-muted)]">
+                    Badges
+                  </div>
+                  <UserBadges badges={userBadges} className="flex-wrap" />
+                </section>
+              )}
+
               {(profileUser.pronouns || joinedAt) && (
                 <section>
                   <div className="mb-2 text-[12px] font-bold uppercase tracking-normal text-[color:var(--profile-muted)]">
