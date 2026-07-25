@@ -54,55 +54,12 @@ type ReadWatermark = {
   recordedAt: number;
 };
 
-const UNREAD_SNAPSHOT_TTL_MS = 90_000;
 const UNREAD_FETCH_COOLDOWN_MS = 3000;
 const READ_WATERMARK_TTL_MS = 30 * 24 * 60 * 60_000;
 const CHANNEL_READ_EVENT = 'kloak:channel-read';
-const UNREAD_STORAGE_PREFIX = 'kloak:channel-unread:';
 const READ_WATERMARK_STORAGE_PREFIX = 'kloak:channel-read-watermarks:';
-const sharedUnreadSnapshotByUser = new Map<string, { unreadState: UnreadState; cachedAt: number }>();
 const sharedReadWatermarksByUser = new Map<string, Map<string, ReadWatermark>>();
 
-const readPersistedUnreadState = (userId: string): { unreadState: UnreadState; cachedAt: number } | null => {
-  const existing = sharedUnreadSnapshotByUser.get(userId);
-  if (existing && Date.now() - existing.cachedAt < UNREAD_SNAPSHOT_TTL_MS) {
-    return existing;
-  }
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = window.sessionStorage.getItem(`${UNREAD_STORAGE_PREFIX}${userId}`);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as { unreadState?: UnreadState; cachedAt?: number };
-    if (!parsed?.unreadState || typeof parsed.cachedAt !== 'number') return null;
-    if (Date.now() - parsed.cachedAt >= UNREAD_SNAPSHOT_TTL_MS) return null;
-    const snapshot = { unreadState: parsed.unreadState, cachedAt: parsed.cachedAt };
-    sharedUnreadSnapshotByUser.set(userId, snapshot);
-    return snapshot;
-  } catch {
-    return null;
-  }
-};
-
-const persistUnreadState = (userId: string, unreadState: UnreadState) => {
-  const existing = sharedUnreadSnapshotByUser.get(userId);
-  const next = {
-    unreadState: {
-      ...(existing?.unreadState ?? {}),
-      ...unreadState,
-    },
-    cachedAt: Date.now(),
-  };
-  sharedUnreadSnapshotByUser.set(userId, next);
-  if (typeof window === 'undefined') return;
-  try {
-    window.sessionStorage.setItem(
-      `${UNREAD_STORAGE_PREFIX}${userId}`,
-      JSON.stringify(next),
-    );
-  } catch {
-    // ignore storage failures
-  }
-};
 
 const readPersistedReadWatermarks = (userId: string): Map<string, ReadWatermark> => {
   const cached = sharedReadWatermarksByUser.get(userId);
@@ -146,19 +103,6 @@ const persistReadWatermarks = (userId: string, watermarks: Map<string, ReadWater
   } catch {
     // ignore storage failures
   }
-};
-const getUnreadSubset = (snapshot: UnreadState, channelIds: string[]): { unreadState: UnreadState; complete: boolean } => {
-  const unreadState: UnreadState = {};
-  let complete = channelIds.length > 0;
-  for (const channelId of channelIds) {
-    const existing = snapshot[channelId];
-    if (existing) {
-      unreadState[channelId] = existing;
-      continue;
-    }
-    complete = false;
-  }
-  return { unreadState, complete };
 };
 const toTime = (value: string | null | undefined): number => {
   if (!value) return Number.NEGATIVE_INFINITY;
@@ -225,29 +169,16 @@ export const useUnread = (serverChannelIds: string[] = []) => {
 
   useEffect(() => {
     unreadStateRef.current = unreadState;
-    if (userId && Object.keys(unreadState).length > 0) {
-      persistUnreadState(userId, unreadState);
-    }
-  }, [unreadState, userId]);
+  }, [unreadState]);
 
   useEffect(() => {
     serverChannelIdsRef.current = serverChannelIds;
   }, [serverChannelIds]);
 
   useEffect(() => {
-    if (!userId || !channelIdsKey) return;
+    readWatermarksRef.current = userId ? readPersistedReadWatermarks(userId) : new Map();
+  }, [userId]);
 
-    const persisted = readPersistedUnreadState(userId);
-    if (!persisted) return;
-
-    const { unreadState: subset } = getUnreadSubset(persisted.unreadState, serverChannelIds);
-    if (Object.keys(subset).length === 0) return;
-    const reconciledSubset = applyReadWatermarks(subset, readWatermarksRef.current);
-    setUnreadState(reconciledSubset);
-    unreadStateRef.current = reconciledSubset;
-    channelIdsRef.current = [...serverChannelIds];
-    lastFetchAtRef.current = persisted.cachedAt;
-  }, [channelIdsKey, serverChannelIds, userId]);
 
   // OPTIMIZATION: Use batch RPC instead of N+1 queries
   // This reduces 50+ queries to a single query per polling cycle
@@ -263,21 +194,6 @@ export const useUnread = (serverChannelIds: string[] = []) => {
       return;
     }
 
-    if (!opts?.force) {
-      const persisted = readPersistedUnreadState(user.id);
-      if (persisted) {
-        const { unreadState: subset, complete } = getUnreadSubset(persisted.unreadState, serverChannelIds);
-        if (complete) {
-          channelIdsRef.current = [...serverChannelIds];
-          lastFetchAtRef.current = persisted.cachedAt;
-          const reconciledSubset = applyReadWatermarks(subset, readWatermarksRef.current);
-          setUnreadState(reconciledSubset);
-          unreadStateRef.current = reconciledSubset;
-          return;
-        }
-      }
-    }
-    
     channelIdsRef.current = [...serverChannelIds];
     lastFetchAtRef.current = now;
     const seq = ++fetchSeqRef.current;
@@ -345,7 +261,6 @@ export const useUnread = (serverChannelIds: string[] = []) => {
 
       const reconciledState = applyReadWatermarks(newState, readWatermarksRef.current);
       setUnreadState(reconciledState);
-      persistUnreadState(user.id, reconciledState);
     } catch (error) {
       console.error('Error fetching unread counts:', error);
     } finally {
@@ -442,25 +357,17 @@ export const useUnread = (serverChannelIds: string[] = []) => {
     async (channelId: string, lastMessageId?: string, lastMessageCreatedAt?: string) => {
       if (!user) return;
 
-      // If we already consider this channel read up to the same message id, skip
-      // the duplicate socket read receipt when revisiting a channel already read.
-      if (lastMessageId) {
-        const local = unreadStateRef.current[channelId];
-        if (local?.lastReadMessageId === lastMessageId && local.unreadCount === 0 && local.mentionCount === 0) {
-          return;
-        }
-      }
-
       const existing = markInFlightRef.current.get(channelId);
       if (existing) return existing;
 
       const p = (async () => {
+        const fallbackAt = new Date().toISOString();
+        const currentUnread = unreadStateRef.current[channelId];
+        const latestUnreadCreatedAt = lastMessageCreatedAt ?? currentUnread?.latestUnreadCreatedAt ?? undefined;
+        const readAt = readAtForMessage(fallbackAt, latestUnreadCreatedAt);
+        const optimisticLastReadMessageId = lastMessageId ?? currentUnread?.latestUnreadMessageId ?? currentUnread?.lastReadMessageId ?? null;
+
         try {
-          const fallbackAt = new Date().toISOString();
-          const currentUnread = unreadStateRef.current[channelId];
-          const latestUnreadCreatedAt = lastMessageCreatedAt ?? currentUnread?.latestUnreadCreatedAt ?? undefined;
-          const readAt = readAtForMessage(fallbackAt, latestUnreadCreatedAt);
-          const optimisticLastReadMessageId = lastMessageId ?? currentUnread?.latestUnreadMessageId ?? currentUnread?.lastReadMessageId ?? null;
           recordReadWatermark(channelId, optimisticLastReadMessageId, readAt);
 
           setUnreadState((prev) => ({
@@ -471,15 +378,30 @@ export const useUnread = (serverChannelIds: string[] = []) => {
               lastReadMessageId: optimisticLastReadMessageId,
               lastReadAt: readAt,
               firstUnreadMessageId: null,
-            latestUnreadMessageId: null,
-            latestUnreadCreatedAt: null,
+              latestUnreadMessageId: null,
+              latestUnreadCreatedAt: null,
             },
           }));
-          publishChannelRead(channelId, optimisticLastReadMessageId, readAt);
           dispatchLocalChannelRead(channelId, readAt, optimisticLastReadMessageId);
 
+          const { error } = optimisticLastReadMessageId
+            ? await supabase.rpc('mark_channel_read', {
+                _channel_id: channelId,
+                _user_id: user.id,
+                _last_read_message_id: optimisticLastReadMessageId,
+                _last_read_at: readAt,
+              })
+            : await supabase.rpc('mark_channels_read', {
+                _channel_ids: [channelId],
+                _user_id: user.id,
+                _last_read_at: readAt,
+              });
+
+          if (error) throw error;
+          publishChannelRead(channelId, optimisticLastReadMessageId, readAt);
         } catch (error) {
           console.error('Error marking channel as read:', error);
+          void fetchUnreadCountsRef.current({ force: true });
         } finally {
           const cur = markInFlightRef.current.get(channelId);
           if (cur === p) markInFlightRef.current.delete(channelId);
@@ -491,7 +413,6 @@ export const useUnread = (serverChannelIds: string[] = []) => {
     },
     [dispatchLocalChannelRead, publishChannelRead, recordReadWatermark, user]
   );
-
   // Get unread info for a specific channel
   const getChannelUnread = useCallback(
     (channelId: string): ChannelUnreadInfo => {
@@ -545,39 +466,54 @@ export const useUnread = (serverChannelIds: string[] = []) => {
       if (!user || channelIds.length === 0) return;
 
       const now = new Date().toISOString();
+      const currentState = unreadStateRef.current;
+      const readEvents = channelIds.map((channelId) => {
+        const currentUnread = currentState[channelId];
+        const readAt = readAtForMessage(now, currentUnread?.latestUnreadCreatedAt ?? undefined);
+        const lastReadMessageId = currentUnread?.latestUnreadMessageId ?? currentUnread?.lastReadMessageId ?? null;
+        recordReadWatermark(channelId, lastReadMessageId, readAt);
+        return { channelId, lastReadMessageId, readAt };
+      });
 
-      // Optimistically clear unread state locally and across this user's websocket sessions.
       setUnreadState((prev) => {
         const next = { ...prev };
-        for (const channelId of channelIds) {
-          const currentUnread = prev[channelId];
-          const readAt = readAtForMessage(now, currentUnread?.latestUnreadCreatedAt ?? undefined);
-          const lastReadMessageId = currentUnread?.latestUnreadMessageId ?? currentUnread?.lastReadMessageId ?? null;
-          recordReadWatermark(channelId, lastReadMessageId, readAt);
-          next[channelId] = {
+        for (const event of readEvents) {
+          next[event.channelId] = {
             unreadCount: 0,
             mentionCount: 0,
-            lastReadMessageId,
-            lastReadAt: readAt,
+            lastReadMessageId: event.lastReadMessageId,
+            lastReadAt: event.readAt,
             firstUnreadMessageId: null,
             latestUnreadMessageId: null,
             latestUnreadCreatedAt: null,
           };
-          publishChannelRead(channelId, lastReadMessageId, readAt);
         }
         return next;
       });
 
-      for (const channelId of channelIds) {
-        const currentUnread = unreadStateRef.current[channelId];
-        const readAt = readAtForMessage(now, currentUnread?.latestUnreadCreatedAt ?? undefined);
-        dispatchLocalChannelRead(channelId, readAt, currentUnread?.latestUnreadMessageId ?? currentUnread?.lastReadMessageId ?? null);
+      for (const event of readEvents) {
+        dispatchLocalChannelRead(event.channelId, event.readAt, event.lastReadMessageId);
       }
 
+      try {
+        const { error } = await supabase.rpc('mark_channels_read', {
+          _channel_ids: channelIds,
+          _user_id: user.id,
+          _last_read_at: now,
+        });
+
+        if (error) throw error;
+
+        for (const event of readEvents) {
+          publishChannelRead(event.channelId, event.lastReadMessageId, event.readAt);
+        }
+      } catch (error) {
+        console.error('Error marking server as read:', error);
+        void fetchUnreadCountsRef.current({ force: true });
+      }
     },
     [dispatchLocalChannelRead, publishChannelRead, recordReadWatermark, user]
   );
-
   // Fetch on mount and when channel IDs change
   useEffect(() => {
     fetchUnreadCounts();
