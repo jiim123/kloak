@@ -29,7 +29,9 @@ type BroadcastMutationPayload<T> = {
 };
 
 const SUMMARY_FETCH_COOLDOWN_MS = 3_000;
+const LOCAL_CLEAR_TTL_MS = 30 * 24 * 60 * 60_000;
 const CHANNEL_READ_EVENT = "kloak:channel-read";
+const LOCAL_CLEAR_STORAGE_PREFIX = "kloak:server-unread-clears:";
 
 export const useServerUnreadSummary = (userId: string | null, serverIds: string[] = []) => {
   const [summaryByServerId, setSummaryByServerId] = useState<SummaryState>({});
@@ -39,8 +41,82 @@ export const useServerUnreadSummary = (userId: string | null, serverIds: string[
   const queuedRef = useRef(false);
   const lastFetchAtRef = useRef(0);
   const fetchSummaryRef = useRef<(opts?: { force?: boolean }) => Promise<void>>(async () => undefined);
+  const locallyClearedChannelsRef = useRef<Map<string, number>>(new Map());
 
   const serverIdsKey = useMemo(() => [...serverIds].sort().join(","), [serverIds]);
+  useEffect(() => {
+    if (!userId) {
+      locallyClearedChannelsRef.current = new Map();
+      return;
+    }
+
+    try {
+      const raw = window.localStorage.getItem(`${LOCAL_CLEAR_STORAGE_PREFIX}${userId}`);
+      const parsed = raw ? JSON.parse(raw) as Record<string, number> : null;
+      const next = new Map<string, number>();
+      const now = Date.now();
+
+      if (parsed && typeof parsed === "object") {
+        for (const [channelId, clearedAt] of Object.entries(parsed)) {
+          if (typeof clearedAt !== "number" || now - clearedAt > LOCAL_CLEAR_TTL_MS) continue;
+          next.set(channelId, clearedAt);
+        }
+      }
+
+      locallyClearedChannelsRef.current = next;
+    } catch {
+      locallyClearedChannelsRef.current = new Map();
+    }
+  }, [userId]);
+
+  const persistLocalClears = useCallback(() => {
+    if (!userId || typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(
+        `${LOCAL_CLEAR_STORAGE_PREFIX}${userId}`,
+        JSON.stringify(Object.fromEntries(locallyClearedChannelsRef.current)),
+      );
+    } catch {
+      // ignore storage failures
+    }
+  }, [userId]);
+  const activeLocallyClearedChannels = useCallback(() => {
+    const now = Date.now();
+    const active = new Set<string>();
+
+    for (const [channelId, clearedAt] of locallyClearedChannelsRef.current) {
+      if (now - clearedAt > LOCAL_CLEAR_TTL_MS) {
+        locallyClearedChannelsRef.current.delete(channelId);
+        continue;
+      }
+      active.add(channelId);
+    }
+
+    return active;
+  }, []);
+
+  const applyLocalClearsToSummary = useCallback((state: SummaryState): SummaryState => {
+    const activeClears = activeLocallyClearedChannels();
+    if (activeClears.size === 0) return state;
+
+    let next = state;
+    for (const [serverId, summary] of Object.entries(state)) {
+      const remainingChannelIds = summary.channelIds.filter((channelId) => !activeClears.has(channelId));
+      if (remainingChannelIds.length === summary.channelIds.length) continue;
+
+      if (next === state) next = { ...state };
+      const allUnreadChannelsWereCleared = remainingChannelIds.length === 0;
+      next[serverId] = {
+        ...summary,
+        channelIds: remainingChannelIds,
+        unreadCount: allUnreadChannelsWereCleared ? 0 : summary.unreadCount,
+        totalMentions: allUnreadChannelsWereCleared ? 0 : summary.totalMentions,
+        hasUnread: remainingChannelIds.length > 0,
+      };
+    }
+
+    return next;
+  }, [activeLocallyClearedChannels]);
 
   const clearReadChannels = useCallback(
     (
@@ -51,6 +127,11 @@ export const useServerUnreadSummary = (userId: string | null, serverIds: string[
       },
     ) => {
       if (channelIdsToClear.length === 0) return;
+      const now = Date.now();
+      for (const channelId of channelIdsToClear) {
+        locallyClearedChannelsRef.current.set(channelId, now);
+      }
+      persistLocalClears();
       const clearSet = new Set(channelIdsToClear);
 
       setSummaryByServerId((prev) => {
@@ -101,7 +182,7 @@ export const useServerUnreadSummary = (userId: string | null, serverIds: string[
         return changed ? next : prev;
       });
     },
-    [],
+    [persistLocalClears],
   );
 
   const fetchSummary = useCallback(
@@ -157,7 +238,7 @@ export const useServerUnreadSummary = (userId: string | null, serverIds: string[
           }
         }
 
-        setSummaryByServerId(next);
+        setSummaryByServerId(applyLocalClearsToSummary(next));
       } catch (error) {
         console.error("Error fetching server unread summary:", error);
       } finally {
@@ -171,7 +252,7 @@ export const useServerUnreadSummary = (userId: string | null, serverIds: string[
         }
       }
     },
-    [serverIds, userId],
+    [applyLocalClearsToSummary, serverIds, userId],
   );
 
   useEffect(() => {

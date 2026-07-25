@@ -637,15 +637,37 @@ const AppLayout = () => {
   // Centralized unread state for all channels (avoid multiple `get_all_channel_unread_counts` calls).
   const unreadChannels = useUnread(allChannelIds);
 
+  const expandChannelReadIds = useCallback((channelId: string) => {
+    const ids = new Set<string>([channelId]);
+    const channel = channels.find((entry) => entry.id === channelId);
+
+    if (channel?.type === "voice") {
+      for (const linked of channels) {
+        if (linked.linked_voice_channel_id === channelId) {
+          ids.add(linked.id);
+        }
+      }
+    }
+
+    if (channel?.linked_voice_channel_id) {
+      ids.add(channel.linked_voice_channel_id);
+    }
+
+    return Array.from(ids);
+  }, [channels]);
+
   const markChannelAsRead = useCallback(
-    async (channelId: string, lastMessageId?: string) => {
-      serverUnreadSummary.clearReadChannels([channelId], {
+    async (channelId: string, lastMessageId?: string, lastMessageCreatedAt?: string) => {
+      const channelIdsToRead = expandChannelReadIds(channelId);
+      serverUnreadSummary.clearReadChannels(channelIdsToRead, {
         serverChannels,
         unreadByChannel: unreadChannels.unreadState,
       });
-      await unreadChannels.markAsRead(channelId, lastMessageId);
+      await Promise.all(
+        channelIdsToRead.map((id) => unreadChannels.markAsRead(id, id === channelId ? lastMessageId : undefined, id === channelId ? lastMessageCreatedAt : undefined)),
+      );
     },
-    [serverChannels, serverUnreadSummary, unreadChannels],
+    [expandChannelReadIds, serverChannels, serverUnreadSummary, unreadChannels],
   );
 
   const markServerAsRead = useCallback(

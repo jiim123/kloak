@@ -690,7 +690,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
         !latestMessage.id.startsWith("temp-") &&
         lastMarkedMessageIdRef.current !== latestMessage.id
       ) {
-        markAsRead(channelId, latestMessage.id);
+        markAsRead(channelId, latestMessage.id, latestMessage.created_at);
         lastMarkedMessageIdRef.current = latestMessage.id;
       }
     }
@@ -745,7 +745,7 @@ export const MessageList = ({ channelId, channelName, manageCurrentChannel = tru
     if (allMsgs.length > 0) {
       const latest = allMsgs[allMsgs.length - 1];
       if (!latest.id.startsWith("temp-") && lastMarkedMessageIdRef.current !== latest.id) {
-        markAsRead(channelIdRef.current, latest.id);
+        markAsRead(channelIdRef.current, latest.id, latest.created_at);
         lastMarkedMessageIdRef.current = latest.id;
       }
     }
