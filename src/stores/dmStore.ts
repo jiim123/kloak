@@ -51,6 +51,7 @@ interface DMState {
     senderId: string,
     content: string,
     replyToId?: string,
+    options?: SendDMOptions,
   ) => Promise<DirectMessage | null>;
   editMessage: (messageId: string, senderId: string, content: string) => Promise<void>;
   deleteMessage: (messageId: string, senderId: string) => Promise<void>;
@@ -87,6 +88,10 @@ interface DMHistoryMeta {
   hasMore: boolean;
   oldestLoadedMessageId: string | null;
   prefetchedOlder?: DMPrefetchedOlderPage | null;
+}
+
+interface SendDMOptions {
+  replyToIds?: string[];
 }
 
 const groupReactions = (reactions: any[], currentUserId?: string): ReactionGroup[] => {
@@ -130,6 +135,26 @@ const isMissingRpcError = (error: unknown) => {
   );
 };
 
+const toDirectMessageReply = (raw: any, conversationId: string, fallbackCreatedAt?: string): DirectMessage | null => {
+  if (!raw || typeof raw !== "object" || !raw.id || !raw.content) return null;
+  const sender = raw.sender && typeof raw.sender === "object" ? raw.sender as User : undefined;
+  const senderId = raw.sender_id || sender?.id;
+  if (!senderId) return null;
+  if (sender?.id) {
+    useUserCacheStore.getState().upsertUser(sender);
+  }
+  return {
+    id: raw.id,
+    conversation_id: raw.conversation_id ?? conversationId,
+    sender_id: senderId,
+    content: raw.content,
+    reply_to_id: raw.reply_to_id ?? null,
+    reply_to_ids: Array.isArray(raw.reply_to_ids) ? raw.reply_to_ids : raw.reply_to_id ? [raw.reply_to_id] : [],
+    edited_at: raw.edited_at ?? null,
+    created_at: raw.created_at ?? fallbackCreatedAt ?? "",
+    sender,
+  };
+};
 const pruneDMMessageCache = (
   input: Record<string, DirectMessage[]>,
   keepConversationId?: string | null,
@@ -244,8 +269,11 @@ const loadDMMessagePage = async (
 
   const reversedData = [...dataArray].reverse();
   const replyToIds = reversedData
-    .map((msg: any) => msg.reply_to_id)
-    .filter((id: string | null): id is string => !!id);
+    .flatMap((msg: any) => {
+      const ids = Array.isArray(msg.reply_to_ids) ? msg.reply_to_ids : [];
+      return msg.reply_to_id ? [msg.reply_to_id, ...ids] : ids;
+    })
+    .filter((id: unknown): id is string => typeof id === "string" && id.length > 0);
 
   const replyToMap: Record<string, Partial<DirectMessage>> = {};
   if (replyToIds.length > 0) {
@@ -265,16 +293,15 @@ const loadDMMessagePage = async (
     }
 
     for (const msg of reversedData) {
-      if (!msg.reply_to_id || !msg.reply_to || typeof msg.reply_to !== "object") continue;
-      replyToMap[msg.reply_to_id] = {
-        id: msg.reply_to.id,
-        conversation_id: msg.reply_to.conversation_id ?? conversationId,
-        content: msg.reply_to.content,
-        sender_id: msg.reply_to.sender_id,
-        reply_to_id: msg.reply_to.reply_to_id ?? null,
-        edited_at: msg.reply_to.edited_at ?? null,
-        created_at: msg.reply_to.created_at ?? msg.created_at,
-      };
+      const inlineReplies = Array.isArray(msg.reply_to_list)
+        ? msg.reply_to_list
+        : msg.reply_to
+          ? [msg.reply_to]
+          : [];
+      for (const inlineReply of inlineReplies) {
+        const normalizedReply = toDirectMessageReply(inlineReply, conversationId, msg.created_at);
+        if (normalizedReply) replyToMap[normalizedReply.id] = normalizedReply;
+      }
     }
 
     const stillMissingIds = missingIds.filter((id) => !replyToMap[id]);
@@ -285,11 +312,8 @@ const loadDMMessagePage = async (
       });
       if (replyData) {
         for (const r of replyData as any[]) {
-          replyToMap[r.id] = {
-            id: r.id,
-            content: r.content,
-            sender_id: r.sender_id,
-          };
+          const normalizedReply = toDirectMessageReply(r, conversationId);
+          if (normalizedReply) replyToMap[normalizedReply.id] = normalizedReply;
         }
       }
     }
@@ -298,15 +322,29 @@ const loadDMMessagePage = async (
   const messages: DirectMessage[] = reversedData.map((msg: any) => {
     const msgReactions = reactionsByMessageId.get(msg.id) ?? [];
     const msgAttachments = attachmentsByMessageId.get(msg.id) ?? [];
+    const msgReplyToIds = Array.from(new Set(
+      (Array.isArray(msg.reply_to_ids) && msg.reply_to_ids.length > 0
+        ? msg.reply_to_ids
+        : msg.reply_to_id
+          ? [msg.reply_to_id]
+          : [])
+        .filter((id: unknown): id is string => typeof id === "string" && id.length > 0),
+    ));
+    const replyToList = msgReplyToIds
+      .map((id) => replyToMap[id] as DirectMessage | undefined)
+      .filter((reply): reply is DirectMessage => !!reply);
+
     return {
       id: msg.id,
       conversation_id: msg.conversation_id,
       sender_id: msg.sender_id,
       content: msg.content,
-      reply_to_id: msg.reply_to_id ?? null,
+      reply_to_id: msg.reply_to_id ?? msgReplyToIds[0] ?? null,
+      reply_to_ids: msgReplyToIds,
       edited_at: msg.edited_at ?? null,
       created_at: msg.created_at,
-      reply_to: msg.reply_to_id ? (replyToMap[msg.reply_to_id] as DirectMessage) || null : null,
+      reply_to: replyToList[0] ?? null,
+      reply_to_list: replyToList.length > 0 ? replyToList : undefined,
       attachments: msgAttachments,
       reactions: groupReactions(msgReactions, userId),
     };
@@ -668,14 +706,20 @@ export const useDMStore = create<DMState>((set, get) => ({
     return p;
   },
 
-  sendMessage: async (conversationId: string, senderId: string, content: string, replyToId?: string) => {
+  sendMessage: async (conversationId: string, senderId: string, content: string, replyToId?: string, options?: SendDMOptions) => {
     try {
+      const replyToIds = Array.from(
+        new Set((options?.replyToIds && options.replyToIds.length > 0 ? options.replyToIds : replyToId ? [replyToId] : []).filter(Boolean)),
+      );
+      const primaryReplyToId = replyToIds[0] ?? replyToId;
+
       // Use RPC function to send message
-      const { data, error } = await supabase.rpc("send_dm", {
+      const { data, error } = await supabase.rpc("send_dm" as any, {
         _conversation_id: conversationId,
         _sender_id: senderId,
         _content: content,
-        _reply_to_id: replyToId || null,
+        _reply_to_id: primaryReplyToId || null,
+        _reply_to_ids: replyToIds,
       });
 
       if (error) throw error;
@@ -686,6 +730,8 @@ export const useDMStore = create<DMState>((set, get) => ({
         sender_id: string;
         content: string;
         reply_to_id: string | null;
+        reply_to_ids?: string[];
+        reply_to_list?: any[];
         edited_at: string | null;
         created_at: string;
       };
@@ -697,25 +743,31 @@ export const useDMStore = create<DMState>((set, get) => ({
         useUserCacheStore.getState().upsertUser(senderData as unknown as User);
       }
 
-      // Look up reply_to from local cache if replyToId is provided
-      let reply_to: DirectMessage | null = null;
-      if (replyToId) {
-        const cachedMessages = get().messagesByConversation[conversationId] || [];
-        const replyMsg = cachedMessages.find((m) => m.id === replyToId);
-        if (replyMsg) {
-          reply_to = replyMsg;
-        }
-      }
+      const returnedReplyIds = Array.isArray(msgData.reply_to_ids) ? msgData.reply_to_ids : replyToIds;
+      const cachedMessages = get().messagesByConversation[conversationId] || [];
+      const returnedReplyList = Array.isArray(msgData.reply_to_list)
+        ? msgData.reply_to_list
+            .map((reply) => toDirectMessageReply(reply, conversationId))
+            .filter((reply): reply is DirectMessage => !!reply)
+        : [];
+      const replyToList = returnedReplyList.length > 0
+        ? returnedReplyList
+        : returnedReplyIds
+            .map((id) => cachedMessages.find((m) => m.id === id))
+            .filter((reply): reply is DirectMessage => !!reply);
+      const reply_to = replyToList[0] ?? null;
 
       const message: DirectMessage = {
         id: msgData.id,
         conversation_id: msgData.conversation_id,
         sender_id: msgData.sender_id,
         content: msgData.content,
-        reply_to_id: msgData.reply_to_id,
+        reply_to_id: msgData.reply_to_id ?? returnedReplyIds[0] ?? null,
+        reply_to_ids: returnedReplyIds,
         edited_at: msgData.edited_at,
         created_at: msgData.created_at,
         reply_to,
+        reply_to_list: replyToList.length > 0 ? replyToList : undefined,
         attachments: [],
         reactions: [],
       };
@@ -732,7 +784,9 @@ export const useDMStore = create<DMState>((set, get) => ({
           conversation_id: msgData.conversation_id,
           sender_id: msgData.sender_id,
           content: msgData.content,
-          reply_to_id: msgData.reply_to_id,
+          reply_to_id: message.reply_to_id,
+          reply_to_ids: message.reply_to_ids,
+          reply_to_list: message.reply_to_list,
           edited_at: msgData.edited_at,
           created_at: msgData.created_at,
         },

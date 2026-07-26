@@ -63,7 +63,9 @@ import type { Message } from "@/types";
 export interface DMInputConfig {
   conversationId: string;
   otherUsername: string;
-  replyingTo?: { id: string; sender?: { username?: string; display_name?: string | null }; content: string } | null;
+  replyingTo?: { id: string; sender_id?: string; sender?: { username?: string; display_name?: string | null }; content: string } | null;
+  replyTargets?: Array<{ id: string; sender_id?: string; sender?: { username?: string; display_name?: string | null }; content: string }>;
+  onRemoveReply?: (messageId: string) => void;
   onCancelReply?: () => void;
   /** Conversation participants (excluding self) used for @mention autocomplete. */
   participants?: import("@/types").User[];
@@ -241,6 +243,49 @@ const ChannelReplyTarget = memo(function ChannelReplyTarget({
       >
         <X className="h-4 w-4" />
       </button>
+    </div>
+  );
+});
+
+const DirectReplyTarget = memo(function DirectReplyTarget({
+  target,
+  onRemove,
+  fallbackName,
+  showIdentity = true,
+}: {
+  target: { id: string; user_id?: string; sender_id?: string; sender?: { username?: string; display_name?: string | null }; content: string };
+  onRemove?: (messageId: string) => void;
+  fallbackName?: string;
+  showIdentity?: boolean;
+}) {
+  const authorUserId = target.user_id || target.sender_id;
+  const targetUser = useMessageUser(authorUserId);
+  const displayName = targetUser?.display_name || targetUser?.username || target.sender?.display_name || target.sender?.username || fallbackName || "unknown";
+  const snippet = getReplySnippet(target.content);
+
+  return (
+    <div className="flex min-w-0 items-center gap-2 rounded-lg bg-background/45 px-2 py-1.5">
+      <AvatarWithDecoration
+        user={showIdentity ? targetUser : null}
+        className="h-6 w-6 shrink-0 text-[10px]"
+        freezeGifUntilHover
+      />
+      <span className="min-w-0 shrink-0 text-xs font-medium text-primary">
+        {showIdentity ? displayName : <span className="italic">Anonymous</span>}
+      </span>
+      <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+        <ReplyPreview content={snippet} maxLength={90} />
+      </span>
+      {onRemove && (
+        <button
+          type="button"
+          onClick={() => onRemove(target.id)}
+          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
+          aria-label={`Remove reply to ${showIdentity ? displayName : "Anonymous"}`}
+        >
+          <X className="h-4 w-4" />
+        </button>
+      )}
     </div>
   );
 });
@@ -506,7 +551,11 @@ export const MessageInput = ({
   // Unified reply state
   const replyingTo = isForum ? forumConfig?.replyingTo : isDM ? dmConfig?.replyingTo : channelReplyingTo;
   const setReplyingTo = isForum ? ((_: any) => {}) : isDM ? ((_: any) => {}) : channelSetReplyingTo;
-  const activeReplyTargets = !isDM && !isForum ? channelReplyTargets : replyingTo ? [replyingTo as any] : [];
+  const activeReplyTargets = isDM
+    ? (dmConfig?.replyTargets && dmConfig.replyTargets.length > 0 ? dmConfig.replyTargets : replyingTo ? [replyingTo as any] : [])
+    : !isForum
+      ? channelReplyTargets
+      : replyingTo ? [replyingTo as any] : [];
   const sendMessage = isDM ? dmSendMessage : channelSendMessage;
   const forumConfigRef = useRef(forumConfig);
   forumConfigRef.current = forumConfig;
@@ -1112,10 +1161,11 @@ export const MessageInput = ({
 
         // Channel / DM mode
         const channelReplyToIds = channelReplyTargets.map((target) => target.id);
-        const replyToId = isDM ? dmConfig?.replyingTo?.id : channelReplyToIds[0];
+        const dmReplyToIds = isDM ? activeReplyTargets.map((target: any) => target.id).filter(Boolean) : [];
+        const replyToId = isDM ? dmReplyToIds[0] : channelReplyToIds[0];
         const sentMessage = await sendMessage(targetId, user.id, finalContent, replyToId, {
           optimisticAttachments: preparedAttachments.map((attachment) => attachment.optimisticAttachment),
-          replyToIds: isDM ? undefined : channelReplyToIds,
+          replyToIds: isDM ? dmReplyToIds : channelReplyToIds,
         });
         if (!sentMessage) return;
         if ((sentMessage as any)._mass_mentions_queued) {
@@ -1534,17 +1584,26 @@ export const MessageInput = ({
                 </span>
               </div>
               {isDM ? (
-                <div className="truncate text-xs text-primary">
-                  @{dmConfig?.replyingTo?.sender?.display_name || dmConfig?.replyingTo?.sender?.username || "unknown"}
+                <div className="flex min-w-0 flex-col gap-1">
+                  {activeReplyTargets.map((target: any) => (
+                    <DirectReplyTarget
+                      key={target.id}
+                      target={target}
+                      onRemove={dmConfig?.onRemoveReply || (dmConfig?.onCancelReply ? () => dmConfig.onCancelReply?.() : undefined)}
+                    />
+                  ))}
                 </div>
               ) : isForum ? (
-                showReplyAuthorIdentity ? (
-                  <div className="truncate text-xs text-primary">
-                    @{replyingToUser?.display_name || replyingToUser?.username || "unknown"}
-                  </div>
-                ) : (
-                  <div className="text-xs text-primary italic">Anonymous</div>
-                )
+                <div className="flex min-w-0 flex-col gap-1">
+                  {activeReplyTargets.map((target: any) => (
+                    <DirectReplyTarget
+                      key={target.id}
+                      target={target}
+                      onRemove={forumConfig?.onCancelReply ? () => forumConfig.onCancelReply?.() : undefined}
+                      showIdentity={showReplyAuthorIdentity}
+                    />
+                  ))}
+                </div>
               ) : (
                 <div className="flex min-w-0 flex-col gap-1">
                   {channelReplyTargets.map((target) => (

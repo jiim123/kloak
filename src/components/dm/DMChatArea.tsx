@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo, useLayoutEffect } from "react";
 import { ArrowDown, Ban } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { StackedAvatars } from "@/components/ui/stacked-avatars";
 import { useDMStore } from "@/stores/dmStore";
@@ -24,6 +25,7 @@ const DM_LOAD_OLDER_TOP_THRESHOLD_MIN_PX = 96;
 const DM_LOAD_OLDER_TOP_THRESHOLD_MAX_PX = 420;
 const DM_LOAD_OLDER_TOP_THRESHOLD_VIEWPORT_RATIO = 0.35;
 const DM_LOAD_OLDER_BOTTOM_DISTANCE_GUARD_PX = 300;
+const MAX_DM_REPLY_TARGETS = 5;
 
 const getDMLoadOlderTopThreshold = (clientHeight: number): number => {
   const scaledThreshold = Math.round(clientHeight * DM_LOAD_OLDER_TOP_THRESHOLD_VIEWPORT_RATIO);
@@ -79,7 +81,7 @@ export const DMChatArea = () => {
 
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [newMessageCount, setNewMessageCount] = useState(0);
-  const [replyingTo, setReplyingTo] = useState<DirectMessage | null>(null);
+  const [replyTargets, setReplyTargets] = useState<DirectMessage[]>([]);
   const [isProfilePanelOpen, setIsProfilePanelOpen] = useState(() => {
     if (typeof window === "undefined") return true;
     return window.localStorage.getItem(DM_PROFILE_PANEL_STORAGE_KEY) !== "false";
@@ -115,6 +117,7 @@ export const DMChatArea = () => {
     if (currentConversation?.id && user?.id) {
       fetchMessages(currentConversation.id, user.id);
       markAsRead(currentConversation.id);
+      setReplyTargets([]);
       setNewMessageCount(0);
       setIsAtBottom(true);
     }
@@ -265,13 +268,21 @@ export const DMChatArea = () => {
     removeReaction: async (messageId: string, userId: string, emoji: string) => {
       await dmStore.getState().removeReaction(messageId, userId, emoji);
     },
+    replyTargetIds: replyTargets.map((target) => target.id),
     onReply: (message: Message) => {
-      // Find the raw DM message to set as reply
       const raw = rawMessagesRef.current.find((m) => m.id === message.id);
-      if (raw) setReplyingTo(raw);
+      if (!raw) return;
+      setReplyTargets((current) => {
+        if (current.some((target) => target.id === raw.id)) return current;
+        if (current.length >= MAX_DM_REPLY_TARGETS) {
+          toast.warning(`You can reply to up to ${MAX_DM_REPLY_TARGETS} messages at once.`);
+          return current;
+        }
+        return [...current, raw];
+      });
     },
     conversationId: currentConversation?.id,
-  }), [currentConversation?.id]);
+  }), [currentConversation?.id, replyTargets]);
 
   // Determine if this is a group conversation
   const isGroup = currentConversation?.is_group || false;
@@ -297,14 +308,16 @@ export const DMChatArea = () => {
   }, [currentConversation, otherParticipants]);
 
   // Build the dmConfig for the unified MessageInput reply state
-  const dmInputReplyingTo = useMemo(() => {
-    if (!replyingTo) return null;
-    return {
-      id: replyingTo.id,
-      sender: replyingTo.sender,
-      content: replyingTo.content,
-    };
-  }, [replyingTo]);
+  const dmInputReplyTargets = useMemo(() => (
+    replyTargets.map((target) => ({
+      id: target.id,
+      sender_id: target.sender_id,
+      sender: target.sender,
+      content: target.content,
+    }))
+  ), [replyTargets]);
+
+  const dmInputReplyingTo = dmInputReplyTargets[0] ?? null;
 
   // Participants used for @mention autocomplete and mention rendering in DMs.
   // 1:1: just the other user. Group: all other participants. Always exclude self.
@@ -429,7 +442,9 @@ export const DMChatArea = () => {
             conversationId: currentConversation.id,
             otherUsername: isGroup ? getGroupDisplayName() : otherUser?.username || "user",
             replyingTo: dmInputReplyingTo,
-            onCancelReply: () => setReplyingTo(null),
+            replyTargets: dmInputReplyTargets,
+            onRemoveReply: (messageId) => setReplyTargets((current) => current.filter((target) => target.id !== messageId)),
+            onCancelReply: () => setReplyTargets([]),
             participants: mentionParticipants,
           }}
         />

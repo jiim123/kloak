@@ -10,6 +10,7 @@ export function normalizeDirectMessage(dm: DirectMessage): Message {
     channel_id: dm.conversation_id,
     user_id: dm.sender_id,
     reply_to_id: dm.reply_to_id,
+    reply_to_ids: dm.reply_to_ids,
     content: dm.content,
     is_pinned: false,
     is_system_message: false,
@@ -34,5 +35,10 @@ export function normalizeDirectMessage(dm: DirectMessage): Message {
           user_id: dm.reply_to.sender_id,
         }
       : undefined,
+    reply_to_list: dm.reply_to_list?.map((reply) => ({
+      id: reply.id,
+      content: reply.content,
+      user_id: reply.sender_id,
+    })),
   };
 }

@@ -429,6 +429,7 @@ export interface DirectMessage {
   conversation_id: string;
   sender_id: string;
   reply_to_id: string | null;
+  reply_to_ids?: string[];
   content: string;
   edited_at: string | null;
   created_at: string;
@@ -436,6 +437,7 @@ export interface DirectMessage {
   attachments?: DMAttachment[];
   reactions?: ReactionGroup[];
   reply_to?: DirectMessage;
+  reply_to_list?: DirectMessage[];
 }
 
 export interface DMAttachment {

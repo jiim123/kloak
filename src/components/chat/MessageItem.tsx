@@ -132,6 +132,7 @@ export interface DMActions {
   addReaction: (messageId: string, userId: string, emoji: string) => Promise<void>;
   removeReaction: (messageId: string, userId: string, emoji: string) => Promise<void>;
   onReply: (message: Message) => void;
+  replyTargetIds?: string[];
   conversationId?: string;
   /** Resolve display name for a user ID (for reaction tooltips) */
   nameForUserId?: (userId: string) => string;
@@ -1224,8 +1225,9 @@ export const MessageItem = memo(function MessageItem({
     }
   }, [isDM, dmActions, message, replyTargets, addReplyTarget, setReplyingTo]);
 
-  const isReplyListActive = !isDM && replyTargets.length > 0;
-  const isInReplyList = isReplyListActive && replyTargets.some((target) => target.id === message.id);
+  const activeReplyTargetIds = isDM ? (dmActions?.replyTargetIds ?? []) : replyTargets.map((target) => target.id);
+  const isReplyListActive = activeReplyTargetIds.length > 0;
+  const isInReplyList = isReplyListActive && activeReplyTargetIds.includes(message.id);
   const replyActionLabel = isReplyListActive && !isInReplyList ? "Add to replies" : "Reply";
 
   const MESSAGE_CHAR_LIMIT = 2000;
@@ -2007,7 +2009,7 @@ export const MessageItem = memo(function MessageItem({
                       serverId={currentServer?.id}
                     >
                       <button
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-transparent text-[hsl(var(--menu-foreground))]/70 transition-colors hover:bg-[hsl(var(--menu-hover))] hover:text-[hsl(var(--menu-foreground))]"
+                        className="relative inline-flex h-8 w-8 items-center justify-center rounded-md bg-transparent text-[hsl(var(--menu-foreground))]/70 transition-colors hover:bg-[hsl(var(--menu-hover))] hover:text-[hsl(var(--menu-foreground))]"
                         aria-label="Add reaction"
                         title="Add reaction"
                       >
@@ -2022,14 +2024,14 @@ export const MessageItem = memo(function MessageItem({
                   {/* Reply - Hide for blocked users */}
                   {!isBlockedUser && (
                     <button
-                       className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-transparent text-[hsl(var(--menu-foreground))]/70 transition-colors hover:bg-[hsl(var(--menu-hover))] hover:text-[hsl(var(--menu-foreground))]"
+                       className="relative inline-flex h-8 w-8 items-center justify-center rounded-md bg-transparent text-[hsl(var(--menu-foreground))]/70 transition-colors hover:bg-[hsl(var(--menu-hover))] hover:text-[hsl(var(--menu-foreground))]"
                       onClick={handleReply}
                       aria-label={replyActionLabel}
                       title={replyActionLabel}
                     >
                       <Reply className="w-4 h-4" />
                       {isReplyListActive && !isInReplyList && (
-                        <Plus className="-ml-1 h-3 w-3" />
+                        <Plus className="absolute bottom-1 right-1 h-3 w-3 rounded-full bg-[hsl(var(--menu))] text-[hsl(var(--menu-foreground))]" />
                       )}
                     </button>
                   )}
@@ -2058,7 +2060,7 @@ export const MessageItem = memo(function MessageItem({
                   >
                     <DropdownMenuTrigger asChild>
                       <button
-                       className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-transparent text-[hsl(var(--menu-foreground))]/70 transition-colors hover:bg-[hsl(var(--menu-hover))] hover:text-[hsl(var(--menu-foreground))]"
+                       className="relative inline-flex h-8 w-8 items-center justify-center rounded-md bg-transparent text-[hsl(var(--menu-foreground))]/70 transition-colors hover:bg-[hsl(var(--menu-hover))] hover:text-[hsl(var(--menu-foreground))]"
                         aria-label="More actions"
                         title="More"
                       >
@@ -2115,7 +2117,7 @@ export const MessageItem = memo(function MessageItem({
             {!isBlockedUser && (
               <ContextMenuItem onClick={handleReply}>
                 <Reply className="w-4 h-4" />
-                {isReplyListActive && !isInReplyList && <Plus className="-ml-2 h-3 w-3" />}
+                {isReplyListActive && !isInReplyList && <Plus className="-ml-1 h-3 w-3" />}
                 {replyActionLabel}
               </ContextMenuItem>
             )}
@@ -2599,3 +2601,4 @@ export const MessageItem = memo(function MessageItem({
     prev.onStartEdit === next.onStartEdit
   );
 });
+
