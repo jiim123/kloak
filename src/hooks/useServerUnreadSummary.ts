@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useFriendStore } from "@/stores/friendStore";
 import { acquireChannel, releaseChannel, subscribeChannel } from "@/lib/sharedChannel";
+import { isKloakSocketEnabled, kloakSocket } from "@/lib/kloakSocket";
 
 export interface ServerUnreadSummary {
   hasUnread: boolean;
@@ -20,6 +21,14 @@ type ChannelReadEventDetail = {
   channelId?: string;
   unreadCount?: number;
   mentionCount?: number;
+};
+
+type ChannelUnreadSocketPayload = {
+  server_id?: string;
+  channel_id?: string;
+  author_user_id?: string;
+  unread_count_delta?: number;
+  mention_count_delta?: number;
 };
 
 type BroadcastMutationPayload<T> = {
@@ -264,6 +273,59 @@ export const useServerUnreadSummary = (userId: string | null, serverIds: string[
   }, [fetchSummary, serverIdsKey]);
 
   useEffect(() => {
+    if (!userId || !isKloakSocketEnabled()) return;
+    let unsubscribe: (() => void) | null = null;
+    let cancelled = false;
+
+    void kloakSocket
+      .subscribe(`user:${userId}`, (event) => {
+        if (event.event === "channel.read") {
+          const payload = event.payload as { channel_id?: string };
+          if (payload?.channel_id) clearReadChannels([payload.channel_id]);
+          return;
+        }
+
+        if (event.event !== "channel.unread") return;
+        const payload = event.payload as ChannelUnreadSocketPayload;
+        const serverId = payload?.server_id;
+        const channelId = payload?.channel_id;
+        if (!serverId || !channelId || payload.author_user_id === userId) return;
+        if (serverIds.length > 0 && !serverIds.includes(serverId)) return;
+
+        const unreadDelta = Math.max(1, Number(payload.unread_count_delta ?? 1));
+        const mentionDelta = Math.max(0, Number(payload.mention_count_delta ?? 0));
+        locallyClearedChannelsRef.current.delete(channelId);
+        persistLocalClears();
+
+        setSummaryByServerId((prev) => {
+          const current = prev[serverId] ?? { hasUnread: false, unreadCount: 0, totalMentions: 0, channelIds: [] };
+          return {
+            ...prev,
+            [serverId]: {
+              hasUnread: true,
+              unreadCount: current.unreadCount + unreadDelta,
+              totalMentions: current.totalMentions + mentionDelta,
+              channelIds: Array.from(new Set([...current.channelIds, channelId])),
+            },
+          };
+        });
+
+        void fetchSummaryRef.current({ force: true });
+      })
+      .then((off) => {
+        if (cancelled) off();
+        else unsubscribe = off;
+      })
+      .catch((error) => {
+        console.warn("[KloakWS] Failed to subscribe to server unread fanout", error);
+      });
+
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, [clearReadChannels, persistLocalClears, serverIds, userId]);
+  useEffect(() => {
     if (!userId) return;
 
     const topic = `user:${userId}`;
@@ -361,3 +423,6 @@ export const useServerUnreadSummary = (userId: string | null, serverIds: string[
     clearReadChannels,
   };
 };
+
+
+

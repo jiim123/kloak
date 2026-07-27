@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback, useRef, Suspense, lazy } from "react";
+﻿import { useEffect, useMemo, useState, useCallback, useRef, Suspense, lazy } from "react";
 import { useNavigate, useSearchParams, useLocation, useParams, Outlet } from "react-router-dom";
 import { AnimatePresence, motion, MotionConfig } from "framer-motion";
 import { Gavel, Link2, Plus, UserCircle, Users, X } from "lucide-react";
@@ -29,7 +29,7 @@ import { ServerMembersPage } from "@/components/members/ServerMembersPage";
 import { PunishmentNoticeModal } from "@/components/modals/PunishmentNoticeModal";
 import { ReportSystemAnnouncementModal } from "@/components/modals/ReportSystemAnnouncementModal";
 
-// Always-mounted modals (have internal form state — lazy for code splitting only)
+// Always-mounted modals (have internal form state â€” lazy for code splitting only)
 const ServerSettingsModal = lazy(() => import("@/components/modals/ServerSettingsModal").then(m => ({ default: m.ServerSettingsModal })));
 const UserSettingsModal = lazy(() => import("@/components/modals/UserSettingsModal").then(m => ({ default: m.UserSettingsModal })));
 
@@ -77,6 +77,8 @@ import { UnreadDMsContext } from "@/hooks/useUnreadDMsContext";
 import { UnreadChannelsContext } from "@/hooks/useUnreadChannelsContext";
 import { useUnread } from "@/hooks/useUnread";
 import { useServerUnreadSummary } from "@/hooks/useServerUnreadSummary";
+import { useKloakRealtimeMessages } from "@/hooks/useKloakRealtimeMessages";
+import { useKloakRealtimeDMs } from "@/hooks/useKloakRealtimeDMs";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSwipeGestureRef } from "@/hooks/useSwipeGesture";
@@ -403,6 +405,8 @@ const AppLayout = () => {
   // Real-time channel messages and reactions - at app level for stability
   useRealtimeMessages(currentChannel?.id || null);
   useRealtimeMessages(activeVoiceTextChannelId);
+  useKloakRealtimeMessages(currentChannel?.id || null);
+  useKloakRealtimeMessages(activeVoiceTextChannelId);
 
   // Real-time DMs at app level so messages are received even when not viewing DMs
   const unreadDMs = useUnreadDMs(user?.id || null);
@@ -420,6 +424,11 @@ const AppLayout = () => {
   );
 
   useRealtimeDMs({
+    userId: user?.id || null,
+    currentConversationId: currentConversation?.id || null,
+    onNewMessage: stableOnNewMessage,
+  });
+  useKloakRealtimeDMs({
     userId: user?.id || null,
     currentConversationId: currentConversation?.id || null,
     onNewMessage: stableOnNewMessage,
@@ -442,7 +451,7 @@ const AppLayout = () => {
       if (server && server.id !== currentServer?.id) {
         setCurrentServer(server);
       } else if (!server) {
-        // Server not found in user's servers — could be banned/kicked/left
+        // Server not found in user's servers â€” could be banned/kicked/left
         // Check if the user is banned from this server
         supabase
           .rpc("is_server_banned_secure", {
@@ -808,7 +817,7 @@ const AppLayout = () => {
       ? currentConversation.other_user?.display_name || currentConversation.other_user?.username || "Home"
       : "Home"
     : isServerOverviewView
-      ? `${currentServer?.name || "Server"} • Overview`
+      ? `${currentServer?.name || "Server"} â€¢ Overview`
       : isServerMembersView
         ? `${currentServer?.name || "Server"} - Members`
         : isServerAuditLogView
@@ -831,7 +840,7 @@ const AppLayout = () => {
 
           {MAINTENANCE_MODE && (
             <div className="w-full py-2.5 px-4 bg-slate-700 border-b border-slate-600 text-center text-sm text-slate-300 shrink-0">
-              We're scaling our systems to handle high traffic. You’re logged in, so you’re safe!
+              We're scaling our systems to handle high traffic. Youâ€™re logged in, so youâ€™re safe!
             </div>
           )}
 
@@ -1144,7 +1153,7 @@ const AppLayout = () => {
         {isMobile && (
           <MobileSidebar isDMView={isDMView} />
         )}
-        {/* Mobile members drawer — always mounted so Sheet close animation works */}
+        {/* Mobile members drawer â€” always mounted so Sheet close animation works */}
         {!isDMView && isMobile && <MembersSidebar />}
 
         {/* Always-mounted modals (preserve internal form state, lazy for code splitting) */}
@@ -1190,3 +1199,5 @@ const AppLayout = () => {
 };
 
 export default AppLayout;
+
+

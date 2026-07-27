@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { acquireChannel, subscribeChannel, releaseChannel } from '@/lib/sharedChannel';
+import { isKloakSocketEnabled, kloakSocket } from '@/lib/kloakSocket';
 
 interface DMUnreadInfo {
   conversationId: string;
@@ -25,6 +26,12 @@ type BroadcastMutationPayload<T> = {
   op?: BroadcastMutationOp;
   new?: T;
   old?: T;
+};
+
+type DmUnreadSocketPayload = {
+  conversation_id?: string;
+  sender_id?: string;
+  unread_count_delta?: number;
 };
 
 const REFETCH_COOLDOWN_MS = 5000;
@@ -101,12 +108,16 @@ export const useUnreadDMs = (userId: string | null) => {
     if (!userId) return;
 
     try {
-      const { error } = await supabase.rpc('mark_dm_read', {
-        _conversation_id: conversationId,
-        _user_id: userId,
-      });
+      if (isKloakSocketEnabled()) {
+        await kloakSocket.markDmRead(conversationId);
+      } else {
+        const { error } = await supabase.rpc('mark_dm_read', {
+          _conversation_id: conversationId,
+          _user_id: userId,
+        });
 
-      if (error) throw error;
+        if (error) throw error;
+      }
 
       // Update local state optimistically
       setUnreadState((prev) => ({
@@ -183,6 +194,59 @@ export const useUnreadDMs = (userId: string | null) => {
     };
   }, [fetchUnreadCounts]);
 
+  useEffect(() => {
+    if (!userId || !isKloakSocketEnabled()) return;
+    let unsubscribe: (() => void) | null = null;
+    let cancelled = false;
+
+    void kloakSocket
+      .subscribe(`user:${userId}`, (event) => {
+        if (event.event === "dm.read") {
+          const payload = event.payload as { conversation_id?: string };
+          const conversationId = payload?.conversation_id;
+          if (!conversationId) return;
+          setUnreadState((prev) => ({
+            ...prev,
+            [conversationId]: {
+              conversationId,
+              unreadCount: 0,
+              lastReadAt: new Date().toISOString(),
+            },
+          }));
+          return;
+        }
+
+        if (event.event !== "dm.unread") return;
+        const payload = event.payload as DmUnreadSocketPayload;
+        const conversationId = payload?.conversation_id;
+        if (!conversationId || payload.sender_id === userId) return;
+        const unreadDelta = Math.max(1, Number(payload.unread_count_delta ?? 1));
+
+        setUnreadState((prev) => ({
+          ...prev,
+          [conversationId]: {
+            ...prev[conversationId],
+            conversationId,
+            unreadCount: (prev[conversationId]?.unreadCount || 0) + unreadDelta,
+            lastReadAt: prev[conversationId]?.lastReadAt || null,
+          },
+        }));
+
+        void fetchUnreadCounts({ force: true });
+      })
+      .then((off) => {
+        if (cancelled) off();
+        else unsubscribe = off;
+      })
+      .catch((error) => {
+        console.warn("[KloakWS] Failed to subscribe to DM unread fanout", error);
+      });
+
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, [fetchUnreadCounts, userId]);
   // Subscribe to user-scoped DM participant updates via Broadcast.
   // Goes through sharedChannel so we co-own `user:${userId}` with useUnread et al.
   useEffect(() => {
@@ -247,3 +311,5 @@ export const useUnreadDMs = (userId: string | null) => {
     refetch: fetchUnreadCounts,
   };
 };
+
+

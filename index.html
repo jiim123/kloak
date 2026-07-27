@@ -32,7 +32,7 @@
 
     <!-- Content Security Policy
          Note: hCaptcha may log a console warning about an inline event handler
-         violating script-src. This is cosmetic — hCaptcha runs inside its own
+         violating script-src. This is cosmetic â€” hCaptcha runs inside its own
          iframe (allowed by frame-src) and functions correctly. Do NOT add
          'unsafe-inline' to script-src to suppress it. -->
     <meta
@@ -45,7 +45,7 @@
       font-src 'self' https://fonts.gstatic.com https://kloakweb.b-cdn.net;
       img-src 'self' data: blob: https: http:;
       media-src 'self' blob: https:;
-      connect-src 'self' http://ipc.localhost https://api.kloak.app https://foquucurnwpqcvgqukpz.supabase.co https://*.supabase.co https://*.functions.supabase.co wss://*.supabase.co https://api.kibun.social wss://api.kibun.social https://livekit.kibun.social wss://livekit.kibun.social https://api.giphy.com https://media.giphy.com https://media0.giphy.com https://media1.giphy.com https://media2.giphy.com https://media3.giphy.com https://media4.giphy.com https://kloakcdn.b-cdn.net https://static.klipy.com https://hcaptcha.com https://*.hcaptcha.com https://sentry.hcaptcha.com;
+      connect-src 'self' http://ipc.localhost ws://localhost:8787 ws://127.0.0.1:8787 http://localhost:8787 http://127.0.0.1:8787 wss://kloak-ws.fly.dev https://kloak-ws.fly.dev https://api.kloak.app https://foquucurnwpqcvgqukpz.supabase.co https://*.supabase.co https://*.functions.supabase.co wss://*.supabase.co https://api.kibun.social wss://api.kibun.social https://livekit.kibun.social wss://livekit.kibun.social https://api.giphy.com https://media.giphy.com https://media0.giphy.com https://media1.giphy.com https://media2.giphy.com https://media3.giphy.com https://media4.giphy.com https://kloakcdn.b-cdn.net https://static.klipy.com https://hcaptcha.com https://*.hcaptcha.com https://sentry.hcaptcha.com;
       frame-src https://www.youtube.com https://player.vimeo.com https://store.steampowered.com https://open.spotify.com https://w.soundcloud.com https://player.twitch.tv https://clips.twitch.tv https://player.kick.com https://hcaptcha.com https://*.hcaptcha.com;
       object-src 'none';
       base-uri 'self';
@@ -92,9 +92,10 @@
       <!-- Static shell for fast First Contentful Paint - replaced by React on mount -->
       <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;background:hsl(0,0%,4%)">
         <img src="/favicon.png" alt="Kloak" width="48" height="48" style="margin-bottom:16px" />
-        <p style="color:hsl(60,9%,85%);font-family:system-ui,-apple-system,sans-serif;font-size:14px;opacity:0.6;margin:0">Loading Kloak…</p>
+        <p style="color:hsl(60,9%,85%);font-family:system-ui,-apple-system,sans-serif;font-size:14px;opacity:0.6;margin:0">Loading Kloakâ€¦</p>
       </div>
     </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
+

@@ -41,3 +41,4 @@ key.pem
 /mobileapps
 /bots
 mobileapps-new/android/app/release/app-release.apk
+/.tmp-supabase-socket-push

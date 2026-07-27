@@ -1,6 +1,7 @@
-import { create } from "zustand";
+﻿import { create } from "zustand";
 import { supabase } from "@/integrations/supabase/client";
 import { getChannel } from "@/lib/sharedChannel";
+import { isKloakSocketEnabled, kloakSocket } from "@/lib/kloakSocket";
 import { useAuthStore } from "@/stores/authStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useServerStore } from "@/stores/serverStore";
@@ -956,7 +957,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         }
       }
 
-      // ─── KEY CHANGE: stale-while-revalidate ───
+      // â”€â”€â”€ KEY CHANGE: stale-while-revalidate â”€â”€â”€
       // Only show the full-screen skeleton if we have ZERO cached messages for this channel.
       // If we have stale cached messages, show them immediately and fetch silently in background.
       const hasCachedMessages = cached && cached.messages.length > 0;
@@ -964,7 +965,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         !normalizedBefore && !skipBootstrap ? getPrefetchedBootstrapPage(channelId, limit) : null;
 
       if (!hasCachedMessages && !prefetchedBootstrap && !silent) {
-        // First-ever visit to this channel — show skeleton
+        // First-ever visit to this channel â€” show skeleton
         set({ isLoading: true });
       }
 
@@ -1357,16 +1358,23 @@ export const useMessageStore = create<MessageState>((set, get) => ({
               _content: content,
               _reply_to_id: null,
             };
-      const { data, error } = await supabase.rpc("send_message" as any, rpcArgs);
-
-      if (error) {
-        if (error.message.includes("muted")) {
-          throw new Error("You are muted in this server");
-        }
-        throw error;
-      }
-
-      // Map RPC response to Message type; author data still resolves from the user cache.
+      const data = isKloakSocketEnabled()
+        ? await kloakSocket.sendChannelMessage({
+            channelId,
+            content,
+            replyToId: primaryReplyToId || null,
+            replyToIds,
+          })
+        : await supabase.rpc("send_message" as any, rpcArgs).then(({ data, error }) => {
+            if (error) {
+              if (error.message.includes("muted")) {
+                throw new Error("You are muted in this server");
+              }
+              throw error;
+            }
+            return data;
+          });
+// Map RPC response to Message type; author data still resolves from the user cache.
       const returnedReplyList = Array.isArray((data as any).reply_to_list)
         ? (data as any).reply_to_list.map(toMessageReply).filter((reply: MessageReply | null): reply is MessageReply => !!reply)
         : [];
@@ -1891,3 +1899,4 @@ Object.defineProperty(useMessageStore.getState(), "hasMore", {
     return this.getHasMore();
   },
 });
+

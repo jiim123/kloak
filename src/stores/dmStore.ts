@@ -1,8 +1,9 @@
-import { create } from "zustand";
+﻿import { create } from "zustand";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
 import { useUserCacheStore, bulkSetUsersInCache, fetchAndCacheUser } from "@/stores/userCacheStore";
 import { resolveSignedUrls, isSupabaseAttachmentUrl } from "@/lib/signedUrl";
+import { isKloakSocketEnabled, kloakSocket } from "@/lib/kloakSocket";
 import type { DMConversation, DirectMessage, User, ReactionGroup } from "@/types";
 
 /** Registry of active DM broadcast channels keyed by conversationId */
@@ -713,18 +714,24 @@ export const useDMStore = create<DMState>((set, get) => ({
       );
       const primaryReplyToId = replyToIds[0] ?? replyToId;
 
-      // Use RPC function to send message
-      const { data, error } = await supabase.rpc("send_dm" as any, {
-        _conversation_id: conversationId,
-        _sender_id: senderId,
-        _content: content,
-        _reply_to_id: primaryReplyToId || null,
-        _reply_to_ids: replyToIds,
-      });
-
-      if (error) throw error;
-
-      const msgData = data as {
+      const data = isKloakSocketEnabled()
+        ? await kloakSocket.sendDmMessage({
+            conversationId,
+            content,
+            replyToId: primaryReplyToId || null,
+            replyToIds,
+          })
+        : await supabase.rpc("send_dm" as any, {
+            _conversation_id: conversationId,
+            _sender_id: senderId,
+            _content: content,
+            _reply_to_id: primaryReplyToId || null,
+            _reply_to_ids: replyToIds,
+          }).then(({ data, error }) => {
+            if (error) throw error;
+            return data;
+          });
+const msgData = data as {
         id: string;
         conversation_id: string;
         sender_id: string;
@@ -1145,3 +1152,4 @@ export const useDMStore = create<DMState>((set, get) => ({
     }
   },
 }));
+

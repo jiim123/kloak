@@ -10,6 +10,7 @@ import type { Message, MessageAttachment, MessageReply } from '@/types';
 import { getUserFromCache, getOrFetchUser } from '@/stores/userCacheStore';
 import type { User } from '@/types';
 import { canRevealGhostIdentityForUser, getGhostPseudonymousUserId } from '@/lib/ghostIdentity';
+import { isKloakSocketEnabled } from '@/lib/kloakSocket';
 
 const CHANNEL_SUBSCRIBE_CATCHUP_MAX_AGE_MS = 5 * 60_000;
 const MIN_CATCHUP_FETCH_GAP_MS = 30_000;
@@ -97,7 +98,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
   const reactionMessageIdByReactionIdRef = useRef(new Map<string, string>());
 
   useEffect(() => {
-    if (!channelId) {
+    if (!channelId || isKloakSocketEnabled()) {
       return;
     }
 

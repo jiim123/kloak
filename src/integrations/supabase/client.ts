@@ -380,6 +380,47 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   },
 });
 
+const isSupabaseRealtimeDisabled = () => {
+  if (typeof window === "undefined") return false;
+  try {
+    const override = window.localStorage.getItem("kloak:disable-supabase-realtime");
+    if (override === "1") return true;
+    if (override === "0") return false;
+    return import.meta.env.VITE_DISABLE_SUPABASE_REALTIME === "true";
+  } catch {
+    return import.meta.env.VITE_DISABLE_SUPABASE_REALTIME === "true";
+  }
+};
+
+if (isSupabaseRealtimeDisabled()) {
+  const disabledChannel = (topic: string) => {
+    const channel = {
+      topic,
+      state: "closed",
+      on: () => channel,
+      subscribe: (callback?: (status: string) => void) => {
+        queueMicrotask(() => callback?.("CLOSED"));
+        return channel;
+      },
+      unsubscribe: () => Promise.resolve("ok"),
+      send: () => Promise.resolve("ok"),
+      track: () => Promise.resolve("ok"),
+      untrack: () => Promise.resolve("ok"),
+      presenceState: () => ({}),
+    };
+    return channel;
+  };
+
+  (supabase as any).channel = disabledChannel;
+  (supabase as any).removeChannel = () => Promise.resolve("ok");
+  (supabase as any).removeAllChannels = () => Promise.resolve([]);
+  (supabase as any).getChannels = () => [];
+  (supabase as any).realtime.connect = () => undefined;
+  (supabase as any).realtime.disconnect = () => undefined;
+  (supabase as any).realtime.isConnected = () => false;
+
+  console.warn("[Supabase] Realtime disabled for this build/session");
+}
 export function recoverSupabaseConnection(reason = "network-resume") {
   inflightReadRequests.clear();
 
@@ -407,3 +448,4 @@ export function isSupabaseRealtimeConnected(): boolean {
     return false;
   }
 }
+

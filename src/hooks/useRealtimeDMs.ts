@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/authStore';
 import type { DirectMessage, DMAttachment, DMConversation } from '@/types';
 import { getOrFetchUser, useUserCacheStore } from '@/stores/userCacheStore';
 import { acquireChannel, releaseChannel, subscribeChannel } from '@/lib/sharedChannel';
+import { isKloakSocketEnabled } from '@/lib/kloakSocket';
 
 
 interface UseRealtimeDMsOptions {
@@ -298,7 +299,7 @@ export const useRealtimeDMs = ({
 
   // Subscribe to the active conversation's broadcast channel
   useEffect(() => {
-    if (!userId || !currentConversationId) return;
+    if (!userId || !currentConversationId || isKloakSocketEnabled()) return;
 
     const channel = supabase.channel(`dm:${currentConversationId}`, {
       config: { broadcast: { self: false } },
@@ -391,7 +392,7 @@ export const useRealtimeDMs = ({
 
   // Subscribe to user-scoped DM updates from database Broadcast triggers.
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || isKloakSocketEnabled()) return;
 
     const topic = `user:${userId}`;
     const channel = acquireChannel(topic);

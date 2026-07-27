@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { useFriendStore } from '@/stores/friendStore';
 import { acquireChannel, subscribeChannel, releaseChannel, isChannelSubscribed } from '@/lib/sharedChannel';
+import { isKloakSocketEnabled, kloakSocket } from '@/lib/kloakSocket';
 
 interface ChannelUnreadInfo {
   unreadCount: number;
@@ -384,21 +385,29 @@ export const useUnread = (serverChannelIds: string[] = []) => {
           }));
           dispatchLocalChannelRead(channelId, readAt, optimisticLastReadMessageId);
 
-          const { error } = optimisticLastReadMessageId
-            ? await supabase.rpc('mark_channel_read', {
-                _channel_id: channelId,
-                _user_id: user.id,
-                _last_read_message_id: optimisticLastReadMessageId,
-                _last_read_at: readAt,
-              })
-            : await supabase.rpc('mark_channels_read', {
-                _channel_ids: [channelId],
-                _user_id: user.id,
-                _last_read_at: readAt,
-              });
+          if (isKloakSocketEnabled()) {
+            await kloakSocket.markChannelRead({
+              channelId,
+              lastReadMessageId: optimisticLastReadMessageId,
+              lastReadAt: readAt,
+            });
+          } else {
+            const { error } = optimisticLastReadMessageId
+              ? await supabase.rpc('mark_channel_read', {
+                  _channel_id: channelId,
+                  _user_id: user.id,
+                  _last_read_message_id: optimisticLastReadMessageId,
+                  _last_read_at: readAt,
+                })
+              : await supabase.rpc('mark_channels_read', {
+                  _channel_ids: [channelId],
+                  _user_id: user.id,
+                  _last_read_at: readAt,
+                });
 
-          if (error) throw error;
-          publishChannelRead(channelId, optimisticLastReadMessageId, readAt);
+            if (error) throw error;
+            publishChannelRead(channelId, optimisticLastReadMessageId, readAt);
+          }
         } catch (error) {
           console.error('Error marking channel as read:', error);
           void fetchUnreadCountsRef.current({ force: true });
@@ -496,16 +505,28 @@ export const useUnread = (serverChannelIds: string[] = []) => {
       }
 
       try {
-        const { error } = await supabase.rpc('mark_channels_read', {
-          _channel_ids: channelIds,
-          _user_id: user.id,
-          _last_read_at: now,
-        });
+        if (isKloakSocketEnabled()) {
+          await Promise.all(
+            readEvents.map((event) =>
+              kloakSocket.markChannelRead({
+                channelId: event.channelId,
+                lastReadMessageId: event.lastReadMessageId,
+                lastReadAt: event.readAt,
+              }),
+            ),
+          );
+        } else {
+          const { error } = await supabase.rpc('mark_channels_read', {
+            _channel_ids: channelIds,
+            _user_id: user.id,
+            _last_read_at: now,
+          });
 
-        if (error) throw error;
+          if (error) throw error;
 
-        for (const event of readEvents) {
-          publishChannelRead(event.channelId, event.lastReadMessageId, event.readAt);
+          for (const event of readEvents) {
+            publishChannelRead(event.channelId, event.lastReadMessageId, event.readAt);
+          }
         }
       } catch (error) {
         console.error('Error marking server as read:', error);
@@ -519,6 +540,90 @@ export const useUnread = (serverChannelIds: string[] = []) => {
     fetchUnreadCounts();
   }, [fetchUnreadCounts, channelIdsKey]);
 
+  // Kloak user-topic unread fanout. This keeps channel badges moving even when
+  // the active route is a DM, settings page, or any non-channel surface.
+  useEffect(() => {
+    if (!userId || !isKloakSocketEnabled()) return;
+    let unsubscribe: (() => void) | null = null;
+    let cancelled = false;
+
+    void kloakSocket
+      .subscribe(`user:${userId}`, (event) => {
+        if (event.event === "channel.read") {
+          const payload = event.payload as { channel_id?: string; last_read_message_id?: string | null; last_read_at?: string | null };
+          const channelId = payload?.channel_id;
+          if (!channelId) return;
+          const trackedChannels = serverChannelIdsRef.current;
+          if (trackedChannels.length > 0 && !trackedChannels.includes(channelId)) return;
+          const at = payload.last_read_at ?? new Date().toISOString();
+          recordReadWatermark(channelId, payload.last_read_message_id ?? null, at);
+          setUnreadState((prev) => ({
+            ...prev,
+            [channelId]: {
+              unreadCount: 0,
+              mentionCount: 0,
+              lastReadMessageId: payload.last_read_message_id ?? prev[channelId]?.lastReadMessageId ?? null,
+              lastReadAt: at,
+              firstUnreadMessageId: null,
+              latestUnreadMessageId: null,
+              latestUnreadCreatedAt: null,
+            },
+          }));
+          return;
+        }
+
+        if (event.event !== "channel.unread") return;
+        const payload = event.payload as ChannelUnreadSocketPayload;
+        const channelId = payload?.channel_id;
+        if (!channelId || payload.author_user_id === userId) return;
+
+        const trackedChannels = serverChannelIdsRef.current;
+        if (trackedChannels.length > 0 && !trackedChannels.includes(channelId)) return;
+
+        const createdAt = payload.created_at ?? event.createdAt ?? new Date().toISOString();
+        const messageId = payload.message_id ?? null;
+        const unreadDelta = Math.max(1, Number(payload.unread_count_delta ?? 1));
+        const mentionDelta = Math.max(0, Number(payload.mention_count_delta ?? 0));
+
+        setUnreadState((prev) => {
+          const current = prev[channelId] ?? {
+            unreadCount: 0,
+            mentionCount: 0,
+            lastReadMessageId: null,
+            lastReadAt: null,
+            firstUnreadMessageId: null,
+            latestUnreadMessageId: null,
+            latestUnreadCreatedAt: null,
+          };
+
+          return {
+            ...prev,
+            [channelId]: {
+              ...current,
+              unreadCount: current.unreadCount + unreadDelta,
+              mentionCount: current.mentionCount + mentionDelta,
+              firstUnreadMessageId: current.firstUnreadMessageId ?? messageId,
+              latestUnreadMessageId: messageId ?? current.latestUnreadMessageId,
+              latestUnreadCreatedAt: createdAt,
+            },
+          };
+        });
+
+        void fetchUnreadCountsRef.current({ force: true });
+      })
+      .then((off) => {
+        if (cancelled) off();
+        else unsubscribe = off;
+      })
+      .catch((error) => {
+        console.warn("[KloakWS] Failed to subscribe to channel unread fanout", error);
+      });
+
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, [recordReadWatermark, userId]);
   // Subscribe to broadcast updates for current user's channel reads.
   useEffect(() => {
     if (!userId) return;
@@ -652,5 +757,7 @@ export const useUnread = (serverChannelIds: string[] = []) => {
     markServerAsRead,
   };
 };
+
+
 
 
