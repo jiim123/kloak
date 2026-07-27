@@ -51,6 +51,18 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
     type: z.literal("mark_dm_read"),
     conversationId: uuid,
   }),
+  base.extend({
+    type: z.literal("send_typing"),
+    channelId: uuid,
+    isTyping: z.boolean(),
+  }),
+  base.extend({
+    type: z.literal("update_presence"),
+    status: z.enum(["online", "idle", "dnd", "offline"]),
+    customStatus: z.string().max(20).optional().nullable(),
+    lastSeen: z.string().datetime().optional().nullable(),
+    ts: z.number().int().nonnegative().optional(),
+  }),
 ]);
 
 export type ClientMessage = z.infer<typeof clientMessageSchema>;
@@ -79,3 +91,4 @@ export type ServerMessage =
   | { type: "unsubscribed"; requestId?: string; topics: string[] }
   | { type: "event"; event: SocketEvent }
   | { type: "pong"; requestId?: string; now: string };
+

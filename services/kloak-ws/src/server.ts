@@ -14,6 +14,7 @@ const startedAt = new Date();
 
 type ChannelRecipient = { user_id: string; server_id: string };
 type DmRecipient = { user_id: string };
+type PresenceRecipient = { user_id: string };
 
 const server = createServer((req, res) => {
   if (req.url === "/healthz" || req.url === "/readyz") {
@@ -52,6 +53,7 @@ wss.on("connection", (ws) => {
     alive: true,
     rateWindowStartedAt: Date.now(),
     rateWindowMessages: 0,
+    currentPresence: null,
   };
   socketContexts.set(ws, socket);
 
@@ -94,6 +96,12 @@ wss.on("connection", (ws) => {
   ws.on("close", () => {
     clearTimeout(authTimer);
     hub.removeSocket(socket);
+    void publishPresence(socket, {
+      status: "offline",
+      customStatus: socket.currentPresence?.customStatus ?? null,
+      lastSeen: new Date().toISOString(),
+      ts: Date.now(),
+    }).catch((error) => console.warn("[kloak-ws] failed to publish offline presence", { socketId: socket.id, error }));
   });
 });
 
@@ -182,6 +190,12 @@ async function handleMessage(socket: SocketContext, message: ClientMessage) {
       return;
     case "mark_dm_read":
       await markDmRead(socket, message);
+      return;
+    case "send_typing":
+      await sendTyping(socket, message);
+      return;
+    case "update_presence":
+      await updatePresence(socket, message);
       return;
   }
 }
@@ -307,6 +321,51 @@ async function markDmRead(socket: SocketContext, message: Extract<ClientMessage,
   hub.send(socket, { type: "ack", requestId: message.requestId, ok: true, data });
 }
 
+async function sendTyping(socket: SocketContext, message: Extract<ClientMessage, { type: "send_typing" }>) {
+  const userId = requireUser(socket);
+  const allowed = await canSubscribeChannel(message.channelId, userId, socketRpcOptions(socket));
+  if (!allowed) throw new ClientVisibleError("forbidden", "You cannot send typing events to this channel");
+
+  hub.publish(`channel:${message.channelId}`, message.isTyping ? "typing.start" : "typing.stop", {
+    user_id: userId,
+    channel_id: message.channelId,
+    started_at: Date.now(),
+  });
+  hub.send(socket, { type: "ack", requestId: message.requestId, ok: true });
+}
+
+async function updatePresence(socket: SocketContext, message: Extract<ClientMessage, { type: "update_presence" }>) {
+  const userId = requireUser(socket);
+  const presence = {
+    status: message.status,
+    customStatus: message.customStatus ?? null,
+    lastSeen: message.lastSeen ?? new Date().toISOString(),
+    ts: message.ts ?? Date.now(),
+  };
+  await publishPresence(socket, presence);
+  hub.send(socket, { type: "ack", requestId: message.requestId, ok: true });
+}
+
+async function publishPresence(socket: SocketContext, presence: NonNullable<SocketContext["currentPresence"]>) {
+  const userId = socket.userId;
+  if (!userId) return;
+  socket.currentPresence = presence;
+
+  const payload = {
+    user_id: userId,
+    status: presence.status,
+    custom_status: presence.customStatus,
+    last_seen: presence.lastSeen,
+    ts: presence.ts,
+  };
+
+  hub.publish(`user:${userId}`, "user.presence", payload);
+  const recipients = await getPresenceRecipients(socket, userId);
+  for (const recipient of recipients) {
+    hub.publish(`user:${recipient.user_id}`, "user.presence", payload);
+  }
+}
+
 async function getChannelRecipients(socket: SocketContext, channelId: string, senderId: string) {
   try {
     const recipients = await callAsSocketUser<ChannelRecipient[]>(socket, "get_socket_channel_recipients", {
@@ -329,6 +388,18 @@ async function getDmRecipients(socket: SocketContext, conversationId: string, se
     return Array.isArray(recipients) ? recipients.filter((row) => isUuidString(row.user_id)) : [];
   } catch (error) {
     console.warn("[kloak-ws] failed to resolve DM recipients", { conversationId, error });
+    return [];
+  }
+}
+
+async function getPresenceRecipients(socket: SocketContext, userId: string) {
+  try {
+    const recipients = await callAsSocketUser<PresenceRecipient[]>(socket, "get_socket_presence_recipients", {
+      _user_id: userId,
+    });
+    return Array.isArray(recipients) ? recipients.filter((row) => isUuidString(row.user_id) && row.user_id !== userId) : [];
+  } catch (error) {
+    console.warn("[kloak-ws] failed to resolve presence recipients", { userId, error });
     return [];
   }
 }
@@ -392,3 +463,4 @@ class ClientVisibleError extends Error {
 server.listen(config.port, config.host, () => {
   console.info(`[kloak-ws] listening on ws://${config.host}:${config.port}/socket`);
 });
+

@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useServerStore } from '@/stores/serverStore';
 import { getUserFromCache, getOrFetchUser } from '@/stores/userCacheStore';
 import { acquireChannel, releaseChannel, subscribeChannel } from '@/lib/sharedChannel';
+import { isKloakSocketEnabled, kloakSocket } from '@/lib/kloakSocket';
 import type { TypingUser } from '@/types';
 
 const TYPING_DEBOUNCE_MS = 4500;
@@ -48,6 +49,71 @@ export const useTyping = (channelId: string | null) => {
   useEffect(() => {
     if (!channelId || !user) return;
 
+    let socketUnsubscribe: (() => void) | null = null;
+    let socketCancelled = false;
+
+    if (isKloakSocketEnabled()) {
+
+      void kloakSocket
+        .subscribe(`channel:${channelId}`, ({ event, payload }) => {
+          if (event !== 'typing.start' && event !== 'typing.stop') return;
+          const incomingUserId = typeof (payload as { user_id?: unknown })?.user_id === 'string'
+            ? (payload as { user_id: string }).user_id
+            : '';
+          if (!UUID_V4ish_RE.test(incomingUserId) || incomingUserId === user.id) return;
+
+          if (event === 'typing.stop') {
+            clearTypingTimer(incomingUserId);
+            setTypingUsers((prev) => prev.filter((u) => u.user_id !== incomingUserId));
+            return;
+          }
+
+          const members = useServerStore.getState().members;
+          const memberUser = members.find((m) => !m.is_banned && m.user_id === incomingUserId)?.user ?? null;
+          const cachedUser = getUserFromCache(incomingUserId);
+          const trustedUsername = memberUser?.username ?? cachedUser?.username ?? 'Someone';
+          const trustedDisplayName = memberUser?.display_name ?? cachedUser?.display_name ?? null;
+
+          setTypingUsers((prev) => {
+            const existing = prev.find((u) => u.user_id === incomingUserId);
+            if (existing) {
+              return prev.map((u) =>
+                u.user_id === incomingUserId
+                  ? { ...u, username: trustedUsername, display_name: trustedDisplayName, started_at: Date.now() }
+                  : u,
+              );
+            }
+            return [
+              ...prev,
+              { user_id: incomingUserId, username: trustedUsername, display_name: trustedDisplayName, started_at: Date.now() },
+            ];
+          });
+
+          scheduleTypingExpiry(incomingUserId);
+
+          if (!memberUser && !cachedUser) {
+            void getOrFetchUser(incomingUserId).then((fetched) => {
+              if (!fetched) return;
+              setTypingUsers((prev) =>
+                prev.map((u) =>
+                  u.user_id === incomingUserId
+                    ? { ...u, username: fetched.username || u.username, display_name: fetched.display_name ?? u.display_name }
+                    : u,
+                ),
+              );
+            });
+          }
+        })
+        .then((fn) => {
+          if (socketCancelled) {
+            fn();
+            return;
+          }
+          socketUnsubscribe = fn;
+        })
+        .catch(() => undefined);
+
+    }
     const topic = `typing:${channelId}`;
     const channel = acquireChannel(topic);
     const typingFilter = { event: 'typing', scope: `typing:${channelId}:${user.id}` };
@@ -123,6 +189,8 @@ export const useTyping = (channelId: string | null) => {
     subscribeChannel(topic);
 
     return () => {
+      socketCancelled = true;
+      socketUnsubscribe?.();
       (channel as unknown as { _off?: (type: string, filter: Record<string, unknown>) => void })._off?.(
         'broadcast',
         typingFilter,
@@ -140,6 +208,13 @@ export const useTyping = (channelId: string | null) => {
 
   const publishTypingEvent = useCallback(async (event: TypingEvent) => {
     if (!channelId || !user || !UUID_V4ish_RE.test(channelId)) return;
+    if (isKloakSocketEnabled()) {
+      try {
+        await kloakSocket.sendTyping({ channelId, isTyping: event === 'typing' });
+      } catch {
+        // Keep the existing Supabase broadcast as the compatibility path.
+      }
+    }
     const channel = channelRef.current;
     if (!channel) return;
 
@@ -195,3 +270,4 @@ export const useTyping = (channelId: string | null) => {
     stopTyping,
   };
 };
+

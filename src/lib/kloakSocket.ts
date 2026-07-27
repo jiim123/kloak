@@ -138,6 +138,24 @@ export class KloakSocketClient {
     return response.data;
   }
 
+  async sendTyping(input: { channelId: string; isTyping: boolean }) {
+    await this.connect();
+    const response = await this.request({ type: "send_typing", ...input });
+    if (response.type !== "ack") throw new Error("Unexpected socket response");
+    return response.data;
+  }
+
+  async updatePresence(input: {
+    status: "online" | "idle" | "dnd" | "offline";
+    customStatus?: string | null;
+    lastSeen?: string | null;
+    ts?: number;
+  }) {
+    await this.connect();
+    const response = await this.request({ type: "update_presence", ...input });
+    if (response.type !== "ack") throw new Error("Unexpected socket response");
+    return response.data;
+  }
   private async openAndAuthenticate() {
     const { keyHash, mfaSessionToken } = useAuthStore.getState();
     if (!keyHash) throw new Error("Missing Kloak key hash for websocket auth");
@@ -243,3 +261,4 @@ export class KloakSocketClient {
 }
 
 export const kloakSocket = new KloakSocketClient();
+

@@ -6,6 +6,7 @@ import { useDMStore } from '@/stores/dmStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useUserCacheStore } from '@/stores/userCacheStore';
 import { useUIStore } from '@/stores/uiStore';
+import { isKloakSocketEnabled, kloakSocket } from '@/lib/kloakSocket';
 import type { User, UserStatus } from '@/types';
 
 /**
@@ -263,6 +264,34 @@ const buildOwnPresencePayload = (): GlobalPresenceMeta | null => {
   };
 };
 
+const publishOwnSocketPresence = () => {
+  const payload = buildOwnPresencePayload();
+  if (!payload) return;
+  void kloakSocket
+    .updatePresence({
+      status: toUserStatus(payload.status, 'online'),
+      customStatus: payload.custom_status ?? null,
+      lastSeen: payload.last_seen ?? new Date().toISOString(),
+      ts: typeof payload.ts === 'number' ? payload.ts : Date.now(),
+    })
+    .catch(() => undefined);
+};
+
+const applySocketPresencePayload = (payload: unknown) => {
+  const meta = payload as GlobalPresenceMeta | null;
+  if (!meta || typeof meta.user_id !== 'string') return;
+  const status = toUserStatus(meta.status, 'online');
+  const ts = typeof meta.ts === 'number' ? meta.ts : 0;
+  if (status !== 'offline' && ts > 0 && Date.now() - ts > RECENT_PRESENCE_WINDOW_MS) return;
+  recentRealtimePresenceByUser.set(meta.user_id, Date.now());
+  patchUserAcrossStores({
+    id: meta.user_id,
+    status,
+    custom_status: meta.custom_status ?? null,
+    last_seen: meta.last_seen ?? null,
+  });
+};
+
 /**
  * Hook for targeted presence updates.
  * 
@@ -306,6 +335,40 @@ export const useRealtimeUsers = () => {
       return;
     }
 
+    if (isKloakSocketEnabled()) {
+      let unsubscribe: (() => void) | null = null;
+      let cancelled = false;
+      const presenceHeartbeat = setInterval(publishOwnSocketPresence, 60_000);
+      void kloakSocket
+        .subscribe(`user:${userId}`, (event) => {
+          if (event.event === 'user.presence') applySocketPresencePayload(event.payload);
+        })
+        .then((fn) => {
+          if (cancelled) {
+            fn();
+            return;
+          }
+          unsubscribe = fn;
+          publishOwnSocketPresence();
+        })
+        .catch(() => undefined);
+
+      const handleSocketRecovery = () => {
+        if (document.visibilityState !== 'visible') return;
+        publishOwnSocketPresence();
+      };
+      window.addEventListener('online', handleSocketRecovery);
+      document.addEventListener('visibilitychange', handleSocketRecovery);
+
+      return () => {
+        cancelled = true;
+        unsubscribe?.();
+        clearInterval(presenceHeartbeat);
+        window.removeEventListener('online', handleSocketRecovery);
+        document.removeEventListener('visibilitychange', handleSocketRecovery);
+        recentRealtimePresenceByUser.clear();
+      };
+    }
     const presenceSigByUser = presenceSigByUserRef.current;
     const absenceStartedAtByUser = absenceStartedAtByUserRef.current;
 
@@ -541,6 +604,11 @@ export const useRealtimeUsers = () => {
 
 
   useEffect(() => {
+    if (isKloakSocketEnabled()) {
+      if (authUser?.id) publishOwnSocketPresence();
+      return;
+    }
+
     const channel = presenceChannelRef.current;
     if (!channel || !presenceConnectedRef.current || !authUser?.id) return;
     const payload = buildOwnPresencePayload();
@@ -592,3 +660,4 @@ export const useRealtimeSingleUser = (
     };
   }, [userId, viewerId]);
 };
+

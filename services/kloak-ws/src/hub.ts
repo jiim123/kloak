@@ -12,6 +12,7 @@ export type SocketContext = {
   alive: boolean;
   rateWindowStartedAt: number;
   rateWindowMessages: number;
+  currentPresence: { status: "online" | "idle" | "dnd" | "offline"; customStatus: string | null; lastSeen: string; ts: number } | null;
 };
 
 type TopicState = {
@@ -99,3 +100,4 @@ export class SocketHub {
     return state;
   }
 }
+
