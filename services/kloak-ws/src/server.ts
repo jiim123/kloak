@@ -326,7 +326,7 @@ async function sendTyping(socket: SocketContext, message: Extract<ClientMessage,
   const allowed = await canSubscribeChannel(message.channelId, userId, socketRpcOptions(socket));
   if (!allowed) throw new ClientVisibleError("forbidden", "You cannot send typing events to this channel");
 
-  hub.publish(`channel:${message.channelId}`, message.isTyping ? "typing.start" : "typing.stop", {
+  hub.publishEphemeral(`channel:${message.channelId}`, message.isTyping ? "typing.start" : "typing.stop", {
     user_id: userId,
     channel_id: message.channelId,
     started_at: Date.now(),

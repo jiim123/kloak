@@ -5,11 +5,17 @@ CREATE OR REPLACE FUNCTION public.get_socket_presence_recipients(
   _user_id uuid
 )
 RETURNS TABLE(user_id uuid)
-LANGUAGE sql
+LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
 SET search_path TO 'public', 'pg_temp'
 AS $$
+BEGIN
+  IF NOT public.verify_request_identity(_user_id) THEN
+    RAISE EXCEPTION 'Not authorized to resolve presence recipients for this user';
+  END IF;
+
+  RETURN QUERY
   SELECT DISTINCT recipient_id AS user_id
   FROM (
     SELECT sm_other.user_id AS recipient_id
@@ -40,10 +46,9 @@ AS $$
     WHERE dp_self.user_id = _user_id
       AND dp_other.user_id <> _user_id
   ) recipients
-  WHERE public.verify_request_identity(_user_id)
-    AND recipient_id IS NOT NULL
+  WHERE recipient_id IS NOT NULL;
+END;
 $$;
 
 REVOKE EXECUTE ON FUNCTION public.get_socket_presence_recipients(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_socket_presence_recipients(uuid) TO anon, authenticated;
-

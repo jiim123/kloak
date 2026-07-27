@@ -49,6 +49,14 @@ export class SocketHub {
   }
 
   publish(topic: string, event: string, payload: unknown): SocketEvent {
+    return this.publishInternal(topic, event, payload, true);
+  }
+
+  publishEphemeral(topic: string, event: string, payload: unknown): SocketEvent {
+    return this.publishInternal(topic, event, payload, false);
+  }
+
+  private publishInternal(topic: string, event: string, payload: unknown, replayable: boolean): SocketEvent {
     const state = this.getTopic(topic);
     const socketEvent: SocketEvent = {
       topic,
@@ -58,9 +66,11 @@ export class SocketHub {
       createdAt: new Date().toISOString(),
     };
 
-    state.replay.push(socketEvent);
-    if (state.replay.length > config.maxReplayEventsPerTopic) {
-      state.replay.splice(0, state.replay.length - config.maxReplayEventsPerTopic);
+    if (replayable) {
+      state.replay.push(socketEvent);
+      if (state.replay.length > config.maxReplayEventsPerTopic) {
+        state.replay.splice(0, state.replay.length - config.maxReplayEventsPerTopic);
+      }
     }
 
     for (const socket of state.sockets) {
