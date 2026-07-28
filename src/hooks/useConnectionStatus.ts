@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSyncStore } from '@/stores/syncStore';
 import { useOnlineStatus } from './useOnlineStatus';
+import { isKloakSocketEnabled, kloakSocket } from '@/lib/kloakSocket';
 
 // OPTIMIZATION: Consolidated heartbeat and latency into single check every 60s
 const COMBINED_CHECK_INTERVAL = 60000; // 60 seconds (was 30s heartbeat + 60s latency)
@@ -70,8 +71,12 @@ export function useConnectionStatus() {
     const p = (async () => {
       const start = performance.now();
       try {
-        const { error } = await supabase.rpc('ping_health');
-        if (error) throw error;
+        if (isKloakSocketEnabled()) {
+          await kloakSocket.ping();
+        } else {
+          const { error } = await supabase.rpc('ping_health');
+          if (error) throw error;
+        }
 
         // Success - update latency and reset failures
         const latency = Math.round(performance.now() - start);

@@ -152,6 +152,55 @@ export class KloakSocketClient {
     return response.data;
   }
 
+  async getChannelBootstrap(input: { channelId: string; limit?: number; blockedUserIds?: string[] }) {
+    await this.connect();
+    const response = await this.request({
+      type: "get_channel_bootstrap",
+      channelId: input.channelId,
+      limit: input.limit ?? 50,
+      blockedUserIds: input.blockedUserIds ?? [],
+    });
+    if (response.type !== "ack") throw new Error("Unexpected socket response");
+    return response.data;
+  }
+
+  async getDmBootstrap(input: { conversationId: string; limit?: number; beforeId?: string | null }) {
+    await this.connect();
+    const response = await this.request({
+      type: "get_dm_bootstrap",
+      conversationId: input.conversationId,
+      limit: input.limit ?? 50,
+      beforeId: input.beforeId ?? null,
+    });
+    if (response.type !== "ack") throw new Error("Unexpected socket response");
+    return response.data;
+  }
+
+  async getChannelUnreadCounts(input: { channelIds: string[]; blockedUserIds?: string[] }) {
+    await this.connect();
+    const response = await this.request({
+      type: "get_channel_unread_counts",
+      channelIds: input.channelIds,
+      blockedUserIds: input.blockedUserIds ?? [],
+    });
+    if (response.type !== "ack") throw new Error("Unexpected socket response");
+    return response.data;
+  }
+
+  async getDmUnreadCounts() {
+    await this.connect();
+    const response = await this.request({ type: "get_dm_unread_counts" });
+    if (response.type !== "ack") throw new Error("Unexpected socket response");
+    return response.data;
+  }
+
+  async ping() {
+    await this.connect();
+    const response = await this.request({ type: "ping" });
+    if (response.type !== "pong") throw new Error("Unexpected socket response");
+    return response.now;
+  }
+
   async sendTyping(input: { channelId: string; isTyping: boolean }) {
     await this.connect();
     const response = await this.request({ type: "send_typing", ...input });

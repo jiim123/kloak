@@ -191,6 +191,18 @@ async function handleMessage(socket: SocketContext, message: ClientMessage) {
     case "mark_dm_read":
       await markDmRead(socket, message);
       return;
+    case "get_channel_bootstrap":
+      await getChannelBootstrap(socket, message);
+      return;
+    case "get_dm_bootstrap":
+      await getDmBootstrap(socket, message);
+      return;
+    case "get_channel_unread_counts":
+      await getChannelUnreadCounts(socket, message);
+      return;
+    case "get_dm_unread_counts":
+      await getDmUnreadCounts(socket, message);
+      return;
     case "send_typing":
       await sendTyping(socket, message);
       return;
@@ -320,6 +332,50 @@ async function markDmRead(socket: SocketContext, message: Extract<ClientMessage,
   });
 
   hub.publish(`user:${userId}`, "dm.read", { conversation_id: message.conversationId });
+  hub.send(socket, { type: "ack", requestId: message.requestId, ok: true, data });
+}
+
+async function getChannelBootstrap(socket: SocketContext, message: Extract<ClientMessage, { type: "get_channel_bootstrap" }>) {
+  const userId = requireUser(socket);
+  const data = await callAsSocketUser(socket, "get_channel_bootstrap_secure", {
+    _channel_id: message.channelId,
+    _user_id: userId,
+    _limit: message.limit,
+    _blocked_user_ids: message.blockedUserIds ?? [],
+  });
+
+  hub.send(socket, { type: "ack", requestId: message.requestId, ok: true, data });
+}
+
+async function getDmBootstrap(socket: SocketContext, message: Extract<ClientMessage, { type: "get_dm_bootstrap" }>) {
+  const userId = requireUser(socket);
+  const data = await callAsSocketUser(socket, "get_dm_bootstrap_secure", {
+    _conversation_id: message.conversationId,
+    _user_id: userId,
+    _limit: message.limit,
+    _before_id: message.beforeId ?? null,
+  });
+
+  hub.send(socket, { type: "ack", requestId: message.requestId, ok: true, data });
+}
+
+async function getChannelUnreadCounts(socket: SocketContext, message: Extract<ClientMessage, { type: "get_channel_unread_counts" }>) {
+  const userId = requireUser(socket);
+  const data = await callAsSocketUser(socket, "get_all_channel_unread_counts", {
+    _user_id: userId,
+    _channel_ids: message.channelIds,
+    _blocked_user_ids: message.blockedUserIds ?? [],
+  });
+
+  hub.send(socket, { type: "ack", requestId: message.requestId, ok: true, data });
+}
+
+async function getDmUnreadCounts(socket: SocketContext, message: Extract<ClientMessage, { type: "get_dm_unread_counts" }>) {
+  const userId = requireUser(socket);
+  const data = await callAsSocketUser(socket, "get_dm_unread_counts", {
+    _user_id: userId,
+  });
+
   hub.send(socket, { type: "ack", requestId: message.requestId, ok: true, data });
 }
 

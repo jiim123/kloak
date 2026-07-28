@@ -52,6 +52,26 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
     conversationId: uuid,
   }),
   base.extend({
+    type: z.literal("get_channel_bootstrap"),
+    channelId: uuid,
+    limit: z.number().int().min(1).max(100).default(50),
+    blockedUserIds: z.array(uuid).max(500).optional(),
+  }),
+  base.extend({
+    type: z.literal("get_dm_bootstrap"),
+    conversationId: uuid,
+    limit: z.number().int().min(1).max(100).default(50),
+    beforeId: uuid.optional().nullable(),
+  }),
+  base.extend({
+    type: z.literal("get_channel_unread_counts"),
+    channelIds: z.array(uuid).min(1).max(500),
+    blockedUserIds: z.array(uuid).max(500).optional(),
+  }),
+  base.extend({
+    type: z.literal("get_dm_unread_counts"),
+  }),
+  base.extend({
     type: z.literal("send_typing"),
     channelId: uuid,
     isTyping: z.boolean(),

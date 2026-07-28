@@ -193,12 +193,27 @@ const loadDMMessagePage = async (
   let dataArray: any[] = [];
   let usedBootstrap = false;
 
-  const bootstrapResult = await (supabase.rpc as any)("get_dm_bootstrap_secure", {
-    _conversation_id: conversationId,
-    _user_id: userId,
-    _limit: limit,
-    _before_id: before || null,
-  });
+  let bootstrapResult: { data: unknown; error: unknown };
+  if (isKloakSocketEnabled()) {
+    try {
+      const data = await kloakSocket.getDmBootstrap({ conversationId, limit, beforeId: before || null });
+      bootstrapResult = { data, error: null };
+    } catch {
+      bootstrapResult = await (supabase.rpc as any)("get_dm_bootstrap_secure", {
+        _conversation_id: conversationId,
+        _user_id: userId,
+        _limit: limit,
+        _before_id: before || null,
+      });
+    }
+  } else {
+    bootstrapResult = await (supabase.rpc as any)("get_dm_bootstrap_secure", {
+      _conversation_id: conversationId,
+      _user_id: userId,
+      _limit: limit,
+      _before_id: before || null,
+    });
+  }
 
   if (bootstrapResult.error) {
     if (!isMissingRpcError(bootstrapResult.error)) {

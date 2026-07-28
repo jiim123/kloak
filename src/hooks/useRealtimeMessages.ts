@@ -524,6 +524,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
                   user_id: revealIdentity ? newMsg.user_id : ghostUserId,
                   is_own: localUser?.id === newMsg.user_id,
                   reply_to_id: newMsg.reply_to_id,
+                  reply_to_ids: Array.isArray((newMsg as any).reply_to_ids) ? (newMsg as any).reply_to_ids : undefined,
                   content: newMsg.content,
                   is_pinned: newMsg.is_pinned || false,
                   is_system_message: newMsg.is_system_message || false,
@@ -535,10 +536,32 @@ export const useRealtimeMessages = (channelId: string | null) => {
                   attachments: [],
                   reactions: [],
                 };
+
+                const inlineReplyList = Array.isArray((newMsg as any).reply_to_list)
+                  ? (newMsg as any).reply_to_list
+                      .map((reply: any) => {
+                        if (!reply?.id || typeof reply.content !== "string") return null;
+                        if (reply.user?.id) useUserCacheStore.getState().upsertUser(reply.user as User);
+                        return {
+                          id: reply.id,
+                          content: reply.content,
+                          user_id: reply.user_id ?? reply.user?.id,
+                          user: reply.user,
+                        } as MessageReply;
+                      })
+                      .filter((reply: MessageReply | null): reply is MessageReply => !!reply)
+                  : [];
+                if (inlineReplyList.length > 0) {
+                  message.reply_to = inlineReplyList[0];
+                  message.reply_to_list = inlineReplyList;
+                  message.reply_to_ids = Array.isArray((newMsg as any).reply_to_ids)
+                    ? (newMsg as any).reply_to_ids
+                    : inlineReplyList.map((reply) => reply.id);
+                }
                 
                 // If there's a reply, try local state first, then hydrate the same preview
                 // data used by the normal channel message fetch path.
-                if (newMsg.reply_to_id) {
+                if (newMsg.reply_to_id && !message.reply_to) {
                   const freshStore = useMessageStore.getState();
                   const freshMessages = freshStore.messagesByChannel[channelId]?.messages || [];
                   const replyMsg = freshMessages.find(m => m.id === newMsg.reply_to_id);
@@ -556,7 +579,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
                 }
                 
                 useMessageStore.getState().addMessage(message);
-                if (newMsg.reply_to_id) {
+                if (newMsg.reply_to_id && !Array.isArray((newMsg as any).reply_to_list)) {
                   scheduleReplyTargetHydration(newMsg.id);
                 }
 

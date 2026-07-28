@@ -133,11 +133,15 @@ export const DMProfilePanel = ({ user }: DMProfilePanelProps) => {
         const sharedServerIds = new Set((Array.isArray(payload.shared_server_ids) ? payload.shared_server_ids : []) as string[]);
         setSharedServers(servers.filter((server) => sharedServerIds.has(server.id)).slice(0, 3));
 
-        const { data: achievementData, error: achievementError } = await supabase.rpc("get_user_achievement_summary" as any, {
-          _target_user_id: targetUserId,
-          _requesting_user_id: currentUser.id,
-        });
-        if (!cancelled) setAuraSummary(!achievementError && achievementData ? (achievementData as AuraSummary) : null);
+        if (payload?.aura_summary) {
+          if (!cancelled) setAuraSummary(payload.aura_summary as AuraSummary);
+        } else {
+          const { data: achievementData, error: achievementError } = await supabase.rpc("get_user_achievement_summary" as any, {
+            _target_user_id: targetUserId,
+            _requesting_user_id: currentUser.id,
+          });
+          if (!cancelled) setAuraSummary(!achievementError && achievementData ? (achievementData as AuraSummary) : null);
+        }
       } catch (error) {
         if (!cancelled) console.error("Failed to load DM profile panel:", error);
       } finally {

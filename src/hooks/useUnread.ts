@@ -209,12 +209,28 @@ export const useUnread = (serverChannelIds: string[] = []) => {
       // Get blocked user IDs for filtering
       const blockedUserIds = useFriendStore.getState().visibilityBlockedUserIds;
 
-      // OPTIMIZATION: Single RPC call replaces N individual queries
-      const { data, error } = await supabase.rpc('get_all_channel_unread_counts', {
-        _user_id: user.id,
-        _channel_ids: serverChannelIds,
-        _blocked_user_ids: blockedUserIds.length > 0 ? blockedUserIds : [],
-      });
+      let data: unknown;
+      let error: unknown = null;
+      if (isKloakSocketEnabled()) {
+        try {
+          data = await kloakSocket.getChannelUnreadCounts({
+            channelIds: serverChannelIds,
+            blockedUserIds,
+          });
+        } catch (socketError) {
+          ({ data, error } = await supabase.rpc('get_all_channel_unread_counts', {
+            _user_id: user.id,
+            _channel_ids: serverChannelIds,
+            _blocked_user_ids: blockedUserIds.length > 0 ? blockedUserIds : [],
+          }));
+        }
+      } else {
+        ({ data, error } = await supabase.rpc('get_all_channel_unread_counts', {
+          _user_id: user.id,
+          _channel_ids: serverChannelIds,
+          _blocked_user_ids: blockedUserIds.length > 0 ? blockedUserIds : [],
+        }));
+      }
 
       if (error) {
         console.error('Error fetching unread counts:', error);
@@ -224,7 +240,7 @@ export const useUnread = (serverChannelIds: string[] = []) => {
       if (fetchSeqRef.current !== seq) return;
 
       const newState: UnreadState = {};
-      (data || []).forEach((row: {
+      (Array.isArray(data) ? data : []).forEach((row: {
         channel_id: string;
         unread_count: number;
         mention_count: number;
@@ -609,7 +625,6 @@ export const useUnread = (serverChannelIds: string[] = []) => {
           };
         });
 
-        void fetchUnreadCountsRef.current({ force: true });
       })
       .then((off) => {
         if (cancelled) off();

@@ -566,15 +566,34 @@ const loadChannelMessagePageUncached = async ({
   let usedBootstrap = false;
 
   if (!normalizedBefore && !skipBootstrap) {
-    const { data: bootstrapData, error: bootstrapError } = await (supabase.rpc as any)(
-      "get_channel_bootstrap_secure",
-      {
-        _channel_id: channelId,
-        _user_id: requestUserId,
-        _limit: limit,
-        _blocked_user_ids: blockedUserIds,
-      },
-    );
+    let bootstrapResult: { data: unknown; error: unknown };
+    if (isKloakSocketEnabled()) {
+      try {
+        const data = await kloakSocket.getChannelBootstrap({ channelId, limit, blockedUserIds });
+        bootstrapResult = { data, error: null };
+      } catch {
+        bootstrapResult = await (supabase.rpc as any)(
+          "get_channel_bootstrap_secure",
+          {
+            _channel_id: channelId,
+            _user_id: requestUserId,
+            _limit: limit,
+            _blocked_user_ids: blockedUserIds,
+          },
+        );
+      }
+    } else {
+      bootstrapResult = await (supabase.rpc as any)(
+        "get_channel_bootstrap_secure",
+        {
+          _channel_id: channelId,
+          _user_id: requestUserId,
+          _limit: limit,
+          _blocked_user_ids: blockedUserIds,
+        },
+      );
+    }
+    const { data: bootstrapData, error: bootstrapError } = bootstrapResult;
 
     if (bootstrapError) {
       markChatPerf(perfId, "bootstrap-rpc", {
@@ -655,7 +674,14 @@ const loadChannelMessagePageUncached = async ({
     }
   }
 
-  await hydrateReplyTargetRows(messageRows, requestUserId, blockedUserIds);
+  const needsReplyTargetHydration = messageRows.some(
+    (msg: any) =>
+      !Object.prototype.hasOwnProperty.call(msg, "reply_to_ids") ||
+      !Object.prototype.hasOwnProperty.call(msg, "reply_to_list"),
+  );
+  if (needsReplyTargetHydration) {
+    await hydrateReplyTargetRows(messageRows, requestUserId, blockedUserIds);
+  }
 
   const replyMap: Record<string, MessageReply> = {};
   const missingReplyIds: string[] = [];

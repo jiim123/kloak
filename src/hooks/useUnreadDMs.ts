@@ -64,10 +64,21 @@ export const useUnreadDMs = (userId: string | null) => {
 
     const p = (async () => {
     try {
-      // Use batched RPC call instead of N+1 queries
-      const { data, error } = await supabase.rpc('get_dm_unread_counts', {
-        _user_id: userId,
-      });
+      let data: unknown;
+      let error: unknown = null;
+      if (isKloakSocketEnabled()) {
+        try {
+          data = await kloakSocket.getDmUnreadCounts();
+        } catch {
+          ({ data, error } = await supabase.rpc('get_dm_unread_counts', {
+            _user_id: userId,
+          }));
+        }
+      } else {
+        ({ data, error } = await supabase.rpc('get_dm_unread_counts', {
+          _user_id: userId,
+        }));
+      }
 
       if (error) {
         console.error('Failed to fetch DM unread counts:', error);
@@ -75,7 +86,7 @@ export const useUnreadDMs = (userId: string | null) => {
       }
 
       const newState: UnreadDMState = {};
-      (data || []).forEach((row: { conversation_id: string; unread_count: number; last_read_at: string | null }) => {
+      (Array.isArray(data) ? data : []).forEach((row: { conversation_id: string; unread_count: number; last_read_at: string | null }) => {
         newState[row.conversation_id] = {
           conversationId: row.conversation_id,
           unreadCount: Number(row.unread_count),
@@ -232,7 +243,6 @@ export const useUnreadDMs = (userId: string | null) => {
           },
         }));
 
-        void fetchUnreadCounts({ force: true });
       })
       .then((off) => {
         if (cancelled) off();
@@ -246,7 +256,7 @@ export const useUnreadDMs = (userId: string | null) => {
       cancelled = true;
       unsubscribe?.();
     };
-  }, [fetchUnreadCounts, userId]);
+  }, [userId]);
   // Subscribe to user-scoped DM participant updates via Broadcast.
   // Goes through sharedChannel so we co-own `user:${userId}` with useUnread et al.
   useEffect(() => {

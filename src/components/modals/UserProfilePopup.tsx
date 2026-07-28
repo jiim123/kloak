@@ -478,12 +478,14 @@ export const UserProfilePopup = () => {
         setSharedServers(servers.filter((s) => sharedServerIds.includes(s.id)).slice(0, 3));
         applyCooldownFromDeclinedAt(payload.declined_at ?? null);
 
+        const payloadAuraSummary = payload?.aura_summary ? (payload.aura_summary as AuraSummary) : null;
+
         profilePopupCache.set(cacheKey, {
           user: nextProfileWithFreshPresence,
           badges,
           sharedServerIds,
           declinedAt: payload.declined_at ?? null,
-          auraSummary: null,
+          auraSummary: payloadAuraSummary,
           cachedAt: Date.now(),
         });
 
@@ -495,19 +497,24 @@ export const UserProfilePopup = () => {
           if (profileViewError) console.warn("Failed to record profile view:", profileViewError.message);
         }
 
-        const { data: achievementData, error: achievementError } = await supabase.rpc("get_user_achievement_summary" as any, {
-          _target_user_id: userId,
-          _requesting_user_id: currentUser.id,
-        });
         if (cancelled) return;
-        if (!achievementError && achievementData) {
-          const nextAuraSummary = achievementData as AuraSummary;
-          setAuraSummary(nextAuraSummary);
-          const cached = profilePopupCache.get(cacheKey);
-          if (cached) profilePopupCache.set(cacheKey, { ...cached, auraSummary: nextAuraSummary, cachedAt: Date.now() });
-        } else if (achievementError) {
-          console.error("Failed to fetch achievement summary:", achievementError);
-          setAuraSummary(null);
+        if (payloadAuraSummary) {
+          setAuraSummary(payloadAuraSummary);
+        } else {
+          const { data: achievementData, error: achievementError } = await supabase.rpc("get_user_achievement_summary" as any, {
+            _target_user_id: userId,
+            _requesting_user_id: currentUser.id,
+          });
+          if (cancelled) return;
+          if (!achievementError && achievementData) {
+            const nextAuraSummary = achievementData as AuraSummary;
+            setAuraSummary(nextAuraSummary);
+            const cached = profilePopupCache.get(cacheKey);
+            if (cached) profilePopupCache.set(cacheKey, { ...cached, auraSummary: nextAuraSummary, cachedAt: Date.now() });
+          } else if (achievementError) {
+            console.error("Failed to fetch achievement summary:", achievementError);
+            setAuraSummary(null);
+          }
         }
       } catch (error) {
         console.error("Failed to fetch profile:", error);
