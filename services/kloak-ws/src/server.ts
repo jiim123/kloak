@@ -105,7 +105,7 @@ wss.on("connection", (ws) => {
   });
 });
 
-setInterval(() => {
+const heartbeatTimer = setInterval(() => {
   for (const ws of wss.clients) {
     const socket = socketContexts.get(ws);
     if (socket && !socket.alive) {
@@ -463,4 +463,35 @@ class ClientVisibleError extends Error {
 server.listen(config.port, config.host, () => {
   console.info(`[kloak-ws] listening on ws://${config.host}:${config.port}/socket`);
 });
+
+function shutdown(signal: NodeJS.Signals) {
+  console.info(`[kloak-ws] received ${signal}, closing websocket clients`);
+  clearInterval(heartbeatTimer);
+
+  for (const ws of wss.clients) {
+    try {
+      ws.close(1012, "service_restart");
+    } catch {
+      // ignore close errors
+    }
+  }
+
+  wss.close(() => {
+    server.close((error) => {
+      if (error) {
+        console.error("[kloak-ws] failed to close HTTP server", error);
+        process.exit(1);
+      }
+      process.exit(0);
+    });
+  });
+
+  setTimeout(() => {
+    console.warn("[kloak-ws] graceful shutdown timed out");
+    process.exit(0);
+  }, 25_000).unref();
+}
+
+process.once("SIGTERM", () => shutdown("SIGTERM"));
+process.once("SIGINT", () => shutdown("SIGINT"));
 

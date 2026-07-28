@@ -250,7 +250,7 @@ export const useUnreadDMs = (userId: string | null) => {
   // Subscribe to user-scoped DM participant updates via Broadcast.
   // Goes through sharedChannel so we co-own `user:${userId}` with useUnread et al.
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || isKloakSocketEnabled()) return;
 
     const topic = `user:${userId}`;
     const channel = acquireChannel(topic);

@@ -326,7 +326,7 @@ export const useServerUnreadSummary = (userId: string | null, serverIds: string[
     };
   }, [clearReadChannels, persistLocalClears, serverIds, userId]);
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || isKloakSocketEnabled()) return;
 
     const topic = `user:${userId}`;
     const channel = acquireChannel(topic);

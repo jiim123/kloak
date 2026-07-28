@@ -68,6 +68,10 @@ export class KloakSocketClient {
     if (!isKloakSocketEnabled()) throw new Error("Kloak websocket is not enabled");
     if (this.isOpen) return;
     if (this.connectPromise) return this.connectPromise;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
 
     this.manuallyClosed = false;
     this.connectPromise = this.openAndAuthenticate().finally(() => {
@@ -81,8 +85,9 @@ export class KloakSocketClient {
     this.authenticated = false;
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
     this.reconnectTimer = null;
-    this.ws?.close(1000, "client_close");
+    const ws = this.ws;
     this.ws = null;
+    ws?.close(1000, "client_close");
   }
 
   async subscribe(topic: string, listener: TopicListener) {
@@ -160,41 +165,57 @@ export class KloakSocketClient {
     const { keyHash, mfaSessionToken } = useAuthStore.getState();
     if (!keyHash) throw new Error("Missing Kloak key hash for websocket auth");
 
-    await new Promise<void>((resolve, reject) => {
-      const ws = new WebSocket(this.url);
-      this.ws = ws;
+    const ws = new WebSocket(this.url);
+    this.ws = ws;
+    this.authenticated = false;
 
-      const cleanup = () => {
-        ws.removeEventListener("open", onOpen);
-        ws.removeEventListener("error", onError);
-      };
-      const onOpen = () => {
-        cleanup();
-        resolve();
-      };
-      const onError = () => {
-        cleanup();
-        reject(new Error("Failed to open Kloak websocket"));
-      };
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const cleanup = () => {
+          ws.removeEventListener("open", onOpen);
+          ws.removeEventListener("error", onError);
+        };
+        const onOpen = () => {
+          cleanup();
+          resolve();
+        };
+        const onError = () => {
+          cleanup();
+          reject(new Error("Failed to open Kloak websocket"));
+        };
 
-      ws.addEventListener("open", onOpen, { once: true });
-      ws.addEventListener("error", onError, { once: true });
-      ws.addEventListener("message", (event) => this.handleMessage(event.data));
-      ws.addEventListener("close", () => this.handleClose());
-    });
-
-    const response = await this.request({ type: "auth", keyHash, mfaSessionToken: mfaSessionToken ?? null });
-    if (response.type !== "auth_ok") throw new Error("Kloak websocket auth failed");
-    this.authenticated = true;
-    this.reconnectAttempt = 0;
-
-    const topics = Array.from(this.listeners.keys());
-    if (topics.length > 0) {
-      await this.request({
-        type: "subscribe",
-        topics,
-        cursors: Object.fromEntries(topics.map((topic) => [topic, this.topicCursors.get(topic) ?? 0])),
+        ws.addEventListener("open", onOpen, { once: true });
+        ws.addEventListener("error", onError, { once: true });
+        ws.addEventListener("message", (event) => this.handleMessage(ws, event.data));
+        ws.addEventListener("close", () => this.handleClose(ws));
       });
+
+      if (this.ws !== ws) throw new Error("Kloak websocket was replaced before auth");
+      const response = await this.request({ type: "auth", keyHash, mfaSessionToken: mfaSessionToken ?? null });
+      if (response.type !== "auth_ok") throw new Error("Kloak websocket auth failed");
+      if (this.ws !== ws) throw new Error("Kloak websocket was replaced after auth");
+      this.authenticated = true;
+      this.reconnectAttempt = 0;
+
+      const topics = Array.from(this.listeners.keys());
+      if (topics.length > 0) {
+        await this.request({
+          type: "subscribe",
+          topics,
+          cursors: Object.fromEntries(topics.map((topic) => [topic, this.topicCursors.get(topic) ?? 0])),
+        });
+      }
+    } catch (error) {
+      if (this.ws === ws) {
+        this.authenticated = false;
+        this.ws = null;
+      }
+      try {
+        ws.close();
+      } catch {
+        // ignore cleanup errors
+      }
+      throw error;
     }
   }
 
@@ -216,7 +237,8 @@ export class KloakSocketClient {
     });
   }
 
-  private handleMessage(data: unknown) {
+  private handleMessage(ws: WebSocket, data: unknown) {
+    if (ws !== this.ws) return;
     let message: ServerMessage;
     try {
       message = JSON.parse(String(data)) as ServerMessage;
@@ -242,8 +264,10 @@ export class KloakSocketClient {
     }
   }
 
-  private handleClose() {
+  private handleClose(ws?: WebSocket) {
+    if (ws && ws !== this.ws) return;
     this.authenticated = false;
+    this.ws = null;
     for (const [requestId, pending] of this.pending) {
       clearTimeout(pending.timeoutId);
       pending.reject(new Error("Kloak websocket closed"));
@@ -255,7 +279,7 @@ export class KloakSocketClient {
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
-      void this.connect().catch(() => this.handleClose());
+      void this.connect().catch(() => this.handleClose(this.ws ?? undefined));
     }, delay);
   }
 }

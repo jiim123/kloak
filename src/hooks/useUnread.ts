@@ -626,7 +626,7 @@ export const useUnread = (serverChannelIds: string[] = []) => {
   }, [recordReadWatermark, userId]);
   // Subscribe to broadcast updates for current user's channel reads.
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || isKloakSocketEnabled()) return;
 
     const topic = `user:${userId}`;
     const channel = acquireChannel(topic);
