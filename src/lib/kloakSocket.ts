@@ -30,6 +30,8 @@ const DEFAULT_SOCKET_URL = "ws://localhost:8787/socket";
 const REQUEST_TIMEOUT_MS = 15_000;
 const RECONNECT_MIN_MS = 500;
 const RECONNECT_MAX_MS = 10_000;
+const SUBSCRIBE_BATCH_MS = 25;
+const SUBSCRIBE_BATCH_SIZE = 40;
 
 let requestSeq = 0;
 
@@ -51,6 +53,10 @@ export class KloakSocketClient {
   private pending = new Map<string, PendingRequest>();
   private listeners = new Map<string, Set<TopicListener>>();
   private topicCursors = new Map<string, number>();
+  private subscribedTopics = new Set<string>();
+  private subscribeQueue = new Set<string>();
+  private subscribeFlushPromise: Promise<void> | null = null;
+  private subscribeFlushTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectAttempt = 0;
   private manuallyClosed = false;
@@ -87,6 +93,11 @@ export class KloakSocketClient {
     this.reconnectTimer = null;
     const ws = this.ws;
     this.ws = null;
+    this.subscribedTopics.clear();
+    this.subscribeQueue.clear();
+    if (this.subscribeFlushTimer) clearTimeout(this.subscribeFlushTimer);
+    this.subscribeFlushTimer = null;
+    this.subscribeFlushPromise = null;
     ws?.close(1000, "client_close");
   }
 
@@ -99,17 +110,15 @@ export class KloakSocketClient {
     set.add(listener);
 
     await this.connect();
-    await this.request({
-      type: "subscribe",
-      topics: [topic],
-      cursors: { [topic]: this.topicCursors.get(topic) ?? 0 },
-    });
+    await this.queueSubscribe(topic);
 
     return () => {
       const current = this.listeners.get(topic);
       current?.delete(listener);
       if (current && current.size === 0) {
         this.listeners.delete(topic);
+        this.subscribeQueue.delete(topic);
+        this.subscribedTopics.delete(topic);
         void this.request({ type: "unsubscribe", topics: [topic] }).catch(() => undefined);
       }
     };
@@ -197,14 +206,9 @@ export class KloakSocketClient {
       this.authenticated = true;
       this.reconnectAttempt = 0;
 
+      this.subscribedTopics.clear();
       const topics = Array.from(this.listeners.keys());
-      if (topics.length > 0) {
-        await this.request({
-          type: "subscribe",
-          topics,
-          cursors: Object.fromEntries(topics.map((topic) => [topic, this.topicCursors.get(topic) ?? 0])),
-        });
-      }
+      await this.subscribeTopics(topics);
     } catch (error) {
       if (this.ws === ws) {
         this.authenticated = false;
@@ -219,6 +223,49 @@ export class KloakSocketClient {
     }
   }
 
+  private queueSubscribe(topic: string): Promise<void> {
+    if (this.subscribedTopics.has(topic)) return Promise.resolve();
+    this.subscribeQueue.add(topic);
+
+    if (!this.subscribeFlushPromise) {
+      this.subscribeFlushPromise = new Promise<void>((resolve, reject) => {
+        this.subscribeFlushTimer = setTimeout(() => {
+          this.subscribeFlushTimer = null;
+          void this.flushSubscribeQueue()
+            .then(resolve)
+            .catch(reject)
+            .finally(() => {
+              this.subscribeFlushPromise = null;
+            });
+        }, SUBSCRIBE_BATCH_MS);
+      });
+    }
+
+    return this.subscribeFlushPromise;
+  }
+
+  private async flushSubscribeQueue() {
+    while (this.subscribeQueue.size > 0) {
+      const topics = Array.from(this.subscribeQueue);
+      this.subscribeQueue.clear();
+      await this.subscribeTopics(topics);
+    }
+  }
+  private async subscribeTopics(topics: string[]) {
+    const uniqueTopics = Array.from(new Set(topics)).filter((topic) => this.listeners.has(topic) && !this.subscribedTopics.has(topic));
+    for (let index = 0; index < uniqueTopics.length; index += SUBSCRIBE_BATCH_SIZE) {
+      const batch = uniqueTopics.slice(index, index + SUBSCRIBE_BATCH_SIZE);
+      if (batch.length === 0) continue;
+      const response = await this.request({
+        type: "subscribe",
+        topics: batch,
+        cursors: Object.fromEntries(batch.map((topic) => [topic, this.topicCursors.get(topic) ?? 0])),
+      });
+      if (response.type === "subscribed") {
+        response.topics.forEach((topic) => this.subscribedTopics.add(topic));
+      }
+    }
+  }
   private request(payload: Record<string, unknown>): Promise<ServerMessage> {
     const ws = this.ws;
     if (!ws || ws.readyState !== WebSocket.OPEN) return Promise.reject(new Error("Kloak websocket is not open"));
@@ -268,6 +315,7 @@ export class KloakSocketClient {
     if (ws && ws !== this.ws) return;
     this.authenticated = false;
     this.ws = null;
+    this.subscribedTopics.clear();
     for (const [requestId, pending] of this.pending) {
       clearTimeout(pending.timeoutId);
       pending.reject(new Error("Kloak websocket closed"));

@@ -51,9 +51,10 @@ export function useKloakRealtimeDMs({ userId, currentConversationId, onNewMessag
   }, [conversations, currentConversationId]);
 
   useEffect(() => {
-    if (!userId || !isKloakSocketEnabled() || conversationIds.length === 0) return;
-    const unsubscribers: Array<() => void> = [];
+    if (!userId || !isKloakSocketEnabled()) return;
+    let unsubscribe: (() => void) | null = null;
     let cancelled = false;
+
     const catchUp = (conversationId: string) => {
       void useDMStore.getState().fetchMessages(conversationId, userId, 50).catch(() => undefined);
     };
@@ -62,36 +63,37 @@ export function useKloakRealtimeDMs({ userId, currentConversationId, onNewMessag
       conversationIds.forEach(catchUp);
     };
 
-    for (const conversationId of conversationIds) {
-      void kloakSocket
-        .subscribe(`dm:${conversationId}`, (event) => {
-          if (event.event !== "dm.created") return;
-          const message = toDirectMessage(event.payload);
-          if (!message || message.conversation_id !== conversationId) return;
-          useDMStore.getState().addMessage(conversationId, message);
-          useDMStore.getState().updateConversation(conversationId, { last_message: message });
-          if (message.sender_id !== localUserId) {
-            onNewMessageRef.current?.(message, conversationId);
-          }
-        })
-        .then((unsubscribe) => {
-          if (cancelled) {
-            unsubscribe();
-            return;
-          }
-          unsubscribers.push(unsubscribe);
-          catchUp(conversationId);
-        })
-        .catch((error) => {
-          console.warn("[KloakWS] Failed to subscribe to DM", { conversationId, error });
-        });
-    }
+    void kloakSocket
+      .subscribe(`user:${userId}`, (event) => {
+        if (event.event !== "dm.created") return;
+        const message = toDirectMessage(event.payload);
+        const conversationId = message?.conversation_id;
+        if (!message || !conversationId) return;
+
+        useDMStore.getState().addMessage(conversationId, message);
+        useDMStore.getState().updateConversation(conversationId, { last_message: message });
+        if (message.sender_id !== localUserId) {
+          onNewMessageRef.current?.(message, conversationId);
+        }
+      })
+      .then((off) => {
+        if (cancelled) {
+          off();
+          return;
+        }
+        unsubscribe = off;
+        conversationIds.forEach(catchUp);
+      })
+      .catch((error) => {
+        console.warn("[KloakWS] Failed to subscribe to DM fanout", { userId, error });
+      });
+
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       cancelled = true;
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-      unsubscribers.forEach((unsubscribe) => unsubscribe());
+      unsubscribe?.();
     };
   }, [conversationIds, localUserId, userId]);
 }

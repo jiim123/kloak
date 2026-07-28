@@ -292,12 +292,14 @@ async function sendDmMessage(socket: SocketContext, message: Extract<ClientMessa
   });
 
   hub.publish(`dm:${message.conversationId}`, "dm.created", data);
+  hub.publish(`user:${userId}`, "dm.created", data);
   hub.publish(`user:${userId}`, "dm.sent", data);
 
   const recipients = await getDmRecipients(socket, message.conversationId, userId);
   const messageId = typeof data.id === "string" ? data.id : null;
   const createdAt = typeof data.created_at === "string" ? data.created_at : new Date().toISOString();
   for (const recipient of recipients) {
+    hub.publish(`user:${recipient.user_id}`, "dm.created", data);
     hub.publish(`user:${recipient.user_id}`, "dm.unread", {
       conversation_id: message.conversationId,
       message_id: messageId,
