@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { kloakSocket, isKloakSocketEnabled } from "@/lib/kloakSocket";
 import { useDMStore } from "@/stores/dmStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -36,19 +36,9 @@ const toDirectMessage = (raw: any): DirectMessage | null => {
 };
 
 export function useKloakRealtimeDMs({ userId, currentConversationId, onNewMessage }: Options) {
-  const conversations = useDMStore((state) => state.conversations);
   const localUserId = useAuthStore((state) => state.user?.id ?? null);
   const onNewMessageRef = useRef(onNewMessage);
   onNewMessageRef.current = onNewMessage;
-
-  const conversationIds = useMemo(() => {
-    const ids = new Set<string>();
-    conversations.forEach((conversation) => {
-      if (conversation.id) ids.add(conversation.id);
-    });
-    if (currentConversationId) ids.add(currentConversationId);
-    return Array.from(ids).sort();
-  }, [conversations, currentConversationId]);
 
   useEffect(() => {
     if (!userId || !isKloakSocketEnabled()) return;
@@ -58,9 +48,13 @@ export function useKloakRealtimeDMs({ userId, currentConversationId, onNewMessag
     const catchUp = (conversationId: string) => {
       void useDMStore.getState().fetchMessages(conversationId, userId, 50).catch(() => undefined);
     };
+    const catchUpLoadedConversations = () => {
+      const loadedConversationIds = Object.keys(useDMStore.getState().messagesByConversation);
+      loadedConversationIds.forEach(catchUp);
+    };
     const handleVisibilityChange = () => {
       if (document.visibilityState !== "visible") return;
-      conversationIds.forEach(catchUp);
+      catchUpLoadedConversations();
     };
 
     void kloakSocket
@@ -82,7 +76,7 @@ export function useKloakRealtimeDMs({ userId, currentConversationId, onNewMessag
           return;
         }
         unsubscribe = off;
-        conversationIds.forEach(catchUp);
+        if (currentConversationId) catchUp(currentConversationId);
       })
       .catch((error) => {
         console.warn("[KloakWS] Failed to subscribe to DM fanout", { userId, error });
@@ -95,6 +89,6 @@ export function useKloakRealtimeDMs({ userId, currentConversationId, onNewMessag
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       unsubscribe?.();
     };
-  }, [conversationIds, localUserId, userId]);
+  }, [currentConversationId, localUserId, userId]);
 }
 

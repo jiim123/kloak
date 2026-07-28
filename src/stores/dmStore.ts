@@ -121,9 +121,12 @@ const MAX_CACHED_DM_CONVERSATIONS = 10;
 const MAX_DM_MESSAGES_PER_CONVERSATION = 200;
 const DM_PREFETCH_CACHE_EXPIRY_MS = 2 * 60 * 1000;
 const DM_CONVERSATIONS_CACHE_TTL_MS = 30_000;
+const DM_INITIAL_MESSAGES_CACHE_TTL_MS = 15_000;
 const inflightDMPrefetches = new Map<string, Promise<void>>();
+const inflightDMMessageFetches = new Map<string, Promise<void>>();
 const dmConversationsCachedAtByUser = new Map<string, number>();
 const dmConversationsInFlightByUser = new Map<string, Promise<void>>();
+const dmMessagesFetchedAtByConversation = new Map<string, number>();
 
 const isMissingRpcError = (error: unknown) => {
   const typed = error as { code?: string; message?: string } | null | undefined;
@@ -556,6 +559,7 @@ export const useDMStore = create<DMState>((set, get) => ({
           Object.entries(state.fetchingOlderByConversation).filter(([key]) => key !== conversationId),
         ),
       }));
+      dmMessagesFetchedAtByConversation.delete(conversationId);
 
       return true;
     } catch (error) {
@@ -567,6 +571,17 @@ export const useDMStore = create<DMState>((set, get) => ({
   fetchMessages: async (conversationId: string, userId: string, limit = 50, before?: string) => {
     // Only show loading state if we have no cached messages for this conversation
     const hasCached = (get().messagesByConversation[conversationId] || []).length > 0;
+    const fetchKey = `${conversationId}:${userId}:${limit}:${before || "latest"}`;
+    const existingInflight = inflightDMMessageFetches.get(fetchKey);
+    if (existingInflight) return existingInflight;
+
+    if (!before && hasCached) {
+      const fetchedAt = dmMessagesFetchedAtByConversation.get(conversationId) ?? 0;
+      if (Date.now() - fetchedAt < DM_INITIAL_MESSAGES_CACHE_TTL_MS) {
+        return;
+      }
+    }
+
     if (!hasCached) {
       set({ isLoading: true });
     }
@@ -579,77 +594,88 @@ export const useDMStore = create<DMState>((set, get) => ({
       }));
     }
 
-    try {
-      const historyMeta = get().historyMetaByConversation[conversationId];
-      const prefetchedOlder =
-        before && historyMeta?.prefetchedOlder?.beforeId === before
-          ? historyMeta.prefetchedOlder
-          : null;
-      const page =
-        prefetchedOlder && Date.now() - prefetchedOlder.prefetchedAt < DM_PREFETCH_CACHE_EXPIRY_MS
-          ? {
-              messages: prefetchedOlder.messages,
-              hasMore: prefetchedOlder.hasMore,
-              oldestLoadedMessageId: prefetchedOlder.oldestLoadedMessageId,
-            }
-          : await loadDMMessagePage(conversationId, userId, limit, before);
-      const { messages, hasMore, oldestLoadedMessageId } = page;
+    const request = (async () => {
+      try {
+        const historyMeta = get().historyMetaByConversation[conversationId];
+        const prefetchedOlder =
+          before && historyMeta?.prefetchedOlder?.beforeId === before
+            ? historyMeta.prefetchedOlder
+            : null;
+        const page =
+          prefetchedOlder && Date.now() - prefetchedOlder.prefetchedAt < DM_PREFETCH_CACHE_EXPIRY_MS
+            ? {
+                messages: prefetchedOlder.messages,
+                hasMore: prefetchedOlder.hasMore,
+                oldestLoadedMessageId: prefetchedOlder.oldestLoadedMessageId,
+              }
+            : await loadDMMessagePage(conversationId, userId, limit, before);
+        const { messages, hasMore, oldestLoadedMessageId } = page;
 
-      set((state) => {
-        const currentMessages = state.messagesByConversation[conversationId] || [];
-        const { [conversationId]: _, ...restFetchingOlder } = state.fetchingOlderByConversation;
+        set((state) => {
+          const currentMessages = state.messagesByConversation[conversationId] || [];
+          const { [conversationId]: _, ...restFetchingOlder } = state.fetchingOlderByConversation;
 
-        if (before) {
-          // Prepend older messages
-          return {
-            messagesByConversation: pruneDMMessageCache(
-              {
-                ...state.messagesByConversation,
-                [conversationId]: [...messages, ...currentMessages],
+          if (before) {
+            // Prepend older messages
+            return {
+              messagesByConversation: pruneDMMessageCache(
+                {
+                  ...state.messagesByConversation,
+                  [conversationId]: [...messages, ...currentMessages],
+                },
+                state.currentConversation?.id,
+              ),
+              historyMetaByConversation: {
+                ...state.historyMetaByConversation,
+                [conversationId]: {
+                  hasMore,
+                  oldestLoadedMessageId: oldestLoadedMessageId ?? before,
+                  prefetchedOlder: null,
+                },
               },
-              state.currentConversation?.id,
-            ),
-            historyMetaByConversation: {
-              ...state.historyMetaByConversation,
-              [conversationId]: {
-                hasMore,
-                oldestLoadedMessageId: oldestLoadedMessageId ?? before,
-                prefetchedOlder: null,
+              fetchingOlderByConversation: restFetchingOlder,
+              isLoading: false,
+            };
+          } else {
+            // Replace with fresh messages
+            return {
+              messagesByConversation: pruneDMMessageCache(
+                {
+                  ...state.messagesByConversation,
+                  [conversationId]: messages,
+                },
+                state.currentConversation?.id,
+              ),
+              historyMetaByConversation: {
+                ...state.historyMetaByConversation,
+                [conversationId]: {
+                  hasMore,
+                  oldestLoadedMessageId,
+                  prefetchedOlder: null,
+                },
               },
-            },
-            fetchingOlderByConversation: restFetchingOlder,
-            isLoading: false,
-          };
-        } else {
-          // Replace with fresh messages
-          return {
-            messagesByConversation: pruneDMMessageCache(
-              {
-                ...state.messagesByConversation,
-                [conversationId]: messages,
-              },
-              state.currentConversation?.id,
-            ),
-            historyMetaByConversation: {
-              ...state.historyMetaByConversation,
-              [conversationId]: {
-                hasMore,
-                oldestLoadedMessageId,
-                prefetchedOlder: null,
-              },
-            },
-            fetchingOlderByConversation: restFetchingOlder,
-            isLoading: false,
-          };
+              fetchingOlderByConversation: restFetchingOlder,
+              isLoading: false,
+            };
+          }
+        });
+        if (!before) {
+          dmMessagesFetchedAtByConversation.set(conversationId, Date.now());
         }
-      });
-    } catch (error) {
-      console.error("Failed to fetch DM messages:", error);
-      set((state) => {
-        const { [conversationId]: _, ...restFetchingOlder } = state.fetchingOlderByConversation;
-        return { isLoading: false, fetchingOlderByConversation: restFetchingOlder };
-      });
-    }
+      } catch (error) {
+        console.error("Failed to fetch DM messages:", error);
+        set((state) => {
+          const { [conversationId]: _, ...restFetchingOlder } = state.fetchingOlderByConversation;
+          return { isLoading: false, fetchingOlderByConversation: restFetchingOlder };
+        });
+      }
+    })().finally(() => {
+      const current = inflightDMMessageFetches.get(fetchKey);
+      if (current === request) inflightDMMessageFetches.delete(fetchKey);
+    });
+
+    inflightDMMessageFetches.set(fetchKey, request);
+    return request;
   },
 
   prefetchOlderMessages: async (conversationId: string, userId: string, limit = 50) => {
@@ -1128,6 +1154,7 @@ const msgData = data as {
           Object.entries(state.messagesByConversation).filter(([key]) => key !== conversationId),
         ),
       }));
+      dmMessagesFetchedAtByConversation.delete(conversationId);
 
       return true;
     } catch (error) {
