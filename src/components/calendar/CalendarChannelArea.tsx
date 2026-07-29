@@ -120,6 +120,21 @@ type CalendarChannelAreaProps = {
 
 type CalendarRpcResponse = { data: unknown; error: { message?: string } | null };
 
+const CALENDAR_SOCKET_MUTATION_RPCS = new Set([
+  "create_calendar_event",
+  "update_calendar_event",
+  "delete_calendar_event",
+  "set_calendar_event_rsvp",
+  "insert_calendar_event_comment",
+  "delete_calendar_event_comment",
+  "toggle_calendar_event_reaction",
+]);
+
+const dispatchCalendarSocketRefresh = (fn: string, params: Record<string, unknown>, data: unknown) => {
+  if (typeof window === "undefined" || !CALENDAR_SOCKET_MUTATION_RPCS.has(fn)) return;
+  window.dispatchEvent(new CustomEvent("kloak:calendar-socket-refresh", { detail: { fn, params, data } }));
+};
+
 const runCalendarRpc = async (fn: string, params: Record<string, unknown>): Promise<CalendarRpcResponse> => {
   if (isKloakSocketEnabled()) {
     try {
@@ -130,6 +145,7 @@ const runCalendarRpc = async (fn: string, params: Record<string, unknown>): Prom
             startsBefore: String(params._starts_before ?? ""),
           })
         : await kloakSocket.calendarRpc(fn, params);
+      dispatchCalendarSocketRefresh(fn, params, data);
       return { data, error: null };
     } catch (error) {
       return { data: null, error: { message: error instanceof Error ? error.message : "Calendar socket request failed" } };
@@ -836,6 +852,23 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
     void loadEventReactions();
   }, [selectedEventId, loadSelectedEvent, loadEventComments, loadEventReactions]);
 
+  useEffect(() => {
+    if (!isKloakSocketEnabled()) return;
+
+    const handleCalendarSocketRefresh = () => {
+      void loadEvents();
+      if (selectedEventId) {
+        void loadSelectedEvent();
+        void loadEventComments();
+        void loadEventReactions();
+      }
+    };
+
+    window.addEventListener("kloak:calendar-socket-refresh", handleCalendarSocketRefresh);
+    return () => {
+      window.removeEventListener("kloak:calendar-socket-refresh", handleCalendarSocketRefresh);
+    };
+  }, [loadEventComments, loadEventReactions, loadEvents, loadSelectedEvent, selectedEventId]);
   useEffect(() => {
     if (!channelId) return;
     const channel = supabase
