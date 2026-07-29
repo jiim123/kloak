@@ -230,7 +230,12 @@ async function handleMessage(socket: SocketContext, message: ClientMessage) {
     case "calendar_rpc":
       await calendarRpc(socket, message);
       return;
-    case "send_typing":
+        case "forum_rpc":
+      await forumRpc(socket, message);
+      return;
+    case "media_rpc":
+      await mediaRpc(socket, message);
+      return;case "send_typing":
       await sendTyping(socket, message);
       return;
     case "update_presence":
@@ -493,12 +498,75 @@ async function getChannelTasks(socket: SocketContext, message: Extract<ClientMes
 
 async function taskRpc(socket: SocketContext, message: Extract<ClientMessage, { type: "task_rpc" }>) {
   const userId = requireUser(socket);
+  const params = message.params ?? {};
+  const refreshTarget = await resolveTaskRefreshTarget(socket, message.name, params);
   const data = await callAsSocketUser(socket, message.name, {
-    ...(message.params ?? {}),
+    ...params,
     _user_id: userId,
   });
 
+  publishTaskRefresh(message.name, refreshTarget, data, userId);
   hub.send(socket, { type: "ack", requestId: message.requestId, ok: true, data });
+}
+
+const TASK_MUTATION_RPCS = new Set([
+  "create_task",
+  "update_task",
+  "delete_task",
+  "move_task",
+  "assign_task_users",
+  "unassign_task_users",
+]);
+
+type TaskRefreshTarget = {
+  channelId: string | null;
+  taskId: string | null;
+};
+
+async function resolveTaskRefreshTarget(socket: SocketContext, name: string, params: Record<string, unknown>): Promise<TaskRefreshTarget> {
+  if (!TASK_MUTATION_RPCS.has(name)) return { channelId: null, taskId: null };
+
+  const directChannelId = typeof params._channel_id === "string" ? params._channel_id : null;
+  const taskId = typeof params._task_id === "string" ? params._task_id : null;
+  if (directChannelId) return { channelId: directChannelId, taskId };
+  if (taskId) return { channelId: await getTaskChannelId(socket, taskId), taskId };
+
+  return { channelId: null, taskId: null };
+}
+
+async function getTaskChannelId(socket: SocketContext, taskId: string) {
+  try {
+    const rows = await rest<Array<{ channel_id?: unknown }>>(
+      `tasks?select=channel_id&id=eq.${encodeURIComponent(taskId)}&limit=1`,
+      socketRestOptions(socket),
+    );
+    const channelId = rows[0]?.channel_id;
+    return typeof channelId === "string" ? channelId : null;
+  } catch (error) {
+    console.warn("[kloak-ws] failed to resolve task channel", { taskId, error });
+    return null;
+  }
+}
+
+function publishTaskRefresh(name: string, target: TaskRefreshTarget, data: unknown, actorUserId: string) {
+  if (!TASK_MUTATION_RPCS.has(name) || !target.channelId) return;
+  hub.publish(`channel:${target.channelId}`, "task.refresh", {
+    rpc: name,
+    channel_id: target.channelId,
+    task_id: target.taskId ?? extractTaskId(data),
+    actor_user_id: actorUserId,
+    updated_at: new Date().toISOString(),
+  });
+}
+
+function extractTaskId(data: unknown) {
+  if (!data || typeof data !== "object") return null;
+  const record = data as Record<string, unknown>;
+  const task = record.task;
+  if (task && typeof task === "object" && typeof (task as Record<string, unknown>).id === "string") {
+    return (task as Record<string, unknown>).id as string;
+  }
+  return typeof record.id === "string" ? record.id : null;
 }
 
 async function getCalendarEvents(socket: SocketContext, message: Extract<ClientMessage, { type: "get_calendar_events" }>) {
@@ -515,14 +583,326 @@ async function getCalendarEvents(socket: SocketContext, message: Extract<ClientM
 
 async function calendarRpc(socket: SocketContext, message: Extract<ClientMessage, { type: "calendar_rpc" }>) {
   const userId = requireUser(socket);
+  const params = message.params ?? {};
+  const refreshTarget = await resolveCalendarRefreshTarget(socket, message.name, params);
   const data = await callAsSocketUser(socket, message.name, {
-    ...(message.params ?? {}),
+    ...params,
     _user_id: userId,
   });
 
+  publishCalendarRefresh(message.name, refreshTarget, data, userId);
   hub.send(socket, { type: "ack", requestId: message.requestId, ok: true, data });
 }
 
+const CALENDAR_MUTATION_RPCS = new Set([
+  "create_calendar_event",
+  "update_calendar_event",
+  "delete_calendar_event",
+  "set_calendar_event_rsvp",
+  "insert_calendar_event_comment",
+  "delete_calendar_event_comment",
+  "toggle_calendar_event_reaction",
+]);
+
+type CalendarRefreshTarget = {
+  channelId: string | null;
+  eventId: string | null;
+};
+
+async function resolveCalendarRefreshTarget(socket: SocketContext, name: string, params: Record<string, unknown>): Promise<CalendarRefreshTarget> {
+  if (!CALENDAR_MUTATION_RPCS.has(name)) return { channelId: null, eventId: null };
+
+  const directChannelId = typeof params._channel_id === "string" ? params._channel_id : null;
+  if (directChannelId) return { channelId: directChannelId, eventId: null };
+
+  const directEventId = typeof params._event_id === "string" ? params._event_id : null;
+  if (directEventId) {
+    return { channelId: await getCalendarEventChannelId(socket, directEventId), eventId: directEventId };
+  }
+
+  const commentId = typeof params._comment_id === "string" ? params._comment_id : null;
+  if (commentId) {
+    const eventId = await getCalendarCommentEventId(socket, commentId);
+    return { channelId: eventId ? await getCalendarEventChannelId(socket, eventId) : null, eventId };
+  }
+
+  return { channelId: null, eventId: null };
+}
+
+async function getCalendarEventChannelId(socket: SocketContext, eventId: string) {
+  try {
+    const rows = await rest<Array<{ channel_id?: unknown }>>(
+      `calendar_events?select=channel_id&id=eq.${encodeURIComponent(eventId)}&limit=1`,
+      socketRestOptions(socket),
+    );
+    const channelId = rows[0]?.channel_id;
+    return typeof channelId === "string" ? channelId : null;
+  } catch (error) {
+    console.warn("[kloak-ws] failed to resolve calendar event channel", { eventId, error });
+    return null;
+  }
+}
+
+async function getCalendarCommentEventId(socket: SocketContext, commentId: string) {
+  try {
+    const rows = await rest<Array<{ event_id?: unknown }>>(
+      `calendar_event_comments?select=event_id&id=eq.${encodeURIComponent(commentId)}&limit=1`,
+      socketRestOptions(socket),
+    );
+    const eventId = rows[0]?.event_id;
+    return typeof eventId === "string" ? eventId : null;
+  } catch (error) {
+    console.warn("[kloak-ws] failed to resolve calendar comment event", { commentId, error });
+    return null;
+  }
+}
+
+function publishCalendarRefresh(name: string, target: CalendarRefreshTarget, data: unknown, actorUserId: string) {
+  if (!CALENDAR_MUTATION_RPCS.has(name) || !target.channelId) return;
+  hub.publish(`channel:${target.channelId}`, "calendar.refresh", {
+    rpc: name,
+    channel_id: target.channelId,
+    event_id: target.eventId ?? extractCalendarEventId(data),
+    actor_user_id: actorUserId,
+    updated_at: new Date().toISOString(),
+  });
+}
+
+function extractCalendarEventId(data: unknown) {
+  if (!data || typeof data !== "object") return null;
+  const record = data as Record<string, unknown>;
+  const event = record.event;
+  if (event && typeof event === "object" && typeof (event as Record<string, unknown>).id === "string") {
+    return (event as Record<string, unknown>).id as string;
+  }
+  return typeof record.id === "string" ? record.id : null;
+}
+
+const FORUM_MUTATION_RPCS = new Set([
+  "create_thread",
+  "send_thread_message",
+  "update_forum_thread_moderation",
+  "edit_forum_thread_post",
+  "edit_thread_message",
+  "delete_thread_message",
+  "delete_forum_thread",
+  "toggle_thread_reaction",
+]);
+
+const FORUM_USER_SCOPED_RPCS = new Set([
+  "get_messages_by_ids_secure",
+  "get_thread_messages",
+  "create_thread",
+  "send_thread_message",
+  "update_forum_thread_moderation",
+  "delete_thread_message",
+  "delete_forum_thread",
+  "toggle_thread_reaction",
+]);
+
+type ForumRefreshTarget = {
+  channelId: string | null;
+  threadId: string | null;
+  messageId: string | null;
+};
+
+async function forumRpc(socket: SocketContext, message: Extract<ClientMessage, { type: "forum_rpc" }>) {
+  const userId = requireUser(socket);
+  const params = message.params ?? {};
+  const refreshTarget = await resolveForumRefreshTarget(socket, message.name, params);
+  const rpcParams = FORUM_USER_SCOPED_RPCS.has(message.name) ? { ...params, _user_id: userId } : params;
+  const data = await callAsSocketUser(socket, message.name, rpcParams);
+
+  publishForumRefresh(message.name, refreshTarget, data, userId);
+  hub.send(socket, { type: "ack", requestId: message.requestId, ok: true, data });
+}
+
+async function resolveForumRefreshTarget(socket: SocketContext, name: string, params: Record<string, unknown>): Promise<ForumRefreshTarget> {
+  if (!FORUM_MUTATION_RPCS.has(name)) return { channelId: null, threadId: null, messageId: null };
+
+  const directThreadId = typeof params._thread_id === "string" ? params._thread_id : null;
+  const directMessageId = typeof params._message_id === "string" ? params._message_id : null;
+
+  if (directThreadId) {
+    return { channelId: await getForumThreadChannelId(socket, directThreadId), threadId: directThreadId, messageId: directMessageId };
+  }
+
+  if (directMessageId) {
+    if (name === "create_thread") {
+      return { channelId: await getChannelMessageChannelId(socket, directMessageId), threadId: null, messageId: directMessageId };
+    }
+
+    const threadId = await getThreadMessageThreadId(socket, directMessageId);
+    return { channelId: threadId ? await getForumThreadChannelId(socket, threadId) : null, threadId, messageId: directMessageId };
+  }
+
+  return { channelId: null, threadId: null, messageId: null };
+}
+
+async function getForumThreadChannelId(socket: SocketContext, threadId: string) {
+  try {
+    const rows = await rest<Array<{ channel_id?: unknown }>>(
+      `threads?select=channel_id&id=eq.${encodeURIComponent(threadId)}&limit=1`,
+      socketRestOptions(socket),
+    );
+    const channelId = rows[0]?.channel_id;
+    return typeof channelId === "string" ? channelId : null;
+  } catch (error) {
+    console.warn("[kloak-ws] failed to resolve forum thread channel", { threadId, error });
+    return null;
+  }
+}
+
+async function getThreadMessageThreadId(socket: SocketContext, messageId: string) {
+  try {
+    const rows = await rest<Array<{ thread_id?: unknown }>>(
+      `thread_messages?select=thread_id&id=eq.${encodeURIComponent(messageId)}&limit=1`,
+      socketRestOptions(socket),
+    );
+    const threadId = rows[0]?.thread_id;
+    return typeof threadId === "string" ? threadId : null;
+  } catch (error) {
+    console.warn("[kloak-ws] failed to resolve forum message thread", { messageId, error });
+    return null;
+  }
+}
+
+async function getChannelMessageChannelId(socket: SocketContext, messageId: string) {
+  try {
+    const rows = await rest<Array<{ channel_id?: unknown }>>(
+      `messages?select=channel_id&id=eq.${encodeURIComponent(messageId)}&limit=1`,
+      socketRestOptions(socket),
+    );
+    const channelId = rows[0]?.channel_id;
+    return typeof channelId === "string" ? channelId : null;
+  } catch (error) {
+    console.warn("[kloak-ws] failed to resolve channel message channel", { messageId, error });
+    return null;
+  }
+}
+
+function publishForumRefresh(name: string, target: ForumRefreshTarget, data: unknown, actorUserId: string) {
+  if (!FORUM_MUTATION_RPCS.has(name) || !target.channelId) return;
+  hub.publish(`channel:${target.channelId}`, "forum.refresh", {
+    rpc: name,
+    channel_id: target.channelId,
+    thread_id: target.threadId ?? extractThreadId(data),
+    message_id: target.messageId ?? extractForumMessageId(data),
+    actor_user_id: actorUserId,
+    updated_at: new Date().toISOString(),
+  });
+}
+
+function extractThreadId(data: unknown) {
+  if (typeof data === "string") return data.length >= 32 ? data : null;
+  if (!data || typeof data !== "object") return null;
+  const record = data as Record<string, unknown>;
+  return typeof record.thread_id === "string" ? record.thread_id : typeof record.id === "string" ? record.id : null;
+}
+
+function extractForumMessageId(data: unknown) {
+  if (!data || typeof data !== "object") return null;
+  const record = data as Record<string, unknown>;
+  return typeof record.message_id === "string" ? record.message_id : typeof record.id === "string" ? record.id : null;
+}
+
+const MEDIA_MUTATION_RPCS = new Set([
+  "insert_media_item",
+  "delete_media_item",
+  "insert_media_comment",
+  "edit_media_comment",
+  "delete_media_comment",
+  "toggle_media_comment_reaction",
+]);
+
+type MediaRefreshTarget = {
+  channelId: string | null;
+  mediaId: string | null;
+  commentId: string | null;
+};
+
+async function mediaRpc(socket: SocketContext, message: Extract<ClientMessage, { type: "media_rpc" }>) {
+  const userId = requireUser(socket);
+  const params = message.params ?? {};
+  const refreshTarget = await resolveMediaRefreshTarget(socket, message.name, params);
+  const data = await callAsSocketUser(socket, message.name, {
+    ...params,
+    _user_id: userId,
+  });
+
+  publishMediaRefresh(message.name, refreshTarget, data, userId);
+  hub.send(socket, { type: "ack", requestId: message.requestId, ok: true, data });
+}
+
+async function resolveMediaRefreshTarget(socket: SocketContext, name: string, params: Record<string, unknown>): Promise<MediaRefreshTarget> {
+  if (!MEDIA_MUTATION_RPCS.has(name)) return { channelId: null, mediaId: null, commentId: null };
+
+  const directChannelId = typeof params._channel_id === "string" ? params._channel_id : null;
+  const itemId = typeof params._item_id === "string" ? params._item_id : null;
+  const mediaId = typeof params._media_id === "string" ? params._media_id : itemId;
+  const commentId = typeof params._comment_id === "string" ? params._comment_id : null;
+
+  if (directChannelId) return { channelId: directChannelId, mediaId, commentId };
+  if (mediaId) return { channelId: await getMediaItemChannelId(socket, mediaId), mediaId, commentId };
+  if (commentId) {
+    const resolvedMediaId = await getMediaCommentMediaId(socket, commentId);
+    return { channelId: resolvedMediaId ? await getMediaItemChannelId(socket, resolvedMediaId) : null, mediaId: resolvedMediaId, commentId };
+  }
+
+  return { channelId: null, mediaId: null, commentId: null };
+}
+
+async function getMediaItemChannelId(socket: SocketContext, mediaId: string) {
+  try {
+    const rows = await rest<Array<{ channel_id?: unknown }>>(
+      `media_items?select=channel_id&id=eq.${encodeURIComponent(mediaId)}&limit=1`,
+      socketRestOptions(socket),
+    );
+    const channelId = rows[0]?.channel_id;
+    return typeof channelId === "string" ? channelId : null;
+  } catch (error) {
+    console.warn("[kloak-ws] failed to resolve media item channel", { mediaId, error });
+    return null;
+  }
+}
+
+async function getMediaCommentMediaId(socket: SocketContext, commentId: string) {
+  try {
+    const rows = await rest<Array<{ media_id?: unknown }>>(
+      `media_comments?select=media_id&id=eq.${encodeURIComponent(commentId)}&limit=1`,
+      socketRestOptions(socket),
+    );
+    const mediaId = rows[0]?.media_id;
+    return typeof mediaId === "string" ? mediaId : null;
+  } catch (error) {
+    console.warn("[kloak-ws] failed to resolve media comment item", { commentId, error });
+    return null;
+  }
+}
+
+function publishMediaRefresh(name: string, target: MediaRefreshTarget, data: unknown, actorUserId: string) {
+  if (!MEDIA_MUTATION_RPCS.has(name) || !target.channelId) return;
+  hub.publish(`channel:${target.channelId}`, "media.refresh", {
+    rpc: name,
+    channel_id: target.channelId,
+    media_id: target.mediaId ?? extractMediaId(data),
+    comment_id: target.commentId ?? extractMediaCommentId(data),
+    actor_user_id: actorUserId,
+    updated_at: new Date().toISOString(),
+  });
+}
+
+function extractMediaId(data: unknown) {
+  if (!data || typeof data !== "object") return null;
+  const record = data as Record<string, unknown>;
+  return typeof record.media_id === "string" ? record.media_id : typeof record.id === "string" ? record.id : null;
+}
+
+function extractMediaCommentId(data: unknown) {
+  if (!data || typeof data !== "object") return null;
+  const record = data as Record<string, unknown>;
+  return typeof record.comment_id === "string" ? record.comment_id : typeof record.id === "string" ? record.id : null;
+}
 function publishNotificationRows(socket: SocketContext, op: "UPDATE" | "DELETE", rows: unknown) {
   const userId = socket.userId;
   if (!userId || !Array.isArray(rows)) return;

@@ -23,6 +23,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/h
 import { EmojiGifPicker } from "@/components/modals/EmojiGifPicker";
 import { DeleteMessageModal } from "@/components/modals/DeleteMessageModal";
 import { supabase } from "@/integrations/supabase/client";
+import { isKloakSocketEnabled, kloakSocket } from "@/lib/kloakSocket";
 import { handleError } from "@/lib/errorHandler";
 import { formatMessageTimestamp } from "@/lib/format";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
@@ -31,6 +32,21 @@ import { getUserFromCache, getOrFetchUser } from "@/stores/userCacheStore";
 import { pickFirstNonBlank } from "@/lib/utils";
 import type { User, ReactionGroup, CustomServerRole, ServerRole } from "@/types";
 import { openUserProfileModal } from "@/lib/userProfilePopover";
+
+type RpcResult = { data: unknown; error: { message?: string } | null };
+
+const runMediaRpc = async (fn: string, params?: Record<string, unknown>): Promise<RpcResult> => {
+  if (isKloakSocketEnabled()) {
+    try {
+      const data = await kloakSocket.mediaRpc(fn, params);
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: { message: error instanceof Error ? error.message : "Media socket request failed" } };
+    }
+  }
+
+  return supabase.rpc(fn as never, params as never) as unknown as Promise<RpcResult>;
+};
 
 interface MediaComment {
   id: string;
@@ -551,7 +567,37 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
     };
   }, [applyCommentBroadcast, applyReactionBroadcast, mediaId]);
 
-  const handleReply = useCallback(
+    useEffect(() => {
+    if (!channelId || !isKloakSocketEnabled()) return;
+
+    let unsubscribe: (() => void) | null = null;
+    let cancelled = false;
+
+    void kloakSocket
+      .subscribe(`channel:${channelId}`, (event) => {
+        if (event.event !== "media.refresh") return;
+        const payload = event.payload && typeof event.payload === "object" ? (event.payload as Record<string, unknown>) : null;
+        const eventMediaId = typeof payload?.media_id === "string" ? payload.media_id : null;
+        if (eventMediaId && eventMediaId !== mediaId) return;
+        void fetchComments({ silent: true });
+      })
+      .then((cleanup) => {
+        if (cancelled) {
+          cleanup();
+          return;
+        }
+        unsubscribe = cleanup;
+      })
+      .catch((error) => {
+        console.warn("[MediaComments] failed to subscribe to media socket refresh", error);
+      });
+
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, [channelId, fetchComments, mediaId]);
+const handleReply = useCallback(
     async () => {
       if (!user || !replyContent.trim()) return;
 
@@ -564,7 +610,7 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
       setReplyingToComment(null);
 
       try {
-        const { data, error } = await (supabase.rpc as any)('insert_media_comment', {
+        const { data, error } = await runMediaRpc('insert_media_comment', {
           _media_id: mediaId,
           _user_id: user.id,
           _content: encodedContent,
@@ -589,7 +635,7 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
     const content = editContent.trim();
     const encodedContent = await encodeCustomEmojisForTransport(content);
     try {
-      const { error } = await (supabase.rpc as any)('edit_media_comment', {
+      const { error } = await runMediaRpc('edit_media_comment', {
         _comment_id: editingCommentId,
         _user_id: user?.id,
         _content: encodedContent
@@ -606,7 +652,7 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
 
   const handleDelete = useCallback(async (commentId: string) => {
     try {
-      const { error } = await (supabase.rpc as any)('delete_media_comment', {
+      const { error } = await runMediaRpc('delete_media_comment', {
         _comment_id: commentId,
         _user_id: user?.id
       });
@@ -671,7 +717,7 @@ export const MediaComments = forwardRef<HTMLDivElement, MediaCommentsProps>(({ m
     );
 
     try {
-      const { error } = await (supabase.rpc as any)('toggle_media_comment_reaction', {
+      const { error } = await runMediaRpc('toggle_media_comment_reaction', {
         _comment_id: commentId,
         _user_id: user.id,
         _emoji: emoji

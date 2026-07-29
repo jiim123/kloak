@@ -29,6 +29,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { isKloakSocketEnabled, kloakSocket } from "@/lib/kloakSocket";
 import { secureUpload } from "@/lib/storageUpload";
 import { getProxiedAssetUrl, peekProxiedAssetUrl } from "@/lib/proxyAssetUrl";
 import { formatRelativeTime } from "@/lib/format";
@@ -39,6 +40,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+type RpcResult = { data: unknown; error: { message?: string } | null };
+
+const runMediaRpc = async (fn: string, params?: Record<string, unknown>): Promise<RpcResult> => {
+  if (isKloakSocketEnabled()) {
+    try {
+      const data = await kloakSocket.mediaRpc(fn, params);
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: { message: error instanceof Error ? error.message : "Media socket request failed" } };
+    }
+  }
+
+  return supabase.rpc(fn as never, params as never) as unknown as Promise<RpcResult>;
+};
 interface MediaItem {
   id: string;
   channel_id: string;
@@ -353,7 +368,40 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
     };
   }, [applyMediaItemBroadcast, currentChannel]);
 
-  // ── File selection ──────────────────────────────────────────────────────────
+    useEffect(() => {
+    if (!currentChannel?.id || !isKloakSocketEnabled()) return;
+
+    let unsubscribe: (() => void) | null = null;
+    let cancelled = false;
+
+    void kloakSocket
+      .subscribe(`channel:${currentChannel.id}`, (event) => {
+        if (event.event !== "media.refresh") return;
+        const payload = event.payload && typeof event.payload === "object" ? (event.payload as Record<string, unknown>) : null;
+        const mediaId = typeof payload?.media_id === "string" ? payload.media_id : null;
+        const rpcName = typeof payload?.rpc === "string" ? payload.rpc : null;
+        if (rpcName === "delete_media_item" && mediaId) {
+          setSelectedMedia((current) => (current?.id === mediaId ? null : current));
+        }
+        void fetchMediaItems({ silent: true });
+      })
+      .then((cleanup) => {
+        if (cancelled) {
+          cleanup();
+          return;
+        }
+        unsubscribe = cleanup;
+      })
+      .catch((error) => {
+        console.warn("[MediaChannelArea] failed to subscribe to media socket refresh", error);
+      });
+
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, [currentChannel?.id, fetchMediaItems]);
+// ── File selection ──────────────────────────────────────────────────────────
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -483,7 +531,7 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
         return;
       }
 
-      const { error: insertError } = await (supabase.rpc as any)("insert_media_item", {
+      const { error: insertError } = await runMediaRpc("insert_media_item", {
         _channel_id: currentChannel.id,
         _user_id: user.id,
         _title: title.trim() || null,
@@ -514,7 +562,7 @@ export const MediaChannelArea = ({ showHeader = true }: MediaChannelAreaProps) =
 
   const handleDelete = async (itemId: string) => {
     try {
-      const { error } = await (supabase.rpc as any)("delete_media_item", {
+      const { error } = await runMediaRpc("delete_media_item", {
         _item_id: itemId,
         _user_id: user?.id,
       });

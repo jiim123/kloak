@@ -72,6 +72,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
+import { isKloakSocketEnabled, kloakSocket } from "@/lib/kloakSocket";
 import { secureUpload } from "@/lib/storageUpload";
 import { handleError, showSuccess, showWarning } from "@/lib/errorHandler";
 import { formatMessageTimestamp } from "@/lib/format";
@@ -108,6 +109,20 @@ type ForumBroadcastRow = {
   channel_id?: string;
   thread_id?: string;
   message_id?: string;
+};
+type RpcResult = { data: unknown; error: { message?: string } | null };
+
+const runForumRpc = async (fn: string, params?: Record<string, unknown>): Promise<RpcResult> => {
+  if (isKloakSocketEnabled()) {
+    try {
+      const data = await kloakSocket.forumRpc(fn, params);
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: { message: error instanceof Error ? error.message : "Forum socket request failed" } };
+    }
+  }
+
+  return supabase.rpc(fn as never, params as never) as unknown as Promise<RpcResult>;
 };
 type BroadcastMutationPayload<T> = {
   op?: BroadcastMutationOp;
@@ -473,7 +488,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
   const refreshThreadSummary = useCallback(async (threadId: string) => {
     if (!threadId) return;
 
-    const { data: summaryData, error: summaryError } = await (supabase.rpc as any)("get_thread_summaries", {
+    const { data: summaryData, error: summaryError } = await runForumRpc("get_thread_summaries", {
       _thread_ids: [threadId],
     });
 
@@ -519,12 +534,12 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
       }
 
       const [{ data: messagesData, error: messagesError }, { data: summaryData, error: summaryError }] = await Promise.all([
-        supabase.rpc("get_messages_by_ids_secure", {
+        runForumRpc("get_messages_by_ids_secure", {
           _message_ids: [threadData.message_id],
           _user_id: user.id,
           _blocked_user_ids: [],
         }),
-        (supabase.rpc as any)("get_thread_summaries", {
+        runForumRpc("get_thread_summaries", {
           _thread_ids: [threadId],
         }),
       ]);
@@ -925,7 +940,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
         }
 
         // Fetch the original messages for each thread (single query)
-        const { data: messagesData, error: messagesError } = await supabase.rpc("get_messages_by_ids_secure", {
+        const { data: messagesData, error: messagesError } = await runForumRpc("get_messages_by_ids_secure", {
           _message_ids: messageIds,
           _user_id: user.id,
           _blocked_user_ids: [],
@@ -934,7 +949,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
         if (messagesError) throw messagesError;
 
         // Batch fetch message_count + last_activity + last_message_author for ALL threads (single RPC)
-        const { data: summaryData, error: summaryError } = await (supabase.rpc as any)("get_thread_summaries", {
+        const { data: summaryData, error: summaryError } = await runForumRpc("get_thread_summaries", {
           _thread_ids: threadIds,
         });
         if (summaryError) throw summaryError;
@@ -1036,7 +1051,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
       }
 
       const inFlight = (async () => {
-        const { data, error } = await supabase.rpc("get_thread_messages", {
+        const { data, error } = await runForumRpc("get_thread_messages", {
           _thread_id: threadId,
           _limit: 50,
         });
@@ -1211,7 +1226,43 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
     };
   }, [currentChannel, fetchThreads, refreshThreadById, refreshThreadSummary, removeThreadById]);
 
-  // Subscribe to thread messages for realtime updates
+  useEffect(() => {
+    if (!currentChannel?.id || !isKloakSocketEnabled()) return;
+
+    let unsubscribe: (() => void) | null = null;
+    let cancelled = false;
+
+    void kloakSocket
+      .subscribe(`channel:${currentChannel.id}`, (event) => {
+        if (event.event !== "forum.refresh") return;
+        const payload = event.payload && typeof event.payload === "object" ? (event.payload as Record<string, unknown>) : null;
+        const threadId = typeof payload?.thread_id === "string" ? payload.thread_id : null;
+        void fetchThreads();
+        if (threadId) {
+          void refreshThreadById(threadId);
+        }
+        const selectedThreadId = selectedThreadIdRef.current;
+        if (selectedThreadId && (!threadId || threadId === selectedThreadId)) {
+          void fetchThreadMessagesById(selectedThreadId);
+        }
+      })
+      .then((cleanup) => {
+        if (cancelled) {
+          cleanup();
+          return;
+        }
+        unsubscribe = cleanup;
+      })
+      .catch((error) => {
+        console.warn("[ForumChannelArea] failed to subscribe to forum socket refresh", error);
+      });
+
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, [currentChannel?.id, fetchThreadMessagesById, fetchThreads, refreshThreadById]);
+// Subscribe to thread messages for realtime updates
   useEffect(() => {
     if (!selectedThreadId || !currentChannel) return;
 
@@ -1557,7 +1608,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
       }
 
       // Then create a thread from that message
-      const { data: threadId, error } = await supabase.rpc("create_thread", {
+      const { data: threadId, error } = await runForumRpc("create_thread", {
         _message_id: message.id,
         _user_id: user.id,
       });
@@ -1626,7 +1677,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
         const finalContent = [content, ...attachmentUrls].filter(Boolean).join("\n").trim();
         const encodedFinalContent = await encodeCustomEmojisForTransport(finalContent);
 
-        const { data: result, error } = await supabase.rpc("send_thread_message", {
+        const { data: result, error } = await runForumRpc("send_thread_message", {
           _thread_id: threadId,
           _user_id: user.id,
           _content: encodedFinalContent,
@@ -1727,7 +1778,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
       if (!user) return;
 
       try {
-        const { data, error } = await (supabase.rpc as any)("update_forum_thread_moderation", {
+        const { data, error } = await runForumRpc("update_forum_thread_moderation", {
           _thread_id: threadId,
           _user_id: user.id,
           _is_pinned: typeof updates.is_pinned === "boolean" ? updates.is_pinned : null,
@@ -1864,7 +1915,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
       setIsSavingThreadPostEdit(true);
 
       try {
-        const { data, error } = await (supabase.rpc as any)("edit_forum_thread_post", {
+        const { data, error } = await runForumRpc("edit_forum_thread_post", {
           _thread_id: threadId,
           _title: title,
           _content: encodedBody,
@@ -1914,7 +1965,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
       try {
         const trimmed = editContent.trim();
         const encodedTrimmed = await encodeCustomEmojisForTransport(trimmed);
-        const { data, error } = await (supabase.rpc as any)("edit_thread_message", {
+        const { data, error } = await runForumRpc("edit_thread_message", {
           _message_id: messageId,
           _content: encodedTrimmed,
         });
@@ -1955,7 +2006,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
 
       try {
         // Use RPC function that handles permission checks (allows admins to delete)
-        const { data, error } = await supabase.rpc("delete_thread_message", {
+        const { data, error } = await runForumRpc("delete_thread_message", {
           _message_id: messageId,
           _user_id: user.id,
         });
@@ -2003,7 +2054,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
       if (!user) return;
 
       try {
-        const { error } = await (supabase.rpc as any)("delete_forum_thread", {
+        const { error } = await runForumRpc("delete_forum_thread", {
           _thread_id: thread.id,
           _user_id: user.id,
         });
@@ -2039,7 +2090,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
         const existingGroup = targetMessage?.reactions?.find((reaction) => reaction.emoji === emoji);
         const hasReacted = !!existingGroup?.users?.includes(user.id);
 
-        const { error } = await (supabase.rpc as any)("toggle_thread_reaction", {
+        const { error } = await runForumRpc("toggle_thread_reaction", {
           _message_id: messageId,
           _user_id: user.id,
           _emoji: emoji,
@@ -2164,7 +2215,7 @@ export const ForumChannelArea = ({ showHeader = true }: ForumChannelAreaProps) =
         return;
       }
 
-      const { data: result, error } = await supabase.rpc("send_thread_message", {
+      const { data: result, error } = await runForumRpc("send_thread_message", {
         _thread_id: threadId,
         _user_id: user.id,
         _content: finalContent,

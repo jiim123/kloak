@@ -256,6 +256,21 @@ export class KloakSocketClient {
     if (response.type !== "ack") throw new Error("Unexpected socket response");
     return response.data;
   }
+
+  async forumRpc(name: string, params?: Record<string, unknown>) {
+    await this.connect();
+    const response = await this.request({ type: "forum_rpc", name, params: params ?? {} });
+    if (response.type !== "ack") throw new Error("Unexpected socket response");
+    return response.data;
+  }
+
+  async mediaRpc(name: string, params?: Record<string, unknown>) {
+    await this.connect();
+    const response = await this.request({ type: "media_rpc", name, params: params ?? {} });
+    if (response.type !== "ack") throw new Error("Unexpected socket response");
+    return response.data;
+  }
+
   async ping() {
     await this.connect();
     const response = await this.request({ type: "ping" });

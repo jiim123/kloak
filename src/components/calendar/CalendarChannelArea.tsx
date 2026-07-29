@@ -363,6 +363,39 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
   );
 
   useEffect(() => {
+    if (!channelId || !isKloakSocketEnabled()) return;
+
+    let unsubscribe: (() => void) | null = null;
+    let cancelled = false;
+
+    const refreshCalendar = () => {
+      void loadEvents();
+      if (selectedEventId) {
+        void loadSelectedEvent();
+        void loadEventComments();
+        void loadEventReactions();
+      }
+    };
+
+    void kloakSocket.subscribe(`channel:${channelId}`, (event) => {
+      if (event.event !== "calendar.refresh") return;
+      refreshCalendar();
+    }).then((fn) => {
+      if (cancelled) {
+        fn();
+        return;
+      }
+      unsubscribe = fn;
+    }).catch((error) => {
+      console.warn("[Calendar] failed to subscribe to socket calendar refresh", error);
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, [channelId, loadEventComments, loadEventReactions, loadEvents, loadSelectedEvent, selectedEventId]);
+  useEffect(() => {
     if (!currentServer?.id) return;
     let cancelled = false;
     void fetchServerEmojis(currentServer.id)

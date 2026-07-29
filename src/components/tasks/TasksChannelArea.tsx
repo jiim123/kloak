@@ -729,6 +729,34 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
   }, [tasks]);
 
   useEffect(() => {
+    if (currentChannel?.type !== "tasks" || !channelId || !canViewTasks || !isKloakSocketEnabled()) return;
+
+    let unsubscribe: (() => void) | null = null;
+    let cancelled = false;
+
+    void kloakSocket
+      .subscribe(`channel:${channelId}`, (event) => {
+        if (event.event !== "task.refresh") return;
+        void loadBoard(false);
+      })
+      .then((cleanup) => {
+        if (cancelled) {
+          cleanup();
+          return;
+        }
+        unsubscribe = cleanup;
+      })
+      .catch((error) => {
+        console.warn("[TasksChannelArea] failed to subscribe to task socket refresh", error);
+      });
+
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, [canViewTasks, channelId, currentChannel?.type, loadBoard]);
+
+  useEffect(() => {
     if (currentChannel?.type !== "tasks" || !channelId || !canViewTasks) return;
 
     let hasSeenSubscribed = false;
