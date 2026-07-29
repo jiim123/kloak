@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { isSupabaseRealtimeConnected, recoverSupabaseConnection } from "@/integrations/supabase/client";
+import { isKloakSocketEnabled, kloakSocket } from "@/lib/kloakSocket";
 import { useAuthStore } from "@/stores/authStore";
 import { useMessageStore } from "@/stores/messageStore";
 import { useServerStore } from "@/stores/serverStore";
@@ -18,7 +19,11 @@ export function useNetworkRecovery() {
       if (!navigator.onLine) return;
 
       const force = options.force ?? false;
-      if (options.onlyIfDisconnected && isSupabaseRealtimeConnected()) return;
+      const usingKloakSocket = isKloakSocketEnabled();
+      if (options.onlyIfDisconnected) {
+        if (usingKloakSocket && kloakSocket.isOpen) return;
+        if (!usingKloakSocket && isSupabaseRealtimeConnected()) return;
+      }
 
       const now = Date.now();
       if (!force && now - lastRecoveryAtRef.current < RECOVERY_THROTTLE_MS) return;
@@ -27,9 +32,16 @@ export function useNetworkRecovery() {
       const userId = useAuthStore.getState().user?.id;
       if (!userId) return;
 
-      recoverSupabaseConnection(reason);
-      if (force) {
-        useSyncStore.getState().setConnectionStatus("reconnecting");
+      if (usingKloakSocket) {
+        void kloakSocket.connect().catch(() => undefined);
+        if (force && !kloakSocket.isOpen) {
+          useSyncStore.getState().setConnectionStatus("reconnecting");
+        }
+      } else {
+        recoverSupabaseConnection(reason);
+        if (force) {
+          useSyncStore.getState().setConnectionStatus("reconnecting");
+        }
       }
 
       const serverStore = useServerStore.getState();

@@ -27,6 +27,7 @@ import { getTopEmojis } from "@/lib/emojiRecents";
 import { fetchServerEmojis } from "@/lib/serverEmojis";
 import { openUserProfileModal, SIDE_ALIGNED_USER_PROFILE_POPOVER } from "@/lib/userProfilePopover";
 import { supabase } from "@/integrations/supabase/client";
+import { isKloakSocketEnabled, kloakSocket } from "@/lib/kloakSocket";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
@@ -117,6 +118,26 @@ type CalendarChannelAreaProps = {
   showHeader?: boolean;
 };
 
+type CalendarRpcResponse = { data: unknown; error: { message?: string } | null };
+
+const runCalendarRpc = async (fn: string, params: Record<string, unknown>): Promise<CalendarRpcResponse> => {
+  if (isKloakSocketEnabled()) {
+    try {
+      const data = fn === "get_calendar_events"
+        ? await kloakSocket.getCalendarEvents({
+            channelId: String(params._channel_id ?? ""),
+            startsAfter: String(params._starts_after ?? ""),
+            startsBefore: String(params._starts_before ?? ""),
+          })
+        : await kloakSocket.calendarRpc(fn, params);
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: { message: error instanceof Error ? error.message : "Calendar socket request failed" } };
+    }
+  }
+
+  return (supabase.rpc as any)(fn, params) as Promise<CalendarRpcResponse>;
+};
 type ToggleSettingProps = {
   title: string;
   description?: string;
@@ -432,7 +453,7 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
     try {
       const monthStart = startOfMonth(subMonths(visibleMonth, 1));
       const monthEnd = endOfMonth(addMonths(visibleMonth, 2));
-      const { data, error } = await (supabase.rpc as any)("get_calendar_events", {
+      const { data, error } = await runCalendarRpc("get_calendar_events", {
         _channel_id: channelId,
         _user_id: user.id,
         _starts_after: monthStart.toISOString(),
@@ -715,7 +736,7 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
         _restrict_roles: allowRsvps && restrictRoles,
         _allowed_role_ids: allowRsvps && restrictRoles ? allowedRoleIds : [],
       };
-      const { data, error } = await (supabase.rpc as any)(rpcName, payload);
+      const { data, error } = await runCalendarRpc(rpcName, payload);
       if (error) throw error;
       const result = data as { success?: boolean; error?: string } | null;
       if (result && result.success === false) throw new Error(result.error || `Failed to ${isEditingEvent ? "update" : "create"} event`);
@@ -746,7 +767,7 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
     }
     try {
       const status = nextStatus ?? (event.viewer_rsvp_status === "going" ? "none" : "going");
-      const { data, error } = await (supabase.rpc as any)("set_calendar_event_rsvp", {
+      const { data, error } = await runCalendarRpc("set_calendar_event_rsvp", {
         _event_id: event.id,
         _user_id: user.id,
         _status: status,
@@ -763,7 +784,7 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
     if (!selectedEventId || !user?.id) return;
     setIsEventLoading(true);
     try {
-      const { data, error } = await (supabase.rpc as any)("get_calendar_event_details", {
+      const { data, error } = await runCalendarRpc("get_calendar_event_details", {
         _event_id: selectedEventId,
         _user_id: user.id,
       });
@@ -885,7 +906,7 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
     if (!eventIdToDelete || !user?.id) return;
     setIsDeletingEvent(true);
     try {
-      const { data, error } = await (supabase.rpc as any)("delete_calendar_event", {
+      const { data, error } = await runCalendarRpc("delete_calendar_event", {
         _event_id: eventIdToDelete,
         _user_id: user.id,
       });
@@ -911,7 +932,7 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
     setEventReply("");
     try {
       const encodedContent = await encodeCustomEmojisForTransport(content);
-      const { error } = await (supabase.rpc as any)("insert_calendar_event_comment", {
+      const { error } = await runCalendarRpc("insert_calendar_event_comment", {
         _event_id: selectedEventId,
         _user_id: user.id,
         _content: encodedContent,
@@ -928,7 +949,7 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
   const handleDeleteEventComment = async (commentId: string) => {
     if (!user?.id) return;
     try {
-      const { error } = await (supabase.rpc as any)("delete_calendar_event_comment", {
+      const { error } = await runCalendarRpc("delete_calendar_event_comment", {
         _comment_id: commentId,
         _user_id: user.id,
       });
@@ -941,7 +962,7 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
   const handleEventReaction = async (emoji: string) => {
     if (!selectedEventId || !user?.id) return;
     try {
-      const { error } = await (supabase.rpc as any)("toggle_calendar_event_reaction", {
+      const { error } = await runCalendarRpc("toggle_calendar_event_reaction", {
         _event_id: selectedEventId,
         _user_id: user.id,
         _emoji: emoji,

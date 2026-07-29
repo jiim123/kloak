@@ -112,6 +112,11 @@ export function useConnectionStatus() {
 
   // Monitor Supabase realtime connection
   useEffect(() => {
+    if (isKloakSocketEnabled()) {
+      setIsRealtimeConnected(true);
+      return;
+    }
+
     sharedSubscriberCount += 1;
 
     const onRealtime = (connected: boolean) => setIsRealtimeConnected(connected);

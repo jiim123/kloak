@@ -6,6 +6,12 @@ type RpcOptions = {
   mfaSessionToken?: string | null;
 };
 
+type RestOptions = RpcOptions & {
+  method?: "GET" | "PATCH" | "DELETE";
+  body?: unknown;
+  prefer?: string;
+};
+
 export class SupabaseRpcError extends Error {
   status: number;
   payload: unknown;
@@ -48,6 +54,36 @@ export async function rpc<T>(name: string, body: Record<string, unknown>, opts: 
   return payload as T;
 }
 
+export async function rest<T>(path: string, opts: RestOptions = {}): Promise<T> {
+  const headers: Record<string, string> = {
+    apikey: config.supabasePublishableKey,
+    authorization: `Bearer ${config.supabasePublishableKey}`,
+  };
+
+  if (opts.keyHash) headers["x-key-hash"] = opts.keyHash;
+  if (opts.mfaSessionToken) headers["x-mfa-session"] = opts.mfaSessionToken;
+  if (opts.prefer) headers.prefer = opts.prefer;
+
+  const init: RequestInit = {
+    method: opts.method ?? "GET",
+    headers,
+  };
+
+  if (opts.body !== undefined) {
+    headers["content-type"] = "application/json";
+    init.body = JSON.stringify(opts.body);
+  }
+
+  const response = await fetch(`${config.supabaseUrl}/rest/v1/${path}`, init);
+  const text = await response.text();
+  const payload = text ? safeJson(text) : null;
+
+  if (!response.ok) {
+    throw new SupabaseRpcError(response.status, payload);
+  }
+
+  return payload as T;
+}
 export async function authenticate(keyHash: string, mfaSessionToken?: string | null): Promise<AuthUser> {
   const user = await rpc<Record<string, unknown> | null>(
     "restore_user_session",

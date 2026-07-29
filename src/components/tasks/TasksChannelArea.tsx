@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { isKloakSocketEnabled, kloakSocket } from "@/lib/kloakSocket";
 import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
@@ -190,8 +191,25 @@ type RpcInvoker = (
   params?: Record<string, unknown>,
 ) => Promise<{ data: unknown; error: { message?: string } | null }>;
 
-const runRpc: RpcInvoker = (fn, params) =>
-  supabase.rpc(fn as never, params as never) as unknown as Promise<{ data: unknown; error: { message?: string } | null }>;
+const runRpc: RpcInvoker = async (fn, params) => {
+  if (isKloakSocketEnabled()) {
+    try {
+      const data = fn === "get_channel_tasks"
+        ? await kloakSocket.getChannelTasks({
+            channelId: String(params?._channel_id ?? ""),
+            statusFilter: (params?._status_filter as string | null | undefined) ?? null,
+            sortBy: (params?._sort_by as string | undefined) ?? "position",
+            sortOrder: (params?._sort_order as "asc" | "desc" | undefined) ?? "asc",
+          })
+        : await kloakSocket.taskRpc(fn, params);
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: { message: error instanceof Error ? error.message : "Task socket request failed" } };
+    }
+  }
+
+  return supabase.rpc(fn as never, params as never) as unknown as Promise<{ data: unknown; error: { message?: string } | null }>;
+};
 
 interface FlattenedTask {
   task: Task;
@@ -885,7 +903,7 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
     if (!user) return;
 
     try {
-      const { data, error } = await supabase.rpc("delete_task", {
+      const { data, error } = await runRpc("delete_task", {
         _task_id: task.id,
         _user_id: user.id,
       });

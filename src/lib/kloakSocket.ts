@@ -194,6 +194,68 @@ export class KloakSocketClient {
     return response.data;
   }
 
+  async getNotifications(input: { limit?: number } = {}) {
+    await this.connect();
+    const response = await this.request({ type: "get_notifications", limit: input.limit ?? 50 });
+    if (response.type !== "ack") throw new Error("Unexpected socket response");
+    return response.data;
+  }
+
+  async markNotificationRead(notificationId: string) {
+    await this.connect();
+    const response = await this.request({ type: "mark_notification_read", notificationId });
+    if (response.type !== "ack") throw new Error("Unexpected socket response");
+    return response.data;
+  }
+
+  async markAllNotificationsRead() {
+    await this.connect();
+    const response = await this.request({ type: "mark_all_notifications_read" });
+    if (response.type !== "ack") throw new Error("Unexpected socket response");
+    return response.data;
+  }
+
+  async deleteNotification(notificationId: string) {
+    await this.connect();
+    const response = await this.request({ type: "delete_notification", notificationId });
+    if (response.type !== "ack") throw new Error("Unexpected socket response");
+    return response.data;
+  }
+
+  async clearNotifications() {
+    await this.connect();
+    const response = await this.request({ type: "clear_notifications" });
+    if (response.type !== "ack") throw new Error("Unexpected socket response");
+    return response.data;
+  }
+
+  async getChannelTasks(input: { channelId: string; statusFilter?: string | null; sortBy?: string; sortOrder?: "asc" | "desc" }) {
+    await this.connect();
+    const response = await this.request({ type: "get_channel_tasks", ...input });
+    if (response.type !== "ack") throw new Error("Unexpected socket response");
+    return response.data;
+  }
+
+  async taskRpc(name: string, params?: Record<string, unknown>) {
+    await this.connect();
+    const response = await this.request({ type: "task_rpc", name, params: params ?? {} });
+    if (response.type !== "ack") throw new Error("Unexpected socket response");
+    return response.data;
+  }
+
+  async getCalendarEvents(input: { channelId: string; startsAfter: string; startsBefore: string }) {
+    await this.connect();
+    const response = await this.request({ type: "get_calendar_events", ...input });
+    if (response.type !== "ack") throw new Error("Unexpected socket response");
+    return response.data;
+  }
+
+  async calendarRpc(name: string, params?: Record<string, unknown>) {
+    await this.connect();
+    const response = await this.request({ type: "calendar_rpc", name, params: params ?? {} });
+    if (response.type !== "ack") throw new Error("Unexpected socket response");
+    return response.data;
+  }
   async ping() {
     await this.connect();
     const response = await this.request({ type: "ping" });

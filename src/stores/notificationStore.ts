@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase, getKeyHashAsync } from '@/integrations/supabase/client';
-import type { Notification, NotificationType } from '@/types';
+import { isKloakSocketEnabled, kloakSocket } from '@/lib/kloakSocket';
+import type { Notification } from '@/types';
 
 interface NotificationState {
   notifications: Notification[];
@@ -20,6 +21,8 @@ interface NotificationState {
   removeNotification: (notificationId: string) => void;
 }
 
+const normalizeNotifications = (data: unknown): Notification[] => (Array.isArray(data) ? (data as Notification[]) : []);
+
 export const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
   unreadCount: 0,
@@ -28,6 +31,13 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   fetchNotifications: async (userId: string) => {
     set({ isLoading: true });
     try {
+      if (isKloakSocketEnabled()) {
+        const notifications = normalizeNotifications(await kloakSocket.getNotifications({ limit: 50 }));
+        const unreadCount = notifications.filter(n => !n.is_read).length;
+        set({ notifications, unreadCount, isLoading: false });
+        return;
+      }
+
       // Wait for auth key hash before querying (prevents 401/RLS errors during init)
       const kh = await getKeyHashAsync();
       if (!kh) {
@@ -56,12 +66,16 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
   markAsRead: async (notificationId: string) => {
     try {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('id', notificationId);
+      if (isKloakSocketEnabled()) {
+        await kloakSocket.markNotificationRead(notificationId);
+      } else {
+        const { error } = await supabase
+          .from('notifications')
+          .update({ is_read: true })
+          .eq('id', notificationId);
 
-      if (error) throw error;
+        if (error) throw error;
+      }
 
       set((state) => ({
         notifications: state.notifications.map(n =>
@@ -76,13 +90,17 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
   markAllAsRead: async (userId: string) => {
     try {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('user_id', userId)
-        .eq('is_read', false);
+      if (isKloakSocketEnabled()) {
+        await kloakSocket.markAllNotificationsRead();
+      } else {
+        const { error } = await supabase
+          .from('notifications')
+          .update({ is_read: true })
+          .eq('user_id', userId)
+          .eq('is_read', false);
 
-      if (error) throw error;
+        if (error) throw error;
+      }
 
       set((state) => ({
         notifications: state.notifications.map(n => ({ ...n, is_read: true })),
@@ -95,12 +113,16 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
   clearAllNotifications: async (userId: string) => {
     try {
-      const { error } = await supabase
-        .from('notifications')
-        .delete()
-        .eq('user_id', userId);
+      if (isKloakSocketEnabled()) {
+        await kloakSocket.clearNotifications();
+      } else {
+        const { error } = await supabase
+          .from('notifications')
+          .delete()
+          .eq('user_id', userId);
 
-      if (error) throw error;
+        if (error) throw error;
+      }
 
       set({ notifications: [], unreadCount: 0 });
     } catch (error) {
@@ -110,12 +132,16 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
   deleteNotification: async (notificationId: string) => {
     try {
-      const { error } = await supabase
-        .from('notifications')
-        .delete()
-        .eq('id', notificationId);
+      if (isKloakSocketEnabled()) {
+        await kloakSocket.deleteNotification(notificationId);
+      } else {
+        const { error } = await supabase
+          .from('notifications')
+          .delete()
+          .eq('id', notificationId);
 
-      if (error) throw error;
+        if (error) throw error;
+      }
 
       set((state) => {
         const notification = state.notifications.find(n => n.id === notificationId);

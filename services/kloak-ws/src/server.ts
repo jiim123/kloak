@@ -5,7 +5,7 @@ import type { RawData } from "ws";
 import { WebSocketServer } from "ws";
 import { config } from "./config.js";
 import { SocketHub, type SocketContext } from "./hub.js";
-import { authenticate, canSubscribeChannel, canSubscribeDm, rpc, SupabaseRpcError } from "./supabase.js";
+import { authenticate, canSubscribeChannel, canSubscribeDm, rest, rpc, SupabaseRpcError } from "./supabase.js";
 import { clientMessageSchema, type ClientMessage } from "./protocol.js";
 
 const hub = new SocketHub();
@@ -203,6 +203,33 @@ async function handleMessage(socket: SocketContext, message: ClientMessage) {
     case "get_dm_unread_counts":
       await getDmUnreadCounts(socket, message);
       return;
+    case "get_notifications":
+      await getNotifications(socket, message);
+      return;
+    case "mark_notification_read":
+      await markNotificationRead(socket, message);
+      return;
+    case "mark_all_notifications_read":
+      await markAllNotificationsRead(socket, message);
+      return;
+    case "delete_notification":
+      await deleteNotification(socket, message);
+      return;
+    case "clear_notifications":
+      await clearNotifications(socket, message);
+      return;
+    case "get_channel_tasks":
+      await getChannelTasks(socket, message);
+      return;
+    case "task_rpc":
+      await taskRpc(socket, message);
+      return;
+    case "get_calendar_events":
+      await getCalendarEvents(socket, message);
+      return;
+    case "calendar_rpc":
+      await calendarRpc(socket, message);
+      return;
     case "send_typing":
       await sendTyping(socket, message);
       return;
@@ -379,6 +406,131 @@ async function getDmUnreadCounts(socket: SocketContext, message: Extract<ClientM
   hub.send(socket, { type: "ack", requestId: message.requestId, ok: true, data });
 }
 
+type NotificationRow = Record<string, unknown> & { id?: string };
+
+async function getNotifications(socket: SocketContext, message: Extract<ClientMessage, { type: "get_notifications" }>) {
+  const userId = requireUser(socket);
+  const data = await rest<NotificationRow[]>(
+    `notifications?select=id,user_id,type,title,body,link,is_read,created_at&user_id=eq.${encodeURIComponent(userId)}&order=created_at.desc&limit=${message.limit}`,
+    socketRestOptions(socket),
+  );
+
+  hub.send(socket, { type: "ack", requestId: message.requestId, ok: true, data: Array.isArray(data) ? data : [] });
+}
+
+async function markNotificationRead(socket: SocketContext, message: Extract<ClientMessage, { type: "mark_notification_read" }>) {
+  const rows = await rest<NotificationRow[]>(
+    `notifications?id=eq.${encodeURIComponent(message.notificationId)}`,
+    {
+      ...socketRestOptions(socket),
+      method: "PATCH",
+      body: { is_read: true },
+      prefer: "return=representation",
+    },
+  );
+
+  publishNotificationRows(socket, "UPDATE", rows);
+  hub.send(socket, { type: "ack", requestId: message.requestId, ok: true, data: rows });
+}
+
+async function markAllNotificationsRead(socket: SocketContext, message: Extract<ClientMessage, { type: "mark_all_notifications_read" }>) {
+  const userId = requireUser(socket);
+  const rows = await rest<NotificationRow[]>(
+    `notifications?user_id=eq.${encodeURIComponent(userId)}&is_read=eq.false`,
+    {
+      ...socketRestOptions(socket),
+      method: "PATCH",
+      body: { is_read: true },
+      prefer: "return=representation",
+    },
+  );
+
+  publishNotificationRows(socket, "UPDATE", rows);
+  hub.send(socket, { type: "ack", requestId: message.requestId, ok: true, data: rows });
+}
+
+async function deleteNotification(socket: SocketContext, message: Extract<ClientMessage, { type: "delete_notification" }>) {
+  const rows = await rest<NotificationRow[]>(
+    `notifications?id=eq.${encodeURIComponent(message.notificationId)}`,
+    {
+      ...socketRestOptions(socket),
+      method: "DELETE",
+      prefer: "return=representation",
+    },
+  );
+
+  publishNotificationRows(socket, "DELETE", rows);
+  hub.send(socket, { type: "ack", requestId: message.requestId, ok: true, data: rows });
+}
+
+async function clearNotifications(socket: SocketContext, message: Extract<ClientMessage, { type: "clear_notifications" }>) {
+  const userId = requireUser(socket);
+  const rows = await rest<NotificationRow[]>(
+    `notifications?user_id=eq.${encodeURIComponent(userId)}`,
+    {
+      ...socketRestOptions(socket),
+      method: "DELETE",
+      prefer: "return=representation",
+    },
+  );
+
+  publishNotificationRows(socket, "DELETE", rows);
+  hub.send(socket, { type: "ack", requestId: message.requestId, ok: true, data: rows });
+}
+
+async function getChannelTasks(socket: SocketContext, message: Extract<ClientMessage, { type: "get_channel_tasks" }>) {
+  const userId = requireUser(socket);
+  const data = await callAsSocketUser(socket, "get_channel_tasks", {
+    _channel_id: message.channelId,
+    _user_id: userId,
+    _status_filter: message.statusFilter ?? null,
+    _sort_by: message.sortBy ?? "position",
+    _sort_order: message.sortOrder ?? "asc",
+  });
+
+  hub.send(socket, { type: "ack", requestId: message.requestId, ok: true, data });
+}
+
+async function taskRpc(socket: SocketContext, message: Extract<ClientMessage, { type: "task_rpc" }>) {
+  const userId = requireUser(socket);
+  const data = await callAsSocketUser(socket, message.name, {
+    ...(message.params ?? {}),
+    _user_id: userId,
+  });
+
+  hub.send(socket, { type: "ack", requestId: message.requestId, ok: true, data });
+}
+
+async function getCalendarEvents(socket: SocketContext, message: Extract<ClientMessage, { type: "get_calendar_events" }>) {
+  const userId = requireUser(socket);
+  const data = await callAsSocketUser(socket, "get_calendar_events", {
+    _channel_id: message.channelId,
+    _user_id: userId,
+    _starts_after: message.startsAfter,
+    _starts_before: message.startsBefore,
+  });
+
+  hub.send(socket, { type: "ack", requestId: message.requestId, ok: true, data });
+}
+
+async function calendarRpc(socket: SocketContext, message: Extract<ClientMessage, { type: "calendar_rpc" }>) {
+  const userId = requireUser(socket);
+  const data = await callAsSocketUser(socket, message.name, {
+    ...(message.params ?? {}),
+    _user_id: userId,
+  });
+
+  hub.send(socket, { type: "ack", requestId: message.requestId, ok: true, data });
+}
+
+function publishNotificationRows(socket: SocketContext, op: "UPDATE" | "DELETE", rows: unknown) {
+  const userId = socket.userId;
+  if (!userId || !Array.isArray(rows)) return;
+  for (const row of rows) {
+    if (!row || typeof row !== "object") continue;
+    hub.publish(`user:${userId}`, "notifications", op === "DELETE" ? { op, old: row } : { op, new: row });
+  }
+}
 async function sendTyping(socket: SocketContext, message: Extract<ClientMessage, { type: "send_typing" }>) {
   const userId = requireUser(socket);
   const allowed = await canSubscribeChannel(message.channelId, userId, socketRpcOptions(socket));
@@ -478,6 +630,10 @@ function socketRpcOptions(socket: SocketContext) {
     keyHash: socket.keyHash ?? undefined,
     mfaSessionToken: socket.mfaSessionToken,
   };
+}
+
+function socketRestOptions(socket: SocketContext) {
+  return socketRpcOptions(socket);
 }
 
 function requireUser(socket: SocketContext) {

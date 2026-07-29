@@ -60,6 +60,7 @@ import { cn } from "@/lib/utils";
 import { useDMStore } from "@/stores/dmStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { supabase } from "@/integrations/supabase/client";
+import { isKloakSocketEnabled } from "@/lib/kloakSocket";
 import {
   usePresence,
   useRealtimeFriendships,
@@ -314,10 +315,12 @@ const AppLayout = () => {
   // Handle native notification click deep-links in Tauri.
   useTauriNotificationActions();
 
-  // Ensure Supabase Realtime websocket is connected early (helps avoid TIMED_OUT joins in some envs).
+  // Ensure Supabase Realtime websocket is connected early when it is the active realtime transport.
   useEffect(() => {
+    if (isKloakSocketEnabled()) return;
+
     try {
-      (supabase as any).realtime?.connect?.();
+      supabase.realtime.connect();
     } catch {
       // ignore
     }

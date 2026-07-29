@@ -3,6 +3,7 @@ import { z } from "zod";
 const uuid = z.string().uuid();
 const requestId = z.string().min(1).max(128).optional();
 const topic = z.string().regex(/^(user|channel|dm):[0-9a-fA-F-]{36}$/);
+const rpcParams = z.record(z.unknown()).optional();
 
 const base = z.object({
   type: z.string(),
@@ -70,6 +71,56 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
   }),
   base.extend({
     type: z.literal("get_dm_unread_counts"),
+  }),
+  base.extend({
+    type: z.literal("get_notifications"),
+    limit: z.number().int().min(1).max(100).default(50),
+  }),
+  base.extend({
+    type: z.literal("mark_notification_read"),
+    notificationId: uuid,
+  }),
+  base.extend({
+    type: z.literal("mark_all_notifications_read"),
+  }),
+  base.extend({
+    type: z.literal("delete_notification"),
+    notificationId: uuid,
+  }),
+  base.extend({
+    type: z.literal("clear_notifications"),
+  }),
+  base.extend({
+    type: z.literal("get_channel_tasks"),
+    channelId: uuid,
+    statusFilter: z.string().max(50).optional().nullable(),
+    sortBy: z.string().max(50).optional(),
+    sortOrder: z.enum(["asc", "desc"]).optional(),
+  }),
+  base.extend({
+    type: z.literal("task_rpc"),
+    name: z.enum(["get_task_secure", "create_task", "update_task", "delete_task", "move_task", "assign_task_users", "unassign_task_users"]),
+    params: rpcParams,
+  }),
+  base.extend({
+    type: z.literal("get_calendar_events"),
+    channelId: uuid,
+    startsAfter: z.string().datetime(),
+    startsBefore: z.string().datetime(),
+  }),
+  base.extend({
+    type: z.literal("calendar_rpc"),
+    name: z.enum([
+      "get_calendar_event_details",
+      "create_calendar_event",
+      "update_calendar_event",
+      "delete_calendar_event",
+      "set_calendar_event_rsvp",
+      "insert_calendar_event_comment",
+      "delete_calendar_event_comment",
+      "toggle_calendar_event_reaction",
+    ]),
+    params: rpcParams,
   }),
   base.extend({
     type: z.literal("send_typing"),
