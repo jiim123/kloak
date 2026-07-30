@@ -536,6 +536,17 @@ async function resolveTaskRefreshTarget(socket: SocketContext, name: string, par
 
 async function getTaskChannelId(socket: SocketContext, taskId: string) {
   try {
+    const task = await callAsSocketUser<Record<string, unknown> | null>(socket, "get_task_secure", {
+      _task_id: taskId,
+      _user_id: requireUser(socket),
+    });
+    const channelId = task?.channel_id;
+    if (typeof channelId === "string") return channelId;
+  } catch (error) {
+    console.warn("[kloak-ws] failed to resolve task channel via RPC", { taskId, error });
+  }
+
+  try {
     const rows = await rest<Array<{ channel_id?: unknown }>>(
       `tasks?select=channel_id&id=eq.${encodeURIComponent(taskId)}&limit=1`,
       socketRestOptions(socket),

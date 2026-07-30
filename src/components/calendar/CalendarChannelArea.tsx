@@ -363,39 +363,6 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
   );
 
   useEffect(() => {
-    if (!channelId || !isKloakSocketEnabled()) return;
-
-    let unsubscribe: (() => void) | null = null;
-    let cancelled = false;
-
-    const refreshCalendar = () => {
-      void loadEvents();
-      if (selectedEventId) {
-        void loadSelectedEvent();
-        void loadEventComments();
-        void loadEventReactions();
-      }
-    };
-
-    void kloakSocket.subscribe(`channel:${channelId}`, (event) => {
-      if (event.event !== "calendar.refresh") return;
-      refreshCalendar();
-    }).then((fn) => {
-      if (cancelled) {
-        fn();
-        return;
-      }
-      unsubscribe = fn;
-    }).catch((error) => {
-      console.warn("[Calendar] failed to subscribe to socket calendar refresh", error);
-    });
-
-    return () => {
-      cancelled = true;
-      unsubscribe?.();
-    };
-  }, [channelId, loadEventComments, loadEventReactions, loadEvents, loadSelectedEvent, selectedEventId]);
-  useEffect(() => {
     if (!currentServer?.id) return;
     let cancelled = false;
     void fetchServerEmojis(currentServer.id)
@@ -551,10 +518,17 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
       const event = payload.event ?? payload.new;
       const deleted = payload.old ?? payload.new;
       if (payload.op === "DELETE") {
-        if (deleted?.id) removeCalendarEvent(deleted.id);
-        return;
+        if (deleted?.id) {
+          removeCalendarEvent(deleted.id);
+          return true;
+        }
+        return false;
       }
-      if (event?.id) upsertCalendarEvent(event);
+      if (event?.id) {
+        upsertCalendarEvent(event);
+        return true;
+      }
+      return false;
     },
     [removeCalendarEvent, upsertCalendarEvent],
   );
@@ -564,7 +538,7 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
       const next = payload.new;
       const previous = payload.old;
       const eventId = payload.event_id ?? next?.event_id ?? previous?.event_id;
-      if (!eventId) return;
+      if (!eventId) return false;
 
       const goingDelta = (next?.status === "going" ? 1 : 0) - (previous?.status === "going" ? 1 : 0);
       const statusForViewer = next?.user_id === user?.id ? next.status : previous?.user_id === user?.id ? null : undefined;
@@ -596,6 +570,7 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
           ...(statusForViewer !== undefined ? { viewer_rsvp_status: statusForViewer } : {}),
         };
       });
+      return true;
     },
     [upsertCalendarEvent, user?.id],
   );
@@ -604,17 +579,17 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
     const comment = payload.new;
     const deleted = payload.old;
     const eventId = payload.event_id ?? comment?.event_id ?? deleted?.event_id;
-    if (!eventId) return;
+    if (!eventId) return false;
 
     if (payload.op === "DELETE") {
       if (deleted?.id) setEventComments((current) => current.filter((entry) => entry.id !== deleted.id));
       setSelectedEvent((current) =>
         current?.id === eventId ? { ...current, comment_count: Math.max(0, current.comment_count - 1) } : current,
       );
-      return;
+      return true;
     }
 
-    if (!comment?.id) return;
+    if (!comment?.id) return false;
     setEventComments((current) => {
       const exists = current.some((entry) => entry.id === comment.id);
       const next = exists
@@ -627,12 +602,13 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
         current?.id === eventId ? { ...current, comment_count: current.comment_count + 1 } : current,
       );
     }
+    return true;
   }, []);
 
   const applyCalendarReactionBroadcast = useCallback(
     (payload: BroadcastMutationPayload<CalendarEventReactionRow>) => {
       const reaction = payload.op === "DELETE" ? payload.old : payload.new;
-      if (!reaction?.emoji || !reaction.user_id) return;
+      if (!reaction?.emoji || !reaction.user_id) return false;
 
       setEventReactions((current) => {
         const groups = current.map((group) => ({ ...group, users: [...group.users] }));
@@ -664,6 +640,7 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
         };
         return groups;
       });
+      return true;
     },
     [user?.id],
   );
@@ -879,6 +856,43 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
   }, [selectedEventId, user?.id]);
 
   useEffect(() => {
+    if (!channelId || !isKloakSocketEnabled()) return;
+
+    let unsubscribe: (() => void) | null = null;
+    let cancelled = false;
+
+    const refreshCalendar = () => {
+      void loadEvents();
+      if (selectedEventId) {
+        void loadSelectedEvent();
+        void loadEventComments();
+        void loadEventReactions();
+      }
+    };
+
+    void kloakSocket
+      .subscribe(`channel:${channelId}`, (event) => {
+        if (event.event !== "calendar.refresh") return;
+        refreshCalendar();
+      })
+      .then((fn) => {
+        if (cancelled) {
+          fn();
+          return;
+        }
+        unsubscribe = fn;
+      })
+      .catch((error) => {
+        console.warn("[Calendar] failed to subscribe to socket calendar refresh", error);
+      });
+
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, [channelId, loadEventComments, loadEventReactions, loadEvents, loadSelectedEvent, selectedEventId]);
+
+  useEffect(() => {
     if (!selectedEventId) return;
     void loadSelectedEvent();
     void loadEventComments();
@@ -907,37 +921,57 @@ export const CalendarChannelArea = ({ showHeader = true }: CalendarChannelAreaPr
     const channel = supabase
       .channel(`calendar-events:${channelId}`, { config: { broadcast: { self: true } } })
       .on("broadcast", { event: "calendar_events" }, ({ payload }) => {
-        applyCalendarEventBroadcast(payload as BroadcastMutationPayload<CalendarEvent>);
+        const applied = applyCalendarEventBroadcast(payload as BroadcastMutationPayload<CalendarEvent>);
+        if (!applied) void loadEvents();
       })
       .on("broadcast", { event: "calendar_event_rsvps" }, ({ payload }) => {
-        applyCalendarRsvpBroadcast(payload as BroadcastMutationPayload<CalendarEventRsvpRow>);
+        const applied = applyCalendarRsvpBroadcast(payload as BroadcastMutationPayload<CalendarEventRsvpRow>);
+        if (!applied) void loadEvents();
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [channelId, applyCalendarEventBroadcast, applyCalendarRsvpBroadcast]);
+  }, [channelId, applyCalendarEventBroadcast, applyCalendarRsvpBroadcast, loadEvents]);
 
   useEffect(() => {
     if (!selectedEventId) return;
     const channel = supabase
       .channel(`calendar-event:${selectedEventId}`, { config: { broadcast: { self: true } } })
       .on("broadcast", { event: "calendar_event_rsvps" }, ({ payload }) => {
-        applyCalendarRsvpBroadcast(payload as BroadcastMutationPayload<CalendarEventRsvpRow>);
+        const applied = applyCalendarRsvpBroadcast(payload as BroadcastMutationPayload<CalendarEventRsvpRow>);
+        if (!applied) {
+          void loadSelectedEvent();
+          void loadEvents();
+        }
       })
       .on("broadcast", { event: "calendar_event_comments" }, ({ payload }) => {
-        applyCalendarCommentBroadcast(payload as BroadcastMutationPayload<CalendarEventComment>);
+        const applied = applyCalendarCommentBroadcast(payload as BroadcastMutationPayload<CalendarEventComment>);
+        if (!applied) {
+          void loadSelectedEvent();
+          void loadEventComments();
+        }
       })
       .on("broadcast", { event: "calendar_event_reactions" }, ({ payload }) => {
-        applyCalendarReactionBroadcast(payload as BroadcastMutationPayload<CalendarEventReactionRow>);
+        const applied = applyCalendarReactionBroadcast(payload as BroadcastMutationPayload<CalendarEventReactionRow>);
+        if (!applied) void loadEventReactions();
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [selectedEventId, applyCalendarCommentBroadcast, applyCalendarReactionBroadcast, applyCalendarRsvpBroadcast]);
+  }, [
+    selectedEventId,
+    applyCalendarCommentBroadcast,
+    applyCalendarReactionBroadcast,
+    applyCalendarRsvpBroadcast,
+    loadEventComments,
+    loadEventReactions,
+    loadEvents,
+    loadSelectedEvent,
+  ]);
 
   const openEvent = useCallback((eventId: string) => {
     setSelectedEventId(eventId);

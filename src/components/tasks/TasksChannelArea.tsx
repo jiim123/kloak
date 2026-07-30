@@ -737,6 +737,20 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
     void kloakSocket
       .subscribe(`channel:${channelId}`, (event) => {
         if (event.event !== "task.refresh") return;
+        const payload = event.payload && typeof event.payload === "object" ? (event.payload as Record<string, unknown>) : null;
+        const taskId = typeof payload?.task_id === "string" ? payload.task_id : null;
+        const rpcName = typeof payload?.rpc === "string" ? payload.rpc : null;
+
+        if (rpcName === "delete_task" && taskId) {
+          commitTasks(tasksRef.current.filter((task) => task.id !== taskId));
+          return;
+        }
+
+        if (taskId) {
+          void refreshTaskById(taskId);
+          return;
+        }
+
         void loadBoard(false);
       })
       .then((cleanup) => {
@@ -754,7 +768,7 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
       cancelled = true;
       unsubscribe?.();
     };
-  }, [canViewTasks, channelId, currentChannel?.type, loadBoard]);
+  }, [canViewTasks, channelId, commitTasks, currentChannel?.type, loadBoard, refreshTaskById]);
 
   useEffect(() => {
     if (currentChannel?.type !== "tasks" || !channelId || !canViewTasks) return;
@@ -778,10 +792,16 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
           return;
         }
 
-        // Ignore legacy thin payloads; expanded broadcasts carry `task`.
+        if (taskId) {
+          void refreshTaskById(taskId);
+          return;
+        }
+
+        void loadBoard(false);
       })
       .on("broadcast", { event: "task_assignees" }, ({ payload }) => {
         const record = payload && typeof payload === "object" ? payload as Record<string, unknown> : null;
+        const taskId = typeof record?.task_id === "string" ? record.task_id : null;
         const taskPayload = record?.task && typeof record.task === "object" ? record.task : null;
 
         if (taskPayload) {
@@ -789,7 +809,12 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
           return;
         }
 
-        // Ignore legacy thin payloads; expanded broadcasts carry `task`.
+        if (taskId) {
+          void refreshTaskById(taskId);
+          return;
+        }
+
+        void loadBoard(false);
       })
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
@@ -802,7 +827,7 @@ export const TasksChannelArea = ({ showHeader = true }: TasksChannelAreaProps) =
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [canViewTasks, channelId, commitTasks, currentChannel?.type, upsertTaskLocally]);
+  }, [canViewTasks, channelId, commitTasks, currentChannel?.type, loadBoard, refreshTaskById, upsertTaskLocally]);
 
   const resetInlineCreate = () => {
     setInlineCreateOpen(false);
