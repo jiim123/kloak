@@ -1597,6 +1597,142 @@ export const ServerSettingsModal = () => {
 
   const displayIconUrl = iconRemoved ? null : iconPreview || server.icon_url;
   const displayBannerUrl = bannerRemoved ? null : bannerPreview || server.banner_url;
+
+  const renderServerBrandPreview = (variant: "mobile" | "desktop") => {
+    const isMobilePreview = variant === "mobile";
+    const bannerHeightClass = isMobilePreview ? "h-28" : "h-32 sm:h-40";
+    const iconSizeClass = isMobilePreview ? "w-16 h-16" : "w-16 h-16 sm:w-20 sm:h-20";
+    const iconOverlapClass = isMobilePreview ? "-mt-8" : "-mt-8 sm:-mt-10";
+
+    return (
+      <div className="overflow-hidden rounded-xl border border-border/30 bg-secondary/30 backdrop-blur-sm">
+        <div className="group/banner relative">
+          <div
+            onClick={() => canManageServer && !isUploadingBanner && bannerInputRef.current?.click()}
+            className={cn(
+              "relative flex w-full items-center justify-center overflow-hidden bg-secondary/50 transition-colors",
+              bannerHeightClass,
+              canManageServer && !isUploadingBanner && "cursor-pointer hover:bg-secondary/60",
+            )}
+          >
+            {displayBannerUrl ? (
+              <img src={displayBannerUrl} alt="Server banner" className="absolute inset-0 h-full w-full object-cover" />
+            ) : (
+              <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                <Upload className="w-5 h-5" />
+                <span className="text-xs">{canManageServer ? "Upload server banner" : "No server banner"}</span>
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-black/5 to-black/45" />
+            {isUploadingBanner && (
+              <div className="absolute inset-0 flex items-center justify-center bg-background/60">
+                <Loader2 className="w-5 h-5 animate-spin text-primary" />
+              </div>
+            )}
+          </div>
+
+          <div className="pointer-events-none absolute left-1/2 top-1/2 w-fit max-w-[calc(100%-1.5rem)] -translate-x-1/2 -translate-y-1/2 rounded-md bg-black/55 px-2.5 py-1 text-center text-[11px] font-medium text-white/85 opacity-0 shadow-sm backdrop-blur-sm transition-opacity group-hover/banner:opacity-100 group-focus-within/banner:opacity-100">
+            {canManageServer ? "960x540 banner recommended • Shown in server list" : "Shown in server list"}
+          </div>
+
+          {canManageServer && (
+            <div className="absolute right-2 top-2 flex items-center gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                rounded="lg"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!isUploadingBanner) bannerInputRef.current?.click();
+                }}
+                disabled={isUploadingBanner}
+                className="h-8 bg-background/85 px-2.5 text-xs shadow-sm backdrop-blur hover:bg-background"
+              >
+                {isUploadingBanner ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Upload className="mr-1.5 h-3.5 w-3.5" />}
+                {displayBannerUrl ? "Change Banner" : "Upload Banner"}
+              </Button>
+              {displayBannerUrl && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (bannerPreview) {
+                      clearBanner();
+                    } else {
+                      handleRemoveBanner();
+                    }
+                  }}
+                  disabled={isUploadingBanner}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 disabled:opacity-50"
+                  title="Remove banner"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="px-3 pb-3 sm:px-4 sm:pb-4">
+          <div className={cn("flex min-w-0 items-end gap-3 sm:gap-4", iconOverlapClass)}>
+            <div className="relative shrink-0">
+              <div
+                onClick={() => canManageServer && !isUploadingIcon && fileInputRef.current?.click()}
+                className={cn(
+                  "relative flex items-center justify-center overflow-hidden rounded-xl border-4 border-background bg-secondary text-muted-foreground shadow-lg transition-colors",
+                  iconSizeClass,
+                  canManageServer && !isUploadingIcon && "cursor-pointer hover:border-primary/60",
+                )}
+                title={canManageServer ? "Change server icon" : "Server icon"}
+              >
+                {displayIconUrl ? (
+                  <img src={displayIconUrl} alt={server.name} className="absolute inset-0 h-full w-full object-cover" />
+                ) : (
+                  <span className="text-base font-bold">{getServerInitials(server.name)}</span>
+                )}
+                {canManageServer && !isUploadingIcon && (
+                  <div className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-tl-lg bg-background/90 text-foreground">
+                    <Pencil className="h-3 w-3" />
+                  </div>
+                )}
+                {isUploadingIcon && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/60">
+                    <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                  </div>
+                )}
+              </div>
+              {canManageServer && displayIconUrl && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (iconPreview) {
+                      clearIcon();
+                    } else {
+                      handleRemoveIcon();
+                    }
+                  }}
+                  disabled={isUploadingIcon}
+                  className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
+                  title="Remove icon"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              )}
+            </div>
+
+            <div className="mb-1 min-w-0">
+              <p className="truncate text-sm font-medium">{server.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {canManageServer ? "Click icon to upload - 512x512 recommended" : "512x512 recommended"}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
   const overviewAdvancedSettings = (
     <>
       {canManageServer && (
@@ -1956,102 +2092,7 @@ export const ServerSettingsModal = () => {
             <div className="overflow-y-auto p-5" style={{ maxHeight: "calc(100vh - 240px)" }}>
               {activeTab === "overview" && (
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                  {/* Server Icon Section */}
-                  <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3">
-                    <div className="flex items-center gap-3">
-                      <div className="relative">
-                        <div
-                          onClick={() => canManageServer && !isUploadingIcon && fileInputRef.current?.click()}
-                          className={cn(
-                            "w-16 h-16 rounded-xl bg-secondary/50 flex items-center justify-center border border-border/60 transition-colors flex-shrink-0 overflow-hidden relative",
-                            canManageServer && !isUploadingIcon && "cursor-pointer hover:border-primary/50",
-                          )}
-                        >
-                          {displayIconUrl ? (
-                            <img src={displayIconUrl} alt={server.name} className="absolute inset-0 h-full w-full object-cover" />
-                          ) : (
-                            <span className="text-base font-medium text-muted-foreground">
-                              {getServerInitials(server.name)}
-                            </span>
-                          )}
-                          {isUploadingIcon && (
-                            <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
-                              <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                            </div>
-                          )}
-                        </div>
-                        {canManageServer && displayIconUrl && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (iconPreview) {
-                                clearIcon();
-                              } else {
-                                handleRemoveIcon();
-                              }
-                            }}
-                            disabled={isUploadingIcon}
-                            className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/90 disabled:opacity-50"
-                          >
-                            <X className="w-2.5 h-2.5" />
-                          </button>
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium">Server Icon</p>
-                        <p className="text-xs text-muted-foreground">512x512 recommended</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Server Banner Section */}
-                  <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 space-y-3">
-                    <Label className="text-sm font-medium">Server Banner</Label>
-                    <div className="relative">
-                      <div
-                        onClick={() => canManageServer && !isUploadingBanner && bannerInputRef.current?.click()}
-                        className={cn(
-                          "w-full h-28 rounded-xl bg-secondary/50 flex items-center justify-center border border-border/60 transition-colors overflow-hidden relative",
-                          canManageServer && !isUploadingBanner && "cursor-pointer hover:border-primary/50",
-                        )}
-                      >
-                        {displayBannerUrl ? (
-                          <img src={displayBannerUrl} alt="Server banner" className="absolute inset-0 h-full w-full object-cover" />
-                        ) : (
-                          <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                            <Upload className="w-5 h-5" />
-                            <span className="text-xs">Click to upload</span>
-                          </div>
-                        )}
-                        {isUploadingBanner && (
-                          <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
-                            <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                          </div>
-                        )}
-                      </div>
-                      {canManageServer && displayBannerUrl && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (bannerPreview) {
-                              clearBanner();
-                            } else {
-                              handleRemoveBanner();
-                            }
-                          }}
-                          disabled={isUploadingBanner}
-                          className="absolute top-2 right-2 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/90 disabled:opacity-50"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {canManageServer ? "960x540 recommended - Shown in server list" : "Shown in server list"}
-                    </p>
-                  </div>
+                  {renderServerBrandPreview("mobile")}
 
                   {/* Server Name Section */}
                   <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 space-y-3">
@@ -3044,104 +3085,7 @@ export const ServerSettingsModal = () => {
               <div className="flex-1 overflow-y-auto overscroll-contain touch-pan-y min-h-0">
                 {activeTab === "overview" && (
                   <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                    {/* Server Icon Section */}
-                    <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4">
-                      <div className="flex items-center gap-3 sm:gap-4">
-                        <div className="relative">
-                          <div
-                            onClick={() => canManageServer && !isUploadingIcon && fileInputRef.current?.click()}
-                            className={cn(
-                              "w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-secondary/50 flex items-center justify-center border border-border/60 transition-colors flex-shrink-0 overflow-hidden relative",
-                              canManageServer && !isUploadingIcon && "cursor-pointer hover:border-primary/50",
-                            )}
-                          >
-                            {displayIconUrl ? (
-                              <img src={displayIconUrl} alt={server.name} className="absolute inset-0 h-full w-full object-cover" />
-                            ) : (
-                              <span className="text-base font-bold text-muted-foreground">
-                                {getServerInitials(server.name)}
-                              </span>
-                            )}
-                            {isUploadingIcon && (
-                              <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
-                                <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                              </div>
-                            )}
-                          </div>
-                          {canManageServer && displayIconUrl && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (iconPreview) {
-                                  clearIcon();
-                                } else {
-                                  handleRemoveIcon();
-                                }
-                              }}
-                              disabled={isUploadingIcon}
-                              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/90 disabled:opacity-50"
-                            >
-                              <X className="w-2.5 h-2.5" />
-                            </button>
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium">Server Icon</p>
-                          <p className="text-xs text-muted-foreground">
-                            {canManageServer ? "Click to upload • 512x512 recommended" : "512x512 recommended"}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Server Banner Section */}
-                    <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4 space-y-3">
-                      <Label className="text-sm font-medium">Server Banner</Label>
-                      <div className="relative">
-                        <div
-                          onClick={() => canManageServer && !isUploadingBanner && bannerInputRef.current?.click()}
-                          className={cn(
-                            "w-full h-32 sm:h-40 rounded-xl bg-secondary/50 flex items-center justify-center border border-border/60 transition-colors overflow-hidden relative",
-                            canManageServer && !isUploadingBanner && "cursor-pointer hover:border-primary/50",
-                          )}
-                        >
-                          {displayBannerUrl ? (
-                            <img src={displayBannerUrl} alt="Server banner" className="absolute inset-0 h-full w-full object-cover" />
-                          ) : (
-                            <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                              <Upload className="w-5 h-5" />
-                              <span className="text-xs">Click to upload banner</span>
-                            </div>
-                          )}
-                          {isUploadingBanner && (
-                            <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
-                              <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                            </div>
-                          )}
-                        </div>
-                        {canManageServer && displayBannerUrl && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (bannerPreview) {
-                                clearBanner();
-                              } else {
-                                handleRemoveBanner();
-                              }
-                            }}
-                            disabled={isUploadingBanner}
-                            className="absolute top-2 right-2 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/90 disabled:opacity-50"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {canManageServer ? "960x540 recommended • Shown in server list" : "Shown in server list"}
-                      </p>
-                    </div>
+                    {renderServerBrandPreview("desktop")}
 
                     {/* Server Name Section */}
                     <div className="bg-secondary/30 backdrop-blur-sm rounded-xl border border-border/30 p-3 sm:p-4 space-y-3">
