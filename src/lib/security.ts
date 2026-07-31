@@ -2,6 +2,7 @@
  * Security utilities for Kloak
  * Input validation, sanitization, and security checks
  */
+import { validateChannelDisplayName } from "@/lib/channelName";
 
 /**
  * Sanitize text input to prevent XSS
@@ -189,27 +190,7 @@ export const validateServerName = (name: string): { valid: boolean; error?: stri
  * Validate channel name
  */
 export const validateChannelName = (name: string): { valid: boolean; error?: string } => {
-  if (!name) {
-    return { valid: false, error: "Channel name is required" };
-  }
-
-  const trimmed = name.trim().toLowerCase();
-
-  if (trimmed.length < 1) {
-    return { valid: false, error: "Channel name is required" };
-  }
-
-  if (trimmed.length > 100) {
-    return { valid: false, error: "Channel name must be 100 characters or less" };
-  }
-
-  // Convert spaces to hyphens and validate
-  const slugified = trimmed.replace(/\s+/g, "-");
-  if (!/^[a-z0-9-]+$/.test(slugified)) {
-    return { valid: false, error: "Only letters, numbers, and hyphens allowed" };
-  }
-
-  return { valid: true };
+  return validateChannelDisplayName(name);
 };
 
 /**

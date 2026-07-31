@@ -14,6 +14,7 @@ export type Config = {
   rateLimitMessages: number;
   heartbeatIntervalMs: number;
   authTimeoutMs: number;
+  supabaseFetchTimeoutMs: number;
 };
 
 loadDotenv();
@@ -87,4 +88,5 @@ export const config: Config = {
   rateLimitMessages: integer("KLOAK_WS_RATE_LIMIT_MESSAGES", 80),
   heartbeatIntervalMs: integer("KLOAK_WS_HEARTBEAT_MS", 30_000),
   authTimeoutMs: integer("KLOAK_WS_AUTH_TIMEOUT_MS", 10_000),
+  supabaseFetchTimeoutMs: integer("KLOAK_WS_SUPABASE_FETCH_TIMEOUT_MS", 12_000),
 };

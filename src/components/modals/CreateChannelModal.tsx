@@ -29,6 +29,7 @@ import {
 import type { ChannelType } from "@/types";
 import { useRateLimit } from "@/hooks/useRateLimit";
 import { rateLimitToast } from "@/lib/rateLimitToast";
+import { MAX_CHANNEL_NAME_LENGTH, normalizeChannelName, normalizeChannelNameInput } from "@/lib/channelName";
 
 type ChannelTypeValue = "text" | "voice" | "forum" | "announcement" | "tasks" | "media" | "calendar";
 
@@ -153,9 +154,6 @@ export const CreateChannelModal = () => {
     }
   };
 
-  const formatChannelName = (value: string) =>
-    value.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
-
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-h-[90vh] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border border-border bg-card p-0 text-card-foreground shadow-2xl sm:max-w-[460px]">
@@ -186,10 +184,10 @@ export const CreateChannelModal = () => {
                     <Input
                       id="name"
                       value={name}
-                      onChange={(e) => setName(formatChannelName(e.target.value))}
-                      placeholder="new-channel"
+                      onChange={(e) => setName(normalizeChannelNameInput(e.target.value))}
+                      placeholder="new-channel or 🎮-ゲーム"
                       className="h-10 pl-9"
-                      maxLength={50}
+                      maxLength={MAX_CHANNEL_NAME_LENGTH}
                       autoFocus
                     />
                   </div>

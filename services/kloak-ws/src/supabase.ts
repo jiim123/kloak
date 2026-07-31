@@ -38,7 +38,7 @@ export async function rpc<T>(name: string, body: Record<string, unknown>, opts: 
   if (opts.keyHash) headers["x-key-hash"] = opts.keyHash;
   if (opts.mfaSessionToken) headers["x-mfa-session"] = opts.mfaSessionToken;
 
-  const response = await fetch(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
+  const response = await fetchWithTimeout(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
     method: "POST",
     headers,
     body: JSON.stringify(body),
@@ -74,7 +74,7 @@ export async function rest<T>(path: string, opts: RestOptions = {}): Promise<T> 
     init.body = JSON.stringify(opts.body);
   }
 
-  const response = await fetch(`${config.supabaseUrl}/rest/v1/${path}`, init);
+  const response = await fetchWithTimeout(`${config.supabaseUrl}/rest/v1/${path}`, init);
   const text = await response.text();
   const payload = text ? safeJson(text) : null;
 
@@ -116,5 +116,21 @@ function safeJson(text: string): unknown {
     return JSON.parse(text);
   } catch {
     return text;
+  }
+}
+
+async function fetchWithTimeout(input: string, init: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort(new Error(`Supabase request timed out after ${config.supabaseFetchTimeoutMs}ms`));
+  }, config.supabaseFetchTimeoutMs);
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: init.signal ? AbortSignal.any([init.signal, controller.signal]) : controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
   }
 }

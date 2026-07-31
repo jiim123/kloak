@@ -702,7 +702,6 @@ const FORUM_MUTATION_RPCS = new Set([
 
 const FORUM_USER_SCOPED_RPCS = new Set([
   "get_messages_by_ids_secure",
-  "get_thread_messages",
   "create_thread",
   "send_thread_message",
   "update_forum_thread_moderation",

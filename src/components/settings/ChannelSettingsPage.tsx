@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useUIStore } from "@/stores/uiStore";
 import { useServerStore } from "@/stores/serverStore";
 import { useAuthStore } from "@/stores/authStore";
+import { MAX_CHANNEL_NAME_LENGTH, normalizeChannelName, normalizeChannelNameInput } from "@/lib/channelName";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -250,13 +251,6 @@ export const ChannelSettingsPage = () => {
     closeModal();
   };
 
-  const formatChannelName = (value: string) => {
-    return value
-      .toLowerCase()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9-]/g, "");
-  };
-
   const handleSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
     e?.preventDefault();
 
@@ -277,7 +271,7 @@ export const ChannelSettingsPage = () => {
         const updates: Partial<Channel> = {};
 
         if (activeTab === "overview") {
-          updates.name = formatChannelName(name.trim());
+          updates.name = normalizeChannelName(name.trim());
 
           const trimmedTopic = topic.trim();
           updates.topic = trimmedTopic || null;
@@ -354,7 +348,7 @@ export const ChannelSettingsPage = () => {
   };
 
   const channelOverviewDirty = !!channel && (
-    formatChannelName(name.trim()) !== channel.name ||
+    normalizeChannelName(name.trim()) !== channel.name ||
     topic.trim() !== (channel.topic || "") ||
     (channel.type !== "voice" && chatNotice.trim() !== (channel.chat_notice || "")) ||
     (channel.type === "voice" && Math.max(0, Number.parseInt(voiceUserLimit, 10) || 0) !== (channel.voice_user_limit ?? 0))
@@ -402,10 +396,10 @@ export const ChannelSettingsPage = () => {
         <Input
           id="channel-name"
           value={name}
-          onChange={(e) => setName(formatChannelName(e.target.value))}
-          placeholder="channel-name"
+          onChange={(e) => setName(normalizeChannelNameInput(e.target.value))}
+          placeholder="channel-name or 🎮-ゲーム"
           className="h-10 rounded-xl border-border/50 bg-secondary/30 text-sm"
-          maxLength={50}
+          maxLength={MAX_CHANNEL_NAME_LENGTH}
         />
       </div>
 

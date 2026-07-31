@@ -44,6 +44,7 @@ import { ChannelPermissionsEditor } from "./ChannelPermissionsEditor";
 import { CategoryPermissionsEditor } from "./CategoryPermissionsEditor";
 import { ChannelMembersEditor } from "./ChannelMembersEditor";
 import { cn } from "@/lib/utils";
+import { MAX_CHANNEL_NAME_LENGTH, normalizeChannelName, normalizeChannelNameInput } from "@/lib/channelName";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Channel } from "@/types";
 
@@ -184,13 +185,6 @@ export const EditChannelModal = () => {
     closeModal();
   };
 
-  const formatChannelName = (value: string) => {
-    return value
-      .toLowerCase()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9-]/g, "");
-  };
-
   const handleSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
     e?.preventDefault();
 
@@ -210,7 +204,7 @@ export const EditChannelModal = () => {
         toast.success("Category updated");
       } else if (channelId) {
         const updates: Partial<Channel> = {
-          name: formatChannelName(name.trim()),
+          name: normalizeChannelName(name.trim()),
           is_nsfw: isNsfw,
           slowmode_seconds: parseInt(slowmodeSeconds, 10) || 0,
           is_read_only: isReadOnly,
@@ -305,10 +299,10 @@ export const EditChannelModal = () => {
           <Input
             id="channel-name"
             value={name}
-            onChange={(e) => setName(formatChannelName(e.target.value))}
-            placeholder="channel-name"
+            onChange={(e) => setName(normalizeChannelNameInput(e.target.value))}
+            placeholder="channel-name or 🎮-ゲーム"
             className="h-11 pl-14 rounded-xl border-border/50 bg-secondary/30"
-            maxLength={50}
+            maxLength={MAX_CHANNEL_NAME_LENGTH}
           />
         </div>
       </div>
