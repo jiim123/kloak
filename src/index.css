@@ -781,10 +781,22 @@
     @apply text-cyan-400 hover:underline;
   }
 
-  /* Reserve space for inline images to prevent layout shift during loading */
+  /* Reserve space for inline images during loading to reduce layout shift */
   [data-message-id] img[data-image-url] {
     min-height: 100px;
+    min-width: 200px;
+    max-width: 100%;
     background-color: hsl(var(--muted) / 0.3);
+    object-fit: contain;
+  }
+
+  /* Same reserved space for inline attachment images */
+  [data-message-id] img[data-attachment-path] {
+    min-height: 100px;
+    min-width: 200px;
+    max-width: 100%;
+    background-color: hsl(var(--muted) / 0.3);
+    object-fit: contain;
   }
 
   /* Hide inline image placeholders (images are rendered separately) */

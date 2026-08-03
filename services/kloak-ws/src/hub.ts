@@ -73,8 +73,21 @@ export class SocketHub {
       }
     }
 
-    for (const socket of state.sockets) {
-      this.send(socket, { type: "event", event: socketEvent });
+    const sockets = Array.from(state.sockets);
+    if (sockets.length === 0) return socketEvent;
+
+    if (sockets.length === 1) {
+      this.send(sockets[0], { type: "event", event: socketEvent });
+    } else {
+      const serialized = JSON.stringify({ type: "event", event: socketEvent });
+      for (const socket of sockets) {
+        if (socket.ws.readyState !== socket.ws.OPEN) continue;
+        if (socket.ws.bufferedAmount > config.maxBufferedBytes) {
+          socket.ws.close(4008, "backpressure");
+          continue;
+        }
+        socket.ws.send(serialized);
+      }
     }
 
     return socketEvent;

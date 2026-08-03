@@ -279,15 +279,18 @@ const AttachmentItem = memo(function AttachmentItem({
   }, []);
 
   // Prefer persisted dimensions, but fall back to the browser-detected image
-  // dimensions. The temporary 300x200 box is only used while an unknown image loads.
+  // dimensions. When neither is available, reserve space with a reasonable
+  // aspect-ratio (not a hardcoded pixel size) to prevent layout shift.
   const reservedStyle = useMemo(() => {
     if (!isImage && !isVideo) return undefined;
 
     const sourceWidth = attachment.width || (isImage ? detectedImageSize?.width : undefined);
     const sourceHeight = attachment.height || (isImage ? detectedImageSize?.height : undefined);
     if (!sourceWidth || !sourceHeight) {
-      if (isImage) return { width: 300, height: 200 };
-      return { width: 400, height: 225 };
+      return {
+        aspectRatio: isImage ? "4 / 3" as const : "16 / 9" as const,
+        maxWidth: isImage ? 400 : 480,
+      };
     }
 
     const maxW = 400;
@@ -364,8 +367,13 @@ const AttachmentItem = memo(function AttachmentItem({
     const containerStyle = isFill
       ? undefined
       : reservedStyle
-        ? { width: reservedStyle.width, height: reservedStyle.height }
+        ? ("width" in reservedStyle
+            ? { width: reservedStyle.width, height: reservedStyle.height }
+            : { aspectRatio: reservedStyle.aspectRatio, maxWidth: reservedStyle.maxWidth })
         : undefined;
+    const imgDimStyle = reservedStyle && "width" in reservedStyle
+      ? { width: reservedStyle.width, height: reservedStyle.height }
+      : undefined;
     return (
       <div
         ref={inViewRef}
@@ -406,8 +414,8 @@ const AttachmentItem = memo(function AttachmentItem({
             ref={imgRef}
             src={signedUrl}
             alt={attachment.file_name}
-            width={isFill ? undefined : reservedStyle?.width}
-            height={isFill ? undefined : reservedStyle?.height}
+            width={isFill ? undefined : imgDimStyle?.width}
+            height={isFill ? undefined : imgDimStyle?.height}
             className={cn(
               "relative w-full h-full rounded-lg cursor-pointer hover:opacity-90 transition-opacity duration-200",
               isFill ? "object-cover" : "object-contain object-left",
@@ -429,7 +437,13 @@ const AttachmentItem = memo(function AttachmentItem({
       <div
         ref={inViewRef}
         className="relative rounded-2xl overflow-hidden bg-muted/30 w-full max-w-[480px]"
-        style={reservedStyle ? { aspectRatio: `${reservedStyle.width} / ${reservedStyle.height}` } : undefined}
+        style={
+          reservedStyle
+            ? ("width" in reservedStyle
+                ? { aspectRatio: `${reservedStyle.width} / ${reservedStyle.height}` }
+                : { aspectRatio: reservedStyle.aspectRatio, maxWidth: reservedStyle.maxWidth })
+            : undefined
+        }
       >
         <div
           className={cn(

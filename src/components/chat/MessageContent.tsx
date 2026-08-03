@@ -359,7 +359,7 @@ export const parseTextContent = (
     const alignClass = align === "center" ? "mx-auto block" : align === "right" ? "ml-auto block" : "mr-auto block";
     if (isTrustedInlineImageUrl(url)) {
       const widthStyle = width !== "auto" ? `width="${escapeHtml(width)}"` : "";
-      return `<img src="data:image/gif;base64,R0lGODlhAQABAAAAACwAAAAAAQABAAA=" alt="Image" ${widthStyle} class="${alignClass} max-w-full rounded-lg my-2 cursor-pointer hover:opacity-90" loading="lazy" data-image-url="${escapeHtml(url)}" data-align="${align}" data-loading-bg="true" style="visibility:hidden;min-height:40px;max-height:350px;background:rgb(24 24 24 / 40%)" />`;
+      return `<img src="data:image/gif;base64,R0lGODlhAQABAAAAACwAAAAAAQABAAA=" alt="Image" ${widthStyle} class="${alignClass} max-w-full rounded-lg my-2 cursor-pointer hover:opacity-90" loading="lazy" data-image-url="${escapeHtml(url)}" data-align="${align}" data-loading-bg="true" style="min-height:100px;max-height:350px;background:hsl(var(--muted)/0.3)" />`;
     }
     return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="${alignClass} message-link">View image</a>`;
   });
@@ -374,7 +374,7 @@ export const parseTextContent = (
     const audioExts = ["mp3", "ogg", "wav", "flac", "m4a"];
 
     if (imageExts.includes(ext)) {
-      return `<img data-attachment-path="${escapeHtml(path)}" alt="Image" class="block mr-auto max-w-full sm:max-w-[400px] max-h-[60vh] sm:max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90 object-contain" loading="lazy" data-loading-bg="true" style="visibility:hidden;min-height:40px;max-height:350px;background:rgb(24 24 24 / 40%)" />`;
+      return `<img data-attachment-path="${escapeHtml(path)}" alt="Image" class="block mr-auto max-w-full sm:max-w-[400px] max-h-[60vh] sm:max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90 object-contain" loading="lazy" data-loading-bg="true" style="min-height:100px;max-height:350px;background:hsl(var(--muted)/0.3)" />`;
     } else if (videoExts.includes(ext)) {
       return `<video data-attachment-path="${escapeHtml(path)}" controls preload="metadata" class="block max-w-full w-full sm:max-w-[480px] rounded-lg my-2 aspect-video object-contain bg-black/10">Your browser does not support video.</video>`;
     } else if (audioExts.includes(ext)) {
@@ -392,7 +392,7 @@ export const parseTextContent = (
       return escapeHtml(url); // Don't linkify unsafe URLs
     }
     if (isImageUrl(url)) {
-      return `<img src="data:image/gif;base64,R0lGODlhAQABAAAAACwAAAAAAQABAAA=" alt="Image" class="block mr-auto max-w-full sm:max-w-[400px] max-h-[60vh] sm:max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90 object-contain" loading="lazy" data-image-url="${escapeHtml(url)}" data-loading-bg="true" style="visibility:hidden;min-height:40px;max-height:350px;background:rgb(24 24 24 / 40%)" />`;
+      return `<img src="data:image/gif;base64,R0lGODlhAQABAAAAACwAAAAAAQABAAA=" alt="Image" class="block mr-auto max-w-full sm:max-w-[400px] max-h-[60vh] sm:max-h-80 rounded-lg my-2 cursor-pointer hover:opacity-90 object-contain" loading="lazy" data-image-url="${escapeHtml(url)}" data-loading-bg="true" style="min-height:100px;max-height:350px;background:hsl(var(--muted)/0.3)" />`;
     }
     return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="message-link">${escapeHtml(url)}</a>`;
   });
@@ -759,7 +759,6 @@ export const MessageContent = ({
             if (cancelled) return;
             element.src = signedUrl;
             element.dataset.imageUrl = signedUrl;
-            element.style.visibility = "visible";
           };
           preloadImg.src = signedUrl;
         } else if (element instanceof HTMLVideoElement || element instanceof HTMLAudioElement) {
@@ -792,7 +791,6 @@ export const MessageContent = ({
       if (!originalUrl) return;
 
       if (isSupabaseAttachmentUrl(originalUrl)) {
-        img.style.visibility = "hidden";
         resolveSignedUrl(originalUrl).then((signedUrl) => {
           if (cancelled || !signedUrl) return;
           const preloadImg = new Image();
@@ -800,17 +798,12 @@ export const MessageContent = ({
             if (cancelled) return;
             img.src = signedUrl;
             img.dataset.imageUrl = signedUrl;
-            img.style.visibility = "visible";
           };
           preloadImg.src = signedUrl;
         });
         return;
       }
 
-      // External URL: route through signed proxy so the user's browser
-      // never contacts attacker-controlled origins directly. The original
-      // src was already replaced with a 1x1 transparent gif at render time.
-      img.style.visibility = "hidden";
       getProxiedAssetUrl(originalUrl).then((proxiedUrl) => {
         if (cancelled || !proxiedUrl) return;
         const preloadImg = new Image();
@@ -818,11 +811,9 @@ export const MessageContent = ({
           if (cancelled) return;
           img.src = proxiedUrl;
           img.dataset.imageUrl = proxiedUrl;
-          img.style.visibility = "visible";
         };
         preloadImg.onerror = () => {
           if (cancelled) return;
-          img.style.visibility = "visible";
         };
         preloadImg.src = proxiedUrl;
       });

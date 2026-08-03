@@ -267,6 +267,13 @@ const buildOwnPresencePayload = (): GlobalPresenceMeta | null => {
 const publishOwnSocketPresence = () => {
   const payload = buildOwnPresencePayload();
   if (!payload) return;
+  recentRealtimePresenceByUser.set(payload.user_id, Date.now());
+  patchUserAcrossStores({
+    id: payload.user_id,
+    status: toUserStatus(payload.status, 'online'),
+    custom_status: payload.custom_status ?? null,
+    last_seen: payload.last_seen ?? new Date().toISOString(),
+  });
   void kloakSocket
     .updatePresence({
       status: toUserStatus(payload.status, 'online'),
@@ -335,44 +342,37 @@ export const useRealtimeUsers = () => {
       return;
     }
 
+    // ─── Kloak WS self-presence: publish own status, receive own events from other sessions ───
+    let kloakUnsubscribe: (() => void) | null = null;
+    let kloakHeartbeat: ReturnType<typeof setInterval> | null = null;
+    let kloakHandleRecovery: (() => void) | null = null;
+
     if (isKloakSocketEnabled()) {
-      let unsubscribe: (() => void) | null = null;
-      let cancelled = false;
-      const presenceHeartbeat = setInterval(publishOwnSocketPresence, 60_000);
+      kloakHeartbeat = setInterval(publishOwnSocketPresence, 60_000);
+
+      kloakHandleRecovery = () => {
+        if (document.visibilityState !== 'visible') return;
+        publishOwnSocketPresence();
+      };
+
       void kloakSocket
         .subscribe(`user:${userId}`, (event) => {
           if (event.event === 'user.presence') applySocketPresencePayload(event.payload);
         })
         .then((fn) => {
-          if (cancelled) {
-            fn();
-            return;
-          }
-          unsubscribe = fn;
+          kloakUnsubscribe = fn;
           publishOwnSocketPresence();
         })
         .catch(() => undefined);
 
-      const handleSocketRecovery = () => {
-        if (document.visibilityState !== 'visible') return;
-        publishOwnSocketPresence();
-      };
-      window.addEventListener('online', handleSocketRecovery);
-      document.addEventListener('visibilitychange', handleSocketRecovery);
-
-      return () => {
-        cancelled = true;
-        unsubscribe?.();
-        clearInterval(presenceHeartbeat);
-        window.removeEventListener('online', handleSocketRecovery);
-        document.removeEventListener('visibilitychange', handleSocketRecovery);
-        recentRealtimePresenceByUser.clear();
-      };
+      window.addEventListener('online', kloakHandleRecovery);
+      document.addEventListener('visibilitychange', kloakHandleRecovery);
     }
+
+    // ─── Supabase Realtime Presence — always runs, handles receiving others' presence ───
     const presenceSigByUser = presenceSigByUserRef.current;
     const absenceStartedAtByUser = absenceStartedAtByUserRef.current;
 
-    // Reconnect state — shared across channel instances for this auth session.
     let activeChannel: ReturnType<typeof supabase.channel> | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let reconnectAttempts = 0;
@@ -387,8 +387,6 @@ export const useRealtimeUsers = () => {
       reconnectAttempts += 1;
       reconnectTimer = setTimeout(() => {
         reconnectTimer = null;
-        // Drop the dead channel + sig cache so the next snapshot re-asserts
-        // every target's status from the fresh presence state.
         try {
           teardown?.();
         } catch {
@@ -445,7 +443,6 @@ export const useRealtimeUsers = () => {
         }
 
         targetIds.forEach((targetId) => {
-          // Skip own user — usePresence hook manages our own status
           if (targetId === userId) return;
 
           const meta = latestByUser.get(targetId);
@@ -501,8 +498,6 @@ export const useRealtimeUsers = () => {
 
           if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
             presenceConnectedRef.current = false;
-            // Auto-recover: stale channel will never re-deliver presence events,
-            // so other users' status would freeze until a manual reload.
             scheduleReconnect();
           }
         });
@@ -525,8 +520,6 @@ export const useRealtimeUsers = () => {
       };
     };
 
-    // Throttle store-subscription-driven presence snapshots to avoid hot-path re-runs
-    // on every friend/DM store mutation (status updates, message caching, etc.)
     const throttledApply = () => {
       if (storeSubTimer) return;
       storeSubTimer = setTimeout(() => {
@@ -535,9 +528,6 @@ export const useRealtimeUsers = () => {
         const currentKey = currentIds.slice().sort().join(',');
         if (currentKey === lastTargetIdsKey) return;
 
-        // For any newly-appearing target, drop its cached signature so the
-        // next snapshot re-applies the presence value over freshly-fetched
-        // (possibly stale "offline") rows from the server/friend/DM stores.
         for (const id of currentIds) {
           if (!lastTargetIdsSet.has(id)) {
             presenceSigByUser.delete(id);
@@ -555,11 +545,9 @@ export const useRealtimeUsers = () => {
     const unsubServer = useServerStore.subscribe(throttledApply);
     const unsubUI = useUIStore.subscribe(throttledApply);
 
-    // Heal the channel when the network/tab returns.
     const handleConnectivity = () => {
       if (document.visibilityState !== 'visible') return;
       if (!presenceConnectedRef.current) {
-        // Force an immediate reconnect (no exponential delay) on user-driven recovery.
         if (reconnectTimer) {
           clearTimeout(reconnectTimer);
           reconnectTimer = null;
@@ -582,6 +570,12 @@ export const useRealtimeUsers = () => {
     setupChannel();
 
     return () => {
+      kloakUnsubscribe?.();
+      if (kloakHeartbeat) clearInterval(kloakHeartbeat);
+      if (kloakHandleRecovery) {
+        window.removeEventListener('online', kloakHandleRecovery);
+        document.removeEventListener('visibilitychange', kloakHandleRecovery);
+      }
       unsubFriends();
       unsubDMs();
       unsubServer();
@@ -604,13 +598,14 @@ export const useRealtimeUsers = () => {
 
 
   useEffect(() => {
+    if (!authUser?.id) return;
+
     if (isKloakSocketEnabled()) {
-      if (authUser?.id) publishOwnSocketPresence();
-      return;
+      publishOwnSocketPresence();
     }
 
     const channel = presenceChannelRef.current;
-    if (!channel || !presenceConnectedRef.current || !authUser?.id) return;
+    if (!channel || !presenceConnectedRef.current) return;
     const payload = buildOwnPresencePayload();
     if (!payload) return;
     void channel.track(payload).catch(() => undefined);

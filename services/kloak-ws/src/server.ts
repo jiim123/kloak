@@ -254,28 +254,41 @@ async function handleMessage(socket: SocketContext, message: ClientMessage) {
   }
 }
 
+const TOPIC_AUTH_CONCURRENCY = 16;
+
 async function filterAuthorizedTopics(socket: SocketContext, topics: string[]) {
   const userId = requireUser(socket);
-  const authorized: string[] = [];
+  const uniqueTopics = Array.from(new Set(topics));
+  const results: string[] = [];
+  const pending: Promise<void>[] = [];
 
-  for (const topic of Array.from(new Set(topics))) {
+  for (let i = 0; i < uniqueTopics.length; i++) {
+    const topic = uniqueTopics[i];
     if (topic === `user:${userId}`) {
-      authorized.push(topic);
+      results.push(topic);
       continue;
     }
 
-    const [kind, id] = topic.split(":");
-    const allowed =
-      kind === "channel"
-        ? await canSubscribeChannel(id, userId, socketRpcOptions(socket))
-        : kind === "dm"
-          ? await canSubscribeDm(id, userId, socketRpcOptions(socket))
-          : false;
+    const p = (async () => {
+      const [kind, id] = topic.split(":");
+      const allowed =
+        kind === "channel"
+          ? await canSubscribeChannel(id, userId, socketRpcOptions(socket))
+          : kind === "dm"
+            ? await canSubscribeDm(id, userId, socketRpcOptions(socket))
+            : false;
 
-    if (allowed) authorized.push(topic);
+      if (allowed) results.push(topic);
+    })();
+
+    pending.push(p);
+
+    if (pending.length >= TOPIC_AUTH_CONCURRENCY || i === uniqueTopics.length - 1) {
+      await Promise.all(pending.splice(0));
+    }
   }
 
-  return authorized;
+  return results;
 }
 
 async function sendChannelMessage(socket: SocketContext, message: Extract<ClientMessage, { type: "send_channel_message" }>) {
