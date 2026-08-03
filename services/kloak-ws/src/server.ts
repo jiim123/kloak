@@ -5,10 +5,12 @@ import type { RawData } from "ws";
 import { WebSocketServer } from "ws";
 import { config } from "./config.js";
 import { SocketHub, type SocketContext } from "./hub.js";
+import { ChannelRelayManager } from "./realtimeBridge.js";
 import { authenticate, canSubscribeChannel, canSubscribeDm, rest, rpc, SupabaseRpcError } from "./supabase.js";
 import { clientMessageSchema, type ClientMessage } from "./protocol.js";
 
 const hub = new SocketHub();
+const channelRelayManager = new ChannelRelayManager(hub);
 const socketContexts = new WeakMap<WebSocket, SocketContext>();
 const startedAt = new Date();
 
@@ -95,6 +97,9 @@ wss.on("connection", (ws) => {
 
   ws.on("close", () => {
     clearTimeout(authTimer);
+    for (const topic of Array.from(socket.topics)) {
+      maybeReleaseChannelRelay(topic);
+    }
     hub.removeSocket(socket);
     void publishPresence(socket, {
       status: "offline",
@@ -170,13 +175,18 @@ async function handleMessage(socket: SocketContext, message: ClientMessage) {
       const availableSlots = Math.max(0, config.maxTopicsPerSocket - socket.topics.size);
       const acceptedTopics = topics.slice(0, availableSlots);
       for (const topic of acceptedTopics) {
+        maybeAcquireChannelRelay(socket, topic);
         hub.subscribe(socket, topic, message.cursors?.[topic] ?? 0);
       }
       hub.send(socket, { type: "subscribed", requestId: message.requestId, topics: acceptedTopics });
       return;
     }
     case "unsubscribe":
-      for (const topic of message.topics) hub.unsubscribe(socket, topic);
+      for (const topic of message.topics) {
+        const hadTopic = socket.topics.has(topic);
+        hub.unsubscribe(socket, topic);
+        if (hadTopic) maybeReleaseChannelRelay(topic);
+      }
       hub.send(socket, { type: "unsubscribed", requestId: message.requestId, topics: message.topics });
       return;
     case "send_channel_message":
@@ -1024,6 +1034,21 @@ function socketRpcOptions(socket: SocketContext) {
 
 function socketRestOptions(socket: SocketContext) {
   return socketRpcOptions(socket);
+}
+
+function maybeAcquireChannelRelay(socket: SocketContext, topic: string) {
+  if (!topic.startsWith("channel:")) return;
+  if (socket.topics.has(topic)) return;
+  const channelId = topic.slice("channel:".length);
+  if (!channelId) return;
+  channelRelayManager.acquire(channelId);
+}
+
+function maybeReleaseChannelRelay(topic: string) {
+  if (!topic.startsWith("channel:")) return;
+  const channelId = topic.slice("channel:".length);
+  if (!channelId) return;
+  channelRelayManager.release(channelId);
 }
 
 function requireUser(socket: SocketContext) {

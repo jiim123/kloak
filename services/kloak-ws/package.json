@@ -9,6 +9,7 @@
     "dev": "npm run build && node dist/server.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.95.3",
     "ws": "^8.18.2",
     "zod": "^3.25.76"
   },
