@@ -1,7 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import WebSocket from "ws";
 import { config } from "./config.js";
 import type { SocketHub } from "./hub.js";
+
+// Supabase Realtime uses the global WebSocket constructor; in Node it is not
+// available by default, so we polyfill it from the `ws` package.
+(globalThis as unknown as Record<string, unknown>).WebSocket = WebSocket;
 
 type BroadcastPayload = {
   op?: string;
@@ -43,7 +48,14 @@ export class ChannelRelayManager {
         this.hub.publish(`channel:${channelId}`, "message.created", row);
       });
 
-    channel.subscribe();
+    channel.subscribe((status, err) => {
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        console.warn(`[kloak-ws] realtime bridge subscription failed for chat:${channelId}`, {
+          status,
+          error: err?.message,
+        });
+      }
+    });
     this.relays.set(channelId, { refCount: 1, channel });
   }
 
