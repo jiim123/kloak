@@ -62,6 +62,7 @@ type ServerRolesCacheEntry = {
 const serverSurfaceCache = new Map<string, ServerSurfaceCacheEntry>();
 const serverRolesCache = new Map<string, ServerRolesCacheEntry>();
 const getScopedServerCacheKey = (serverId: string, userId: string | null) => `${serverId}:${userId ?? "anon"}`;
+const inFlightJoinRequests = new Map<string, Promise<Server | null>>();
 
 const readSessionCache = <T>(key: string): T | null => {
   if (typeof window === "undefined") return null;
@@ -720,7 +721,14 @@ export const useServerStore = create<ServerState>((set, get) => ({
     }
   },
 
-  joinServer: async (inviteCode: string, userId: string, joinSource?: "discover" | "invite_link") => {
+  joinServer: (inviteCode: string, userId: string, joinSource?: "discover" | "invite_link") => {
+    const normalizedInviteCode = inviteCode.trim().toUpperCase();
+    const normalizedJoinSource = joinSource ?? "invite_link";
+    const requestKey = `${userId}:${normalizedInviteCode}:${normalizedJoinSource}`;
+    const existingRequest = inFlightJoinRequests.get(requestKey);
+    if (existingRequest) return existingRequest;
+
+    const request = (async (): Promise<Server | null> => {
     try {
       // Rate limit invite code lookups to prevent abuse
       if (!inviteCodeRateLimiter.isAllowed(userId)) {
@@ -731,9 +739,9 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
       // Use RPC function to join server (bypasses RLS). joinSource: 'discover' when joining from Explore.
       const { data, error } = await supabase.rpc("join_server_by_invite", {
-        _invite_code: inviteCode.toUpperCase(),
+        _invite_code: normalizedInviteCode,
         _user_id: userId,
-        _join_source: joinSource ?? "invite_link",
+        _join_source: normalizedJoinSource,
       });
 
       if (error) {
@@ -850,6 +858,15 @@ export const useServerStore = create<ServerState>((set, get) => ({
       set({ error: "Failed to join server" });
       return null;
     }
+    })();
+
+    inFlightJoinRequests.set(requestKey, request);
+    void request.finally(() => {
+      if (inFlightJoinRequests.get(requestKey) === request) {
+        inFlightJoinRequests.delete(requestKey);
+      }
+    });
+    return request;
   },
 
   leaveServer: async (serverId: string, userId: string) => {
