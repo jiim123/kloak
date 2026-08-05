@@ -148,14 +148,22 @@ export const useRealtimeServer = (serverId: string | null) => {
   useEffect(() => {
     if (!serverId) return;
     if (prevConnectedRef.current === false && isConnected) {
-      console.log('[Realtime] Reconnected - waiting for user-scoped server surface', serverId);
+      console.log('[Realtime] Reconnected - waiting for server surface invalidation', serverId);
     }
     prevConnectedRef.current = isConnected;
   }, [isConnected, serverId]);
 
   useEffect(() => {
     if (!serverId) return;
-    const debounced = makeDebouncedFn(() => undefined, 500);
+    const debounced = makeDebouncedFn(() => {
+      const serverStore = useServerStore.getState();
+      void Promise.all([
+        serverStore.fetchChannels(serverId, { force: true }),
+        serverStore.fetchMembers(serverId, { force: true }),
+      ]).catch((error) => {
+        console.warn('[Realtime] Failed to refresh server surface', error);
+      });
+    }, 500);
     debouncedRefreshRef.current = debounced;
     return () => {
       debounced.cancel();
@@ -176,9 +184,12 @@ export const useRealtimeServer = (serverId: string | null) => {
 
         if (event.table === 'servers') {
           applyServerRowBroadcast(serverId, event);
+        } else {
+          debouncedRefreshRef.current?.();
         }
 
-        // Full private channel/member/role updates now arrive on the user-scoped `user:<id>` topic.
+        // The event is an invalidation only. Refetches use the existing secure
+        // RPCs rather than broadcasting private data to every server member.
       },
     );
     subscribeChannel(topic);
