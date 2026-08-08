@@ -1,83 +1,58 @@
-# Hooks Folder Audit — Cleanup Plan
+# Make Kloak's WebSocket + presence layer production-solid
 
-A read-only audit of `src/hooks/` found 10 issues across conflicting writes, dead exports, subscription bugs, and double-delivery. Below is the proposed remediation, grouped by severity. Nothing outside `src/hooks/` and `src/hooks/index.ts` is touched except for one consumer check.
+## What I found
 
----
+The `kloak-ws` service works, but it is a **single-process, memory-only** server. There is **no Redis in the project at all** — no dependency, no config, no client code. Everything the socket layer knows lives in one Node process:
 
-## HIGH severity (breaks logic / visible flashes)
+- `SocketHub` keeps topics, subscribers and the per-topic replay buffer in a plain in-memory `Map`.
+- Presence lives only on the socket object (`currentPresence`) and is fanned out to recipients connected to the *same* process.
+- Nothing writes `users.status` / `users.last_seen` from the socket service.
 
-### H1. Delete `useRealtimeReactions` (dead + would conflict if mounted)
-- `src/hooks/useRealtimeReactions.ts` has **zero call sites**.
-- `useRealtimeMessages.ts:530-671` already owns all reaction INSERT/UPDATE/DELETE handling — and unlike the dead hook, it correctly accounts for ghost-mode/pseudonymous users.
-- If `useRealtimeReactions` were ever mounted alongside it, every reaction would be applied twice (inflated counts, duplicate user IDs).
-- **Action:** delete the file; remove the export from `src/hooks/index.ts`.
+Consequences today:
 
-### H2. Delete `useOfflineSync` (duplicates `useBackgroundSync`)
-- Both hooks drain `offlineQueueStore` on `isOnline && wasOffline`, both iterate `queuedMessages`, both call `sendMessage`, both toast "Reconnected" / "Syncing messages…".
-- `useOfflineSync` has **zero call sites**; `useBackgroundSync` is the one wired into `AppLayout`.
-- **Action:** delete `useOfflineSync.ts`; remove the export from `src/hooks/index.ts`.
+1. **Fan-out breaks the moment there is more than one machine.** `fly.toml` allows auto-start with a 250-connection hard limit, so a second machine will eventually boot. Two users on different machines will not see each other's messages, typing, or status.
+2. **Every deploy or restart wipes presence and replay.** All users appear offline until each client re-pushes presence; reconnect cursors (`afterSeq`) point at a sequence counter that has reset to 0, so gap-recovery silently returns nothing.
+3. **Presence flaps with multiple tabs/devices.** There is no per-user connection count — closing one tab publishes "offline" while another tab is still connected.
+4. **Presence fan-out is expensive.** Each status change runs the `get_socket_presence_recipients` RPC for that socket, then publishes N times. Idle/online transitions multiply this across every user.
+5. **The topic map never shrinks.** Empty topics are never deleted and replay buffers persist per channel forever — a slow memory leak on a long-lived machine.
+6. **Two overlapping delivery paths.** `realtimeBridge` also relays Supabase broadcast `messages` into `channel:*`, in addition to the hub's own publish on send — a duplicate-delivery risk.
 
-### H3. Strip connection-status writes from `useBackgroundSync`
-- `useConnectionStatus` already owns `syncStore.connection.status` (driven by Supabase realtime channel state + the `ping_health` heartbeat).
-- `useBackgroundSync.ts:90,102,135,139` independently calls `setConnectionStatus('reconnecting'|'connected'|'disconnected')` and `incrementReconnectAttempts`/`resetReconnectAttempts` on `navigator.onLine` events.
-- On reconnect both fire near-simultaneously → status flickers and `reconnectAttempts` can be double-incremented/reset.
-- **Action:** in `useBackgroundSync.ts`, remove all `setConnectionStatus`, `incrementReconnectAttempts`, `resetReconnectAttempts` calls and any helper ping that exists only to drive them. Keep the queue-drain logic. `useConnectionStatus` becomes the sole writer.
+## The fix
 
-### H4. Migrate `useUnreadDMs` to `sharedChannel`
-- `useUnreadDMs.ts:187-240` calls `supabase.channel('user:${userId}')` directly, never calls `.subscribe()`, and tears down via the private `_off` API.
-- The same topic is owned by `useUnread` / `useRealtimeOwnMembership` / `useServerUnreadSummary` / `useRealtimeFriendships` via `sharedChannel`. The direct call creates a second channel instance for the same topic, so the broadcast listener registered in `useUnreadDMs` **never receives events** delivered to the shared instance.
-- **Action:** replace the direct `supabase.channel(topic)` + `_off` teardown with `acquireChannel(topic)` + `subscribeChannel(topic)` + `releaseChannel(topic)` from `src/lib/sharedChannel.ts`, matching the pattern used by the four sibling hooks.
+### 1. Fly Valkey backplane (same region)
+Provision a Valkey/Redis instance in `sin` and give `kloak-ws` a `REDIS_URL` secret over Fly private networking. Add `ioredis` to the service with two connections (one publisher, one subscriber) plus a lazy, non-fatal fallback: if Redis is unreachable the server keeps serving locally and logs loudly rather than crashing.
 
----
+### 2. Cross-machine event fan-out
+`SocketHub.publish` gains a Redis pub/sub layer:
+- Local delivery stays synchronous (no added latency for same-machine subscribers).
+- The event is also published to a Redis channel keyed by topic; every other machine delivers it to its local subscribers only, with an origin-instance id so the publishing machine never double-delivers.
+- Sequence numbers move to a Redis `INCR` per topic so `afterSeq` gap-recovery is globally correct.
+- Replay buffers move to a capped Redis list per topic (`LPUSH` + `LTRIM` to 1000, TTL ~1h) so a reconnect to a different machine still replays missed events.
 
-## MEDIUM severity (wasted work, audible duplication)
+### 3. Presence with TTL + write-back
+- On connect / heartbeat, write `presence:{userId}` in Redis (status, custom status, last seen, connection count) with a TTL of ~2x the heartbeat interval; refresh on every ping.
+- Track connections per user with a Redis set of socket ids so multi-tab works: a user only goes offline when the **last** connection drops or the TTL expires.
+- A single sweeper (one machine, via a Redis lock) expires stale presence and publishes `user.presence` offline events for users whose keys lapsed — this covers hard crashes and killed machines.
+- Batched write-back to Postgres: `users.status` and `users.last_seen` flushed every ~30s for changed users only, plus an immediate flush on last-disconnect. This keeps `getEffectivePresence`'s `last_seen` heuristic accurate and makes presence survive a full service restart.
+- Cache `get_socket_presence_recipients` results in Redis (short TTL, invalidated on friend/member changes) so repeated status changes stop hammering PostgREST.
 
-### M1. Stop double-delivery in `useRealtimeNotifications`
-- `useRealtimeNotifications.ts:88-149` registers a Broadcast listener for `"notifications"` AND three `postgres_changes` listeners (INSERT/UPDATE/DELETE) on the same `notifications` table on the same channel.
-- The dedup guard catches the duplicate store write, but `playNotificationSound` (line 83) is called before the store write, so the bell **plays twice** per notification.
-- **Action:** keep the Broadcast path as primary. Gate the `postgres_changes` listeners behind a fallback flag (e.g., only invoke `processIncomingNotification` from the pg path if the broadcast hasn't delivered the same id within ~1s), or remove the pg INSERT path entirely and keep only DELETE/UPDATE (which Broadcast may not emit).
+### 4. Hub hygiene
+- Delete topic state when the last local subscriber leaves and no Redis replay is pending.
+- Keep the existing backpressure close (4008) but log a metric instead of failing silently.
+- Add a dedupe guard on `message.created` so the `realtimeBridge` relay and the direct publish cannot deliver the same message id twice; long term the bridge only handles rows written outside the socket path.
 
-### M2. Consolidate `server_surface` handling between `useRealtimeServer` and `useRealtimeMembers`
-- Both subscribe to the same shared `server:${serverId}` broadcast event `server_surface` and both react to `server_members`/`server_roles`/`server_member_roles` table names by calling `fetchMembers` + `fetchRoles` with `{ force: true }`.
-- Every membership/role change → 2× fetchMembers + 2× fetchRoles in the same tick.
-- **Action:** keep the handler in `useRealtimeServer` (it additionally purges messages from removed members). Remove the duplicate `server_members`/`server_roles`/`server_member_roles` branch from `useRealtimeMembers.ts:75-82`, leaving its other responsibilities intact.
+### 5. Fly + client
+- Set explicit `KLOAK_WS_*` env for Redis, keep `min_machines_running = 1`, and raise the connection soft/hard limits now that multiple machines are safe.
+- Extend `/healthz` to report Redis connectivity so Fly health checks catch a broken backplane.
+- Client (`src/lib/kloakSocket.ts`): resubscribe with the stored per-topic cursor after reconnect (already partly there) and re-push presence immediately on `hello`, so a machine restart repopulates status without waiting for the idle timer.
 
----
+## Technical notes
 
-## LOW severity (cleanup)
+- New files: `services/kloak-ws/src/redis.ts` (connection factory + health), `services/kloak-ws/src/presenceStore.ts` (TTL presence, connection counting, DB write-back).
+- Changed: `hub.ts` (Redis-backed publish/replay/seq), `server.ts` (presence lifecycle, heartbeat refresh, healthz), `config.ts` (`REDIS_URL`, TTL/flush intervals), `realtimeBridge.ts` (dedupe), `fly.toml`, `package.json` (`ioredis`).
+- No schema migration required — `users.status` and `users.last_seen` already exist and are what the write-back targets.
+- Everything degrades gracefully: with `REDIS_URL` unset the service behaves exactly as it does today, so this can ship before the Valkey instance exists.
 
-### L1. Stabilize `useSignedUrls` effect dependency
-- `useSignedUrls.ts:44` uses `JSON.stringify(fileUrls)` as a `useEffect` dep. Replace with `const urlsKey = fileUrls.join('\n')` computed once per render and use `urlsKey` as the dep (matches the existing internal `keyRef` comparison).
+## What you need to do
 
-### L2. Delete unused hooks (confirm with user before deleting)
-- `useAttachmentQueue.ts` — zero call sites, not exported from `index.ts`.
-- `useMaintenanceMode.ts` — zero call sites, not exported from `index.ts`.
-- These may be WIP. **Will ask before deleting.** Everything else above proceeds.
-
-### L3. Latent guard to preserve (no code change)
-- `useRealtimeUsers.ts:402` skips own-user presence writes so it never fights `usePresence`'s idle/online transitions. Add a short comment so the guard isn't accidentally removed.
-
----
-
-## Files touched
-
-- `src/hooks/useRealtimeReactions.ts` — **delete**
-- `src/hooks/useOfflineSync.ts` — **delete**
-- `src/hooks/index.ts` — remove `useRealtimeReactions` + `useOfflineSync` exports
-- `src/hooks/useBackgroundSync.ts` — strip connection-status writes
-- `src/hooks/useUnreadDMs.ts` — migrate to `sharedChannel`
-- `src/hooks/useRealtimeNotifications.ts` — dedupe broadcast vs postgres_changes
-- `src/hooks/useRealtimeMembers.ts` — remove duplicate `server_surface` table branch
-- `src/hooks/useSignedUrls.ts` — stable dep key
-- `src/hooks/useRealtimeUsers.ts` — add comment on own-user guard
-
-## Out of scope
-- No changes to stores, components, or RPCs.
-- `useAttachmentQueue` / `useMaintenanceMode` deletion deferred pending your confirmation that they aren't WIP.
-
-## Verification after build mode
-- Grep that `useRealtimeReactions` and `useOfflineSync` have no remaining imports.
-- Send a DM and confirm `useUnreadDMs` increments via the shared channel (no `_off` warnings in console).
-- Trigger a reconnect (DevTools offline → online) and confirm `connection.status` transitions exactly once and `reconnectAttempts` is incremented/reset exactly once.
-- Receive a notification and confirm the bell sound plays once.
-- Change a server member's role and confirm `fetchMembers`/`fetchRoles` are each called once.
+Create the Fly Valkey instance in `sin` and set `REDIS_URL` as a secret on the `kloak-ws` app. I'll write all the code so it activates automatically once that secret is present.
