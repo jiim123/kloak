@@ -125,10 +125,9 @@ const shouldGroupMessages = (current: Message, previous: Message | null): boolea
 };
 
 const getStableMessageKey = (message: Message): string => {
-  if (!message.id.startsWith("temp-")) return message.id;
   const timestamp = Math.floor(new Date(message.created_at).getTime() / 1000);
   const contentPrefix = message.content.substring(0, 30).replace(/\s+/g, "_");
-  return `pending-${timestamp}-${message.user_id}-${contentPrefix}`;
+  return `msg-${timestamp}-${message.user_id}-${contentPrefix}`;
 };
 
 const getDateDividerLabel = (date: Date): string => {

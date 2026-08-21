@@ -359,10 +359,9 @@ const mergeMessageIntoChannelCache = (
   const existingMessages = existingCache?.messages ?? [];
   const tempMessage = tempId ? existingMessages.find((m) => m.id === tempId) : undefined;
   const withoutTemp = tempId ? existingMessages.filter((m) => m.id !== tempId) : existingMessages;
-  const mergedMessage =
-    tempMessage && (!message.attachments || message.attachments.length === 0)
-      ? { ...message, attachments: tempMessage.attachments }
-      : message;
+  const mergedMessage = tempMessage
+    ? { ...message, created_at: tempMessage.created_at, attachments: (message.attachments && message.attachments.length > 0) ? message.attachments : tempMessage.attachments }
+    : message;
 
   if (withoutTemp.some((m) => m.id === mergedMessage.id)) {
     const nextMessages = withoutTemp.map((m) => (m.id === mergedMessage.id ? { ...m, ...mergedMessage } : m));
