@@ -1,14 +1,12 @@
 import type { UserStatus } from '@/types';
 import { hasRecentRealtimePresence } from '@/hooks/useRealtimeUsers';
 
-// Keep this aligned with UX expectations in the app (Members list uses 5 minutes today).
-export const PRESENCE_OFFLINE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
-
 export interface EffectivePresence {
   status: UserStatus;
   /**
-   * True when we had to "fix up" the displayed status because DB fields are inconsistent.
-   * Example: status === 'offline' but last_seen is recent → treat as online (stale).
+   * Retained for compatibility. Presence is now derived from the authoritative
+   * realtime presence channel (plus the persisted status as a fallback), so this
+   * is always false — no last_seen-based "stale" inference is applied anymore.
    */
   isStale: boolean;
   isOffline: boolean;
@@ -23,33 +21,23 @@ export interface EffectivePresence {
  */
 export function getEffectivePresence(
   status: UserStatus,
-  lastSeen: string | null | undefined,
+  _lastSeen: string | null | undefined,
   userId?: string,
 ): EffectivePresence {
   // If we have recent real-time Presence data for this user,
-  // trust the status as-is without last_seen override
+  // trust the status as-is without any DB/last_seen override.
   if (userId && hasRecentRealtimePresence(userId)) {
     return { status, isStale: false, isOffline: status === 'offline' };
   }
 
-  if (!lastSeen) {
-    return { status, isStale: false, isOffline: status === 'offline' };
-  }
-
-  const nowMs = Date.now();
-  const lastSeenMs = new Date(lastSeen).getTime();
-  const isRecent = Number.isFinite(lastSeenMs) && nowMs - lastSeenMs <= PRESENCE_OFFLINE_THRESHOLD_MS;
-
-  // If last_seen is recent, but status says offline, treat as online (status likely stale).
-  if (status === 'offline' && isRecent) {
-    return { status: 'online', isStale: true, isOffline: false };
-  }
-
-  // If last_seen is old, treat as offline even if status says otherwise.
-  if (!isRecent && status !== 'offline') {
-    return { status: 'offline', isStale: true, isOffline: true };
-  }
-
+  // Fallback: we have no live realtime presence data for this user, so trust the
+  // persisted status verbatim. We deliberately do NOT infer online/offline from
+  // `last_seen` here. `last_seen` is only updated while the user actively types or
+  // changes status, so treating a stale `last_seen` as "offline" mislabels connected
+  // and idle users as offline, and a recent `last_seen` as "online" fights the
+  // realtime presence channel when it explicitly marks a user offline. The live
+  // presence channel (kept fresh by a heartbeat in useRealtimeUsers) is the
+  // authoritative source of online/offline — exactly like Discord's gateway.
   return { status, isStale: false, isOffline: status === 'offline' };
 }
 

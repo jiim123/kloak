@@ -212,6 +212,9 @@ const GLOBAL_USERS_PRESENCE_TOPIC = 'presence:users-global';
 const PRESENCE_ABSENT_GRACE_MS = 30_000;
 const RECENT_PRESENCE_WINDOW_MS = 180_000;
 const TARGET_CHANGE_APPLY_DEBOUNCE_MS = 120;
+// Periodically re-read presenceState() so online/offline stays authoritative even when
+// no join/leave events fire (static user sets) and so offline grace transitions complete.
+const PRESENCE_HEARTBEAT_MS = 20_000;
 
 const recentRealtimePresenceByUser = new Map<string, number>();
 
@@ -562,14 +565,30 @@ export const useRealtimeUsers = () => {
         absenceStartedAtByUser.clear();
         recentRealtimePresenceByUser.clear();
         setupChannel();
+        return;
       }
+
+      // Already connected but we may have been hidden/offline for a while:
+      // re-read presenceState() so any drift is reconciled immediately.
+      applyPresenceRef.current?.();
     };
     window.addEventListener('online', handleConnectivity);
     document.addEventListener('visibilitychange', handleConnectivity);
 
+    // Heartbeat: keep the presence snapshot fresh while the tab is visible.
+    // Supabase only emits sync/join/leave events on changes, so without this a
+    // static roster of online users would eventually lose its "recent realtime
+    // presence" signal and fall back to (now-removed) last_seen heuristics.
+    const presenceHeartbeat = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      if (!presenceConnectedRef.current) return;
+      applyPresenceRef.current?.();
+    }, PRESENCE_HEARTBEAT_MS);
+
     setupChannel();
 
     return () => {
+      clearInterval(presenceHeartbeat);
       kloakUnsubscribe?.();
       if (kloakHeartbeat) clearInterval(kloakHeartbeat);
       if (kloakHandleRecovery) {
