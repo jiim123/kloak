@@ -251,6 +251,9 @@ async function handleMessage(socket: SocketContext, message: ClientMessage) {
     case "update_presence":
       await updatePresence(socket, message);
       return;
+    case "get_presence_snapshot":
+      await getPresenceSnapshot(socket, message);
+      return;
   }
 }
 
@@ -987,6 +990,48 @@ async function publishPresence(socket: SocketContext, presence: NonNullable<Sock
   for (const recipient of recipients) {
     hub.publish(`user:${recipient.user_id}`, "user.presence", payload);
   }
+}
+
+type PresenceSnapshotEntry = {
+  user_id: string;
+  status: "online" | "idle" | "dnd" | "offline";
+  custom_status: string | null;
+  last_seen: string;
+  ts: number;
+};
+
+// Returns the current live presence of every peer (server member / friend / DM
+// participant) who is online right now. Offline and invisible peers are omitted —
+// absence from this list means the peer is offline. This gives newly-connected
+// clients an authoritative initial state instead of waiting for the next heartbeat.
+async function getPresenceSnapshot(socket: SocketContext, message: Extract<ClientMessage, { type: "get_presence_snapshot" }>) {
+  const userId = requireUser(socket);
+  const recipients = await getPresenceRecipients(socket, userId);
+  const peerIds = new Set<string>(recipients.map((r) => r.user_id));
+
+  if (peerIds.size === 0) {
+    hub.send(socket, { type: "ack", requestId: message.requestId, ok: true, data: [] });
+    return;
+  }
+
+  const latestByUser = new Map<string, PresenceSnapshotEntry>();
+  for (const ws of wss.clients) {
+    const other = socketContexts.get(ws);
+    if (!other || !other.userId || !peerIds.has(other.userId)) continue;
+    const presence = other.currentPresence;
+    if (!presence || presence.status === "offline") continue;
+    const prev = latestByUser.get(other.userId);
+    if (prev && prev.ts >= presence.ts) continue;
+    latestByUser.set(other.userId, {
+      user_id: other.userId,
+      status: presence.status,
+      custom_status: presence.customStatus ?? null,
+      last_seen: presence.lastSeen,
+      ts: presence.ts,
+    });
+  }
+
+  hub.send(socket, { type: "ack", requestId: message.requestId, ok: true, data: Array.from(latestByUser.values()) });
 }
 
 async function getChannelRecipients(socket: SocketContext, channelId: string, senderId: string) {

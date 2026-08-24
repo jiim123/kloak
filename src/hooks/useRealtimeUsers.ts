@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, isSupabaseRealtimeDisabled } from '@/integrations/supabase/client';
 import { useServerStore } from '@/stores/serverStore';
 import { useFriendStore } from '@/stores/friendStore';
 import { useDMStore } from '@/stores/dmStore';
@@ -215,6 +215,10 @@ const TARGET_CHANGE_APPLY_DEBOUNCE_MS = 120;
 // Periodically re-read presenceState() so online/offline stays authoritative even when
 // no join/leave events fire (static user sets) and so offline grace transitions complete.
 const PRESENCE_HEARTBEAT_MS = 20_000;
+// Keeps the DB `last_seen` column fresh while the app is open, so the persisted
+// presence fallback (used before the first realtime event and for users who
+// disconnected before we connected) can tell online from offline reliably.
+const LAST_SEEN_HEARTBEAT_MS = 60_000;
 
 const recentRealtimePresenceByUser = new Map<string, number>();
 
@@ -302,6 +306,37 @@ const applySocketPresencePayload = (payload: unknown) => {
   });
 };
 
+let lastPresenceBootstrapAt = 0;
+const PRESENCE_BOOTSTRAP_THROTTLE_MS = 30_000;
+
+// Fetches the authoritative "who's online" snapshot from kloak-ws and applies it,
+// so a freshly-connected client doesn't have to wait up to a minute for heartbeats
+// (or trust stale DB status). Peers absent from the snapshot are marked offline.
+const bootstrapPresenceFromSocket = async (userId: string) => {
+  const now = Date.now();
+  if (now - lastPresenceBootstrapAt < PRESENCE_BOOTSTRAP_THROTTLE_MS) return;
+  lastPresenceBootstrapAt = now;
+
+  try {
+    const entries = (await kloakSocket.getPresenceSnapshot()) as GlobalPresenceMeta[];
+    if (!Array.isArray(entries)) return;
+
+    const onlineIds = new Set<string>();
+    for (const entry of entries) {
+      if (!entry || typeof entry.user_id !== 'string' || entry.user_id === userId) continue;
+      applySocketPresencePayload(entry);
+      onlineIds.add(entry.user_id);
+    }
+
+    for (const targetId of collectPresenceTargetUserIds()) {
+      if (targetId === userId || onlineIds.has(targetId)) continue;
+      applySocketPresencePayload({ user_id: targetId, status: 'offline', ts: Date.now() });
+    }
+  } catch {
+    // Snapshot is best-effort: heartbeats + the last_seen fallback cover failures.
+  }
+};
+
 /**
  * Hook for targeted presence updates.
  * 
@@ -356,6 +391,7 @@ export const useRealtimeUsers = () => {
       kloakHandleRecovery = () => {
         if (document.visibilityState !== 'visible') return;
         publishOwnSocketPresence();
+        void bootstrapPresenceFromSocket(userId);
       };
 
       void kloakSocket
@@ -365,6 +401,7 @@ export const useRealtimeUsers = () => {
         .then((fn) => {
           kloakUnsubscribe = fn;
           publishOwnSocketPresence();
+          void bootstrapPresenceFromSocket(userId);
         })
         .catch(() => undefined);
 
@@ -372,37 +409,52 @@ export const useRealtimeUsers = () => {
       document.addEventListener('visibilitychange', kloakHandleRecovery);
     }
 
-    // ─── Supabase Realtime Presence — always runs, handles receiving others' presence ───
-    const presenceSigByUser = presenceSigByUserRef.current;
-    const absenceStartedAtByUser = absenceStartedAtByUserRef.current;
+    // ─── DB `last_seen` heartbeat (runs regardless of presence transport) ───
+    const lastSeenHeartbeat = setInterval(() => {
+      const { user, manualStatus } = useAuthStore.getState();
+      if (!user) return;
+      if (user.status === 'offline' || manualStatus === 'offline') return;
+      void useAuthStore.getState().updateLastSeen();
+    }, LAST_SEEN_HEARTBEAT_MS);
 
-    let activeChannel: ReturnType<typeof supabase.channel> | null = null;
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-    let reconnectAttempts = 0;
-    let teardown: (() => void) | null = null;
-    let storeSubTimer: ReturnType<typeof setTimeout> | null = null;
-    let lastTargetIdsKey = collectPresenceTargetUserIds().slice().sort().join(',');
-    let lastTargetIdsSet = new Set(collectPresenceTargetUserIds());
+    // ─── Supabase Realtime Presence — only when Realtime is enabled ───
+    // When Realtime is disabled (production uses kloak-ws), supabase.channel() is a
+    // stub that reports CLOSED immediately. Setting the channel up anyway would spin
+    // an infinite reconnect loop that repeatedly clears `recentRealtimePresenceByUser`
+    // and fights the kloak-ws presence path — so we skip it entirely.
+    let teardownPresence: (() => void) | null = null;
 
-    const scheduleReconnect = () => {
-      if (reconnectTimer) return;
-      const delay = Math.min(10_000, 500 * 2 ** Math.min(reconnectAttempts, 5));
-      reconnectAttempts += 1;
-      reconnectTimer = setTimeout(() => {
-        reconnectTimer = null;
-        try {
-          teardown?.();
-        } catch {
-          // ignore
-        }
-        presenceSigByUser.clear();
-        absenceStartedAtByUser.clear();
-        recentRealtimePresenceByUser.clear();
-        setupChannel();
-      }, delay);
-    };
+    if (!isSupabaseRealtimeDisabled()) {
+      const presenceSigByUser = presenceSigByUserRef.current;
+      const absenceStartedAtByUser = absenceStartedAtByUserRef.current;
 
-    const setupChannel = () => {
+      let activeChannel: ReturnType<typeof supabase.channel> | null = null;
+      let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+      let reconnectAttempts = 0;
+      let teardown: (() => void) | null = null;
+      let storeSubTimer: ReturnType<typeof setTimeout> | null = null;
+      let lastTargetIdsKey = collectPresenceTargetUserIds().slice().sort().join(',');
+      let lastTargetIdsSet = new Set(collectPresenceTargetUserIds());
+
+      const scheduleReconnect = () => {
+        if (reconnectTimer) return;
+        const delay = Math.min(10_000, 500 * 2 ** Math.min(reconnectAttempts, 5));
+        reconnectAttempts += 1;
+        reconnectTimer = setTimeout(() => {
+          reconnectTimer = null;
+          try {
+            teardown?.();
+          } catch {
+            // ignore
+          }
+          presenceSigByUser.clear();
+          absenceStartedAtByUser.clear();
+          recentRealtimePresenceByUser.clear();
+          setupChannel();
+        }, delay);
+      };
+
+      const setupChannel = () => {
       const channel = supabase.channel(GLOBAL_USERS_PRESENCE_TOPIC, {
         config: { presence: { key: `${userId}:${tabIdRef.current}` } },
       });
@@ -578,38 +630,44 @@ export const useRealtimeUsers = () => {
     // Heartbeat: keep the presence snapshot fresh while the tab is visible.
     // Supabase only emits sync/join/leave events on changes, so without this a
     // static roster of online users would eventually lose its "recent realtime
-    // presence" signal and fall back to (now-removed) last_seen heuristics.
+    // presence" signal and fall back to the persisted last_seen heuristic.
     const presenceHeartbeat = setInterval(() => {
       if (document.visibilityState !== 'visible') return;
       if (!presenceConnectedRef.current) return;
       applyPresenceRef.current?.();
     }, PRESENCE_HEARTBEAT_MS);
 
-    setupChannel();
+      setupChannel();
+
+      teardownPresence = () => {
+        clearInterval(presenceHeartbeat);
+        unsubFriends();
+        unsubDMs();
+        unsubServer();
+        unsubUI();
+        if (storeSubTimer) clearTimeout(storeSubTimer);
+        if (reconnectTimer) clearTimeout(reconnectTimer);
+        window.removeEventListener('online', handleConnectivity);
+        document.removeEventListener('visibilitychange', handleConnectivity);
+        try {
+          teardown?.();
+        } catch {
+          // ignore
+        }
+        presenceSigByUser.clear();
+        absenceStartedAtByUser.clear();
+      };
+    }
 
     return () => {
-      clearInterval(presenceHeartbeat);
+      clearInterval(lastSeenHeartbeat);
       kloakUnsubscribe?.();
       if (kloakHeartbeat) clearInterval(kloakHeartbeat);
       if (kloakHandleRecovery) {
         window.removeEventListener('online', kloakHandleRecovery);
         document.removeEventListener('visibilitychange', kloakHandleRecovery);
       }
-      unsubFriends();
-      unsubDMs();
-      unsubServer();
-      unsubUI();
-      if (storeSubTimer) clearTimeout(storeSubTimer);
-      if (reconnectTimer) clearTimeout(reconnectTimer);
-      window.removeEventListener('online', handleConnectivity);
-      document.removeEventListener('visibilitychange', handleConnectivity);
-      try {
-        teardown?.();
-      } catch {
-        // ignore
-      }
-      presenceSigByUser.clear();
-      absenceStartedAtByUser.clear();
+      teardownPresence?.();
       recentRealtimePresenceByUser.clear();
     };
   }, [authUser?.id]);

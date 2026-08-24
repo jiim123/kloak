@@ -296,6 +296,13 @@ export class KloakSocketClient {
     if (response.type !== "ack") throw new Error("Unexpected socket response");
     return response.data;
   }
+
+  async getPresenceSnapshot() {
+    await this.connect();
+    const response = await this.request({ type: "get_presence_snapshot" });
+    if (response.type !== "ack") throw new Error("Unexpected socket response");
+    return response.data;
+  }
   private async openAndAuthenticate() {
     const { keyHash, mfaSessionToken } = useAuthStore.getState();
     if (!keyHash) throw new Error("Missing Kloak key hash for websocket auth");

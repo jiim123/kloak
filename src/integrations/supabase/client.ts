@@ -380,7 +380,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   },
 });
 
-const isSupabaseRealtimeDisabled = () => {
+export const isSupabaseRealtimeDisabled = () => {
   if (typeof window === "undefined") return false;
   try {
     const override = window.localStorage.getItem("kloak:disable-supabase-realtime");

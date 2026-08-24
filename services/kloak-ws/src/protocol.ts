@@ -163,6 +163,9 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
     lastSeen: z.string().datetime().optional().nullable(),
     ts: z.number().int().nonnegative().optional(),
   }),
+  base.extend({
+    type: z.literal("get_presence_snapshot"),
+  }),
 ]);
 
 export type ClientMessage = z.infer<typeof clientMessageSchema>;
