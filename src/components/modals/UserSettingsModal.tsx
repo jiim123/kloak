@@ -1423,10 +1423,17 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   };
 
   const handleManageSubscription = () => {
-    // Open Pocketsflow customer portal
-    const portalUrl = import.meta.env.VITE_POCKETSFLOW_PORTAL_URL;
-    if (portalUrl) {
+    // Build Pocketsflow customer portal URL from stored IDs
+    // Format: https://bugdrop.pocketsflow.com/portal/{subscriptionId}/{subscriptionCustomerId}
+    const offerId = subscription?.pocketsflow_offer_id;
+    const subscriberId = subscription?.pocketsflow_subscription_id;
+    if (offerId && subscriberId) {
+      const portalUrl = `https://bugdrop.pocketsflow.com/portal/${offerId}/${subscriberId}`;
       window.open(portalUrl, "_blank", "noopener,noreferrer");
+    } else {
+      toast.error("Subscription portal not available", {
+        description: "Missing subscription IDs. Please try again later.",
+      });
     }
   };
 

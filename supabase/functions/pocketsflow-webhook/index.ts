@@ -197,7 +197,11 @@ async function handleSubscriptionActivated(
   const customerEmail = customer.email as string | undefined;
   const status = payload.status as string | undefined;
 
-  console.log(`[pocketsflow-webhook] Activating subscription for user ${userId}, subscriberId: ${subscriberId}, email: ${customerEmail}`);
+  // subscription.id = offer ID (for portal URL), subscriptionCustomerId = per-subscriber ID
+  const sub = (payload.subscription || {}) as Record<string, unknown>;
+  const offerId = sub.id as string | undefined;
+
+  console.log(`[pocketsflow-webhook] Activating subscription for user ${userId}, subscriberId: ${subscriberId}, offerId: ${offerId}, email: ${customerEmail}`);
 
   // Upsert subscription record
   const { error } = await supabase
@@ -209,6 +213,7 @@ async function handleSubscriptionActivated(
         status: status ? mapStatus(status) : "active",
         pocketsflow_customer_id: customerEmail || null,
         pocketsflow_subscription_id: subscriberId || null,
+        pocketsflow_offer_id: offerId || null,
         cancel_at_period_end: false,
       },
       { onConflict: "user_id,plan_id" },
@@ -331,6 +336,10 @@ async function handleOrderCompleted(
   console.log(`[pocketsflow-webhook] order.completed with subscription metadata for user ${userId}, plan ${planId}`);
   console.log(`[pocketsflow-webhook] customerEmail: ${customerEmail}, paymentIntentId: ${order.paymentIntentId}`);
 
+  // product.id is the subscription offer ID in order.completed events
+  const product = (payload.product || {}) as Record<string, unknown>;
+  const offerId = product.id as string | undefined;
+
   // Try PostgREST upsert first
   const { data, error } = await supabase
     .from("user_subscriptions")
@@ -341,6 +350,7 @@ async function handleOrderCompleted(
         status: "active",
         pocketsflow_customer_id: customerEmail || null,
         pocketsflow_subscription_id: (order.paymentIntentId as string) || null,
+        pocketsflow_offer_id: offerId || null,
         cancel_at_period_end: false,
       },
       { onConflict: "user_id,plan_id" },
@@ -356,6 +366,7 @@ async function handleOrderCompleted(
       _status: "active",
       _customer_email: customerEmail || null,
       _subscription_id: (order.paymentIntentId as string) || null,
+      _offer_id: offerId || null,
     });
 
     if (sqlError) {
