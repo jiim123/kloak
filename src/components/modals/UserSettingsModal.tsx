@@ -347,7 +347,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const navItems = [
     { id: "account", label: "Account", icon: Key },
     { id: "profile", label: "Profile", icon: User },
-    { id: "subscription", label: "Subscription", icon: Zap },
+    { id: "subscription", label: "Kloak Prime", icon: Crown, colorClass: "text-amber-500" },
     { id: "achievements", label: "Achievements", icon: Trophy },
     { id: "privacy", label: "Privacy", icon: Shield },
     { id: "voice", label: "Voice & Audio", icon: Mic },
@@ -1437,144 +1437,184 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     }
   };
 
+  const primeFeatures = [
+    { icon: Crown, title: "Exclusive badge", desc: "Golden crown badge on your profile and in chat", color: "from-amber-400 to-yellow-500", bg: "bg-amber-500/10", text: "text-amber-400" },
+    { icon: User, title: "Exclusive PFP & decorations", desc: "Premium avatar decorations and profile effects", color: "from-purple-400 to-pink-500", bg: "bg-purple-500/10", text: "text-purple-400" },
+    { icon: Sparkles, title: "Exclusive nametags", desc: "Special nametag styles nobody else can get", color: "from-cyan-400 to-blue-500", bg: "bg-cyan-500/10", text: "text-cyan-400" },
+    { icon: Download, title: "Higher upload limits", desc: "Share files up to 100MB", color: "from-emerald-400 to-teal-500", bg: "bg-emerald-500/10", text: "text-emerald-400" },
+    { icon: Mic, title: "Higher voice & screenshare quality", desc: "Crystal-clear voice calls and HD screensharing", color: "from-rose-400 to-red-500", bg: "bg-rose-500/10", text: "text-rose-400" },
+  ];
+
   const subscriptionContent = (
-    <div className="space-y-6">
-      {/* Hero Banner */}
-      <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-transparent p-6 sm:p-8">
-        <div className="absolute -top-12 -right-12 h-40 w-40 rounded-full bg-amber-500/10 blur-3xl" />
-        <div className="absolute -bottom-8 -left-8 h-32 w-32 rounded-full bg-orange-500/10 blur-2xl" />
-        <div className="relative">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 via-amber-500 to-orange-600 shadow-lg shadow-amber-500/25">
-              <Crown className="h-7 w-7 text-white drop-shadow-sm" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-black tracking-tight">Kloak Prime</h2>
-              <p className="text-sm text-muted-foreground">The ultimate Kloak experience</p>
-            </div>
+    <div className="space-y-0">
+      {/* === Illustration Banner === */}
+      <div className="relative -mx-6 -mt-4 border-b border-border/40 px-6 py-10 sm:-mx-8 sm:px-8">
+        <div className="flex flex-col items-center text-center">
+          {/* Crown illustration with sparkle accents */}
+          <div className="relative mb-5">
+            {/* Glow behind the crown */}
+            <div className="absolute inset-0 -m-4 rounded-full bg-amber-500/10 blur-2xl" />
+            <svg width="88" height="88" viewBox="0 0 88 88" fill="none" xmlns="http://www.w3.org/2000/svg" className="relative">
+              {/* Crown body */}
+              <path d="M44 20L56 42L72 28L68 64H20L16 28L32 42L44 20Z" fill="url(#crown-gradient)" stroke="url(#crown-stroke)" strokeWidth="1.5" strokeLinejoin="round"/>
+              {/* Crown base */}
+              <rect x="20" y="62" width="48" height="6" rx="3" fill="url(#base-gradient)"/>
+              {/* Crown gems */}
+              <circle cx="44" cy="50" r="3.5" fill="#FFF7ED" fillOpacity="0.9"/>
+              <circle cx="34" cy="52" r="2.5" fill="#FEF3C7" fillOpacity="0.8"/>
+              <circle cx="54" cy="52" r="2.5" fill="#FEF3C7" fillOpacity="0.8"/>
+              {/* Crown tips */}
+              <circle cx="44" cy="18" r="3" fill="#FCD34D"/>
+              <circle cx="16" cy="26" r="2.5" fill="#FCD34D"/>
+              <circle cx="72" cy="26" r="2.5" fill="#FCD34D"/>
+              <defs>
+                <linearGradient id="crown-gradient" x1="16" y1="20" x2="72" y2="64" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#FBBF24"/>
+                  <stop offset="0.5" stopColor="#F59E0B"/>
+                  <stop offset="1" stopColor="#D97706"/>
+                </linearGradient>
+                <linearGradient id="crown-stroke" x1="16" y1="20" x2="72" y2="64" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#FDE68A"/>
+                  <stop offset="1" stopColor="#B45309"/>
+                </linearGradient>
+                <linearGradient id="base-gradient" x1="20" y1="62" x2="68" y2="68" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#D97706"/>
+                  <stop offset="1" stopColor="#92400E"/>
+                </linearGradient>
+              </defs>
+            </svg>
+            {/* Sparkle accents around the crown */}
+            <svg className="absolute -top-2 -right-3 h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M10 0L12.5 7.5L20 10L12.5 12.5L10 20L7.5 12.5L0 10L7.5 7.5L10 0Z"/>
+            </svg>
+            <svg className="absolute -bottom-1 -left-3 h-3.5 w-3.5 text-amber-300" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M10 0L12.5 7.5L20 10L12.5 12.5L10 20L7.5 12.5L0 10L7.5 7.5L10 0Z"/>
+            </svg>
+            <svg className="absolute top-1 -left-5 h-2.5 w-2.5 text-yellow-300" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M10 0L12.5 7.5L20 10L12.5 12.5L10 20L7.5 12.5L0 10L7.5 7.5L10 0Z"/>
+            </svg>
+            <svg className="absolute top-0 -right-5 h-2 w-2 text-orange-300" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M10 0L12.5 7.5L20 10L12.5 12.5L10 20L7.5 12.5L0 10L7.5 7.5L10 0Z"/>
+            </svg>
           </div>
-        </div>
-      </div>
 
-      {/* Active Subscription Status */}
-      {isSubscriptionLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      ) : isSubscribed() ? (
-        <div className="rounded-2xl border border-amber-500/20 bg-card p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500">
-                  <Crown className="h-5 w-5 text-white" />
-                </div>
-                <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-emerald-500 border-2 border-card" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold">Kloak Prime</h3>
-                <p className="text-xs text-emerald-500 font-medium">
-                  {subscription?.status === "trialing"
-                    ? "Free trial active"
-                    : subscription?.status === "past_due"
-                      ? "Payment past due"
-                      : subscription?.cancel_at_period_end
-                        ? "Cancels at end of period"
-                        : "Active"}
-                </p>
-              </div>
-            </div>
-            <span className="text-2xl font-black text-amber-500">${SUBSCRIPTION_PLANS[0]?.price ?? 0}<span className="text-sm font-medium text-muted-foreground">/mo</span></span>
-          </div>
-
-          {subscription?.current_period_end && !subscription?.cancel_at_period_end && (
-            <div className="flex items-center gap-2 rounded-xl bg-secondary/50 px-4 py-3">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">
-                Next billing: {new Date(subscription.current_period_end).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}
-              </span>
-            </div>
-          )}
-
-          {subscription?.cancel_at_period_end && subscription?.current_period_end && (
-            <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3">
-              <p className="text-xs text-destructive font-medium">
-                Subscription ends {new Date(subscription.current_period_end).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}
-              </p>
-            </div>
-          )}
-
-          <Button
-            variant="outline"
-            onClick={handleManageSubscription}
-            className="w-full rounded-xl h-11 border-border/50"
-          >
-            Manage Subscription
-            <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
-          </Button>
-        </div>
-      ) : null}
-
-      {/* Feature List */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-bold">What you get with Prime</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Everything you need to stand out</p>
-          </div>
+          <h2 className="text-2xl font-black tracking-tight">Kloak Prime</h2>
+          <p className="mt-1 text-sm text-muted-foreground">The ultimate Kloak experience</p>
           {!isSubscribed() && (
-            <span className="text-2xl font-black">${SUBSCRIPTION_PLANS[0]?.price ?? 0}<span className="text-sm font-medium text-muted-foreground">/mo</span></span>
+            <p className="mt-3 text-2xl font-black">
+              <span className="text-amber-500">${SUBSCRIPTION_PLANS[0]?.price ?? 0}</span>
+              <span className="text-sm font-medium text-muted-foreground">/month</span>
+            </p>
           )}
-        </div>
-
-        <div className="grid gap-3">
-          {[
-            { icon: Crown, title: "Exclusive badge", desc: "Show off your Prime status with a golden crown badge on your profile and in chat" },
-            { icon: User, title: "Exclusive PFP & decorations", desc: "Access premium avatar decorations and profile effects only for Prime members" },
-            { icon: Palette, title: "Exclusive nametags", desc: "Stand out with special nametag styles that nobody else can get" },
-            { icon: Download, title: "Higher upload limits (100MB)", desc: "Share large files up to 100MB — perfect for high-res images, videos, and documents" },
-            { icon: Mic, title: "Higher voice & screenshare quality", desc: "Crystal-clear voice calls and HD screensharing for the best experience" },
-          ].map((feature) => (
-            <div key={feature.title} className="flex items-start gap-4 rounded-xl border border-border/40 bg-card p-4 transition-colors hover:border-amber-500/30">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10">
-                <feature.icon className="h-5 w-5 text-amber-500" />
-              </div>
-              <div className="min-w-0">
-                <h4 className="text-sm font-semibold">{feature.title}</h4>
-                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{feature.desc}</p>
-              </div>
-            </div>
-          ))}
         </div>
       </div>
 
-      {/* Subscribe CTA */}
-      {!isSubscribed() && (
-        <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-transparent p-6 text-center space-y-4">
-          <div className="flex justify-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 via-amber-500 to-orange-600 shadow-lg shadow-amber-500/25">
-              <Crown className="h-8 w-8 text-white drop-shadow-sm" />
+      {/* === Content area === */}
+      <div className="space-y-6 px-1 pt-6">
+        {/* Active Subscription Status */}
+        {isSubscriptionLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : isSubscribed() ? (
+          <div className="relative overflow-hidden rounded-2xl border border-amber-500/25 bg-gradient-to-br from-amber-500/5 to-transparent p-5">
+            <div className="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-amber-500/5 blur-2xl" />
+            <div className="relative space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-md shadow-amber-500/20">
+                      <Crown className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-emerald-500 ring-2 ring-background" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold">You&apos;re a Prime member</h3>
+                    <p className="text-xs font-medium text-emerald-500">
+                      {subscription?.status === "trialing"
+                        ? "Free trial active"
+                        : subscription?.status === "past_due"
+                          ? "Payment past due"
+                          : subscription?.cancel_at_period_end
+                            ? "Cancels at end of period"
+                            : "Active"}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-xl font-black text-amber-500">${SUBSCRIPTION_PLANS[0]?.price ?? 0}</span>
+                  <span className="text-xs font-medium text-muted-foreground">/mo</span>
+                </div>
+              </div>
+
+              {subscription?.current_period_end && !subscription?.cancel_at_period_end && (
+                <div className="flex items-center gap-2 rounded-xl bg-secondary/40 px-4 py-2.5">
+                  <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">
+                    Next billing: {new Date(subscription.current_period_end).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}
+                  </span>
+                </div>
+              )}
+
+              {subscription?.cancel_at_period_end && subscription?.current_period_end && (
+                <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-2.5">
+                  <p className="text-xs text-destructive font-medium">
+                    Subscription ends {new Date(subscription.current_period_end).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}
+                  </p>
+                </div>
+              )}
+
+              <Button
+                variant="outline"
+                onClick={handleManageSubscription}
+                className="w-full rounded-xl h-10 border-border/50 text-sm"
+              >
+                Manage Subscription
+                <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
+              </Button>
             </div>
           </div>
-          <div>
-            <h3 className="text-lg font-black">Upgrade to Kloak Prime</h3>
-            <p className="text-sm text-muted-foreground mt-1">Join thousands of Prime members</p>
+        ) : null}
+
+        {/* === Feature Grid — colorful Discord Nitro style === */}
+        <div>
+          <h3 className="text-base font-bold mb-1">What you get with Prime</h3>
+          <p className="text-xs text-muted-foreground mb-4">Level up your Kloak experience</p>
+
+          <div className="space-y-2.5">
+            {primeFeatures.map((feature) => (
+              <div key={feature.title} className="group flex items-start gap-3.5 rounded-xl border border-border/40 bg-card p-4 transition-all hover:border-border/60 hover:bg-secondary/30">
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${feature.bg} transition-transform group-hover:scale-110`}> 
+                  <feature.icon className={`h-5 w-5 ${feature.text}`} />
+                </div>
+                <div className="min-w-0 pt-0.5">
+                  <h4 className="text-sm font-semibold leading-snug">{feature.title}</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{feature.desc}</p>
+                </div>
+              </div>
+            ))}
           </div>
-          <Button
-            onClick={() => SUBSCRIPTION_PLANS[0] && void handleCheckout(SUBSCRIPTION_PLANS[0].id)}
-            disabled={isCheckoutLoading !== null}
-            className="w-full h-12 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-sm shadow-lg shadow-amber-500/25 border-0"
-          >
-            {isCheckoutLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <Crown className="h-4 w-4 mr-2" />
-            )}
-            Subscribe — ${SUBSCRIPTION_PLANS[0]?.price ?? 0}/mo
-          </Button>
-          <p className="text-[11px] text-muted-foreground">Cancel anytime. No questions asked.</p>
         </div>
-      )}
+
+        {/* === Subscribe CTA === */}
+        {!isSubscribed() && (
+          <div className="space-y-3 pb-2">
+            <Button
+              onClick={() => SUBSCRIPTION_PLANS[0] && void handleCheckout(SUBSCRIPTION_PLANS[0].id)}
+              disabled={isCheckoutLoading !== null}
+              className="w-full h-12 rounded-xl bg-gradient-to-r from-[#FFD866] via-[#F5A623] to-[#E85D04] hover:from-[#E8C85A] hover:via-[#D9951D] hover:to-[#CC5203] text-black font-bold text-sm shadow-lg shadow-amber-500/20 border-0 transition-all hover:shadow-xl hover:shadow-amber-500/30"
+            >
+              {isCheckoutLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Crown className="h-4 w-4 mr-2" />
+              )}
+              Subscribe — ${SUBSCRIPTION_PLANS[0]?.price ?? 0}/mo
+            </Button>
+            <p className="text-center text-[11px] text-muted-foreground">Cancel anytime. No questions asked.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 
@@ -2457,7 +2497,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {activeTab === "account" && "Manage your account"}
                   {activeTab === "profile" && "Customize your profile"}
-                  {activeTab === "subscription" && "Manage your plan"}
+                  {activeTab === "subscription" && "Kloak Prime"}
                   {activeTab === "achievements" && "Track your progress"}
                   {activeTab === "privacy" && "Control who can message you"}
                   {activeTab === "voice" && "Audio and voice settings"}
@@ -2509,6 +2549,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                   {navItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = activeTab === item.id;
+                    const isPrime = item.id === "subscription";
                     return (
                       <button
                         key={item.id}
@@ -2516,8 +2557,12 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                         className={cn(
                           "user-settings-nav-row w-full flex items-center justify-start gap-2 text-sm px-2 py-2.5 rounded-xl transition-colors",
                           isActive
-                            ? "bg-primary/15 text-primary shadow-sm"
-                            : "text-muted-foreground hover:text-foreground hover:bg-secondary/80",
+                            ? isPrime
+                              ? "bg-amber-500/15 text-amber-500 shadow-sm"
+                              : "bg-primary/15 text-primary shadow-sm"
+                            : isPrime
+                              ? "text-amber-500/70 hover:text-amber-500 hover:bg-amber-500/10"
+                              : "text-muted-foreground hover:text-foreground hover:bg-secondary/80",
                         )}
                       >
                         <Icon className="w-4 h-4 flex-shrink-0" />
@@ -2568,6 +2613,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
               <nav className="flex flex-col gap-0">
                 {navItems.map((item) => {
                   const isActive = activeTab === item.id;
+                  const isPrime = item.id === "subscription";
 
                   return (
                     <button
@@ -2576,8 +2622,12 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                       className={cn(
                         "user-settings-nav-row w-full h-9 justify-start px-4 py-0 text-left text-sm font-medium leading-none transition-colors",
                         isActive
-                          ? "bg-secondary text-foreground"
-                          : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground",
+                          ? isPrime
+                            ? "bg-amber-500/10 text-amber-500"
+                            : "bg-secondary text-foreground"
+                          : isPrime
+                            ? "text-amber-500/70 hover:bg-amber-500/10 hover:text-amber-500"
+                            : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground",
                       )}
                     >
                       {item.label}
