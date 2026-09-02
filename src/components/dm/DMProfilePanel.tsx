@@ -4,6 +4,7 @@ import { Ban, Calendar, Check, Clock, Flag, Loader2, UserCircle, UserMinus, User
 import { useNavigate } from "react-router-dom";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { UserBadges } from "@/components/ui/user-badges";
+import { NitroBadge } from "@/components/ui/nitro-badge";
 import { BotTag } from "@/components/ui/bot-tag";
 import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
@@ -87,6 +88,7 @@ export const DMProfilePanel = ({ user }: DMProfilePanelProps) => {
 
   const [profileUser, setProfileUser] = useState<User | null>(user ?? null);
   const [badges, setBadges] = useState<Badge[]>([]);
+  const [subscriptionBadge, setSubscriptionBadge] = useState<string | null>(null);
   const [sharedServers, setSharedServers] = useState<typeof servers>([]);
   const [auraSummary, setAuraSummary] = useState<AuraSummary | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -99,6 +101,7 @@ export const DMProfilePanel = ({ user }: DMProfilePanelProps) => {
   useEffect(() => {
     setProfileUser(user ?? null);
     setBadges([]);
+    setSubscriptionBadge(null);
     setSharedServers([]);
     setAuraSummary(null);
   }, [targetUserId]);
@@ -129,6 +132,22 @@ export const DMProfilePanel = ({ user }: DMProfilePanelProps) => {
         setProfileUser(mergedUser);
         useUserCacheStore.getState().upsertUser(mergedUser);
         setBadges((Array.isArray(payload.badges) ? payload.badges : []) as Badge[]);
+
+        // Fetch subscription badge
+        try {
+          const { data: subBadge } = await supabase.rpc("get_user_subscription_badges" as any, {
+            _user_ids: [targetUserId],
+          });
+          const subs = subBadge as Array<{ user_id: string; plan_id: string; status: string }> | null;
+          if (!cancelled && subs && subs.length > 0) {
+            const sub = subs[0];
+            if (sub.status === "active" || sub.status === "trialing") {
+              setSubscriptionBadge(sub.plan_id);
+            }
+          }
+        } catch {
+          // Subscription badge is non-critical
+        }
 
         const sharedServerIds = new Set((Array.isArray(payload.shared_server_ids) ? payload.shared_server_ids : []) as string[]);
         setSharedServers(servers.filter((server) => sharedServerIds.has(server.id)).slice(0, 3));
@@ -278,6 +297,7 @@ export const DMProfilePanel = ({ user }: DMProfilePanelProps) => {
                   {statusText && <p className="mt-3 break-words text-[13px] font-semibold leading-5">{statusText}</p>}
                 </div>
                 {badges.length > 0 && <UserBadges badges={badges} />}
+                {subscriptionBadge && <NitroBadge planId={subscriptionBadge} />}
               </div>
 
               <div className={cn("mt-4 grid gap-2 text-center", hasPendingRequest ? "grid-cols-5" : "grid-cols-4")}>

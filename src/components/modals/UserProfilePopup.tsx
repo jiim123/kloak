@@ -19,6 +19,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { UserBadges } from "@/components/ui/user-badges";
+import { NitroBadge } from "@/components/ui/nitro-badge";
 import { BotTag } from "@/components/ui/bot-tag";
 import { useUIStore } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -292,6 +293,7 @@ export const UserProfilePopup = () => {
 
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [userBadges, setUserBadges] = useState<Badge[]>([]);
+  const [subscriptionBadge, setSubscriptionBadge] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [sharedServers, setSharedServers] = useState<typeof servers>([]);
   const [cooldownSeconds, setCooldownSeconds] = useState<number>(0);
@@ -350,6 +352,7 @@ export const UserProfilePopup = () => {
   const handleClose = useCallback(() => {
     setProfileUser(null);
     setUserBadges([]);
+    setSubscriptionBadge(null);
     setSharedServers([]);
     setAuraSummary(null);
     setPosition(null);
@@ -476,6 +479,23 @@ export const UserProfilePopup = () => {
         const sharedServerIds = (Array.isArray(payload.shared_server_ids) ? payload.shared_server_ids : []) as string[];
         setUserBadges(badges);
         setSharedServers(servers.filter((s) => sharedServerIds.includes(s.id)).slice(0, 3));
+
+        // Fetch subscription badge
+        try {
+          const { data: subBadge } = await supabase.rpc("get_user_subscription_badges" as any, {
+            _user_ids: [userId],
+          });
+          if (!cancelled) {
+            const subs = subBadge as Array<{ user_id: string; plan_id: string; status: string }> | null;
+            if (subs && subs.length > 0 && (subs[0].status === "active" || subs[0].status === "trialing")) {
+              setSubscriptionBadge(subs[0].plan_id);
+            } else {
+              setSubscriptionBadge(null);
+            }
+          }
+        } catch {
+          // Subscription badge is non-critical
+        }
         applyCooldownFromDeclinedAt(payload.declined_at ?? null);
 
         const payloadAuraSummary = payload?.aura_summary ? (payload.aura_summary as AuraSummary) : null;
@@ -1011,12 +1031,15 @@ export const UserProfilePopup = () => {
             {renderActionRow(divider, muted)}
 
             <div className="mt-4 space-y-3.5">
-              {userBadges.length > 0 && (
+              {(userBadges.length > 0 || subscriptionBadge) && (
                 <section>
                   <div className="mb-2 text-[12px] font-bold uppercase tracking-normal text-[color:var(--profile-muted)]">
                     Badges
                   </div>
-                  <UserBadges badges={userBadges} className="flex-wrap" />
+                  <div className="inline-flex items-center gap-1 flex-wrap">
+                    <UserBadges badges={userBadges} />
+                    {subscriptionBadge && <NitroBadge planId={subscriptionBadge} />}
+                  </div>
                 </section>
               )}
 

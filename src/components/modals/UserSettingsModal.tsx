@@ -35,6 +35,9 @@ import {
   Shield,
   Trophy,
   Rabbit,
+  Zap,
+  Crown,
+  ExternalLink,
 } from "lucide-react";
 // Rate limit utilities
 import { useRateLimit } from "@/hooks/useRateLimit";
@@ -82,7 +85,9 @@ import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { getAuthEntryPath, isTauri } from "@/lib/tauriRuntime";
 import { VoiceSettingsPanel } from "@/components/voice/VoiceSettingsPanel";
-import type { User as UserType } from "@/types";
+import type { User as UserType, SubscriptionPlanId } from "@/types";
+import { SUBSCRIPTION_PLANS } from "@/types";
+import { useSubscriptionStore } from "@/stores/subscriptionStore";
 import { useAppUpdater } from "@/hooks/useAppUpdater";
 import { sanitizeDisplayName, validateDisplayName } from "@/lib/displayNameValidation";
 import {
@@ -240,6 +245,17 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const [isAchievementsLoading, setIsAchievementsLoading] = useState(false);
   const [achievementTab, setAchievementTab] = useState<"completed" | "pending">("pending");
 
+  // Subscription state
+  const {
+    subscription,
+    isLoading: isSubscriptionLoading,
+    fetchSubscription,
+    startCheckout,
+    isSubscribed,
+    isPro,
+  } = useSubscriptionStore();
+  const [isCheckoutLoading, setIsCheckoutLoading] = useState<SubscriptionPlanId | null>(null);
+
   // Sync browser notification toggle with actual browser permission on mount
   useEffect(() => {
     const webPushSupport = getWebPushSupportStatus();
@@ -331,6 +347,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const navItems = [
     { id: "account", label: "Account", icon: Key },
     { id: "profile", label: "Profile", icon: User },
+    { id: "subscription", label: "Subscription", icon: Zap },
     { id: "achievements", label: "Achievements", icon: Trophy },
     { id: "privacy", label: "Privacy", icon: Shield },
     { id: "voice", label: "Voice & Audio", icon: Mic },
@@ -347,6 +364,13 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     if (variant === "modal" && !isOpen) return;
     fetchFriends(user.id);
   }, [fetchFriends, isOpen, user?.id, variant]);
+
+  // Fetch subscription on mount / open
+  useEffect(() => {
+    if (!user?.id) return;
+    if (variant === "modal" && !isOpen) return;
+    fetchSubscription(user.id);
+  }, [fetchSubscription, isOpen, user?.id, variant]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -965,6 +989,8 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         return accountContent;
       case "profile":
         return profileContent;
+      case "subscription":
+        return subscriptionContent;
       case "achievements":
         return achievementsContent;
       case "privacy":
@@ -1373,6 +1399,177 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
   // Voice & Audio Content
   const voiceContent = <VoiceSettingsPanel />;
+
+  const handleCheckout = async (planId: SubscriptionPlanId) => {
+    if (!user?.id) {
+      toast.error("You must be logged in to subscribe");
+      return;
+    }
+    setIsCheckoutLoading(planId);
+    try {
+      const email = user.username ? `${user.username}@kloak.app` : `${user.id}@kloak.app`;
+      console.log("[UserSettings] Starting checkout", { planId, userId: user.id, email });
+      const url = await startCheckout(planId, user.id, email);
+      if (url) {
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+      // If url is null, the store already showed a toast with the specific error
+    } catch (err) {
+      console.error("[UserSettings] handleCheckout error:", err);
+      toast.error("Something went wrong starting checkout");
+    } finally {
+      setIsCheckoutLoading(null);
+    }
+  };
+
+  const handleManageSubscription = () => {
+    // Open Pocketsflow customer portal
+    const portalUrl = import.meta.env.VITE_POCKETSFLOW_PORTAL_URL;
+    if (portalUrl) {
+      window.open(portalUrl, "_blank", "noopener,noreferrer");
+    }
+  };
+
+  const subscriptionContent = (
+    <div className="space-y-6">
+      {/* Hero Banner */}
+      <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-transparent p-6 sm:p-8">
+        <div className="absolute -top-12 -right-12 h-40 w-40 rounded-full bg-amber-500/10 blur-3xl" />
+        <div className="absolute -bottom-8 -left-8 h-32 w-32 rounded-full bg-orange-500/10 blur-2xl" />
+        <div className="relative">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 via-amber-500 to-orange-600 shadow-lg shadow-amber-500/25">
+              <Crown className="h-7 w-7 text-white drop-shadow-sm" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black tracking-tight">Kloak Prime</h2>
+              <p className="text-sm text-muted-foreground">The ultimate Kloak experience</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Active Subscription Status */}
+      {isSubscriptionLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : isSubscribed() ? (
+        <div className="rounded-2xl border border-amber-500/20 bg-card p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500">
+                  <Crown className="h-5 w-5 text-white" />
+                </div>
+                <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-emerald-500 border-2 border-card" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold">Kloak Prime</h3>
+                <p className="text-xs text-emerald-500 font-medium">
+                  {subscription?.status === "trialing"
+                    ? "Free trial active"
+                    : subscription?.status === "past_due"
+                      ? "Payment past due"
+                      : subscription?.cancel_at_period_end
+                        ? "Cancels at end of period"
+                        : "Active"}
+                </p>
+              </div>
+            </div>
+            <span className="text-2xl font-black text-amber-500">${SUBSCRIPTION_PLANS[0]?.price ?? 0}<span className="text-sm font-medium text-muted-foreground">/mo</span></span>
+          </div>
+
+          {subscription?.current_period_end && !subscription?.cancel_at_period_end && (
+            <div className="flex items-center gap-2 rounded-xl bg-secondary/50 px-4 py-3">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">
+                Next billing: {new Date(subscription.current_period_end).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}
+              </span>
+            </div>
+          )}
+
+          {subscription?.cancel_at_period_end && subscription?.current_period_end && (
+            <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3">
+              <p className="text-xs text-destructive font-medium">
+                Subscription ends {new Date(subscription.current_period_end).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}
+              </p>
+            </div>
+          )}
+
+          <Button
+            variant="outline"
+            onClick={handleManageSubscription}
+            className="w-full rounded-xl h-11 border-border/50"
+          >
+            Manage Subscription
+            <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
+          </Button>
+        </div>
+      ) : null}
+
+      {/* Feature List */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-bold">What you get with Prime</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Everything you need to stand out</p>
+          </div>
+          {!isSubscribed() && (
+            <span className="text-2xl font-black">${SUBSCRIPTION_PLANS[0]?.price ?? 0}<span className="text-sm font-medium text-muted-foreground">/mo</span></span>
+          )}
+        </div>
+
+        <div className="grid gap-3">
+          {[
+            { icon: Crown, title: "Exclusive badge", desc: "Show off your Prime status with a golden crown badge on your profile and in chat" },
+            { icon: User, title: "Exclusive PFP & decorations", desc: "Access premium avatar decorations and profile effects only for Prime members" },
+            { icon: Palette, title: "Exclusive nametags", desc: "Stand out with special nametag styles that nobody else can get" },
+            { icon: Download, title: "Higher upload limits (100MB)", desc: "Share large files up to 100MB — perfect for high-res images, videos, and documents" },
+            { icon: Mic, title: "Higher voice & screenshare quality", desc: "Crystal-clear voice calls and HD screensharing for the best experience" },
+          ].map((feature) => (
+            <div key={feature.title} className="flex items-start gap-4 rounded-xl border border-border/40 bg-card p-4 transition-colors hover:border-amber-500/30">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10">
+                <feature.icon className="h-5 w-5 text-amber-500" />
+              </div>
+              <div className="min-w-0">
+                <h4 className="text-sm font-semibold">{feature.title}</h4>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{feature.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Subscribe CTA */}
+      {!isSubscribed() && (
+        <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-transparent p-6 text-center space-y-4">
+          <div className="flex justify-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 via-amber-500 to-orange-600 shadow-lg shadow-amber-500/25">
+              <Crown className="h-8 w-8 text-white drop-shadow-sm" />
+            </div>
+          </div>
+          <div>
+            <h3 className="text-lg font-black">Upgrade to Kloak Prime</h3>
+            <p className="text-sm text-muted-foreground mt-1">Join thousands of Prime members</p>
+          </div>
+          <Button
+            onClick={() => SUBSCRIPTION_PLANS[0] && void handleCheckout(SUBSCRIPTION_PLANS[0].id)}
+            disabled={isCheckoutLoading !== null}
+            className="w-full h-12 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-sm shadow-lg shadow-amber-500/25 border-0"
+          >
+            {isCheckoutLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <Crown className="h-4 w-4 mr-2" />
+            )}
+            Subscribe — ${SUBSCRIPTION_PLANS[0]?.price ?? 0}/mo
+          </Button>
+          <p className="text-[11px] text-muted-foreground">Cancel anytime. No questions asked.</p>
+        </div>
+      )}
+    </div>
+  );
 
   const tierLabel: Record<AchievementItem["tier"], string> = {
     bronze: "Bronze",
@@ -2253,6 +2450,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {activeTab === "account" && "Manage your account"}
                   {activeTab === "profile" && "Customize your profile"}
+                  {activeTab === "subscription" && "Manage your plan"}
                   {activeTab === "achievements" && "Track your progress"}
                   {activeTab === "privacy" && "Control who can message you"}
                   {activeTab === "voice" && "Audio and voice settings"}

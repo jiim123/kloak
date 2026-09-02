@@ -2,6 +2,7 @@
 import { useNavigate, useSearchParams, useLocation, useParams, Outlet } from "react-router-dom";
 import { AnimatePresence, motion, MotionConfig } from "framer-motion";
 import { Gavel, Link2, Plus, UserCircle, Users, X } from "lucide-react";
+import { toast } from "sonner";
 import { useAuthStore, initializeAuth } from "@/stores/authStore";
 import { useUIStore } from "@/stores/uiStore";
 import { getCachedServerChannelMap, useServerStore } from "@/stores/serverStore";
@@ -175,6 +176,33 @@ const AppLayout = () => {
   const setCurrentConversation = useDMStore((s) => s.setCurrentConversation);
   const fetchConversations = useDMStore((s) => s.fetchConversations);
   const fetchFriends = useFriendStore((s) => s.fetchFriends);
+
+  // Handle subscription checkout redirect
+  useEffect(() => {
+    const subStatus = searchParams.get("subscription");
+    if (!subStatus) return;
+
+    // Remove the query param immediately
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete("subscription");
+    setSearchParams(newParams, { replace: true });
+
+    if (subStatus === "success") {
+      toast.success("Subscription activated!", {
+        description: "Welcome to Kloak+ / Kloak Pro. Enjoy your premium features!",
+      });
+      // Refresh subscription state
+      if (user?.id) {
+        import("@/stores/subscriptionStore").then(({ useSubscriptionStore }) => {
+          useSubscriptionStore.getState().fetchSubscription(user.id);
+        });
+      }
+    } else if (subStatus === "cancelled") {
+      toast.info("Subscription cancelled", {
+        description: "No worries — you can subscribe anytime from your settings.",
+      });
+    }
+  }, [searchParams, setSearchParams, user?.id]);
   const pendingFriendRequestCount = useFriendStore((s) => s.pendingRequests.length);
   const isMobileRaw = useIsMobile();
   const joinedVoiceChannelId = useVoiceStore((s) => s.joinedChannelId);
@@ -591,6 +619,15 @@ const AppLayout = () => {
       loadVoiceSettings(user.id);
     }
   }, [user?.id, loadVoiceSettings]);
+
+  // Load subscription state when user is authenticated
+  useEffect(() => {
+    if (user?.id) {
+      import("@/stores/subscriptionStore").then(({ useSubscriptionStore }) => {
+        useSubscriptionStore.getState().fetchSubscription(user.id);
+      });
+    }
+  }, [user?.id]);
 
   // Close mobile sidebars when selecting a DM conversation
   useEffect(() => {

@@ -620,3 +620,48 @@ export interface SendMessageForm {
   attachments?: File[];
   reply_to_id?: string;
 }
+
+// ============================================
+// Subscription Types (Kloak+ / Kloak Pro)
+// ============================================
+
+export type SubscriptionPlanId = "kloak_prime";
+export type SubscriptionStatus = "active" | "trialing" | "past_due" | "canceled" | "unpaid" | "paused";
+
+export interface SubscriptionPlan {
+  id: SubscriptionPlanId;
+  name: string;
+  description: string;
+  price: number; // monthly price in USD
+  features: string[];
+}
+
+export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
+  {
+    id: "kloak_prime",
+    name: "Kloak Prime",
+    description: "The ultimate Kloak experience",
+    price: 6.99,
+    features: [
+      "Exclusive badge",
+      "Exclusive PFP avatar & profile decorations",
+      "Exclusive nametags",
+      "Higher upload limits (100MB)",
+      "Higher voice & screenshare quality",
+    ],
+  },
+];
+
+export interface UserSubscription {
+  id: string;
+  user_id: string;
+  plan_id: SubscriptionPlanId;
+  status: SubscriptionStatus;
+  pocketsflow_customer_id: string | null;
+  pocketsflow_subscription_id: string | null;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+  created_at: string;
+  updated_at: string;
+}

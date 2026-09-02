@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { UserBadges } from "@/components/ui/user-badges";
+import { NitroBadge } from "@/components/ui/nitro-badge";
 import { BotTag } from "@/components/ui/bot-tag";
 import { FormatToolbar } from "@/components/chat/FormatToolbar";
 import { ReportReasonDialog, type ReportReasonOption } from "@/components/modals/ReportReasonDialog";
@@ -401,6 +402,7 @@ const UserProfile = () => {
 
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [badges, setBadges] = useState<Badge[]>([]);
+  const [subscriptionBadge, setSubscriptionBadge] = useState<string | null>(null);
   const [sharedServerIds, setSharedServerIds] = useState<string[]>([]);
   const [posts, setPosts] = useState<ProfilePost[]>([]);
   const [titleDraft, setTitleDraft] = useState("");
@@ -444,6 +446,26 @@ const UserProfile = () => {
       setSharedServerIds((Array.isArray(payload.shared_server_ids) ? payload.shared_server_ids : []) as string[]);
       setPosts((Array.isArray(payload.posts) ? payload.posts : []).map(mapPost));
       useUserCacheStore.getState().upsertUser(nextUser);
+
+      // Fetch subscription badge
+      try {
+        const { data: subBadge } = await supabase.rpc("get_user_subscription_badges", {
+          _user_ids: [userId],
+        });
+        const subs = subBadge as Array<{ user_id: string; plan_id: string; status: string }> | null;
+        if (subs && subs.length > 0) {
+          const sub = subs[0];
+          if (sub.status === "active" || sub.status === "trialing") {
+            setSubscriptionBadge(sub.plan_id);
+          } else {
+            setSubscriptionBadge(null);
+          }
+        } else {
+          setSubscriptionBadge(null);
+        }
+      } catch {
+        // Subscription badge is non-critical
+      }
     } catch (error) {
       console.error("Failed to load profile page:", error);
       toast.error("Failed to load profile");
@@ -940,6 +962,7 @@ const UserProfile = () => {
             <h1 className="truncate text-2xl font-semibold tracking-normal">{displayName}</h1>
             {profileUser.is_bot && <BotTag />}
             {badges.length > 0 && <UserBadges badges={badges} />}
+            {subscriptionBadge && <NitroBadge planId={subscriptionBadge} />}
           </div>
           <p className="mt-1 text-sm font-medium text-muted-foreground">@{profileUser.username}</p>
           {isSelf ? (
