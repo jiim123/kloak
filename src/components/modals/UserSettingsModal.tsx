@@ -36,7 +36,7 @@ import {
   Trophy,
   Rabbit,
   Zap,
-  Crown,
+  Star,
   ExternalLink,
 } from "lucide-react";
 // Rate limit utilities
@@ -348,7 +348,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const navItems = [
     { id: "account", label: "Account", icon: Key },
     { id: "profile", label: "Profile", icon: User },
-    { id: "subscription", label: "Kloak Prime", icon: Crown, colorClass: "text-amber-500" },
+    { id: "subscription", label: "Kloak Prime", icon: Star, colorClass: "text-amber-500" },
     { id: "achievements", label: "Achievements", icon: Trophy },
     { id: "privacy", label: "Privacy", icon: Shield },
     { id: "voice", label: "Voice & Audio", icon: Mic },
@@ -1500,7 +1500,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   };
 
   const primeFeatures = [
-    { icon: Crown, title: "Exclusive badge", desc: "Golden crown badge on your profile and in chat", color: "from-amber-400 to-yellow-500", bg: "bg-amber-500/10", text: "text-amber-400" },
+    { icon: Star, title: "Exclusive badge", desc: "Golden crown badge on your profile and in chat", color: "from-amber-400 to-yellow-500", bg: "bg-amber-500/10", text: "text-amber-400" },
     { icon: User, title: "Exclusive PFP & decorations", desc: "Premium avatar decorations and profile effects", color: "from-purple-400 to-pink-500", bg: "bg-purple-500/10", text: "text-purple-400" },
     { icon: Sparkles, title: "Exclusive nametags", desc: "Special nametag styles nobody else can get", color: "from-cyan-400 to-blue-500", bg: "bg-cyan-500/10", text: "text-cyan-400" },
     { icon: Download, title: "Higher upload limits", desc: "Share files up to 100MB", color: "from-emerald-400 to-teal-500", bg: "bg-emerald-500/10", text: "text-emerald-400" },
@@ -1547,7 +1547,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 <div className="flex items-center gap-3">
                   <div className="relative">
                     <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-md shadow-amber-500/20">
-                      <Crown className="h-5 w-5 text-white" />
+                      <Star className="h-5 w-5 text-white" />
                     </div>
                     <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-emerald-500 ring-2 ring-background" />
                   </div>
@@ -1619,6 +1619,15 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           </div>
         </div>
 
+        {/* === Support message === */}
+        {!isSubscribed() && (
+          <div className="rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/5 to-transparent p-4">
+            <p className="text-center text-sm text-muted-foreground leading-relaxed">
+              By subscribing, <span className="font-semibold text-amber-400">you help us accelerate development</span> and bring you even more amazing features. Your support means the world to us! 💛
+            </p>
+          </div>
+        )}
+
         {/* === Subscribe CTA === */}
         {!isSubscribed() && (
           <div className="space-y-3 pb-2">
@@ -1630,7 +1639,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
               {isCheckoutLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : (
-                <Crown className="h-4 w-4 mr-2" />
+                <Star className="h-4 w-4 mr-2" />
               )}
               Subscribe — ${SUBSCRIPTION_PLANS[0]?.price ?? 0}/mo
             </Button>
