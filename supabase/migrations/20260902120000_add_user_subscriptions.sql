@@ -1,7 +1,27 @@
+-- Ensure requesting_user_id() exists (may not be available locally)
+CREATE OR REPLACE FUNCTION public.requesting_user_id()
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+BEGIN
+  BEGIN
+    RETURN public.get_request_user_id();
+  EXCEPTION WHEN OTHERS THEN
+    BEGIN
+      RETURN auth.uid();
+    EXCEPTION WHEN OTHERS THEN
+      RETURN NULL;
+    END;
+  END;
+END;
+$function$;
+
 -- user_subscriptions: tracks Kloak Prime plan via Pocketsflow
 CREATE TABLE IF NOT EXISTS public.user_subscriptions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  user_id text NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   plan_id text NOT NULL DEFAULT 'kloak_prime' CHECK (plan_id = 'kloak_prime'),
   status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'trialing', 'past_due', 'canceled', 'unpaid', 'paused')),
   pocketsflow_customer_id text,
@@ -23,10 +43,11 @@ GRANT ALL ON public.user_subscriptions TO service_role;
 GRANT SELECT ON public.user_subscriptions TO anon, authenticated;
 
 -- Users can read their own subscription
+DROP POLICY IF EXISTS "Users read own subscription" ON public.user_subscriptions;
 CREATE POLICY "Users read own subscription"
   ON public.user_subscriptions
   FOR SELECT
-  USING (user_id = ( SELECT public.requesting_user_id() AS requesting_user_id ));
+  USING (user_id = public.requesting_user_id()::text);
 
 -- updated_at trigger
 CREATE OR REPLACE FUNCTION public.touch_user_subscriptions_updated_at()
@@ -44,7 +65,7 @@ CREATE TRIGGER trg_touch_user_subscriptions_updated_at
   EXECUTE FUNCTION public.touch_user_subscriptions_updated_at();
 
 -- RPC: get the current user's active subscription (safe for anon/authenticated)
-CREATE OR REPLACE FUNCTION public.get_my_subscription(_user_id uuid)
+CREATE OR REPLACE FUNCTION public.get_my_subscription(_user_id text)
 RETURNS jsonb AS $$
   SELECT to_jsonb(row)
   FROM (
@@ -59,7 +80,7 @@ RETURNS jsonb AS $$
 $$ LANGUAGE sql SECURITY DEFINER STABLE;
 
 -- RPC: check if a user has an active subscription (used for badge/feature gating)
-CREATE OR REPLACE FUNCTION public.has_active_subscription(_user_id uuid)
+CREATE OR REPLACE FUNCTION public.has_active_subscription(_user_id text)
 RETURNS boolean AS $$
   SELECT EXISTS (
     SELECT 1
@@ -70,21 +91,22 @@ RETURNS boolean AS $$
 $$ LANGUAGE sql SECURITY DEFINER STABLE;
 
 -- RPC: get subscription for a list of users (for badge display)
-CREATE OR REPLACE FUNCTION public.get_user_subscription_badges(_user_ids uuid[])
+CREATE OR REPLACE FUNCTION public.get_user_subscription_badges(_user_ids text[])
 RETURNS jsonb AS $$
   SELECT COALESCE(
     jsonb_agg(
       jsonb_build_object(
         'user_id', s.user_id,
         'plan_id', s.plan_id,
-        'status', s.status
+        'status', s.status,
+        'created_at', s.created_at
       )
     ),
     '[]'::jsonb
   )
   FROM (
     SELECT DISTINCT ON (user_id)
-      user_id, plan_id, status
+      user_id, plan_id, status, created_at
     FROM public.user_subscriptions
     WHERE user_id = ANY(_user_ids)
       AND status IN ('active', 'trialing')

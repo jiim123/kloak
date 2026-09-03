@@ -294,6 +294,7 @@ export const UserProfilePopup = () => {
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [userBadges, setUserBadges] = useState<Badge[]>([]);
   const [subscriptionBadge, setSubscriptionBadge] = useState<string | null>(null);
+  const [subscriptionSince, setSubscriptionSince] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [sharedServers, setSharedServers] = useState<typeof servers>([]);
   const [cooldownSeconds, setCooldownSeconds] = useState<number>(0);
@@ -353,6 +354,7 @@ export const UserProfilePopup = () => {
     setProfileUser(null);
     setUserBadges([]);
     setSubscriptionBadge(null);
+    setSubscriptionSince(null);
     setSharedServers([]);
     setAuraSummary(null);
     setPosition(null);
@@ -489,8 +491,10 @@ export const UserProfilePopup = () => {
             const subs = subBadge as Array<{ user_id: string; plan_id: string; status: string }> | null;
             if (subs && subs.length > 0 && (subs[0].status === "active" || subs[0].status === "trialing")) {
               setSubscriptionBadge(subs[0].plan_id);
+              setSubscriptionSince((subs[0] as any).created_at ?? null);
             } else {
               setSubscriptionBadge(null);
+              setSubscriptionSince(null);
             }
           }
         } catch {
@@ -1038,7 +1042,7 @@ export const UserProfilePopup = () => {
                   </div>
                   <div className="inline-flex items-center gap-1 flex-wrap">
                     <UserBadges badges={userBadges} />
-                    {subscriptionBadge && <NitroBadge planId={subscriptionBadge} />}
+                    {subscriptionBadge && <NitroBadge planId={subscriptionBadge} subscribedSince={subscriptionSince} />}
                   </div>
                 </section>
               )}

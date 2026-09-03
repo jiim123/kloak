@@ -1,29 +1,31 @@
-import { Crown } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface NitroBadgeProps {
   planId: string;
+  subscribedSince?: string | null;
   className?: string;
 }
 
 /**
  * Displays a Kloak Prime subscriber badge next to user names.
  */
-export const NitroBadge = ({ className = "" }: NitroBadgeProps) => {
+export const NitroBadge = ({ subscribedSince, className = "" }: NitroBadgeProps) => {
+  const sinceDate = subscribedSince ? new Date(subscribedSince).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" }) : null;
+
   return (
     <TooltipProvider delayDuration={200}>
       <Tooltip>
         <TooltipTrigger asChild>
           <span
-            className={`inline-flex items-center justify-center h-6 w-6 rounded-full bg-gradient-to-br from-amber-400 via-amber-500 to-orange-600 shadow-[0_0_8px_rgba(245,158,11,0.4)] transition-transform hover:scale-110 ${className}`}
+            className={`inline-flex items-center justify-center h-7 w-7 transition-transform hover:scale-110 ${className}`}
           >
-            <Crown className="h-3.5 w-3.5 text-white drop-shadow-sm" />
+            <img src="/Prime.svg" alt="Kloak Prime" className="h-7 w-7" />
           </span>
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-xs">
           <p className="font-medium">Kloak Prime</p>
           <p className="text-xs text-muted-foreground">
-            Premium subscriber
+            {sinceDate ? `Prime subscriber since ${sinceDate}` : "Prime subscriber"}
           </p>
         </TooltipContent>
       </Tooltip>

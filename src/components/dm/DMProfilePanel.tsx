@@ -89,6 +89,7 @@ export const DMProfilePanel = ({ user }: DMProfilePanelProps) => {
   const [profileUser, setProfileUser] = useState<User | null>(user ?? null);
   const [badges, setBadges] = useState<Badge[]>([]);
   const [subscriptionBadge, setSubscriptionBadge] = useState<string | null>(null);
+  const [subscriptionSince, setSubscriptionSince] = useState<string | null>(null);
   const [sharedServers, setSharedServers] = useState<typeof servers>([]);
   const [auraSummary, setAuraSummary] = useState<AuraSummary | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -102,6 +103,7 @@ export const DMProfilePanel = ({ user }: DMProfilePanelProps) => {
     setProfileUser(user ?? null);
     setBadges([]);
     setSubscriptionBadge(null);
+    setSubscriptionSince(null);
     setSharedServers([]);
     setAuraSummary(null);
   }, [targetUserId]);
@@ -143,6 +145,7 @@ export const DMProfilePanel = ({ user }: DMProfilePanelProps) => {
             const sub = subs[0];
             if (sub.status === "active" || sub.status === "trialing") {
               setSubscriptionBadge(sub.plan_id);
+              setSubscriptionSince((sub as any).created_at ?? null);
             }
           }
         } catch {
@@ -297,7 +300,7 @@ export const DMProfilePanel = ({ user }: DMProfilePanelProps) => {
                   {statusText && <p className="mt-3 break-words text-[13px] font-semibold leading-5">{statusText}</p>}
                 </div>
                 {badges.length > 0 && <UserBadges badges={badges} />}
-                {subscriptionBadge && <NitroBadge planId={subscriptionBadge} />}
+                {subscriptionBadge && <NitroBadge planId={subscriptionBadge} subscribedSince={subscriptionSince} />}
               </div>
 
               <div className={cn("mt-4 grid gap-2 text-center", hasPendingRequest ? "grid-cols-5" : "grid-cols-4")}>

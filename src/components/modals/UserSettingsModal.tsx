@@ -1443,6 +1443,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     { icon: Sparkles, title: "Exclusive nametags", desc: "Special nametag styles nobody else can get", color: "from-cyan-400 to-blue-500", bg: "bg-cyan-500/10", text: "text-cyan-400" },
     { icon: Download, title: "Higher upload limits", desc: "Share files up to 100MB", color: "from-emerald-400 to-teal-500", bg: "bg-emerald-500/10", text: "text-emerald-400" },
     { icon: Mic, title: "Higher voice & screenshare quality", desc: "Crystal-clear voice calls and HD screensharing", color: "from-rose-400 to-red-500", bg: "bg-rose-500/10", text: "text-rose-400" },
+    { icon: Zap, title: "Early access to major updates", desc: "Try new features before they roll out to everyone else", color: "from-yellow-400 to-orange-500", bg: "bg-yellow-500/10", text: "text-yellow-400" },
   ];
 
   const subscriptionContent = (
@@ -1454,48 +1455,8 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           <div className="relative mb-5">
             {/* Glow behind the crown */}
             <div className="absolute inset-0 -m-4 rounded-full bg-amber-500/10 blur-2xl" />
-            <svg width="88" height="88" viewBox="0 0 88 88" fill="none" xmlns="http://www.w3.org/2000/svg" className="relative">
-              {/* Crown body */}
-              <path d="M44 20L56 42L72 28L68 64H20L16 28L32 42L44 20Z" fill="url(#crown-gradient)" stroke="url(#crown-stroke)" strokeWidth="1.5" strokeLinejoin="round"/>
-              {/* Crown base */}
-              <rect x="20" y="62" width="48" height="6" rx="3" fill="url(#base-gradient)"/>
-              {/* Crown gems */}
-              <circle cx="44" cy="50" r="3.5" fill="#FFF7ED" fillOpacity="0.9"/>
-              <circle cx="34" cy="52" r="2.5" fill="#FEF3C7" fillOpacity="0.8"/>
-              <circle cx="54" cy="52" r="2.5" fill="#FEF3C7" fillOpacity="0.8"/>
-              {/* Crown tips */}
-              <circle cx="44" cy="18" r="3" fill="#FCD34D"/>
-              <circle cx="16" cy="26" r="2.5" fill="#FCD34D"/>
-              <circle cx="72" cy="26" r="2.5" fill="#FCD34D"/>
-              <defs>
-                <linearGradient id="crown-gradient" x1="16" y1="20" x2="72" y2="64" gradientUnits="userSpaceOnUse">
-                  <stop stopColor="#FBBF24"/>
-                  <stop offset="0.5" stopColor="#F59E0B"/>
-                  <stop offset="1" stopColor="#D97706"/>
-                </linearGradient>
-                <linearGradient id="crown-stroke" x1="16" y1="20" x2="72" y2="64" gradientUnits="userSpaceOnUse">
-                  <stop stopColor="#FDE68A"/>
-                  <stop offset="1" stopColor="#B45309"/>
-                </linearGradient>
-                <linearGradient id="base-gradient" x1="20" y1="62" x2="68" y2="68" gradientUnits="userSpaceOnUse">
-                  <stop stopColor="#D97706"/>
-                  <stop offset="1" stopColor="#92400E"/>
-                </linearGradient>
-              </defs>
-            </svg>
-            {/* Sparkle accents around the crown */}
-            <svg className="absolute -top-2 -right-3 h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M10 0L12.5 7.5L20 10L12.5 12.5L10 20L7.5 12.5L0 10L7.5 7.5L10 0Z"/>
-            </svg>
-            <svg className="absolute -bottom-1 -left-3 h-3.5 w-3.5 text-amber-300" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M10 0L12.5 7.5L20 10L12.5 12.5L10 20L7.5 12.5L0 10L7.5 7.5L10 0Z"/>
-            </svg>
-            <svg className="absolute top-1 -left-5 h-2.5 w-2.5 text-yellow-300" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M10 0L12.5 7.5L20 10L12.5 12.5L10 20L7.5 12.5L0 10L7.5 7.5L10 0Z"/>
-            </svg>
-            <svg className="absolute top-0 -right-5 h-2 w-2 text-orange-300" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M10 0L12.5 7.5L20 10L12.5 12.5L10 20L7.5 12.5L0 10L7.5 7.5L10 0Z"/>
-            </svg>
+            <img src="/Prime.svg" alt="Kloak Prime" className="relative h-24 w-24 drop-shadow-lg" />
+
           </div>
 
           <h2 className="text-2xl font-black tracking-tight">Kloak Prime</h2>
@@ -1581,15 +1542,15 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           <h3 className="text-base font-bold mb-1">What you get with Prime</h3>
           <p className="text-xs text-muted-foreground mb-4">Level up your Kloak experience</p>
 
-          <div className="space-y-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {primeFeatures.map((feature) => (
-              <div key={feature.title} className="group flex items-start gap-3.5 rounded-xl border border-border/40 bg-card p-4 transition-all hover:border-border/60 hover:bg-secondary/30">
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${feature.bg} transition-transform group-hover:scale-110`}> 
-                  <feature.icon className={`h-5 w-5 ${feature.text}`} />
+              <div key={feature.title} className="group flex items-start gap-3 rounded-xl border border-border/40 bg-card p-3.5 transition-all hover:border-border/60 hover:bg-secondary/30">
+                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${feature.bg} transition-transform group-hover:scale-110`}> 
+                  <feature.icon className={`h-4.5 w-4.5 ${feature.text}`} />
                 </div>
                 <div className="min-w-0 pt-0.5">
-                  <h4 className="text-sm font-semibold leading-snug">{feature.title}</h4>
-                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{feature.desc}</p>
+                  <h4 className="text-xs font-semibold leading-snug">{feature.title}</h4>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{feature.desc}</p>
                 </div>
               </div>
             ))}
@@ -1647,55 +1608,39 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const formatAchievementCount = (value: number) => Math.max(0, value).toLocaleString();
 
   const achievementsContent = (
-    <div className="rounded-2xl border border-border/40 p-3 sm:p-4">
-      <div className="space-y-6">
+    <div className="space-y-0">
+      {/* === Illustration Banner === */}
+      <div className="relative -mx-6 -mt-4 border-b border-border/40 px-6 py-10 sm:-mx-8 sm:px-8">
+        <div className="flex flex-col items-center text-center">
+          <div className="relative mb-5">
+            <div className="absolute inset-0 -m-4 rounded-full bg-amber-500/10 blur-2xl" />
+            <img src="/aura-badge.svg" alt="Aura" className="relative h-24 w-24 drop-shadow-lg" />
+
+          </div>
+          <h2 className="text-2xl font-black tracking-tight">Achievements</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Complete challenges and earn rewards</p>
+          {achievementSummary?.label && (
+            <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-4 py-1.5">
+              <img src="/aura-badge.svg" alt="" className="h-4 w-4 rounded object-cover" />
+              <span className="text-sm font-bold">{achievementSummary.label}</span>
+              <span className="text-xs text-muted-foreground">· {completionPercent}% complete</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* === Content area === */}
+      <div className="space-y-6 px-1 pt-6">
       {isAchievementsLoading && !achievementsPayload ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
         </div>
       ) : (
         <>
-          <div className="overflow-hidden rounded-xl border border-primary/20 bg-secondary/20">
-            <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-primary/25 bg-primary/10">
-                  <img src="/aura-badge.svg" alt="" className="h-11 w-11 rounded-xl object-cover" />
-                </div>
-                <div className="min-w-0">
-                  <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Aura</Label>
-                  <div className="mt-1 truncate text-xl font-black leading-tight">
-                    {achievementSummary?.label ?? "No Aura"}
-                  </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {completedCount} of {totalCount} achievements completed
-                  </p>
-                </div>
-              </div>
 
-              <div className="shrink-0 rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-center">
-                <div className="text-2xl font-black leading-none text-primary">{completionPercent}%</div>
-                <div className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Complete
-                </div>
-              </div>
-            </div>
-
-            <div className="border-t border-border/50 px-4 py-3">
-              <div className="h-2 overflow-hidden rounded-full bg-secondary">
-                <div
-                  className="h-full rounded-full bg-primary transition-all"
-                  style={{ width: `${completionPercent}%` }}
-                />
-              </div>
-            </div>
-          </div>
 
           {recentCompletedAchievements.length > 0 && (
-            <section className="space-y-2">
-              <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Recently Completed
-              </Label>
-              <div className="grid gap-2 sm:grid-cols-3">
+            <div className="grid gap-2 sm:grid-cols-3">
                 {recentCompletedAchievements.map((achievement) => (
                   <div
                     key={`recent-${achievement.slug}`}
@@ -1713,7 +1658,6 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                   </div>
                 ))}
               </div>
-            </section>
           )}
 
           <div className="space-y-3">
