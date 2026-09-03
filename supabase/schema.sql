@@ -5051,8 +5051,8 @@ BEGIN
       'status', f.status,
       'created_at', f.created_at,
       'user', CASE
-        WHEN f.requester_id = _user_id THEN (SELECT json_build_object('id', u.id, 'username', u.username, 'display_name', u.display_name, 'avatar_url', u.avatar_url, 'banner_color', u.banner_color, 'status', u.status, 'custom_status', u.custom_status) FROM users u WHERE u.id = f.addressee_id)
-        ELSE (SELECT json_build_object('id', u.id, 'username', u.username, 'display_name', u.display_name, 'avatar_url', u.avatar_url, 'banner_color', u.banner_color, 'status', u.status, 'custom_status', u.custom_status) FROM users u WHERE u.id = f.requester_id)
+        WHEN f.requester_id = _user_id THEN (SELECT json_build_object('id', u.id, 'username', u.username, 'display_name', u.display_name, 'avatar_url', u.avatar_url, 'banner_color', u.banner_color, 'status', u.status, 'custom_status', u.custom_status, 'nameplate', u.nameplate) FROM users u WHERE u.id = f.addressee_id)
+        ELSE (SELECT json_build_object('id', u.id, 'username', u.username, 'display_name', u.display_name, 'avatar_url', u.avatar_url, 'banner_color', u.banner_color, 'status', u.status, 'custom_status', u.custom_status, 'nameplate', u.nameplate) FROM users u WHERE u.id = f.requester_id)
       END
     ) AS friend
     FROM friendships f
@@ -5066,7 +5066,7 @@ BEGIN
       'id', f.id,
       'status', f.status,
       'created_at', f.created_at,
-      'user', (SELECT json_build_object('id', u.id, 'username', u.username, 'display_name', u.display_name, 'avatar_url', u.avatar_url, 'banner_color', u.banner_color, 'status', u.status) FROM users u WHERE u.id = f.requester_id)
+      'user', (SELECT json_build_object('id', u.id, 'username', u.username, 'display_name', u.display_name, 'avatar_url', u.avatar_url, 'banner_color', u.banner_color, 'status', u.status, 'nameplate', u.nameplate) FROM users u WHERE u.id = f.requester_id)
     ) AS request
     FROM friendships f
     WHERE f.addressee_id = _user_id AND f.status = 'pending'
@@ -5080,7 +5080,7 @@ BEGIN
       'id', f.id,
       'status', f.status,
       'created_at', f.created_at,
-      'user', (SELECT json_build_object('id', u.id, 'username', u.username, 'display_name', u.display_name, 'avatar_url', u.avatar_url, 'banner_color', u.banner_color, 'status', u.status) FROM users u WHERE u.id = f.addressee_id)
+      'user', (SELECT json_build_object('id', u.id, 'username', u.username, 'display_name', u.display_name, 'avatar_url', u.avatar_url, 'banner_color', u.banner_color, 'status', u.status, 'nameplate', u.nameplate) FROM users u WHERE u.id = f.addressee_id)
     ) AS request
     FROM friendships f
     WHERE f.requester_id = _user_id AND f.status = 'pending'
@@ -6331,6 +6331,7 @@ BEGIN
             'status', u.status,
             'custom_status', u.custom_status,
             'banner_color', u.banner_color,
+            'nameplate', u.nameplate,
             'last_seen', CASE WHEN u.id = _user_id THEN u.last_seen ELSE NULL END
           )
         )

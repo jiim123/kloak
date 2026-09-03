@@ -47,6 +47,7 @@ export const DMSidebar = () => {
   useUserCacheStore((s) => s._version);
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const isFriendsRoute = location.pathname === "/app/friends";
   const isProfileRoute = location.pathname === `/app/profiles/${user?.id}`;
   const pendingFriendRequestCount = useFriendStore((s) => s.pendingRequests.length);
@@ -208,6 +209,7 @@ export const DMSidebar = () => {
             const unreadCount = getUnreadCount(conversation.id);
             const hasUnread = unreadCount > 0;
             const isGroup = conversation.is_group || false;
+            const isActive = currentConversation?.id === conversation.id;
 
             // Get display name for groups
             const getGroupDisplayName = () => {
@@ -235,9 +237,15 @@ export const DMSidebar = () => {
                         : "hover:bg-secondary/50",
                     )}
                     onClick={() => handleSelectConversation(conversation)}
+                    onMouseEnter={() => setHoveredId(conversation.id)}
+                    onMouseLeave={() => setHoveredId(null)}
                   >
-                    {!isGroup && conversation.other_user?.nameplate && (
-                      <NameplateVideo nameplate={conversation.other_user.nameplate} className="rounded-md" />
+                    {!isGroup && conversation.other_user?.nameplate && (isActive || hoveredId === conversation.id) && (
+                      <NameplateVideo
+                        nameplate={conversation.other_user.nameplate}
+                        className="rounded-md"
+                        isHovered={isActive || hoveredId === conversation.id}
+                      />
                     )}
                     {/* Avatar with status (or stacked avatars for group) */}
                     <div className="relative z-[2] flex-shrink-0">

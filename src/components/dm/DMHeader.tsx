@@ -8,6 +8,7 @@ import { useFriendStore } from "@/stores/friendStore";
 import { useAuthStore } from "@/stores/authStore";
 import { cn } from "@/lib/utils";
 import { getEffectivePresence } from "@/lib/presence";
+import { getUserFromCache } from "@/stores/userCacheStore";
 import { toast } from "sonner";
 import type { User, UserStatus } from "@/types";
 import { useRateLimit } from "@/hooks/useRateLimit";
@@ -38,11 +39,13 @@ export const DMHeader = ({ otherUser, isProfilePanelOpen, onToggleProfilePanel }
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const checkBlockLimit = useRateLimit(10, 60_000);
 
-  const otherPresence = getEffectivePresence(
-    (otherUser?.status as UserStatus) || "offline",
-    otherUser?.last_seen,
-    otherUser?.id,
-  );
+  // Prefer the user cache for the freshest status — it's kept up-to-date by
+  // the realtime presence system (kloak-ws), while `otherUser` comes from
+  // the conversation object which may still carry the DB default status.
+  const cachedOther = otherUser?.id ? getUserFromCache(otherUser.id) : null;
+  const otherStatus = ((cachedOther?.status ?? otherUser?.status) as UserStatus) || "offline";
+  const otherLastSeen = cachedOther?.last_seen ?? otherUser?.last_seen;
+  const otherPresence = getEffectivePresence(otherStatus, otherLastSeen, otherUser?.id);
 
   const getStatusColor = (status: string) => {
     switch (status) {

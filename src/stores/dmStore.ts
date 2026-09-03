@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
 import { useUserCacheStore, bulkSetUsersInCache, fetchAndCacheUser } from "@/stores/userCacheStore";
+import { fetchUsersPresence } from "@/lib/presenceBatch";
 import { resolveSignedUrls, isSupabaseAttachmentUrl } from "@/lib/signedUrl";
 import { isKloakSocketEnabled, kloakSocket } from "@/lib/kloakSocket";
 import type { DMConversation, DirectMessage, User, ReactionGroup } from "@/types";
@@ -431,6 +432,69 @@ export const useDMStore = create<DMState>((set, get) => ({
           last_message: conv.last_message as DirectMessage,
         };
       });
+
+      // Batch-fetch presence (status + last_seen) for all DM participants.
+      // The get_user_dm_conversations RPC masks last_seen for other users,
+      // so without this, getEffectivePresence receives null last_seen and
+      // trusts the DB status (which defaults to 'online'), making everyone
+      // appear online regardless of actual activity.
+      const participantIds = Array.from(
+        new Set(
+          conversations
+            .flatMap((c) => [
+              c.other_user?.id,
+              ...(c.participants?.map((p) => p.user_id) ?? []),
+            ])
+            .filter((id): id is string => typeof id === "string" && id !== userId),
+        ),
+      );
+
+      if (participantIds.length > 0) {
+        try {
+          const presenceData = await fetchUsersPresence(userId, participantIds);
+          const presenceByUserId = new Map<
+            string,
+            { status: string | null; last_seen: string | null }
+          >();
+          for (const row of presenceData) {
+            if (!row?.id) continue;
+            presenceByUserId.set(row.id, {
+              status: row.status ?? null,
+              last_seen: row.last_seen ?? null,
+            });
+          }
+
+          // Patch conversation user data with fresh presence
+          for (const conv of conversations) {
+            if (conv.other_user?.id) {
+              const p = presenceByUserId.get(conv.other_user.id);
+              if (p) {
+                conv.other_user = {
+                  ...conv.other_user,
+                  status: (p.status as any) ?? conv.other_user.status,
+                  last_seen: p.last_seen ?? conv.other_user.last_seen,
+                };
+              }
+            }
+            if (conv.participants) {
+              conv.participants = conv.participants.map((pt) => {
+                const p = pt.user_id ? presenceByUserId.get(pt.user_id) : undefined;
+                if (!p || !pt.user) return pt;
+                return {
+                  ...pt,
+                  user: {
+                    ...pt.user,
+                    status: (p.status as any) ?? pt.user.status,
+                    last_seen: p.last_seen ?? pt.user.last_seen,
+                  },
+                };
+              });
+            }
+          }
+        } catch {
+          // Presence fetch is best-effort; conversations still load
+        }
+      }
 
       for (const conversation of conversations) {
         const users = [

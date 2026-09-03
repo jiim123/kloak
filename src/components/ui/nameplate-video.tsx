@@ -60,6 +60,14 @@ export const NameplateVideo = memo(function NameplateVideo({
 
   if (!plate) return null;
 
+  // Gradient mask: nameplate fades in from transparent on the left to opaque
+  // on the right, so the name text on the left reads cleanly over the parent
+  // background while the nameplate art appears from the right side.
+  const maskStyle = {
+    WebkitMaskImage: 'linear-gradient(to right, transparent 0%, transparent 25%, black 75%, black 100%)',
+    maskImage: 'linear-gradient(to right, transparent 0%, transparent 25%, black 75%, black 100%)',
+  } as const;
+
   // Static PNG — always visible
   if (plate.format === 'png') {
     return (
@@ -68,6 +76,7 @@ export const NameplateVideo = memo(function NameplateVideo({
           'absolute inset-0 z-0 overflow-hidden rounded-xl pointer-events-none',
           className,
         )}
+        style={maskStyle}
       >
         <img
           className="absolute inset-0 w-full h-full object-cover"
@@ -87,6 +96,7 @@ export const NameplateVideo = memo(function NameplateVideo({
           'absolute inset-0 z-0 overflow-hidden rounded-xl pointer-events-none',
           className,
         )}
+        style={maskStyle}
       >
         <img
           ref={gifRef}
@@ -107,6 +117,7 @@ export const NameplateVideo = memo(function NameplateVideo({
         'absolute inset-0 z-0 overflow-hidden rounded-xl pointer-events-none',
         className,
       )}
+      style={maskStyle}
     >
       <video
         ref={videoRef}
