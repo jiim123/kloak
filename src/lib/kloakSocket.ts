@@ -61,6 +61,22 @@ export class KloakSocketClient {
   private reconnectAttempt = 0;
   private manuallyClosed = false;
   private authenticated = false;
+  private everConnected = false;
+  private reconnectListeners = new Set<() => void>();
+
+  /**
+   * Register a callback that fires every time the socket finishes (re)connecting
+   * and re-subscribing — i.e. whenever a connection was freshly established.
+   * Used to re-publish presence right after a reconnect instead of waiting for
+   * the next heartbeat, so peers don't see the user blink offline for up to a
+   * minute on every socket drop.
+   */
+  onReconnect(listener: () => void): () => void {
+    this.reconnectListeners.add(listener);
+    return () => {
+      this.reconnectListeners.delete(listener);
+    };
+  }
 
   get url() {
     return (import.meta.env.VITE_KLOAK_WS_URL as string | undefined)?.trim() || DEFAULT_SOCKET_URL;
@@ -342,6 +358,21 @@ export class KloakSocketClient {
       this.subscribedTopics.clear();
       const topics = Array.from(this.listeners.keys());
       await this.subscribeTopics(topics);
+
+      // Only fire listeners on *re*connects. The very first connection is handled
+      // by each subscriber's own post-subscribe logic (e.g. the presence hook
+      // publishes immediately in its subscribe().then).
+      if (this.everConnected) {
+        for (const listener of this.reconnectListeners) {
+          try {
+            listener();
+          } catch {
+            // listener errors must not break the socket
+          }
+        }
+      } else {
+        this.everConnected = true;
+      }
     } catch (error) {
       if (this.ws === ws) {
         this.authenticated = false;

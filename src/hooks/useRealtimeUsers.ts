@@ -220,6 +220,32 @@ const PRESENCE_HEARTBEAT_MS = 20_000;
 // disconnected before we connected) can tell online from offline reliably.
 const LAST_SEEN_HEARTBEAT_MS = 60_000;
 
+// ---------------------------------------------------------------------------
+// Kloak-ws live-presence stabilisation
+// ---------------------------------------------------------------------------
+// A peer whose socket blips (reconnect, network drop, another session churning)
+// produces an "offline" event from the dead socket followed seconds later by an
+// "online" event from the fresh socket. Applying the offline instantly is what
+// makes members randomly appear/hide in the member list. We therefore hold
+// offline signals for a short confirmation window and only hide the user if no
+// newer online event arrives first. Connected users keep heartbeating every ~60s
+// (and re-publish immediately after reconnect), so a legitimately-online peer
+// always cancels the pending hide long before it fires.
+const KLOAK_OFFLINE_CONFIRM_MS = 8_000;
+const KLOAK_OFFLINE_SWEEP_MS = 2_000;
+
+// Last status we actually applied for a user through the kloak-ws transport.
+const kloakAppliedStatusByUser = new Map<string, UserStatus>();
+// userId -> timestamp of the first (still-unconfirmed) offline signal.
+const pendingKloakOfflineByUser = new Map<string, number>();
+// Monotonic arrival sequence per user. Live events are FIFO per socket, but the
+// presence *snapshot* request/response can interleave with them, so when a
+// snapshot was requested we remember where the live stream had gotten and refuse
+// to let the (possibly older) snapshot regress anyone whose live state is newer.
+const liveEventSeqByUser = new Map<string, number>();
+let liveEventSeq = 0;
+let offlineConfirmSweepTimer: ReturnType<typeof setInterval> | null = null;
+
 const recentRealtimePresenceByUser = new Map<string, number>();
 
 export const hasRecentRealtimePresence = (userId: string, nowMs: number = Date.now()): boolean => {
@@ -291,31 +317,133 @@ const publishOwnSocketPresence = () => {
     .catch(() => undefined);
 };
 
-const applySocketPresencePayload = (payload: unknown) => {
+const getPresenceMeta = (payload: unknown): (GlobalPresenceMeta & { user_id: string }) | null => {
   const meta = payload as GlobalPresenceMeta | null;
-  if (!meta || typeof meta.user_id !== 'string') return;
-  const status = toUserStatus(meta.status, 'online');
-  const ts = typeof meta.ts === 'number' ? meta.ts : 0;
-  if (status !== 'offline' && ts > 0 && Date.now() - ts > RECENT_PRESENCE_WINDOW_MS) return;
-  recentRealtimePresenceByUser.set(meta.user_id, Date.now());
+  if (!meta || typeof meta.user_id !== 'string' || meta.user_id.length === 0) return null;
+  return meta as GlobalPresenceMeta & { user_id: string };
+};
+
+const applyKloakPresenceOffline = (userId: string) => {
+  kloakAppliedStatusByUser.set(userId, 'offline');
+  // Pin the offline as recent realtime presence so the persisted `status`/`last_seen`
+  // fallback (which can't distinguish "invisible but connected" from "gone") doesn't
+  // override it — exactly like an online event pins online.
+  recentRealtimePresenceByUser.set(userId, Date.now());
+  patchUserAcrossStores({ id: userId, status: 'offline' });
+};
+
+const applyKloakPresenceOnline = (meta: GlobalPresenceMeta & { user_id: string }, status: UserStatus) => {
+  const { user_id: userId } = meta;
+  pendingKloakOfflineByUser.delete(userId);
+  kloakAppliedStatusByUser.set(userId, status);
+  recentRealtimePresenceByUser.set(userId, Date.now());
   patchUserAcrossStores({
-    id: meta.user_id,
+    id: userId,
     status,
     custom_status: meta.custom_status ?? null,
     last_seen: meta.last_seen ?? null,
   });
 };
 
+// Records that a live (non-snapshot) event was handled for a user, so snapshot
+// results that raced ahead of the live stream can't regress it.
+const recordKloakLiveEvent = (userId: string) => {
+  liveEventSeq += 1;
+  liveEventSeqByUser.set(userId, liveEventSeq);
+};
+
+const hasNewerLiveEventSince = (userId: string, seqAtRequest: number): boolean =>
+  (liveEventSeqByUser.get(userId) ?? 0) > seqAtRequest;
+
+// Holds an offline signal for the confirmation window unless the user was already
+// confirmed offline (dedupe). During the window a newer online event cancels it.
+const scheduleKloakOffline = (userId: string) => {
+  if (kloakAppliedStatusByUser.get(userId) === 'offline') return;
+  if (!pendingKloakOfflineByUser.has(userId)) {
+    pendingKloakOfflineByUser.set(userId, Date.now());
+  }
+};
+
+const sweepKloakOfflineConfirms = () => {
+  if (offlineConfirmSweepTimer == null) return;
+  if (pendingKloakOfflineByUser.size === 0) return;
+  const now = Date.now();
+  for (const [userId, signaledAt] of Array.from(pendingKloakOfflineByUser.entries())) {
+    if (now - signaledAt < KLOAK_OFFLINE_CONFIRM_MS) continue;
+    pendingKloakOfflineByUser.delete(userId);
+    // Safe-guard: only hide if a newer online event hasn't been applied since
+    // (applyKloakPresenceOnline removes the pending entry, but re-check anyway).
+    if (kloakAppliedStatusByUser.get(userId) !== 'offline') {
+      applyKloakPresenceOffline(userId);
+    }
+  }
+};
+
+const ensureKloakOfflineSweep = () => {
+  if (offlineConfirmSweepTimer) return;
+  offlineConfirmSweepTimer = setInterval(sweepKloakOfflineConfirms, KLOAK_OFFLINE_SWEEP_MS);
+};
+
+const stopKloakOfflineSweep = () => {
+  if (offlineConfirmSweepTimer) {
+    clearInterval(offlineConfirmSweepTimer);
+    offlineConfirmSweepTimer = null;
+  }
+};
+
+// Handles a live `user.presence` event pushed by kloak-ws (FIFO per socket).
+const handleKloakLivePresence = (payload: unknown) => {
+  const meta = getPresenceMeta(payload);
+  if (!meta) return;
+  const status = toUserStatus(meta.status, 'online');
+  const ts = typeof meta.ts === 'number' ? meta.ts : 0;
+  // Ignore stale online signals (e.g. replayed events older than the live window).
+  if (status !== 'offline' && ts > 0 && Date.now() - ts > RECENT_PRESENCE_WINDOW_MS) return;
+
+  recordKloakLiveEvent(meta.user_id);
+
+  if (status === 'offline') {
+    // Our own presence decisions (manual status, our other session publishing) are
+    // authoritative and originate locally — apply them immediately.
+    if (meta.user_id === useAuthStore.getState().user?.id) {
+      pendingKloakOfflineByUser.delete(meta.user_id);
+      applyKloakPresenceOffline(meta.user_id);
+      return;
+    }
+    scheduleKloakOffline(meta.user_id);
+    return;
+  }
+
+  applyKloakPresenceOnline(meta, status);
+};
+
+const clearKloakPresenceBookkeeping = () => {
+  kloakAppliedStatusByUser.clear();
+  pendingKloakOfflineByUser.clear();
+  liveEventSeqByUser.clear();
+  liveEventSeq = 0;
+  stopKloakOfflineSweep();
+};
+
 let lastPresenceBootstrapAt = 0;
+let bootstrapInFlight = false;
 const PRESENCE_BOOTSTRAP_THROTTLE_MS = 30_000;
 
 // Fetches the authoritative "who's online" snapshot from kloak-ws and applies it,
 // so a freshly-connected client doesn't have to wait up to a minute for heartbeats
-// (or trust stale DB status). Peers absent from the snapshot are marked offline.
+// (or trust stale DB status). Peers absent from the snapshot are queued offline
+// (through the same confirmation window as live offline events).
 const bootstrapPresenceFromSocket = async (userId: string) => {
   const now = Date.now();
   if (now - lastPresenceBootstrapAt < PRESENCE_BOOTSTRAP_THROTTLE_MS) return;
+  if (bootstrapInFlight) return;
   lastPresenceBootstrapAt = now;
+  bootstrapInFlight = true;
+  // Sequence the live stream had reached when this snapshot was requested. The
+  // snapshot response can arrive *after* newer live events (they travel on the
+  // same socket, so ordering is FIFO, but the snapshot content was generated
+  // earlier) — anything newer than the request must not be regressed by it.
+  const seqAtRequest = liveEventSeq;
 
   try {
     const entries = (await kloakSocket.getPresenceSnapshot()) as GlobalPresenceMeta[];
@@ -323,17 +451,28 @@ const bootstrapPresenceFromSocket = async (userId: string) => {
 
     const onlineIds = new Set<string>();
     for (const entry of entries) {
-      if (!entry || typeof entry.user_id !== 'string' || entry.user_id === userId) continue;
-      applySocketPresencePayload(entry);
-      onlineIds.add(entry.user_id);
+      const meta = getPresenceMeta(entry);
+      if (!meta || meta.user_id === userId) continue;
+      onlineIds.add(meta.user_id);
+      if (hasNewerLiveEventSince(meta.user_id, seqAtRequest)) continue;
+      const status = toUserStatus(meta.status, 'online');
+      if (status === 'offline') continue;
+      // Ignore snapshot rows whose presence is older than the live window (e.g.
+      // a peer whose heartbeats stopped long ago but whose socket lingers).
+      const ts = typeof meta.ts === 'number' ? meta.ts : 0;
+      if (ts > 0 && Date.now() - ts > RECENT_PRESENCE_WINDOW_MS) continue;
+      applyKloakPresenceOnline(meta, status);
     }
 
     for (const targetId of collectPresenceTargetUserIds()) {
       if (targetId === userId || onlineIds.has(targetId)) continue;
-      applySocketPresencePayload({ user_id: targetId, status: 'offline', ts: Date.now() });
+      if (hasNewerLiveEventSince(targetId, seqAtRequest)) continue;
+      scheduleKloakOffline(targetId);
     }
   } catch {
     // Snapshot is best-effort: heartbeats + the last_seen fallback cover failures.
+  } finally {
+    bootstrapInFlight = false;
   }
 };
 
@@ -368,6 +507,7 @@ export const useRealtimeUsers = () => {
       presenceSigByUserRef.current.clear();
       absenceStartedAtByUserRef.current.clear();
       recentRealtimePresenceByUser.clear();
+      clearKloakPresenceBookkeeping();
       applyPresenceRef.current = null;
       if (existing) {
         try {
@@ -382,6 +522,7 @@ export const useRealtimeUsers = () => {
 
     // ─── Kloak WS self-presence: publish own status, receive own events from other sessions ───
     let kloakUnsubscribe: (() => void) | null = null;
+    let kloakUnsubReconnect: (() => void) | null = null;
     let kloakHeartbeat: ReturnType<typeof setInterval> | null = null;
     let kloakHandleRecovery: (() => void) | null = null;
 
@@ -396,7 +537,7 @@ export const useRealtimeUsers = () => {
 
       void kloakSocket
         .subscribe(`user:${userId}`, (event) => {
-          if (event.event === 'user.presence') applySocketPresencePayload(event.payload);
+          if (event.event === 'user.presence') handleKloakLivePresence(event.payload);
         })
         .then((fn) => {
           kloakUnsubscribe = fn;
@@ -404,6 +545,17 @@ export const useRealtimeUsers = () => {
           void bootstrapPresenceFromSocket(userId);
         })
         .catch(() => undefined);
+
+      // Re-publish our presence as soon as the socket is (re)established. Without
+      // this, a reconnect leaves us absent from the server's live presence until
+      // the next 60s heartbeat — our peers see us blink offline for up to a minute
+      // on every socket drop.
+      kloakUnsubReconnect = kloakSocket.onReconnect(() => {
+        publishOwnSocketPresence();
+        void bootstrapPresenceFromSocket(userId);
+      });
+
+      ensureKloakOfflineSweep();
 
       window.addEventListener('online', kloakHandleRecovery);
       document.addEventListener('visibilitychange', kloakHandleRecovery);
@@ -417,14 +569,18 @@ export const useRealtimeUsers = () => {
       void useAuthStore.getState().updateLastSeen();
     }, LAST_SEEN_HEARTBEAT_MS);
 
-    // ─── Supabase Realtime Presence — only when Realtime is enabled ───
-    // When Realtime is disabled (production uses kloak-ws), supabase.channel() is a
-    // stub that reports CLOSED immediately. Setting the channel up anyway would spin
-    // an infinite reconnect loop that repeatedly clears `recentRealtimePresenceByUser`
-    // and fights the kloak-ws presence path — so we skip it entirely.
+    // ─── Supabase Realtime Presence — only when Realtime is enabled AND kloak-ws
+    // is not in use. When Realtime is disabled (production uses kloak-ws),
+    // supabase.channel() is a stub that reports CLOSED immediately; setting the
+    // channel up anyway would spin an infinite reconnect loop that repeatedly
+    // clears `recentRealtimePresenceByUser` and fights the kloak-ws presence path.
+    // The two transports must never run together: they don't share the same
+    // roster of tracked users, so they'd mark each other's users offline and make
+    // members randomly show/hide. kloak-ws is the authoritative transport when
+    // enabled; Supabase Realtime presence is the fallback for builds without it.
     let teardownPresence: (() => void) | null = null;
 
-    if (!isSupabaseRealtimeDisabled()) {
+    if (!isSupabaseRealtimeDisabled() && !isKloakSocketEnabled()) {
       const presenceSigByUser = presenceSigByUserRef.current;
       const absenceStartedAtByUser = absenceStartedAtByUserRef.current;
 
@@ -662,12 +818,14 @@ export const useRealtimeUsers = () => {
     return () => {
       clearInterval(lastSeenHeartbeat);
       kloakUnsubscribe?.();
+      kloakUnsubReconnect?.();
       if (kloakHeartbeat) clearInterval(kloakHeartbeat);
       if (kloakHandleRecovery) {
         window.removeEventListener('online', kloakHandleRecovery);
         document.removeEventListener('visibilitychange', kloakHandleRecovery);
       }
       teardownPresence?.();
+      clearKloakPresenceBookkeeping();
       recentRealtimePresenceByUser.clear();
     };
   }, [authUser?.id]);

@@ -101,12 +101,33 @@ wss.on("connection", (ws) => {
       maybeReleaseChannelRelay(topic);
     }
     hub.removeSocket(socket);
-    void publishPresence(socket, {
-      status: "offline",
-      customStatus: socket.currentPresence?.customStatus ?? null,
-      lastSeen: new Date().toISOString(),
-      ts: Date.now(),
-    }).catch((error) => console.warn("[kloak-ws] failed to publish offline presence", { socketId: socket.id, error }));
+
+    const closedUserId = socket.userId;
+    if (closedUserId) {
+      // Presence is per-socket, but a user can be connected from several sessions
+      // (desktop + phone, multiple tabs). Announcing "offline" whenever one of
+      // those sockets drops would make every peer (and this user's other
+      // sessions) flicker them offline/online on each churned connection. Only
+      // publish offline once no other live session of the same user remains.
+      let hasOtherLiveSession = false;
+      for (const otherWs of wss.clients) {
+        if (otherWs === ws || otherWs.readyState !== otherWs.OPEN) continue;
+        const other = socketContexts.get(otherWs);
+        if (other && other.userId === closedUserId) {
+          hasOtherLiveSession = true;
+          break;
+        }
+      }
+
+      if (!hasOtherLiveSession) {
+        void publishPresence(socket, {
+          status: "offline",
+          customStatus: socket.currentPresence?.customStatus ?? null,
+          lastSeen: new Date().toISOString(),
+          ts: Date.now(),
+        }).catch((error) => console.warn("[kloak-ws] failed to publish offline presence", { socketId: socket.id, error }));
+      }
+    }
   });
 });
 
