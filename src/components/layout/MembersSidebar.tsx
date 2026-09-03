@@ -44,6 +44,7 @@ import { MembersSidebarSkeleton } from "@/components/ui/skeletons";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { BotTag } from "@/components/ui/bot-tag";
 import { RoleIconPreview } from "@/components/ui/role-icon-preview";
+import { NameplateVideo } from "@/components/ui/nameplate-video";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import type { ServerMember, CustomServerRole, UserStatus } from "@/types";
@@ -256,12 +257,14 @@ const MemberListItemContent = forwardRef<HTMLDivElement, MemberListItemContentPr
       return { color: priorityCustomRoleColor } as React.CSSProperties;
     }, [memberIsOffline, priorityCustomRoleColor, isGradientName]);
 
+    const hasNameplate = !memberIsOffline && !!member.user?.nameplate;
+
     return (
       <div
         ref={ref}
         className={cn(
-          "group flex items-center gap-2 mx-1.5 my-0.5 px-2 py-1.5 rounded-xl cursor-pointer transition-colors",
-          "hover:bg-secondary/45 active:bg-secondary/70",
+          "group relative flex items-center gap-2 mx-1.5 my-0.5 px-2 py-1.5 rounded-xl cursor-pointer transition-colors",
+          hasNameplate ? "" : "hover:bg-secondary/45 active:bg-secondary/70",
           className,
         )}
         style={mergedStyle}
@@ -270,7 +273,14 @@ const MemberListItemContent = forwardRef<HTMLDivElement, MemberListItemContentPr
         onMouseLeave={handleMouseLeave}
         {...props}
       >
-        <div className="relative flex-shrink-0">
+        {hasNameplate && (
+          <>
+            <NameplateVideo nameplate={member.user?.nameplate} />
+            <div className="absolute inset-0 rounded-xl hover:bg-white/5 active:bg-white/10 transition-colors z-[1] pointer-events-none" />
+          </>
+        )}
+
+        <div className="relative flex-shrink-0 z-[2]">
           <AvatarWithDecoration
             user={member.user}
             className={cn("w-8 h-8 rounded-full", memberIsOffline && "opacity-50 grayscale-[30%]")}
@@ -286,7 +296,7 @@ const MemberListItemContent = forwardRef<HTMLDivElement, MemberListItemContentPr
           </div>
         </div>
 
-        <div className="flex-1 min-w-0 overflow-hidden">
+        <div className="flex-1 min-w-0 overflow-hidden z-[2]">
           <div className="flex items-center gap-1.5">
             {isServerOwner && <Crown className="w-3 h-3 text-amber-400 flex-shrink-0" />}
             <span

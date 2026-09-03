@@ -4708,6 +4708,7 @@ export type Database = {
           is_bot: boolean
           is_staff: boolean
           last_seen: string | null
+          nameplate: string | null
           profile_effect: string | null
           profile_theme_accent: string | null
           profile_theme_primary: string | null
@@ -4730,6 +4731,7 @@ export type Database = {
           is_bot?: boolean
           is_staff?: boolean
           last_seen?: string | null
+          nameplate?: string | null
           profile_effect?: string | null
           profile_theme_accent?: string | null
           profile_theme_primary?: string | null
@@ -4752,6 +4754,7 @@ export type Database = {
           is_bot?: boolean
           is_staff?: boolean
           last_seen?: string | null
+          nameplate?: string | null
           profile_effect?: string | null
           profile_theme_accent?: string | null
           profile_theme_primary?: string | null
@@ -4831,6 +4834,7 @@ export type Database = {
           id: string | null
           is_bot: boolean | null
           last_seen: string | null
+          nameplate: string | null
           profile_effect: string | null
           profile_theme_accent: string | null
           profile_theme_primary: string | null
@@ -4850,6 +4854,7 @@ export type Database = {
           id?: string | null
           is_bot?: boolean | null
           last_seen?: never
+          nameplate?: string | null
           profile_effect?: string | null
           profile_theme_accent?: string | null
           profile_theme_primary?: string | null

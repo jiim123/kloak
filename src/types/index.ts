@@ -30,6 +30,7 @@ export interface User {
   is_bot?: boolean | null;
   is_staff?: boolean | null;
   allow_nsfw?: boolean;
+  nameplate?: string | null;
 }
 
 export interface UserProfile extends User {
@@ -650,6 +651,25 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
       "Higher voice & screenshare quality",
     ],
   },
+];
+
+// ============================================
+// Nameplate Types (Prime-exclusive)
+// ============================================
+
+export type NameplateId = 'plate1' | 'plate2' | 'plate3' | 'plate4';
+
+export interface Nameplate {
+  id: NameplateId;
+  label: string;
+  videoSrc: string;
+}
+
+export const AVAILABLE_NAMEPLATES: Nameplate[] = [
+  { id: 'plate1', label: 'Plate 1', videoSrc: '/plates/1.webm' },
+  { id: 'plate2', label: 'Plate 2', videoSrc: '/plates/2.webm' },
+  { id: 'plate3', label: 'Plate 3', videoSrc: '/plates/3.webm' },
+  { id: 'plate4', label: 'Plate 4', videoSrc: '/plates/4.webm' },
 ];
 
 export interface UserSubscription {

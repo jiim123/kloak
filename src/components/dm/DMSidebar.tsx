@@ -24,6 +24,7 @@ import { getEffectivePresence } from "@/lib/presence";
 import { hasRecentRealtimePresence } from "@/hooks/useRealtimeUsers";
 import { getUserFromCache, useUserCacheStore } from "@/stores/userCacheStore";
 import { ConversationItemSkeleton } from "@/components/ui/skeletons";
+import { NameplateVideo } from "@/components/ui/nameplate-video";
 import type { DMConversation, UserStatus, User } from "@/types";
 import { useRateLimit } from "@/hooks/useRateLimit";
 import { rateLimitToast } from "@/lib/rateLimitToast";
@@ -228,15 +229,18 @@ export const DMSidebar = () => {
                 <ContextMenuTrigger asChild>
                   <div
                     className={cn(
-                      "group flex items-center gap-3 px-2 py-2 rounded-md cursor-pointer transition-smooth",
+                      "group relative flex items-center gap-3 px-2 py-2 rounded-md cursor-pointer transition-smooth overflow-hidden",
                       currentConversation?.id === conversation.id
                         ? "bg-secondary"
                         : "hover:bg-secondary/50",
                     )}
                     onClick={() => handleSelectConversation(conversation)}
                   >
+                    {!isGroup && conversation.other_user?.nameplate && (
+                      <NameplateVideo nameplate={conversation.other_user.nameplate} className="rounded-md" />
+                    )}
                     {/* Avatar with status (or stacked avatars for group) */}
-                    <div className="relative flex-shrink-0">
+                    <div className="relative z-[2] flex-shrink-0">
                       {isGroup ? (
                         <StackedAvatars
                           users={
@@ -272,7 +276,7 @@ export const DMSidebar = () => {
                     </div>
 
                     {/* Name and last message */}
-                    <div className="flex-1 min-w-0">
+                    <div className="relative z-[2] flex-1 min-w-0">
                       <div className="flex items-center justify-between">
                         <span
                           className={cn(
@@ -301,7 +305,7 @@ export const DMSidebar = () => {
 
                     {/* Unread badge */}
                     {hasUnread && (
-                      <span className="min-w-[20px] h-5 bg-destructive rounded-full text-xs text-destructive-foreground flex items-center justify-center px-1.5 font-medium">
+                      <span className="relative z-[2] min-w-[20px] h-5 bg-destructive rounded-full text-xs text-destructive-foreground flex items-center justify-center px-1.5 font-medium">
                         {unreadCount > 99 ? "99+" : unreadCount}
                       </span>
                     )}

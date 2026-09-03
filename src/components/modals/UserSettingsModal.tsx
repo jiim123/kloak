@@ -86,7 +86,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { getAuthEntryPath, isTauri } from "@/lib/tauriRuntime";
 import { VoiceSettingsPanel } from "@/components/voice/VoiceSettingsPanel";
 import type { User as UserType, SubscriptionPlanId } from "@/types";
-import { SUBSCRIPTION_PLANS } from "@/types";
+import { SUBSCRIPTION_PLANS, AVAILABLE_NAMEPLATES } from "@/types";
 import { useSubscriptionStore } from "@/stores/subscriptionStore";
 import { useAppUpdater } from "@/hooks/useAppUpdater";
 import { sanitizeDisplayName, validateDisplayName } from "@/lib/displayNameValidation";
@@ -304,6 +304,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const [profileThemeAccent, setProfileThemeAccent] = useState<string | null>(user?.profile_theme_accent ?? null);
   const [localAvatarUrl, setLocalAvatarUrl] = useState<string | null>(user?.avatar_url ?? null);
   const [localBannerUrl, setLocalBannerUrl] = useState<string | null>(user?.banner_url ?? null);
+  const [selectedNameplate, setSelectedNameplate] = useState<string | null>(user?.nameplate ?? null);
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const [cropTarget, setCropTarget] = useState<ProfileCropTarget>(null);
   const [cropSourceFile, setCropSourceFile] = useState<File | null>(null);
@@ -489,6 +490,16 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         profile_theme_primary: profileThemePrimary,
         profile_theme_accent: profileThemeAccent,
       });
+
+      // Save nameplate separately so a server-side rejection (pre-migration) doesn't block the rest
+      if (selectedNameplate !== (user?.nameplate ?? null)) {
+        try {
+          await updateUser({ nameplate: selectedNameplate });
+        } catch (nameplateError) {
+          console.warn("[profile] nameplate save failed (migration may not be deployed yet):", nameplateError);
+        }
+      }
+
       toast.success("Profile updated!");
     } catch (error) {
       toast.error(getErrorMessage(error, "Failed to update profile"));
@@ -1373,6 +1384,56 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         isBannerUploading={isBannerUploading}
       />
 
+      {/* Nameplate Selector (Prime-only) */}
+      {isSubscribed() && (
+        <div className="mt-6">
+          <Label className="text-sm font-medium">Nameplate</Label>
+          <p className="text-xs text-muted-foreground mb-3">Choose an animated background for your username in sidebars</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {AVAILABLE_NAMEPLATES.map((plate) => (
+              <button
+                key={plate.id}
+                type="button"
+                className={cn(
+                  "relative h-16 rounded-xl overflow-hidden border-2 transition-all cursor-pointer",
+                  selectedNameplate === plate.id
+                    ? "border-primary ring-2 ring-primary/30"
+                    : "border-border/40 hover:border-border/70",
+                )}
+                onClick={() => setSelectedNameplate(selectedNameplate === plate.id ? null : plate.id)}
+              >
+                <video
+                  className="absolute inset-0 w-full h-full object-cover"
+                  src={plate.videoSrc}
+                  muted
+                  loop
+                  playsInline
+                  preload="metadata"
+                />
+                <div className="absolute inset-0 bg-black/30" />
+                <span className="relative z-10 text-[10px] font-medium text-white/90 truncate px-2">
+                  {plate.label}
+                </span>
+                {selectedNameplate === plate.id && (
+                  <div className="absolute top-1 right-1 z-10">
+                    <Check className="w-3.5 h-3.5 text-primary" />
+                  </div>
+                )}
+              </button>
+            ))}
+            {selectedNameplate && (
+              <button
+                type="button"
+                className="relative h-16 rounded-xl overflow-hidden border-2 border-border/40 hover:border-border/70 transition-all cursor-pointer flex items-center justify-center bg-secondary/50"
+                onClick={() => setSelectedNameplate(null)}
+              >
+                <span className="text-[10px] font-medium text-muted-foreground">No nameplate</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="mt-6 flex gap-3">
         <Button
           variant="outline"
@@ -1384,6 +1445,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
             setProfileThemeAccent(user?.profile_theme_accent ?? null);
             setLocalAvatarUrl(user?.avatar_url ?? null);
             setLocalBannerUrl(user?.banner_url ?? null);
+            setSelectedNameplate(user?.nameplate ?? null);
           }}
           className="flex-1 h-11 rounded-xl"
         >

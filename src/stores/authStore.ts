@@ -623,6 +623,10 @@ export const useAuthStore = create<AuthState>()(
                   ? (normalizedUpdates.pronouns as string | null)
                   : ((userData.pronouns as string | null) ?? user.pronouns),
               is_bot: (userData.is_bot as boolean | null) ?? user.is_bot ?? false,
+              nameplate:
+                "nameplate" in normalizedUpdates
+                  ? (normalizedUpdates.nameplate as string | null)
+                  : ((userData.nameplate as string | null) ?? user.nameplate ?? null),
             };
 
             set({ user: updatedUser });
