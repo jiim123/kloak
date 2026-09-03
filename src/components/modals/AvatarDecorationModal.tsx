@@ -12,7 +12,7 @@ import {
   type AvatarDecorationTransform,
 } from "@/lib/avatarDecorations";
 import { Slider } from "@/components/ui/slider";
-import { Copy, RotateCcw, X, Sparkles, Trash2 } from "lucide-react";
+import { Copy, RotateCcw, X, Sparkles } from "lucide-react";
 
 interface AvatarDecorationModalProps {
   open: boolean;
@@ -105,8 +105,6 @@ export const AvatarDecorationModal = ({ open, onOpenChange, onSelect }: AvatarDe
   // Check if there are unsaved changes
   const hasChanges = selectedDecoration !== (user?.avatar_decoration ?? null);
 
-  // Check if user currently has a decoration applied (in database)
-  const hasCurrentDecoration = Boolean(user?.avatar_decoration);
   const selectedDecorationIsAvailable =
     selectedDecoration === null || availableDecorations.some((decoration) => decoration.id === selectedDecoration);
 
@@ -132,25 +130,6 @@ export const AvatarDecorationModal = ({ open, onOpenChange, onSelect }: AvatarDe
     } catch (error) {
       console.error("Failed to save avatar decoration:", error);
       toast.error("Failed to save avatar decoration");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleRemove = async () => {
-    if (!user) return;
-
-    setIsSaving(true);
-    try {
-      // Explicitly pass null to remove the decoration
-      await updateUser({ avatar_decoration: null });
-      setSelectedDecoration(null);
-      onSelect(null);
-      toast.success("Avatar decoration removed!");
-      onOpenChange(false);
-    } catch (error) {
-      console.error("Failed to remove avatar decoration:", error);
-      toast.error("Failed to remove avatar decoration");
     } finally {
       setIsSaving(false);
     }
@@ -418,19 +397,6 @@ export const AvatarDecorationModal = ({ open, onOpenChange, onSelect }: AvatarDe
             <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1 sm:flex-none rounded-xl">
               Cancel
             </Button>
-
-            {/* Show Remove button only if user HAS a decoration currently saved */}
-            {hasCurrentDecoration && (
-              <Button
-                variant="outline"
-                onClick={handleRemove}
-                disabled={isSaving}
-                className="flex-1 sm:flex-none rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Remove
-              </Button>
-            )}
 
             <Button
               onClick={handleSave}

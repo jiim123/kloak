@@ -657,19 +657,23 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
 // Nameplate Types (Prime-exclusive)
 // ============================================
 
-export type NameplateId = 'plate1' | 'plate2' | 'plate3' | 'plate4';
+export type NameplateId = 'plate1' | 'plate2' | 'plate3' | 'plate4' | 'plate5';
+
+export type NameplateFormat = 'png' | 'webm' | 'gif';
 
 export interface Nameplate {
   id: NameplateId;
   label: string;
-  videoSrc: string;
+  src: string;
+  format: NameplateFormat;
 }
 
 export const AVAILABLE_NAMEPLATES: Nameplate[] = [
-  { id: 'plate1', label: 'Plate 1', videoSrc: '/plates/1.webm' },
-  { id: 'plate2', label: 'Plate 2', videoSrc: '/plates/2.webm' },
-  { id: 'plate3', label: 'Plate 3', videoSrc: '/plates/3.webm' },
-  { id: 'plate4', label: 'Plate 4', videoSrc: '/plates/4.webm' },
+  { id: 'plate1', label: 'Plate 1', src: '/plates/1.webm', format: 'webm' },
+  { id: 'plate2', label: 'Plate 2', src: '/plates/2.webm', format: 'webm' },
+  { id: 'plate3', label: 'Plate 3', src: '/plates/3.webm', format: 'webm' },
+  { id: 'plate4', label: 'Plate 4', src: '/plates/4.webm', format: 'webm' },
+  { id: 'plate5', label: 'Plate 5', src: '/plates/5.gif', format: 'gif' },
 ];
 
 export interface UserSubscription {

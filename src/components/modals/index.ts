@@ -10,6 +10,7 @@ export { UserSettingsModal, UserSettingsPage } from './UserSettingsModal';
 export { UserProfilePopup } from './UserProfilePopup';
 export { EmojiPicker } from './EmojiPicker';
 export { AvatarDecorationModal } from './AvatarDecorationModal';
+export { NameplateModal } from './NameplateModal';
 export { ProfileEffectModal } from './ProfileEffectModal';
 export { PinnedMessagesPanel } from './PinnedMessagesPanel';
 export { SearchModal } from './SearchModal';

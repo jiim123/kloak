@@ -46,10 +46,8 @@ interface EditableProfilePreviewProps {
   onBannerRemove: () => void;
   onDisplayNameChange: (name: string) => void;
   onBioChange: (bio: string) => void;
-  onThemePrimaryChange: (color: string | null) => void;
-  onThemeAccentChange: (color: string | null) => void;
+  onThemePrimaryChange: (color: string | null) => void;  onThemeAccentChange: (color: string | null) => void;
   onOpenAvatarDecoration: () => void;
-  onOpenProfileEffect: () => void;
   fileInputRef: React.RefObject<HTMLInputElement>;
   bannerInputRef: React.RefObject<HTMLInputElement>;
   isLoading: boolean;
@@ -70,10 +68,8 @@ export const EditableProfilePreview = ({
   onBannerRemove,
   onDisplayNameChange,
   onBioChange,
-  onThemePrimaryChange,
-  onThemeAccentChange,
+  onThemePrimaryChange,  onThemeAccentChange,
   onOpenAvatarDecoration,
-  onOpenProfileEffect,
   fileInputRef,
   bannerInputRef,
   isLoading,
@@ -397,28 +393,6 @@ export const EditableProfilePreview = ({
                 <Pencil className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: muted }} />
               </button>
             )}
-          </div>
-
-          {/* Customization Row */}
-          <div className="flex flex-wrap items-center gap-2 mb-4">
-            <Button
-              variant="secondary"
-              size="sm"
-              className="rounded-lg bg-background/60 hover:bg-background/80"
-              onClick={onOpenAvatarDecoration}
-            >
-              <Sparkles className="w-4 h-4 mr-1.5" />
-              {user.avatar_decoration ? "Change Deco" : "Add Deco"}
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="rounded-lg bg-background/60 hover:bg-background/80"
-              onClick={onOpenProfileEffect}
-            >
-              <Sparkles className="w-4 h-4 mr-1.5" />
-              {user.profile_effect ? "Change Effect" : "Add Effect"}
-            </Button>
           </div>
 
           {/* Theme Pickers - Always visible */}

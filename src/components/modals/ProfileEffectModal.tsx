@@ -5,7 +5,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { PROFILE_EFFECTS } from "@/lib/profileEffects";
-import { X, Sparkles, Trash2 } from "lucide-react";
+import { X, Sparkles } from "lucide-react";
 
 interface ProfileEffectModalProps {
   open: boolean;
@@ -29,9 +29,6 @@ export const ProfileEffectModal = ({ open, onOpenChange, onSelect }: ProfileEffe
   // Check if there are unsaved changes
   const hasChanges = selectedEffect !== (user?.profile_effect ?? null);
 
-  // Check if user currently has an effect applied (in database)
-  const hasCurrentEffect = Boolean(user?.profile_effect);
-
   const handleSave = async () => {
     if (!user) return;
 
@@ -50,25 +47,6 @@ export const ProfileEffectModal = ({ open, onOpenChange, onSelect }: ProfileEffe
     } catch (error) {
       console.error("Failed to save profile effect:", error);
       toast.error("Failed to save profile effect");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleRemove = async () => {
-    if (!user) return;
-
-    setIsSaving(true);
-    try {
-      // Explicitly pass null to remove the effect
-      await updateUser({ profile_effect: null });
-      setSelectedEffect(null);
-      onSelect(null);
-      toast.success("Profile effect removed!");
-      onOpenChange(false);
-    } catch (error) {
-      console.error("Failed to remove profile effect:", error);
-      toast.error("Failed to remove profile effect");
     } finally {
       setIsSaving(false);
     }
@@ -166,19 +144,6 @@ export const ProfileEffectModal = ({ open, onOpenChange, onSelect }: ProfileEffe
             <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1 sm:flex-none rounded-xl">
               Cancel
             </Button>
-
-            {/* Show Remove button only if user HAS an effect currently saved */}
-            {hasCurrentEffect && (
-              <Button
-                variant="outline"
-                onClick={handleRemove}
-                disabled={isSaving}
-                className="flex-1 sm:flex-none rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Remove
-              </Button>
-            )}
 
             <Button
               onClick={handleSave}

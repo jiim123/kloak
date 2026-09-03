@@ -65,6 +65,7 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AvatarDecorationModal } from "@/components/modals/AvatarDecorationModal";
 import { ProfileEffectModal } from "@/components/modals/ProfileEffectModal";
+import { NameplateModal } from "@/components/modals/NameplateModal";
 import { EditableProfilePreview } from "@/components/modals/EditableProfilePreview";
 import { BannerCropModal } from "@/components/modals/BannerCropModal";
 import { DockNavigation } from "@/components/ui/dock-navigation";
@@ -86,7 +87,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { getAuthEntryPath, isTauri } from "@/lib/tauriRuntime";
 import { VoiceSettingsPanel } from "@/components/voice/VoiceSettingsPanel";
 import type { User as UserType, SubscriptionPlanId } from "@/types";
-import { SUBSCRIPTION_PLANS, AVAILABLE_NAMEPLATES } from "@/types";
+import { SUBSCRIPTION_PLANS } from "@/types";
 import { useSubscriptionStore } from "@/stores/subscriptionStore";
 import { useAppUpdater } from "@/hooks/useAppUpdater";
 import { sanitizeDisplayName, validateDisplayName } from "@/lib/displayNameValidation";
@@ -226,6 +227,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const [copied, setCopied] = useState(false);
   const [showAvatarDecorationModal, setShowAvatarDecorationModal] = useState(false);
   const [showProfileEffectModal, setShowProfileEffectModal] = useState(false);
+  const [showNameplateModal, setShowNameplateModal] = useState(false);
   const [isBannerUploading, setIsBannerUploading] = useState(false);
   const [browserPermissionStatus, setBrowserPermissionStatus] = useState<
     NotificationPermission | "unsupported" | "missing-vapid-key"
@@ -1377,64 +1379,52 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
         onThemePrimaryChange={setProfileThemePrimary}
         onThemeAccentChange={setProfileThemeAccent}
         onOpenAvatarDecoration={() => setShowAvatarDecorationModal(true)}
-        onOpenProfileEffect={() => setShowProfileEffectModal(true)}
         fileInputRef={fileInputRef}
         bannerInputRef={bannerInputRef}
         isLoading={isLoading}
         isBannerUploading={isBannerUploading}
       />
 
-      {/* Nameplate Selector (Prime-only) */}
-      {isSubscribed() && (
-        <div className="mt-6">
-          <Label className="text-sm font-medium">Nameplate</Label>
-          <p className="text-xs text-muted-foreground mb-3">Choose an animated background for your username in sidebars</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {AVAILABLE_NAMEPLATES.map((plate) => (
-              <button
-                key={plate.id}
-                type="button"
-                className={cn(
-                  "relative h-16 rounded-xl overflow-hidden border-2 transition-all cursor-pointer",
-                  selectedNameplate === plate.id
-                    ? "border-primary ring-2 ring-primary/30"
-                    : "border-border/40 hover:border-border/70",
-                )}
-                onClick={() => setSelectedNameplate(selectedNameplate === plate.id ? null : plate.id)}
-              >
-                <video
-                  className="absolute inset-0 w-full h-full object-cover"
-                  src={plate.videoSrc}
-                  muted
-                  loop
-                  playsInline
-                  preload="metadata"
-                />
-                <div className="absolute inset-0 bg-black/30" />
-                <span className="relative z-10 text-[10px] font-medium text-white/90 truncate px-2">
-                  {plate.label}
-                </span>
-                {selectedNameplate === plate.id && (
-                  <div className="absolute top-1 right-1 z-10">
-                    <Check className="w-3.5 h-3.5 text-primary" />
-                  </div>
-                )}
-              </button>
-            ))}
-            {selectedNameplate && (
-              <button
-                type="button"
-                className="relative h-16 rounded-xl overflow-hidden border-2 border-border/40 hover:border-border/70 transition-all cursor-pointer flex items-center justify-center bg-secondary/50"
-                onClick={() => setSelectedNameplate(null)}
-              >
-                <span className="text-[10px] font-medium text-muted-foreground">No nameplate</span>
-              </button>
-            )}
-          </div>
+      {/* Customization Section */}
+      <div className="mt-4 p-4 rounded-xl bg-secondary/30 border border-border/30">
+        <div className="text-center mb-3">
+          <p className="text-sm font-medium">Customize Your Profile</p>
+          <p className="text-xs text-muted-foreground">Add avatar decorations, profile effects, and nameplates to stand out</p>
         </div>
-      )}
+        <div className="flex flex-wrap justify-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="rounded-lg bg-background/60 hover:bg-background/80"
+            onClick={() => setShowAvatarDecorationModal(true)}
+          >
+            <Sparkles className="w-4 h-4 mr-1.5" />
+            {user?.avatar_decoration ? "Change Deco" : "Add Deco"}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="rounded-lg bg-background/60 hover:bg-background/80"
+            onClick={() => setShowProfileEffectModal(true)}
+          >
+            <Sparkles className="w-4 h-4 mr-1.5" />
+            {user?.profile_effect ? "Change Effect" : "Add Effect"}
+          </Button>
+          {isSubscribed() && (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="rounded-lg bg-background/60 hover:bg-background/80"
+              onClick={() => setShowNameplateModal(true)}
+            >
+              <Star className="w-4 h-4 mr-1.5" />
+              {user?.nameplate ? "Change Nameplate" : "Add Nameplate"}
+            </Button>
+          )}
+        </div>
+      </div>
 
-      <div className="mt-6 flex gap-3">
+      <div className="mt-4 flex gap-3">
         <Button
           variant="outline"
           onClick={() => {
@@ -2969,6 +2959,16 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
 
       {/* Profile Effect Modal */}
       <ProfileEffectModal open={showProfileEffectModal} onOpenChange={setShowProfileEffectModal} onSelect={() => {}} />
+
+      {/* Nameplate Modal */}
+      <NameplateModal
+        open={showNameplateModal}
+        onOpenChange={setShowNameplateModal}
+        onSelect={(nameplate) => {
+          // Sync the local state so the save button reflects the change
+          setSelectedNameplate(nameplate);
+        }}
+      />
     </>
   );
 };

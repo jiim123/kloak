@@ -12,7 +12,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const VALID_NAMEPLATES = new Set(["plate1", "plate2", "plate3", "plate4"]);
+const VALID_NAMEPLATES = new Set(["plate1", "plate2", "plate3", "plate4", "plate5"]);
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -70,6 +70,16 @@ serve(async (req) => {
 
     const updates = updatesCandidate as Record<string, unknown>;
 
+    // Create an RPC client with x-key-hash for verify_request_identity.
+    const rpcClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+      global: {
+        headers: {
+          "x-key-hash": keyHash,
+        },
+      },
+    });
+
     // Handle nameplate separately — use a dedicated lightweight RPC to avoid PostgREST schema cache issues.
     let nameplateSaved = false;
     let savedNameplateValue: string | null = null;
@@ -83,7 +93,7 @@ serve(async (req) => {
 
       // Try the dedicated nameplate RPC. If the function doesn't exist yet (pre-migration), silently skip.
       try {
-        const { error: nameplateErr } = await supabase.rpc("update_user_nameplate", {
+        const { error: nameplateErr } = await rpcClient.rpc("update_user_nameplate", {
           _user_id: auth.requestUserId,
           _nameplate: value,
         });
@@ -105,15 +115,6 @@ serve(async (req) => {
     // If there are remaining fields, call the SQL RPC as before.
     let rpcResult: Record<string, unknown> | null = null;
     if (Object.keys(updates).length > 0) {
-      const rpcClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-        auth: { autoRefreshToken: false, persistSession: false },
-        global: {
-          headers: {
-            "x-key-hash": keyHash,
-          },
-        },
-      });
-
       const { data, error } = await rpcClient.rpc("update_user_profile", {
         _user_id: auth.requestUserId,
         _updates: updates,

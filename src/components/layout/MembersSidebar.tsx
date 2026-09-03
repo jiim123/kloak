@@ -284,7 +284,7 @@ const MemberListItemContent = forwardRef<HTMLDivElement, MemberListItemContentPr
       >
         {hasNameplate && (
           <>
-            <NameplateVideo nameplate={member.user?.nameplate} />
+            <NameplateVideo nameplate={member.user?.nameplate} isHovered={isHovered} />
             <div className="absolute inset-0 rounded-xl hover:bg-white/5 active:bg-white/10 transition-colors z-[1] pointer-events-none" />
           </>
         )}
@@ -305,7 +305,7 @@ const MemberListItemContent = forwardRef<HTMLDivElement, MemberListItemContentPr
           </div>
         </div>
 
-        <div className="flex-1 min-w-0 overflow-hidden z-[2]">
+        <div className="flex-1 min-w-0 overflow-hidden z-[2] h-8 flex flex-col justify-center">
           <div className="flex items-center gap-1.5">
             {isServerOwner && <Crown className="w-3 h-3 text-amber-400 flex-shrink-0" />}
             <span
@@ -324,7 +324,7 @@ const MemberListItemContent = forwardRef<HTMLDivElement, MemberListItemContentPr
           {member.user?.custom_status && (
             <p
               className={cn(
-                "text-[11px] truncate mt-0.5 max-w-[154px]",
+                "text-[11px] truncate max-w-[154px]",
                 memberIsOffline ? "text-muted-foreground/60" : "text-muted-foreground/80",
               )}
               title={member.user.custom_status}
@@ -571,9 +571,21 @@ export const MembersSidebar = () => {
   // Filter out offline/invisible members
   const baseOnlineMembers = useMemo(() => {
     const online = members.filter((m) => !getMemberPresence(m).isOffline);
-    if (!memberSearchQuery.trim()) return online;
+    // Hydrate from user cache so profile changes (nameplate, avatar, etc.) reflect immediately.
+    const hydrated = online.map((member) => {
+      const cachedUser = getUserFromCache(member.user_id);
+      if (!cachedUser) return member;
+      return {
+        ...member,
+        user: {
+          ...member.user,
+          ...cachedUser,
+        },
+      };
+    });
+    if (!memberSearchQuery.trim()) return hydrated;
     const q = memberSearchQuery.toLowerCase();
-    return online.filter((m) => {
+    return hydrated.filter((m) => {
       const name = m.nickname || m.user?.display_name || m.user?.username || "";
       return name.toLowerCase().includes(q);
     });
