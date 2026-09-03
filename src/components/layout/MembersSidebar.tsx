@@ -49,7 +49,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import type { ServerMember, CustomServerRole, UserStatus } from "@/types";
 import { getEffectivePresence } from "@/lib/presence";
-import { hasRecentRealtimePresence } from "@/hooks/useRealtimeUsers";
+import {
+  hasRecentRealtimePresence,
+  isPresenceReady,
+  subscribePresenceReady,
+} from "@/hooks/useRealtimeUsers";
+
+// How long to wait for the first authoritative presence snapshot before falling
+// back to the (stale) DB `last_seen` view. Kept short so a dead socket degrades
+// to the DB view instead of blocking the member list forever.
+const PRESENCE_READY_TIMEOUT_MS = 4_000;
 
 import { readCachedMemberCount, persistMemberCount, waitForCachedMemberCount } from "@/lib/serverMemberCount";
 import { LEFT_ALIGNED_USER_PROFILE_POPOVER, openUserProfileModal } from "@/lib/userProfilePopover";
@@ -439,6 +448,21 @@ export const MembersSidebar = () => {
   const openConversation = useDMStore((s) => s.openConversation);
   const blockedUserIds = useFriendStore((s) => s.visibilityBlockedUserIds);
   const userCacheVersion = useUserCacheStore((s) => s._version);
+
+  // Wait for the first authoritative presence snapshot before painting the list.
+  // Without this, the DB `last_seen` window (5 min) paints recently-disconnected
+  // users as "online" and the snapshot correction a few seconds later makes them
+  // vanish — the member list appears to randomly show and hide people.
+  const [presenceReady, setPresenceReady] = useState<boolean>(() => isPresenceReady());
+  useEffect(() => {
+    if (presenceReady) return;
+    const unsubscribe = subscribePresenceReady(() => setPresenceReady(true));
+    const fallbackTimer = window.setTimeout(() => setPresenceReady(true), PRESENCE_READY_TIMEOUT_MS);
+    return () => {
+      unsubscribe();
+      window.clearTimeout(fallbackTimer);
+    };
+  }, [presenceReady]);
 
   const [totalMemberCount, setTotalMemberCount] = useState<number | null>(null);
   const [isOfflineExpanded, setIsOfflineExpanded] = useState(true);
@@ -1299,7 +1323,7 @@ export const MembersSidebar = () => {
     [renderMemberListRow],
   );
 
-  const isLoadingSkeleton = isMembersLoading && members.length === 0;
+  const isLoadingSkeleton = (isMembersLoading && members.length === 0) || !presenceReady;
 
   const sidebarContent = (
     <div

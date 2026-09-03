@@ -236,8 +236,11 @@ const KLOAK_OFFLINE_SWEEP_MS = 2_000;
 
 // Last status we actually applied for a user through the kloak-ws transport.
 const kloakAppliedStatusByUser = new Map<string, UserStatus>();
-// userId -> timestamp of the first (still-unconfirmed) offline signal.
-const pendingKloakOfflineByUser = new Map<string, number>();
+// userId -> { since, confirmMs } for the first (still-unconfirmed) offline signal.
+// `confirmMs` is the grace before the offline is applied; it is per-signal so the
+// first authoritative snapshot can correct the startup roster immediately while
+// live reconnect blips keep the longer grace.
+const pendingKloakOfflineByUser = new Map<string, { since: number; confirmMs: number }>();
 // Monotonic arrival sequence per user. Live events are FIFO per socket, but the
 // presence *snapshot* request/response can interleave with them, so when a
 // snapshot was requested we remember where the live stream had gotten and refuse
@@ -245,6 +248,40 @@ const pendingKloakOfflineByUser = new Map<string, number>();
 const liveEventSeqByUser = new Map<string, number>();
 let liveEventSeq = 0;
 let offlineConfirmSweepTimer: ReturnType<typeof setInterval> | null = null;
+
+// True once we have applied authoritative realtime presence data at least once
+// (first kloak-ws snapshot, first live presence event, or first Supabase
+// presence snapshot). Components (e.g. the member sidebar) can wait for this
+// before painting presence-dependent UI, so the initial paint is based on the
+// authoritative snapshot instead of the stale DB `last_seen` window — which
+// would otherwise flash recently-disconnected users as "online" for a moment
+// and then hide them.
+let presenceReady = false;
+const presenceReadyListeners = new Set<() => void>();
+let presenceBootstrapDoneOnce = false;
+
+export const isPresenceReady = (): boolean => presenceReady;
+
+export const subscribePresenceReady = (listener: () => void): (() => void) => {
+  presenceReadyListeners.add(listener);
+  return () => {
+    presenceReadyListeners.delete(listener);
+  };
+};
+
+const markPresenceReady = () => {
+  if (presenceReady) return;
+  presenceReady = true;
+  const listeners = Array.from(presenceReadyListeners);
+  presenceReadyListeners.clear();
+  for (const listener of listeners) {
+    try {
+      listener();
+    } catch {
+      // listener errors must not break presence processing
+    }
+  }
+};
 
 const recentRealtimePresenceByUser = new Map<string, number>();
 
@@ -355,21 +392,29 @@ const recordKloakLiveEvent = (userId: string) => {
 const hasNewerLiveEventSince = (userId: string, seqAtRequest: number): boolean =>
   (liveEventSeqByUser.get(userId) ?? 0) > seqAtRequest;
 
-// Holds an offline signal for the confirmation window unless the user was already
+// Holds an offline signal for its confirmation window unless the user was already
 // confirmed offline (dedupe). During the window a newer online event cancels it.
-const scheduleKloakOffline = (userId: string) => {
+// `confirmMs` defaults to the live-flap grace; the first bootstrap passes 0 so the
+// startup roster is corrected immediately.
+const scheduleKloakOffline = (userId: string, confirmMs: number = KLOAK_OFFLINE_CONFIRM_MS) => {
   if (kloakAppliedStatusByUser.get(userId) === 'offline') return;
-  if (!pendingKloakOfflineByUser.has(userId)) {
-    pendingKloakOfflineByUser.set(userId, Date.now());
+  const existing = pendingKloakOfflineByUser.get(userId);
+  if (existing) {
+    // A newer signal with a shorter grace wins (e.g. explicit offline event
+    // overriding an earlier snapshot-absence mark).
+    if (confirmMs < existing.confirmMs) {
+      pendingKloakOfflineByUser.set(userId, { since: Date.now(), confirmMs });
+    }
+    return;
   }
+  pendingKloakOfflineByUser.set(userId, { since: Date.now(), confirmMs });
 };
 
 const sweepKloakOfflineConfirms = () => {
-  if (offlineConfirmSweepTimer == null) return;
   if (pendingKloakOfflineByUser.size === 0) return;
   const now = Date.now();
-  for (const [userId, signaledAt] of Array.from(pendingKloakOfflineByUser.entries())) {
-    if (now - signaledAt < KLOAK_OFFLINE_CONFIRM_MS) continue;
+  for (const [userId, entry] of Array.from(pendingKloakOfflineByUser.entries())) {
+    if (now - entry.since < entry.confirmMs) continue;
     pendingKloakOfflineByUser.delete(userId);
     // Safe-guard: only hide if a newer online event hasn't been applied since
     // (applyKloakPresenceOnline removes the pending entry, but re-check anyway).
@@ -401,6 +446,7 @@ const handleKloakLivePresence = (payload: unknown) => {
   if (status !== 'offline' && ts > 0 && Date.now() - ts > RECENT_PRESENCE_WINDOW_MS) return;
 
   recordKloakLiveEvent(meta.user_id);
+  markPresenceReady();
 
   if (status === 'offline') {
     // Our own presence decisions (manual status, our other session publishing) are
@@ -422,6 +468,8 @@ const clearKloakPresenceBookkeeping = () => {
   pendingKloakOfflineByUser.clear();
   liveEventSeqByUser.clear();
   liveEventSeq = 0;
+  presenceReady = false;
+  presenceBootstrapDoneOnce = false;
   stopKloakOfflineSweep();
 };
 
@@ -444,6 +492,13 @@ const bootstrapPresenceFromSocket = async (userId: string) => {
   // same socket, so ordering is FIFO, but the snapshot content was generated
   // earlier) — anything newer than the request must not be regressed by it.
   const seqAtRequest = liveEventSeq;
+  // The very first snapshot of a session is the authoritative startup truth: the
+  // member list has been painted from the DB `last_seen` window (which over-claims
+  // "online" for anyone who disconnected within the last 5 minutes). Correcting
+  // those rows immediately — before the list is shown — prevents members from
+  // flashing "online" for ~10s and then vanishing.
+  const isFirstBootstrap = !presenceBootstrapDoneOnce;
+  presenceBootstrapDoneOnce = true;
 
   try {
     const entries = (await kloakSocket.getPresenceSnapshot()) as GlobalPresenceMeta[];
@@ -464,13 +519,30 @@ const bootstrapPresenceFromSocket = async (userId: string) => {
       applyKloakPresenceOnline(meta, status);
     }
 
+    if (isFirstBootstrap && entries.length === 0) {
+      // An empty snapshot on first load is almost always a hiccup (e.g. the
+      // recipients lookup failing, or the peer set not yet loaded). Marking
+      // everyone offline would blank the whole member list; leave the DB view up
+      // and let live heartbeats fill in the truth.
+      markPresenceReady();
+      return;
+    }
+
     for (const targetId of collectPresenceTargetUserIds()) {
       if (targetId === userId || onlineIds.has(targetId)) continue;
       if (hasNewerLiveEventSince(targetId, seqAtRequest)) continue;
-      scheduleKloakOffline(targetId);
+      scheduleKloakOffline(targetId, isFirstBootstrap ? 0 : KLOAK_OFFLINE_CONFIRM_MS);
+    }
+
+    if (isFirstBootstrap) {
+      // Apply the first snapshot's corrections now (confirmMs 0) so the member
+      // list paints with authoritative presence, then announce readiness.
+      sweepKloakOfflineConfirms();
+      markPresenceReady();
     }
   } catch {
     // Snapshot is best-effort: heartbeats + the last_seen fallback cover failures.
+    markPresenceReady();
   } finally {
     bootstrapInFlight = false;
   }
@@ -687,6 +759,9 @@ export const useRealtimeUsers = () => {
             last_seen: meta.last_seen ?? null,
           });
         });
+        // First realtime presence application → announce readiness (see
+        // isPresenceReady / subscribePresenceReady).
+        markPresenceReady();
       };
 
       applyPresenceRef.current = applyPresenceSnapshot;
