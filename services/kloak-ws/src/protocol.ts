@@ -2,7 +2,7 @@ import { z } from "zod";
 
 const uuid = z.string().uuid();
 const requestId = z.string().min(1).max(128).optional();
-const topic = z.string().regex(/^(user|channel|dm):[0-9a-fA-F-]{36}$/);
+const topic = z.string().regex(/^(user|channel|dm|server):[0-9a-fA-F-]{36}$/);
 const rpcParams = z.record(z.unknown()).optional();
 
 const base = z.object({
@@ -165,6 +165,20 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
   }),
   base.extend({
     type: z.literal("get_presence_snapshot"),
+  }),
+  base.extend({
+    type: z.literal("broadcast_server_change"),
+    serverId: uuid,
+    event: z.string().min(1).max(100),
+    data: z.record(z.unknown()).optional(),
+  }),
+  base.extend({
+    type: z.literal("voice_join"),
+    channelId: uuid,
+  }),
+  base.extend({
+    type: z.literal("voice_leave"),
+    channelId: uuid,
   }),
 ]);
 

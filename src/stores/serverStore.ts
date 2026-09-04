@@ -7,6 +7,7 @@ import { hydrateServerEmojis, type ServerEmoji } from "@/lib/serverEmojis";
 import { persistMemberCount } from "@/lib/serverMemberCount";
 import { bulkSetUsersInCache } from "@/stores/userCacheStore";
 import { hasRecentRealtimePresence } from "@/hooks/useRealtimeUsers";
+import { kloakSocket, isKloakSocketEnabled } from "@/lib/kloakSocket";
 import { useAuthStore } from "./authStore";
 import { useFriendStore } from "./friendStore";
 import { useMessageStore } from "@/stores/messageStore";
@@ -24,6 +25,15 @@ import type {
   CategoryPermission,
   Permission,
 } from "@/types";
+
+/**
+ * Broadcast a channel/category change to other members on the same server
+ * via the kloak-ws socket so they see it instantly.
+ */
+function broadcastServerChange(event: string, serverId: string, data?: Record<string, unknown>) {
+  if (!isKloakSocketEnabled()) return;
+  void kloakSocket.broadcastServerChange({ serverId, event, data }).catch(() => undefined);
+}
 
 // Permission queries can be triggered by multiple components/effects.
 // Use a short TTL cache to avoid sequential re-fetch spam when switching channels.
@@ -1242,6 +1252,8 @@ export const useServerStore = create<ServerState>((set, get) => ({
         categories: [...state.categories, category],
       }));
 
+      broadcastServerChange("category.created", serverId, { category_id: category.id });
+
       return category;
     } catch (error) {
       console.error("Failed to create category:", error);
@@ -1357,6 +1369,8 @@ export const useServerStore = create<ServerState>((set, get) => ({
           channels: [...state.channels, channel],
         };
       });
+
+      broadcastServerChange("channel.created", serverId, { channel_id: channel.id });
 
       return channel;
     } catch (error) {
@@ -1499,10 +1513,16 @@ export const useServerStore = create<ServerState>((set, get) => ({
             ? { ...state.currentChannel, ...normalizedChannel }
             : state.currentChannel,
       }));
+
+      const serverId = normalizedChannel.server_id ?? get().currentServer?.id;
+      if (serverId) broadcastServerChange("channel.updated", serverId, { channel_id: channelId });
     }
   },
 
   deleteChannel: async (channelId: string, userId: string) => {
+    // Grab server_id before the channel is removed from state
+    const channelServerId = get().channels.find((c) => c.id === channelId)?.server_id ?? get().currentServer?.id;
+
     // Use RPC function to bypass RLS
     const { error } = await supabase.rpc("delete_channel", {
       _channel_id: channelId,
@@ -1524,6 +1544,8 @@ export const useServerStore = create<ServerState>((set, get) => ({
           ? null
           : state.currentChannel,
     }));
+
+    if (channelServerId) broadcastServerChange("channel.deleted", channelServerId, { channel_id: channelId });
   },
 
   updateCategory: async (categoryId: string, updates: Partial<ChannelCategory>, userId: string) => {
@@ -1549,6 +1571,9 @@ export const useServerStore = create<ServerState>((set, get) => ({
     set((state) => ({
       categories: state.categories.map((c) => (c.id === categoryId ? { ...c, ...categoryData } : c)),
     }));
+
+    const catServerId = get().currentServer?.id ?? get().channels[0]?.server_id;
+    if (catServerId) broadcastServerChange("category.updated", catServerId, { category_id: categoryId });
   },
 
   deleteCategory: async (categoryId: string, userId: string) => {
@@ -1563,10 +1588,15 @@ export const useServerStore = create<ServerState>((set, get) => ({
       throw new Error(error.message || "Failed to delete category");
     }
 
+    // Grab server_id before the category is removed
+    const catServerId = get().currentServer?.id ?? get().channels.find((c) => c.category_id === categoryId)?.server_id;
+
     set((state) => ({
       categories: state.categories.filter((c) => c.id !== categoryId),
       channels: state.channels.map((c) => (c.category_id === categoryId ? { ...c, category_id: null } : c)),
     }));
+
+    if (catServerId) broadcastServerChange("category.deleted", catServerId, { category_id: categoryId });
   },
 
   reorderCategories: async (categoryIds: string[]) => {
@@ -1592,6 +1622,8 @@ export const useServerStore = create<ServerState>((set, get) => ({
           }))
           .sort((a, b) => (a.position ?? 0) - (b.position ?? 0)),
       }));
+
+      broadcastServerChange("channels.reordered", currentServer.id);
     } catch (error) {
       console.error("Failed to reorder categories:", error);
     }
@@ -1625,6 +1657,8 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
       // Refresh to get accurate positions
       await get().fetchChannels(currentServer.id);
+
+      broadcastServerChange("channels.reordered", currentServer.id, { channel_id: channelId });
     } catch (error) {
       console.error("Failed to reorder channels:", error);
     }
@@ -1651,6 +1685,8 @@ export const useServerStore = create<ServerState>((set, get) => ({
           c.id === channelId ? { ...c, category_id: categoryId, position: newPosition } : c,
         ),
       }));
+
+      broadcastServerChange("channels.reordered", currentServer.id, { channel_id: channelId });
     } catch (error) {
       console.error("Failed to move channel:", error);
       throw error;

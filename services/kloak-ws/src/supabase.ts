@@ -111,6 +111,18 @@ export async function canSubscribeDm(conversationId: string, userId: string, opt
   return await rpc<boolean>("can_subscribe_socket_dm", { _conversation_id: conversationId, _user_id: userId }, opts);
 }
 
+export async function canSubscribeServer(serverId: string, userId: string, opts: RpcOptions) {
+  try {
+    const rows = await rest<Array<{ user_id: string }>>(
+      `server_members?select=user_id&server_id=eq.${encodeURIComponent(serverId)}&user_id=eq.${encodeURIComponent(userId)}&is_banned=eq.false`,
+      opts,
+    );
+    return rows.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 function safeJson(text: string): unknown {
   try {
     return JSON.parse(text);

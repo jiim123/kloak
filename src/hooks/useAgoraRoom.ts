@@ -12,6 +12,8 @@ import {
   RoomEvent,
   Track,
   RemoteAudioTrack,
+  LocalVideoTrack,
+  LocalAudioTrack,
   type VideoTrack,
   setLogLevel,
 } from "livekit-client";
@@ -19,11 +21,13 @@ import { getKeyHash, supabase } from "@/integrations/supabase/client";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { useVoiceSettingsStore } from "@/stores/voiceSettingsStore";
 import { pauseVoicePresenceWatch, resumeVoicePresenceWatch } from "@/hooks/useVoicePresenceWatchers";
+import { kloakSocket, isKloakSocketEnabled } from "@/lib/kloakSocket";
 import { playJoinSound, playLeaveSound } from "@/lib/voiceSounds";
-import type {
-  ScreenShareFrameRate,
-  ScreenShareQuality,
-  ScreenShareResolution,
+import {
+  getScreenShareConstraints,
+  type ScreenShareFrameRate,
+  type ScreenShareQuality,
+  type ScreenShareResolution,
 } from "@/components/voice/ScreenShareQualityModal";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
@@ -86,8 +90,12 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
   const roomRef = useRef<Room | null>(null);
   const presenceChannelRef = useRef<RealtimeChannel | null>(null);
   const broadcastChannelRef = useRef<RealtimeChannel | null>(null);
-  const readyForSoundsRef = useRef(false);
-  const cameraOpInFlightRef = useRef<Promise<void> | null>(null);
+  const readyForSoundsRef = useRef(false);  const cameraOpInFlightRef = useRef<Promise<void> | null>(null);
+  const screenShareVideoPubRef = useRef<LocalVideoTrack | null>(null);
+  const screenShareAudioPubRef = useRef<LocalAudioTrack | null>(null);
+  const screenShareVideoRawRef = useRef<MediaStreamTrack | null>(null);
+  const screenShareAudioRawRef = useRef<MediaStreamTrack | null>(null);
+
 
   // Map uid → hideVoiceActivity
   const hideActivityRef = useRef<Map<string, boolean>>(new Map());
@@ -236,6 +244,9 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
     setError(null);
     setConnection({ channelId, status: "joining", error: null });
     pauseVoicePresenceWatch(channelId);
+    if (isKloakSocketEnabled()) {
+      kloakSocket.voiceJoin(channelId).catch(() => {});
+    }
 
     try {
       // Get token from edge function
@@ -506,6 +517,9 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
       }
     }
 
+    if (channelId && isKloakSocketEnabled()) {
+      kloakSocket.voiceLeave(channelId).catch(() => {});
+    }
     if (channelId) resumeVoicePresenceWatch(channelId);
   }, [channelId, userId, setConnection, setJoinedChannelId, setControls, setPresence, clearPresence]);
 
@@ -547,26 +561,46 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
     if (!room) return;
 
     try {
-      const preset = QUALITY_PRESETS[quality.resolution];
-      await room.localParticipant.setScreenShareEnabled(
-        true,
-        {
-          audio: true,
-          contentHint: "detail",
-          resolution: {
-            width: preset.width,
-            height: preset.height,
-            frameRate: quality.frameRate,
-          },
+      // Use max constraints to actually cap the capture resolution.
+      // LiveKit's SDK only applies `ideal` on non-Safari, which browsers ignore,
+      // so both 720p and 1080p would capture at the monitor's native resolution.
+      const constraints = getScreenShareConstraints(quality);
+      const stream = await navigator.mediaDevices.getDisplayMedia(constraints);
+
+      const videoTrack = stream.getVideoTracks()[0];
+      if (!videoTrack) throw new Error("No video track from screen capture");
+      videoTrack.contentHint = "detail";
+
+      // Keep raw refs so we can stop() them on cleanup
+      screenShareVideoRawRef.current = videoTrack;
+
+      const videoPub = new LocalVideoTrack(videoTrack);
+      videoPub.source = Track.Source.ScreenShare;
+      await room.localParticipant.publishTrack(videoPub, {
+        screenShareEncoding: {
+          maxBitrate: SCREEN_SHARE_BITRATES[quality.resolution][quality.frameRate],
+          maxFramerate: quality.frameRate,
+          priority: "medium",
         },
-        {
-          screenShareEncoding: {
-            maxBitrate: SCREEN_SHARE_BITRATES[quality.resolution][quality.frameRate],
-            maxFramerate: quality.frameRate,
-            priority: "medium",
-          },
-        }
-      );
+      });
+      screenShareVideoPubRef.current = videoPub;
+
+      // Publish system audio if available
+      const audioTracks = stream.getAudioTracks();
+      if (audioTracks.length > 0) {
+        const audioTrack = audioTracks[0];
+        screenShareAudioRawRef.current = audioTrack;
+        const audioPub = new LocalAudioTrack(audioTrack);
+        audioPub.source = Track.Source.ScreenShareAudio;
+        await room.localParticipant.publishTrack(audioPub);
+        screenShareAudioPubRef.current = audioPub;
+      }
+
+      // If the browser's native "Stop sharing" button is clicked,
+      // the track ends. Sync our state so it doesn't get stuck.
+      videoTrack.addEventListener("ended", () => {
+        stopScreenShare();
+      });
 
       setIsScreenSharing(true);
       setScreenShareQuality(quality);
@@ -579,11 +613,26 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
   const stopScreenShare = useCallback(async () => {
     const room = roomRef.current;
     if (!room) return;
-    try {
-      await room.localParticipant.setScreenShareEnabled(false);
-    } catch {
-      // ignore
+
+    // Unpublish manually-published tracks
+    const videoPub = screenShareVideoPubRef.current;
+    const audioPub = screenShareAudioPubRef.current;
+    const videoRaw = screenShareVideoRawRef.current;
+    const audioRaw = screenShareAudioRawRef.current;
+
+    if (videoPub) {
+      try { await room.localParticipant.unpublishTrack(videoPub); } catch { /* ignore */ }
     }
+    if (audioPub) {
+      try { await room.localParticipant.unpublishTrack(audioPub); } catch { /* ignore */ }
+    }
+    if (videoRaw) { try { videoRaw.stop(); } catch { /* ignore */ } }
+    if (audioRaw) { try { audioRaw.stop(); } catch { /* ignore */ } }
+
+    screenShareVideoPubRef.current = null;
+    screenShareAudioPubRef.current = null;
+    screenShareVideoRawRef.current = null;
+    screenShareAudioRawRef.current = null;
 
     setIsScreenSharing(false);
     setScreenShareQuality(null);
@@ -722,6 +771,15 @@ export function useAgoraRoom(opts: UseAgoraRoomOptions) {
         try { pc.untrack(); supabase.removeChannel(pc); } catch { /* ignore */ }
       }
       presenceChannelRef.current = null;
+      // Stop any active screen-share tracks
+      const sVideo = screenShareVideoRawRef.current;
+      const sAudio = screenShareAudioRawRef.current;
+      if (sVideo) { try { sVideo.stop(); } catch { /* ignore */ } }
+      if (sAudio) { try { sAudio.stop(); } catch { /* ignore */ } }
+      screenShareVideoRawRef.current = null;
+      screenShareAudioRawRef.current = null;
+      screenShareVideoPubRef.current = null;
+      screenShareAudioPubRef.current = null;
       const r = roomRef.current;
       if (r) {
         try { r.disconnect(); } catch { /* ignore */ }

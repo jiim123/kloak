@@ -156,7 +156,7 @@ export const ChannelHeader = ({
 
         {extraActions}
 
-        {currentServer && (
+        {currentServer && channel.type !== "voice" && (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button

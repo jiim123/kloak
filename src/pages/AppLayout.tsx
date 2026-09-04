@@ -81,6 +81,7 @@ import { useUnread } from "@/hooks/useUnread";
 import { useServerUnreadSummary } from "@/hooks/useServerUnreadSummary";
 import { useKloakRealtimeMessages } from "@/hooks/useKloakRealtimeMessages";
 import { useKloakRealtimeDMs } from "@/hooks/useKloakRealtimeDMs";
+import { useKloakRealtimeServerChannels } from "@/hooks/useKloakRealtimeServerChannels";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSwipeGestureRef } from "@/hooks/useSwipeGesture";
@@ -438,6 +439,9 @@ const AppLayout = () => {
   useRealtimeMessages(activeVoiceTextChannelId);
   useKloakRealtimeMessages(currentChannel?.id || null);
   useKloakRealtimeMessages(activeVoiceTextChannelId);
+
+  // Real-time channel/category changes on the current server
+  useKloakRealtimeServerChannels(currentServer?.id || null);
 
   // Real-time DMs at app level so messages are received even when not viewing DMs
   const unreadDMs = useUnreadDMs(user?.id || null);

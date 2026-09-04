@@ -6,7 +6,7 @@ import { WebSocketServer } from "ws";
 import { config } from "./config.js";
 import { SocketHub, type SocketContext } from "./hub.js";
 import { ChannelRelayManager } from "./realtimeBridge.js";
-import { authenticate, canSubscribeChannel, canSubscribeDm, rest, rpc, SupabaseRpcError } from "./supabase.js";
+import { authenticate, canSubscribeChannel, canSubscribeDm, canSubscribeServer, rest, rpc, SupabaseRpcError } from "./supabase.js";
 import { clientMessageSchema, type ClientMessage } from "./protocol.js";
 
 const hub = new SocketHub();
@@ -275,6 +275,29 @@ async function handleMessage(socket: SocketContext, message: ClientMessage) {
     case "get_presence_snapshot":
       await getPresenceSnapshot(socket, message);
       return;
+    case "broadcast_server_change":
+      await broadcastServerChange(socket, message);
+      return;
+    case "voice_join": {
+      const userId = requireUser(socket);
+      const allowed = await canSubscribeChannel(message.channelId, userId, socketRpcOptions(socket));
+      if (!allowed) throw new ClientVisibleError("forbidden", "You cannot join this voice channel");
+      hub.publishEphemeral(`channel:${message.channelId}`, "voice.join", {
+        user_id: userId,
+        channel_id: message.channelId,
+      });
+      hub.send(socket, { type: "ack", requestId: message.requestId, ok: true });
+      return;
+    }
+    case "voice_leave": {
+      const userId = requireUser(socket);
+      hub.publishEphemeral(`channel:${message.channelId}`, "voice.leave", {
+        user_id: userId,
+        channel_id: message.channelId,
+      });
+      hub.send(socket, { type: "ack", requestId: message.requestId, ok: true });
+      return;
+    }
   }
 }
 
@@ -300,7 +323,9 @@ async function filterAuthorizedTopics(socket: SocketContext, topics: string[]) {
           ? await canSubscribeChannel(id, userId, socketRpcOptions(socket))
           : kind === "dm"
             ? await canSubscribeDm(id, userId, socketRpcOptions(socket))
-            : false;
+            : kind === "server"
+              ? await canSubscribeServer(id, userId, socketRpcOptions(socket))
+              : false;
 
       if (allowed) results.push(topic);
     })();
@@ -1053,6 +1078,19 @@ async function getPresenceSnapshot(socket: SocketContext, message: Extract<Clien
   }
 
   hub.send(socket, { type: "ack", requestId: message.requestId, ok: true, data: Array.from(latestByUser.values()) });
+}
+
+async function broadcastServerChange(socket: SocketContext, message: Extract<ClientMessage, { type: "broadcast_server_change" }>) {
+  const userId = requireUser(socket);
+  const allowed = await canSubscribeServer(message.serverId, userId, socketRpcOptions(socket));
+  if (!allowed) throw new ClientVisibleError("forbidden", "You are not a member of this server");
+
+  hub.publish(`server:${message.serverId}`, message.event, {
+    ...message.data,
+    actor_user_id: userId,
+    server_id: message.serverId,
+  });
+  hub.send(socket, { type: "ack", requestId: message.requestId, ok: true });
 }
 
 async function getChannelRecipients(socket: SocketContext, channelId: string, senderId: string) {

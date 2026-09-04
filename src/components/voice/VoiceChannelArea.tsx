@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Eye,
   Maximize2,
   MessageSquareText,
   Clock3,
@@ -21,7 +20,6 @@ import { cn } from "@/lib/utils";
 import { useLocation, useParams } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { useServerStore } from "@/stores/serverStore";
-import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { useVoiceSettingsStore } from "@/stores/voiceSettingsStore";
 import { useFriendStore } from "@/stores/friendStore";
@@ -30,18 +28,18 @@ import { usePushToTalk } from "@/hooks/usePushToTalk";
 import { useHideVoiceActivity } from "@/hooks/useHideVoiceActivity";
 import { ScreenShareQualityModal, ScreenShareQuality } from "@/components/voice/ScreenShareQualityModal";
 import { ParticipantAudioPlayer } from "@/components/voice/ParticipantAudioPlayer";
-import { UserVolumeControl, VolumeIndicator } from "@/components/voice/UserVolumeControl";
 import { useAutoDisconnect } from "@/hooks/useAutoDisconnect";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { openUserProfileModal, SIDE_ALIGNED_USER_PROFILE_POPOVER } from "@/lib/userProfilePopover";
 import { MessageList } from "@/components/chat/MessageList";
 import { MessageInput } from "@/components/chat/MessageInput";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
-import { ChannelHeader } from "@/components/chat/ChannelHeader";
 import { useTyping } from "@/hooks/useTyping";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { fetchAndCacheUser, getUserFromCache, useUserCacheStore } from "@/stores/userCacheStore";
 import { useUIStore } from "@/stores/uiStore";
+import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
+import { openUserProfileModal, SIDE_ALIGNED_USER_PROFILE_POPOVER } from "@/lib/userProfilePopover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { UserVolumeControl, VolumeIndicator } from "@/components/voice/UserVolumeControl";
 import type { Channel, ServerMember } from "@/types";
 import type { VideoTrack } from "livekit-client";
 
@@ -85,25 +83,6 @@ function getMemberDisplayName(member: ServerMember | undefined, participant: Ago
     return member.nickname || resolvedUser?.display_name || resolvedUser?.username || participant.name;
   }
   return resolvedUser?.display_name || resolvedUser?.username || participant.name || participant.identity.slice(0, 8);
-}
-
-const PARTICIPANT_TILE_COLORS = [
-  "#2b3440",
-  "#243b53",
-  "#2f3e2f",
-  "#3d3226",
-  "#2f2d49",
-  "#3a2f3f",
-  "#2b3e45",
-  "#384252",
-];
-
-function getParticipantTileColor(identity: string): string {
-  let hash = 0;
-  for (let i = 0; i < identity.length; i += 1) {
-    hash = (hash * 31 + identity.charCodeAt(i)) >>> 0;
-  }
-  return PARTICIPANT_TILE_COLORS[hash % PARTICIPANT_TILE_COLORS.length];
 }
 
 function hasActiveScreenShare(participant: Pick<AgoraParticipant, "isScreenSharing" | "screenTrack">): boolean {
@@ -164,21 +143,11 @@ function ParticipantTile({
     });
   };
 
-  const handleTileKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== "Enter" && event.key !== " ") return;
-    event.preventDefault();
-    openUserProfileModal(openModal, participant.identity, event.currentTarget, {
-      ...SIDE_ALIGNED_USER_PROFILE_POPOVER,
-      user: avatarUser,
-    });
-  };
-
   const tileContent = (
     <div
       role="button"
       tabIndex={0}
       onClick={handleOpenProfile}
-      onKeyDown={handleTileKeyDown}
       className={cn(
         "group relative overflow-hidden rounded-xl border min-h-[170px] sm:min-h-[210px] transition-transform cursor-pointer outline-none",
         speaking ? "border-primary/70" : "border-white/15",
@@ -228,7 +197,6 @@ function ParticipantTile({
                   className="flex h-5 min-w-5 items-center justify-center rounded text-white/90 hover:bg-white/15 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/70"
                   title={`Adjust ${name}'s volume`}
                   onClick={(event) => event.stopPropagation()}
-                  onKeyDown={(event) => event.stopPropagation()}
                 >
                   {participantVolume === 100 ? (
                     <Volume2 className="h-3 w-3 opacity-70" />
@@ -264,6 +232,19 @@ function ParticipantTile({
   );
 
   return tileContent;
+}
+
+const PARTICIPANT_TILE_COLORS = [
+  "#2b3440", "#243b53", "#2f3e2f", "#3d3226",
+  "#2f2d49", "#3a2f3f", "#2b3e45", "#384252",
+];
+
+function getParticipantTileColor(identity: string): string {
+  let hash = 0;
+  for (let i = 0; i < identity.length; i += 1) {
+    hash = (hash * 31 + identity.charCodeAt(i)) >>> 0;
+  }
+  return PARTICIPANT_TILE_COLORS[hash % PARTICIPANT_TILE_COLORS.length];
 }
 
 export function VoiceChannelArea({ channel }: { channel: Channel }) {
@@ -324,6 +305,14 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
     isSpeaking: isLocalSpeaking,
     onDisconnect: leaveVoice,
   });
+
+  // Close member sidebar when joining voice
+  const setMemberSidebarOpen = useUIStore((s) => s.setMemberSidebarOpen);
+  useEffect(() => {
+    if (effectivelyJoined) {
+      setMemberSidebarOpen(false);
+    }
+  }, [effectivelyJoined, setMemberSidebarOpen]);
 
   const handleStartScreenShare = (quality: ScreenShareQuality) => {
     setShowQualityModal(false);
@@ -534,81 +523,18 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
     }
   };
 
-  const textPanelToggle = (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      className={cn(
-        "h-8 w-8 rounded-lg text-muted-foreground hover:bg-white/10 hover:text-white",
-        showTextPanel && "bg-white/10 text-white"
-      )}
-      onClick={() => (showTextPanel ? setIsTextPanelOpen(false) : handleOpenLinkedText())}
-      disabled={!linkedTextChannel}
-      title={
-        !linkedTextChannel
-          ? "No attached text chat yet"
-          : "Open attached text chat"
-      }
-    >
-      <MessageSquareText className="w-4 h-4" />
-    </Button>
-  );
-
   return (
-    <div className="h-full flex flex-col min-w-0 bg-[rgb(28_30_33)] text-white relative overflow-hidden md:gap-2">
-      <ChannelHeader channel={channel} extraActions={textPanelToggle} showMessageActions={false} />
-
-      <div className="flex h-11 items-center justify-between border-b border-white/10 bg-[rgb(28_30_33)] px-3 sm:px-4 md:hidden">
-        <div className="flex min-w-0 items-center gap-2">
-          <Volume2 className="h-4 w-4 flex-shrink-0 text-white/70" />
-          <div className="min-w-0">
-            <div className="truncate text-sm font-medium text-white">{channel.name}</div>
-            <div className="truncate text-[11px] text-white/55">
-              {effectivelyJoined ? "Voice connected" : "Not connected"}
-            </div>
-          </div>
-        </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className={cn(
-            "h-8 w-8 text-white/70 hover:bg-white/10 hover:text-white",
-            showTextPanel && "bg-white/10 text-white"
-          )}
-          onClick={() => (showTextPanel ? setIsTextPanelOpen(false) : handleOpenLinkedText())}
-          disabled={!linkedTextChannel}
-          title={
-            !linkedTextChannel
-              ? "No attached text chat yet"
-              : "Open attached text chat"
-          }
-        >
-          <MessageSquareText className="h-4 w-4" />
-        </Button>
-      </div>
-
-      {/* Main content */}
+    <div className="h-full flex flex-col min-w-0 bg-[rgb(28_30_33)] text-white relative overflow-hidden">
+      {/* Main content area — NO ChannelHeader for voice channels */}
       <div
         className={cn(
           "flex-1 min-h-0 flex relative overflow-hidden transition-[padding] duration-200",
           showTextPanel && "lg:pr-[420px]"
         )}
       >
-        <div
-          className={cn(
-            "min-h-0 min-w-0 flex-1 p-2.5 sm:p-3",
-            effectivelyJoined ? "overflow-y-auto" : "h-full flex items-center justify-center"
-          )}
-        >
-          {voice.error && (
-            <div className="mb-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {voice.error}
-            </div>
-          )}
-
-          {!effectivelyJoined ? (
+        {!effectivelyJoined ? (
+          /* ---- Join screen ---- */
+          <div className="h-full w-full p-2.5 sm:p-3 flex items-center justify-center">
             <div className="relative w-full h-full min-h-[460px] flex items-center justify-center overflow-hidden rounded-2xl bg-[radial-gradient(110%_85%_at_50%_22%,rgb(36_40_46)_0%,rgb(31_34_38)_46%,rgb(28_30_33)_100%)]">
               <div className="pointer-events-none absolute inset-0">
                 <div className="absolute inset-0 bg-[radial-gradient(70%_55%_at_50%_38%,rgba(120,144,170,0.12)_0%,rgba(0,0,0,0)_100%)]" />
@@ -635,184 +561,190 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
                 </Button>
               </div>
             </div>
-          ) : (
-            <div className="mx-auto w-full max-w-[1240px]">
-              {stage ? (
-                <div
-                  ref={stageContainerRef}
+          </div>
+        ) : (
+          /* ---- Joined: fullscreen with overlay controls ---- */
+          <div className="relative h-full w-full overflow-y-auto">
+            {/* Top overlay: channel name + actions */}
+            <div className="sticky top-0 inset-x-0 z-20 flex items-center justify-between px-3 py-2 bg-gradient-to-b from-black/60 via-black/30 to-transparent pointer-events-none">
+              <div className="pointer-events-auto flex items-center gap-2">
+                <Volume2 className="h-4 w-4 text-white/70" />
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium text-white">#{channel.name}</div>
+                  <div className="truncate text-[11px] text-white/55">
+                    {filteredParticipants.length} connected
+                  </div>
+                </div>
+              </div>
+              <div className="pointer-events-auto flex items-center gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
                   className={cn(
-                    "mb-3 overflow-hidden border border-white/15 bg-[rgb(28_30_33)] flex flex-col rounded-xl",
-                    isStageFullscreen && "h-full w-full rounded-none border-0 mb-0"
+                    "h-8 w-8 rounded-lg text-white/70 hover:bg-white/15 hover:text-white",
+                    showTextPanel && "bg-white/15 text-white"
                   )}
+                  onClick={() => (showTextPanel ? setIsTextPanelOpen(false) : handleOpenLinkedText())}
+                  disabled={!linkedTextChannel}
+                  title={!linkedTextChannel ? "No attached text chat" : "Open text chat"}
                 >
-                  <div
-                    className={cn(
-                      "px-3 py-2 border-b border-white/15 bg-[rgb(28_30_33)] flex items-center justify-between gap-2",
-                      isStageFullscreen && "absolute inset-x-0 top-0 z-10 border-white/20 bg-[rgb(28_30_33)]/85 backdrop-blur"
-                    )}
-                  >
-                    <div className="text-sm font-medium truncate text-white">
-                      {stage.isLocal
-                        ? `Your Live ${stage.kind === "screen" ? "Screen" : "Camera"}`
-                        : `${stage.name} - Live ${stage.kind === "screen" ? "Screen" : "Camera"}`}
-                    </div>
-                    <div className="flex items-center gap-2">
+                  <MessageSquareText className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Error */}
+            {voice.error && (
+              <div className="mx-3 mb-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                {voice.error}
+              </div>
+            )}
+
+            {/* Stage (screen share / camera) */}
+            {stage && (
+              <div
+                ref={stageContainerRef}
+                className={cn(
+                  "mx-3 mb-3 overflow-hidden border border-white/15 bg-[rgb(28_30_33)] flex flex-col rounded-xl",
+                  isStageFullscreen && "h-full w-full rounded-none border-0 mx-0 mb-0"
+                )}
+              >
+                <div className="px-3 py-2 border-b border-white/15 bg-[rgb(28_30_33)] flex items-center justify-between gap-2">
+                  <div className="text-sm font-medium truncate text-white">
+                    {stage.isLocal
+                      ? `Your Live ${stage.kind === "screen" ? "Screen" : "Camera"}`
+                      : `${stage.name} - Live ${stage.kind === "screen" ? "Screen" : "Camera"}`}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2.5 text-xs rounded-full text-white/90 bg-white/10 hover:bg-white/20"
+                      onClick={handleToggleStageFullscreen}
+                    >
+                      {isStageFullscreen ? (
+                        <Minimize2 className="w-3 h-3 mr-1" />
+                      ) : (
+                        <Maximize2 className="w-3 h-3 mr-1" />
+                      )}
+                      {isStageFullscreen ? "Exit" : "Full Screen"}
+                    </Button>
+                    {!stage.isLocal ? (
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         className="h-8 px-2.5 text-xs rounded-full text-white/90 bg-white/10 hover:bg-white/20"
-                        onClick={handleToggleStageFullscreen}
+                        onClick={() => setWatchingStreamKey(null)}
                       >
-                        {isStageFullscreen ? (
-                          <Minimize2 className="w-3 h-3 mr-1" />
-                        ) : (
-                          <Maximize2 className="w-3 h-3 mr-1" />
-                        )}
-                        {isStageFullscreen ? "Exit" : "Full Screen"}
+                        Stop watching
                       </Button>
-                      {!stage.isLocal ? (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 px-2.5 text-xs rounded-full text-white/90 bg-white/10 hover:bg-white/20"
-                          onClick={() => setWatchingStreamKey(null)}
-                        >
-                          Stop watching
-                        </Button>
-                      ) : null}
-                    </div>
-                  </div>
-                  <div
-                    className={cn(
-                      "flex items-center justify-center bg-[rgb(28_30_33)]",
-                      isStageFullscreen ? "h-full w-full" : "aspect-video max-h-[68vh]"
-                    )}
-                  >
-                    <VideoPlayer
-                      track={stage.track}
-                      className={cn(
-                        isStageFullscreen
-                          ? "h-full w-full max-h-none max-w-none object-contain"
-                          : "h-full w-full object-contain"
-                      )}
-                    />
+                    ) : null}
                   </div>
                 </div>
-              ) : null}
-
-              {!stage && hasRemoteShares ? (
-                <div className="mb-3 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs text-white/75">
-                  A participant is sharing video. Click <span className="font-medium text-white">Watch Stream</span> on
-                  their tile.
+                <div className="flex items-center justify-center bg-[rgb(28_30_33)] aspect-video">
+                  <VideoPlayer
+                    track={stage.track}
+                    className="h-full w-full object-contain"
+                  />
                 </div>
-              ) : null}
+              </div>
+            )}
 
-              {filteredParticipants.length === 0 ? (
-                <div className="rounded-2xl border border-white/15 bg-gradient-to-br from-white/[0.07] via-white/[0.03] to-transparent p-6 sm:p-8">
-                  <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
-                    <div className="relative shrink-0">
-                      <div className="absolute inset-0 rounded-full bg-primary/20 blur-2xl" />
-                      <div className="absolute -left-3 -top-2 h-14 w-14 rounded-full bg-cyan-400/20 blur-xl" />
-                      <div className="absolute -right-2 -bottom-2 h-16 w-16 rounded-full bg-blue-500/20 blur-xl" />
-                      <div className="relative h-28 w-28 sm:h-32 sm:w-32 rounded-full bg-black/35 border border-white/15 flex items-center justify-center">
-                        <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-full bg-gradient-to-br from-primary/45 via-cyan-400/35 to-blue-500/30 blur-[1px]" />
-                      </div>
-                    </div>
+            {!stage && hasRemoteShares ? (
+              <div className="mx-3 mb-3 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs text-white/75">
+                A participant is sharing video. Click <span className="font-medium text-white">Watch Stream</span> on their tile.
+              </div>
+            ) : null}
 
-                    <div className="min-w-0 text-center sm:text-left">
-                      <h3 className="text-xl sm:text-2xl font-semibold text-white">It is quiet in here</h3>
-                      <p className="mt-2 text-sm sm:text-base text-white/70">
-                        You are connected to <span className="text-white font-medium">#{channel.name}</span>. Invite
-                        others to join, or start sharing your screen to kick things off.
-                      </p>
-                      <div className="mt-4 flex flex-wrap justify-center sm:justify-start gap-2 text-xs">
-                        <span className="rounded-full border border-white/15 bg-white/[0.06] px-3 py-1 text-white/80">
-                          Voice ready
-                        </span>
-                        <span className="rounded-full border border-white/15 bg-white/[0.06] px-3 py-1 text-white/80">
-                          Screen share ready
-                        </span>
-                      </div>
+            {filteredParticipants.length === 0 ? (
+              <div className="mx-3 mb-3 rounded-2xl border border-white/15 bg-gradient-to-br from-white/[0.07] via-white/[0.03] to-transparent p-6 sm:p-8">
+                <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
+                  <div className="relative shrink-0">
+                    <div className="absolute inset-0 rounded-full bg-primary/20 blur-2xl" />
+                    <div className="relative h-28 w-28 sm:h-32 sm:w-32 rounded-full bg-black/35 border border-white/15 flex items-center justify-center">
+                      <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-full bg-gradient-to-br from-primary/45 via-cyan-400/35 to-blue-500/30 blur-[1px]" />
                     </div>
                   </div>
+                  <div className="min-w-0 text-center sm:text-left">
+                    <h3 className="text-xl sm:text-2xl font-semibold text-white">It is quiet in here</h3>
+                    <p className="mt-2 text-sm sm:text-base text-white/70">
+                      You are connected to <span className="text-white font-medium">#{channel.name}</span>. Invite others to join.
+                    </p>
+                  </div>
                 </div>
-              ) : (
-                <div
-                  className={cn(
-                    "grid gap-2.5 sm:gap-3",
-                    filteredParticipants.length <= 1
-                      ? "grid-cols-1 max-w-[460px] mx-auto w-full"
-                      : "grid-cols-1 sm:grid-cols-2"
-                  )}
-                >
-                  {filteredParticipants.map((p) => (
-                    <ParticipantTile
-                      key={p.identity}
-                      participant={p}
-                      member={memberByUserId.get(p.identity)}
-                      avatarUser={memberByUserId.get(p.identity)?.user ?? getUserFromCache(p.identity) ?? undefined}
-                      isYou={p.identity === user?.id}
-                      isDeafened={p.identity === user?.id ? voice.localState.deafened : false}
-                      backgroundColor={getParticipantTileColor(p.identity)}
-                      isWatchingShare={
-                        watchingStreamKey === `${p.identity}:screen` ||
-                        watchingStreamKey === `${p.identity}:camera`
-                      }
-                      onWatchShare={
-                        p.identity !== user?.id && (hasActiveScreenShare(p) || hasActiveCameraShare(p))
-                          ? () =>
-                              setWatchingStreamKey((current) => {
-                                const next =
-                                  hasActiveScreenShare(p) && p.screenTrack
-                                    ? `${p.identity}:screen`
-                                    : hasActiveCameraShare(p) && p.cameraTrack
-                                      ? `${p.identity}:camera`
-                                      : null;
-                                return current === next ? null : next;
-                              })
-                          : null
-                      }
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+              </div>
+            ) : (
+              <div
+                className={cn(
+                  "mx-3 mb-3 grid gap-2.5 sm:gap-3",
+                  filteredParticipants.length <= 1
+                    ? "grid-cols-1 max-w-[460px] mx-auto w-full"
+                    : "grid-cols-1 sm:grid-cols-2"
+                )}
+              >
+                {filteredParticipants.map((p) => (
+                  <ParticipantTile
+                    key={p.identity}
+                    participant={p}
+                    member={memberByUserId.get(p.identity)}
+                    avatarUser={memberByUserId.get(p.identity)?.user ?? getUserFromCache(p.identity) ?? undefined}
+                    isYou={p.identity === user?.id}
+                    isDeafened={p.identity === user?.id ? voice.localState.deafened : false}
+                    backgroundColor={getParticipantTileColor(p.identity)}
+                    isWatchingShare={
+                      watchingStreamKey === `${p.identity}:screen` ||
+                      watchingStreamKey === `${p.identity}:camera`
+                    }
+                    onWatchShare={
+                      p.identity !== user?.id && (hasActiveScreenShare(p) || hasActiveCameraShare(p))
+                        ? () =>
+                            setWatchingStreamKey((current) => {
+                              const next =
+                                hasActiveScreenShare(p) && p.screenTrack
+                                  ? `${p.identity}:screen`
+                                  : hasActiveCameraShare(p) && p.cameraTrack
+                                    ? `${p.identity}:camera`
+                                    : null;
+                              return current === next ? null : next;
+                            })
+                        : null
+                    }
+                  />
+                ))}
+              </div>
+            )}
 
-          {/* Remote audio elements (hidden) - using Web Audio API with per-user volume */}
-          {filteredParticipants
-            .filter((p) => p.identity !== user?.id && p.audioTrack)
-            .map((p) => (
-              <ParticipantAudioPlayer
-                key={p.identity}
-                participantId={p.identity}
-                track={p.audioTrack!}
-                muted={voice.localState.deafened}
-              />
-            ))}
-        </div>
+            {/* Remote audio elements (hidden) */}
+            {filteredParticipants
+              .filter((p) => p.identity !== user?.id && p.audioTrack)
+              .map((p) => (
+                <ParticipantAudioPlayer
+                  key={p.identity}
+                  participantId={p.identity}
+                  track={p.audioTrack!}
+                  muted={voice.localState.deafened}
+                />
+              ))}
+          </div>
+        )}
       </div>
 
       {/* Bottom control bar */}
       {effectivelyJoined && (
         <div
           className={cn(
-            "h-20 border-t border-white/10 bg-[rgb(28_30_33)] flex items-center justify-center px-3 relative transition-[padding] duration-200",
+            "h-16 border-t border-white/10 bg-[rgb(28_30_33)] flex items-center justify-center px-3 relative transition-[padding] duration-200 shrink-0",
             showTextPanel && "lg:pr-[420px]"
           )}
         >
-          <div className="hidden md:flex absolute left-4 items-center gap-2 text-xs text-white/60">
-            <Volume2 className="w-3.5 h-3.5" />
-            <span>{filteredParticipants.length} connected</span>
-          </div>
-
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               className={cn(
-                "h-12 w-12 rounded-full border border-white/15 flex items-center justify-center transition-colors",
+                "h-11 w-11 rounded-full border border-white/15 flex items-center justify-center transition-colors",
                 voice.localState.sharing
                   ? "bg-red-500 text-white border-red-400 hover:bg-red-500/90"
                   : "bg-white/10 text-white hover:bg-white/20"
@@ -826,7 +758,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
             <button
               type="button"
               className={cn(
-                "h-12 w-12 rounded-full border border-white/15 flex items-center justify-center transition-colors",
+                "h-11 w-11 rounded-full border border-white/15 flex items-center justify-center transition-colors",
                 voice.localState.cameraSharing
                   ? "bg-red-500 text-white border-red-400 hover:bg-red-500/90"
                   : "bg-white/10 text-white hover:bg-white/20"
@@ -842,7 +774,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
             <button
               type="button"
               className={cn(
-                "h-12 w-12 rounded-full border border-white/15 flex items-center justify-center transition-colors",
+                "h-11 w-11 rounded-full border border-white/15 flex items-center justify-center transition-colors",
                 voice.localState.deafened
                   ? "bg-red-500 text-white border-red-400 hover:bg-red-500/90"
                   : "bg-white/10 text-white hover:bg-white/20"
@@ -856,7 +788,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
             <button
               type="button"
               className={cn(
-                "h-12 w-12 rounded-full border border-white/15 flex items-center justify-center transition-colors",
+                "h-11 w-11 rounded-full border border-white/15 flex items-center justify-center transition-colors",
                 voice.localState.muted
                   ? "bg-red-500 text-white border-red-400 hover:bg-red-500/90"
                   : "bg-white/10 text-white hover:bg-white/20"
@@ -869,7 +801,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
 
             <button
               type="button"
-              className="h-12 w-12 rounded-full border border-red-400 bg-red-500 text-white hover:bg-red-500/90 flex items-center justify-center transition-colors"
+              className="h-11 w-11 rounded-full border border-red-400 bg-red-500 text-white hover:bg-red-500/90 flex items-center justify-center transition-colors"
               onClick={() => voice.leave()}
               title="Disconnect"
             >
@@ -881,7 +813,7 @@ export function VoiceChannelArea({ channel }: { channel: Channel }) {
 
       {/* Voice-attached text panel */}
       {showTextPanel && (
-        <aside className="absolute bottom-0 right-0 top-11 z-30 w-full overflow-hidden border-l border-white/15 bg-background/95 backdrop-blur md:top-0 sm:w-[420px]">
+        <aside className="absolute bottom-0 right-0 top-0 z-30 w-full overflow-hidden border-l border-white/15 bg-background/95 backdrop-blur sm:w-[420px]">
           <div className="h-full flex flex-col min-h-0">
             <div className="h-14 px-3 border-b border-border/70 flex items-center justify-between bg-background">
               <div className="min-w-0">

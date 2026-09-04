@@ -294,6 +294,27 @@ export class KloakSocketClient {
     return response.now;
   }
 
+  async broadcastServerChange(input: { serverId: string; event: string; data?: Record<string, unknown> }) {
+    await this.connect();
+    const response = await this.request({ type: "broadcast_server_change", ...input });
+    if (response.type !== "ack") throw new Error("Unexpected socket response");
+    return response.data;
+  }
+
+  async voiceJoin(channelId: string) {
+    await this.connect();
+    const response = await this.request({ type: "voice_join", channelId });
+    if (response.type !== "ack") throw new Error("Unexpected socket response");
+    return response.data;
+  }
+
+  async voiceLeave(channelId: string) {
+    await this.connect();
+    const response = await this.request({ type: "voice_leave", channelId });
+    if (response.type !== "ack") throw new Error("Unexpected socket response");
+    return response.data;
+  }
+
   async sendTyping(input: { channelId: string; isTyping: boolean }) {
     await this.connect();
     const response = await this.request({ type: "send_typing", ...input });
