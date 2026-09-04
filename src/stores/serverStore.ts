@@ -1810,6 +1810,12 @@ export const useServerStore = create<ServerState>((set, get) => ({
           .filter((item) => !item.is_banned)
           .filter((item) => !blockedUserIdSet.has(item.user_id))
           .map((item) => {
+            // When kloak-ws is enabled, presence comes exclusively from the realtime
+            // layer (useRealtimeUsers → patchUserAcrossStores). The RPC user data
+            // carries the DB-default 'online' status that is never updated on
+            // disconnect — strip it so member presence reflects the realtime layer
+            // instead of a stale 'online'. Bots are always online and keep their
+            // hardcoded status.
             const user = item.user?.is_bot
               ? {
                   ...item.user,
@@ -1817,7 +1823,9 @@ export const useServerStore = create<ServerState>((set, get) => ({
                   custom_status: item.user.custom_status || "Bot",
                   last_seen: item.user.last_seen ?? new Date().toISOString(),
                 }
-              : item.user;
+              : isKloakSocketEnabled()
+                ? (({ status: _s, last_seen: _ls, ...rest }) => rest)(item.user)
+                : item.user;
 
             return {
               id: item.id,

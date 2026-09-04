@@ -14,6 +14,34 @@ const channelRelayManager = new ChannelRelayManager(hub);
 const socketContexts = new WeakMap<WebSocket, SocketContext>();
 const startedAt = new Date();
 
+// ---------------------------------------------------------------------------
+// Time-based presence (DCTS-style)
+// ---------------------------------------------------------------------------
+// Presence is a per-user record that SURVIVES socket disconnects. A user is
+// reported online to peers while they have a live socket, or within a short
+// grace window after their last presence update once all their sockets have
+// closed. Offline is never published the instant a socket drops: a periodic
+// sweep flips users to offline only after the grace window expires with no
+// live socket remaining, so quick reconnects (network blips, tab switches,
+// another session churning) never flicker the roster. The presence snapshot
+// applies the same rules, so clients that connect later converge without
+// needing to have witnessed the socket closing.
+type PresenceState = {
+  status: "online" | "idle" | "dnd" | "offline";
+  customStatus: string | null;
+  lastSeen: string;
+  ts: number;
+};
+
+type PresenceEntry = PresenceState & { ownerSocket: SocketContext };
+
+const presenceByUser = new Map<string, PresenceEntry>();
+
+// Long-idle offline records (and their stale socket refs) are pruned so the
+// map can't grow unboundedly. Once pruned, absence from the snapshot means
+// offline — identical to what the record said.
+const PRESENCE_PRUNE_AFTER_MS = 60 * 60 * 1000;
+
 type ChannelRecipient = { user_id: string; server_id: string };
 type DmRecipient = { user_id: string };
 type PresenceRecipient = { user_id: string };
@@ -26,6 +54,28 @@ const server = createServer((req, res) => {
   }
 
   if (req.url === "/metrics.json") {
+    const metricsNow = Date.now();
+    const liveUserIds = new Set<string>();
+    for (const ws of wss.clients) {
+      if (ws.readyState !== ws.OPEN) continue;
+      const other = socketContexts.get(ws);
+      if (other?.userId) liveUserIds.add(other.userId);
+    }
+    const presenceUsers = Array.from(presenceByUser.entries())
+      .map(([userId, entry]) => ({
+        user_id: userId,
+        status: entry.status,
+        age_ms: metricsNow - entry.ts,
+        live: liveUserIds.has(userId),
+      }))
+      .sort((a, b) => Number(b.live) - Number(a.live) || a.age_ms - b.age_ms)
+      .slice(0, 200);
+    const byStatus: Record<string, number> = {};
+    for (const entry of presenceByUser.values()) {
+      byStatus[entry.status] = (byStatus[entry.status] ?? 0) + 1;
+    }
+    const liveNoRecord = Array.from(liveUserIds).filter((userId) => !presenceByUser.has(userId)).slice(0, 200);
+
     res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
     res.end(JSON.stringify({
       ok: true,
@@ -34,6 +84,13 @@ const server = createServer((req, res) => {
       clients: wss.clients.size,
       hub: hub.stats(),
       memory: process.memoryUsage(),
+      presence: {
+        records: presenceByUser.size,
+        byStatus,
+        liveSockets: liveUserIds.size,
+        liveNoRecord,
+        users: presenceUsers,
+      },
     }));
     return;
   }
@@ -103,30 +160,27 @@ wss.on("connection", (ws) => {
     hub.removeSocket(socket);
 
     const closedUserId = socket.userId;
-    if (closedUserId) {
-      // Presence is per-socket, but a user can be connected from several sessions
-      // (desktop + phone, multiple tabs). Announcing "offline" whenever one of
-      // those sockets drops would make every peer (and this user's other
-      // sessions) flicker them offline/online on each churned connection. Only
-      // publish offline once no other live session of the same user remains.
-      let hasOtherLiveSession = false;
-      for (const otherWs of wss.clients) {
-        if (otherWs === ws || otherWs.readyState !== otherWs.OPEN) continue;
-        const other = socketContexts.get(otherWs);
-        if (other && other.userId === closedUserId) {
-          hasOtherLiveSession = true;
-          break;
-        }
-      }
+    if (!closedUserId) return;
 
-      if (!hasOtherLiveSession) {
-        void publishPresence(socket, {
-          status: "offline",
-          customStatus: socket.currentPresence?.customStatus ?? null,
-          lastSeen: new Date().toISOString(),
-          ts: Date.now(),
-        }).catch((error) => console.warn("[kloak-ws] failed to publish offline presence", { socketId: socket.id, error }));
-      }
+    const previous = presenceByUser.get(closedUserId);
+    if (!previous) return;
+
+    // Offline is NOT announced here (DCTS-style). A user stays visible to
+    // peers until the grace-period sweep confirms no live socket remains, so
+    // churned connections never flicker the roster. When this session was one
+    // of several for the same account, re-merge the REMAINING live sessions:
+    // presence is a property of the account, so a window closing must not
+    // change it while a sibling window is still connected. Only when the merge
+    // actually changed the visible status (e.g. the only non-offline window
+    // closed, leaving windows that had published offline) are peers told.
+    const merged = recomputePresenceForUser(closedUserId);
+    if (!merged) return; // no live sessions remain — the grace sweep owns offline
+
+    presenceByUser.set(closedUserId, merged);
+    if (merged.status !== previous.status) {
+      void publishPresenceEntry(closedUserId, merged).catch((error) =>
+        console.warn("[kloak-ws] failed to publish presence after session close", { userId: closedUserId, error }),
+      );
     }
   });
 });
@@ -142,6 +196,123 @@ const heartbeatTimer = setInterval(() => {
     ws.ping();
   }
 }, config.heartbeatIntervalMs);
+
+const hasLiveSocket = (userId: string): boolean => {
+  for (const ws of wss.clients) {
+    if (ws.readyState !== ws.OPEN) continue;
+    const other = socketContexts.get(ws);
+    if (other?.userId === userId) return true;
+  }
+  return false;
+};
+
+const PRESENCE_VISIBILITY_RANK: Record<PresenceState["status"], number> = {
+  online: 3,
+  idle: 2,
+  dnd: 1,
+  offline: 0,
+};
+
+// Recomputes a user's authoritative presence from ALL of their live sessions
+// (DCTS live-socket semantics + per-session statuses). Presence is a property
+// of the account, not of any single window: a stale window that publishes
+// "offline" (e.g. an old tab left in invisible mode, or a second window of the
+// same account) must never hide the account while another window is online.
+// The merged status is the most-visible one among live sessions — online >
+// idle > dnd > offline — so the account stays visible as long as ANY live
+// session reports a non-offline status. A socket that connected but has not
+// reported presence yet counts as online (a live socket means the app is
+// running). The merged record is stamped "now" because the user demonstrably
+// has a live socket at this moment. Returns null when the user has no live
+// sessions at all — the grace sweep owns the offline transition then.
+function recomputePresenceForUser(userId: string): PresenceEntry | null {
+  const now = Date.now();
+  const nowIso = new Date(now).toISOString();
+  let identity: SocketContext | null = null;
+  let bestRank = -1;
+  let status: PresenceState["status"] = "online";
+  let customStatus: string | null = null;
+
+  for (const ws of wss.clients) {
+    if (ws.readyState !== ws.OPEN) continue;
+    const session = socketContexts.get(ws);
+    if (!session || session.userId !== userId) continue;
+    if (!identity) identity = session;
+
+    const sessionState: PresenceState =
+      session.currentPresence ?? {
+        status: "online",
+        customStatus: null,
+        lastSeen: nowIso,
+        ts: now,
+      };
+    const rank = PRESENCE_VISIBILITY_RANK[sessionState.status];
+    if (rank > bestRank) {
+      bestRank = rank;
+      status = sessionState.status;
+      customStatus = sessionState.customStatus;
+    }
+  }
+
+  if (!identity) return null;
+  return { status, customStatus, lastSeen: nowIso, ts: now, ownerSocket: identity };
+}
+
+// Publishes a user's presence record to their own topic and to every presence
+// recipient (server members, friends, DM participants).
+async function publishPresenceEntry(userId: string, entry: PresenceEntry) {
+  const payload = {
+    user_id: userId,
+    status: entry.status,
+    custom_status: entry.customStatus,
+    last_seen: entry.lastSeen,
+    ts: entry.ts,
+  };
+
+  hub.publish(`user:${userId}`, "user.presence", payload);
+  try {
+    const recipients = await getPresenceRecipients(entry.ownerSocket, userId);
+    for (const recipient of recipients) {
+      hub.publish(`user:${recipient.user_id}`, "user.presence", payload);
+    }
+  } catch (error) {
+    console.warn("[kloak-ws] failed to fan out presence", { userId, error });
+  }
+}
+
+// DCTS-style sweep: flip a user to offline only when all of their sockets have
+// been gone for the grace window since their last presence update, then publish
+// the offline event so already-connected peers update immediately.
+const presenceSweepTimer = setInterval(() => {
+  const now = Date.now();
+  const nowIso = new Date().toISOString();
+
+  for (const [userId, entry] of Array.from(presenceByUser.entries())) {
+    if (entry.status === "offline") {
+      if (now - entry.ts > PRESENCE_PRUNE_AFTER_MS) {
+        presenceByUser.delete(userId);
+      }
+      continue;
+    }
+    if (hasLiveSocket(userId)) continue;
+    if (now - entry.ts < config.presenceOfflineGraceMs) continue;
+    // Double-check right before flipping in case the user reconnected while we
+    // were iterating.
+    if (hasLiveSocket(userId)) continue;
+
+    const offlineEntry: PresenceEntry = {
+      status: "offline",
+      customStatus: entry.customStatus,
+      lastSeen: nowIso,
+      ts: now,
+      ownerSocket: entry.ownerSocket,
+    };
+    presenceByUser.set(userId, offlineEntry);
+    void publishPresenceEntry(userId, offlineEntry).catch((error) =>
+      console.warn("[kloak-ws] failed to publish offline presence", { userId, error }),
+    );
+  }
+}, config.presenceSweepMs);
 
 async function handleRawMessage(socket: SocketContext, raw: string) {
   let parsed: unknown;
@@ -1008,36 +1179,33 @@ async function sendTyping(socket: SocketContext, message: Extract<ClientMessage,
 
 async function updatePresence(socket: SocketContext, message: Extract<ClientMessage, { type: "update_presence" }>) {
   const userId = requireUser(socket);
-  const presence = {
+  const presence: PresenceState = {
     status: message.status,
     customStatus: message.customStatus ?? null,
     lastSeen: message.lastSeen ?? new Date().toISOString(),
     ts: message.ts ?? Date.now(),
   };
-  await publishPresence(socket, presence);
+  // Record what THIS session reports so the per-user merge below can see it.
+  socket.currentPresence = presence;
+  // The user's record is the MERGE of every live session's status (see
+  // recomputePresenceForUser), never the raw message alone: when the same
+  // account has several windows open, one stale window publishing "offline"
+  // must not overwrite a sibling window's "online". The merged record is what
+  // gets fanned out and served in snapshots, so every viewer sees the account
+  // as online as long as ANY of its live sessions is online.
+  const merged = recomputePresenceForUser(userId);
+  if (!merged) {
+    // Cannot normally happen — this socket is live — but guard anyway.
+    hub.send(socket, { type: "ack", requestId: message.requestId, ok: true });
+    return;
+  }
+  presenceByUser.set(userId, merged);
+  await publishPresenceEntry(userId, merged);
   hub.send(socket, { type: "ack", requestId: message.requestId, ok: true });
 }
 
-async function publishPresence(socket: SocketContext, presence: NonNullable<SocketContext["currentPresence"]>) {
-  const userId = socket.userId;
-  if (!userId) return;
-  socket.currentPresence = presence;
-
-  const payload = {
-    user_id: userId,
-    status: presence.status,
-    custom_status: presence.customStatus,
-    last_seen: presence.lastSeen,
-    ts: presence.ts,
-  };
-
-  hub.publish(`user:${userId}`, "user.presence", payload);
-  const recipients = await getPresenceRecipients(socket, userId);
-  for (const recipient of recipients) {
-    hub.publish(`user:${recipient.user_id}`, "user.presence", payload);
-  }
-}
-
+// Wire shape sent to clients (snake_case) — distinct from the camelCase
+// internal PresenceState record.
 type PresenceSnapshotEntry = {
   user_id: string;
   status: "online" | "idle" | "dnd" | "offline";
@@ -1046,10 +1214,14 @@ type PresenceSnapshotEntry = {
   ts: number;
 };
 
-// Returns the current live presence of every peer (server member / friend / DM
-// participant) who is online right now. Offline and invisible peers are omitted —
-// absence from this list means the peer is offline. This gives newly-connected
-// clients an authoritative initial state instead of waiting for the next heartbeat.
+// Returns the current presence of every peer (server member / friend / DM
+// participant) the requesting user should see, using the same time-based rules
+// as the offline sweep: a peer is online while they have a live socket, or
+// within the grace window since their last presence update once their sockets
+// closed. Offline and invisible peers are omitted — absence from this list
+// means the peer is offline. This gives newly-connected clients an
+// authoritative initial state without needing to have witnessed any socket
+// closing.
 async function getPresenceSnapshot(socket: SocketContext, message: Extract<ClientMessage, { type: "get_presence_snapshot" }>) {
   const userId = requireUser(socket);
   const recipients = await getPresenceRecipients(socket, userId);
@@ -1060,24 +1232,32 @@ async function getPresenceSnapshot(socket: SocketContext, message: Extract<Clien
     return;
   }
 
-  const latestByUser = new Map<string, PresenceSnapshotEntry>();
+  const now = Date.now();
+  const liveUserIds = new Set<string>();
   for (const ws of wss.clients) {
+    if (ws.readyState !== ws.OPEN) continue;
     const other = socketContexts.get(ws);
-    if (!other || !other.userId || !peerIds.has(other.userId)) continue;
-    const presence = other.currentPresence;
-    if (!presence || presence.status === "offline") continue;
-    const prev = latestByUser.get(other.userId);
-    if (prev && prev.ts >= presence.ts) continue;
-    latestByUser.set(other.userId, {
-      user_id: other.userId,
-      status: presence.status,
-      custom_status: presence.customStatus ?? null,
-      last_seen: presence.lastSeen,
-      ts: presence.ts,
+    if (other?.userId && peerIds.has(other.userId)) liveUserIds.add(other.userId);
+  }
+
+  const entries: PresenceSnapshotEntry[] = [];
+  for (const peerId of peerIds) {
+    const entry = presenceByUser.get(peerId);
+    // Explicit offline / invisible beats a live socket.
+    if (entry?.status === "offline") continue;
+    const live = liveUserIds.has(peerId);
+    const fresh = !!entry && now - entry.ts < config.presenceOfflineGraceMs;
+    if (!live && !fresh) continue;
+    entries.push({
+      user_id: peerId,
+      status: entry?.status ?? "online",
+      custom_status: entry?.customStatus ?? null,
+      last_seen: entry?.lastSeen ?? new Date(now).toISOString(),
+      ts: entry?.ts ?? now,
     });
   }
 
-  hub.send(socket, { type: "ack", requestId: message.requestId, ok: true, data: Array.from(latestByUser.values()) });
+  hub.send(socket, { type: "ack", requestId: message.requestId, ok: true, data: entries });
 }
 
 async function broadcastServerChange(socket: SocketContext, message: Extract<ClientMessage, { type: "broadcast_server_change" }>) {
@@ -1213,6 +1393,7 @@ server.listen(config.port, config.host, () => {
 function shutdown(signal: NodeJS.Signals) {
   console.info(`[kloak-ws] received ${signal}, closing websocket clients`);
   clearInterval(heartbeatTimer);
+  clearInterval(presenceSweepTimer);
 
   for (const ws of wss.clients) {
     try {

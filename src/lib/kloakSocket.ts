@@ -1,4 +1,5 @@
 import { useAuthStore } from "@/stores/authStore";
+import { isKloakSocketEnabled } from "@/lib/kloakConfig";
 
 type KloakSocketEvent = {
   topic: string;
@@ -35,17 +36,7 @@ const SUBSCRIBE_BATCH_SIZE = 40;
 
 let requestSeq = 0;
 
-export function isKloakSocketEnabled() {
-  if (typeof window === "undefined") return false;
-  try {
-    const override = window.localStorage.getItem("kloak:use-kloak-ws");
-    if (override === "1") return true;
-    if (override === "0") return false;
-    return import.meta.env.VITE_KLOAK_WS_ENABLED === "true";
-  } catch {
-    return import.meta.env.VITE_KLOAK_WS_ENABLED === "true";
-  }
-}
+export { isKloakSocketEnabled };
 
 export class KloakSocketClient {
   private ws: WebSocket | null = null;

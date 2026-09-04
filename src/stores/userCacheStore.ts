@@ -7,6 +7,7 @@
  */
 import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
+import { isKloakSocketEnabled } from '@/lib/kloakConfig';
 import type { User } from '@/types';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -95,6 +96,21 @@ function evictOldest(cache: Map<string, CachedEntry>) {
   }
 }
 
+/**
+ * When kloak-ws is enabled, presence is managed entirely by the realtime layer
+ * (useRealtimeUsers → patchUser). RPC responses (get_user_by_id, conversation
+ * participants, friends, message senders…) carry the DB-default `status`
+ * ('online') which is never updated when a user goes offline, and a masked
+ * `last_seen`. Writing those fields into the cache would overwrite the correct
+ * presence data the realtime layer already set, making everyone appear online.
+ * Strip them so patchUser (realtime) is the only writer of presence fields.
+ */
+function stripStalePresence<T extends { status?: unknown; last_seen?: unknown }>(user: T): T {
+  if (!isKloakSocketEnabled()) return user;
+  const { status: _status, last_seen: _lastSeen, ...rest } = user;
+  return rest as T;
+}
+
 /** Check if a patch contains any visual field changes compared to existing user */
 function hasVisualChanges(incoming: Partial<User>, existing?: User): boolean {
   for (const key of Object.keys(incoming)) {
@@ -122,7 +138,11 @@ export const useUserCacheStore = create<UserCacheState>((set, get) => ({
   upsertUser: (user: User) => {
     const state = get();
     const existing = state._cache.get(user.id);
-    
+
+    // Presence fields come exclusively from the realtime layer when kloak-ws
+    // is enabled; strip the stale DB-default values from RPC data.
+    user = stripStalePresence(user);
+
     // Skip if identical object reference
     if (existing?.user === user) return;
     
@@ -148,7 +168,10 @@ export const useUserCacheStore = create<UserCacheState>((set, get) => ({
     const now = Date.now();
     let anyVisualChange = false;
     
-    for (const user of users) {
+    for (const rawUser of users) {
+      // Presence fields come exclusively from the realtime layer when kloak-ws
+      // is enabled; strip the stale DB-default values from RPC data.
+      const user = stripStalePresence(rawUser);
       const existing = state._cache.get(user.id);
       if (existing?.user === user) continue;
       const isVisual = hasVisualChanges(user, existing?.user);
@@ -307,7 +330,7 @@ export async function fetchAndCacheUser(userId: string): Promise<User | null> {
     try {
       const { data } = await supabase.rpc('get_user_by_id', { _user_id: userId });
       if (data) {
-        const user = data as unknown as User;
+        const user = stripStalePresence(data as unknown as User);
         useUserCacheStore.getState().upsertUser(user);
         return user;
       }

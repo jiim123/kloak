@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
 import { friendRequestRateLimiter } from '@/lib/security';
 import { fetchUsersPresence } from '@/lib/presenceBatch';
+import { isKloakSocketEnabled } from '@/lib/kloakSocket';
 import type { User, Friendship, FriendWithUser, FriendshipStatus } from '@/types';
 
 const FRIENDS_CACHE_TTL_MS = 45_000;
@@ -114,7 +115,10 @@ export const useFriendStore = create<FriendState>((set, get) => ({
         );
 
         const presenceByUserId = new Map<string, { status: string | null; last_seen: string | null }>();
-        if (presenceTargetIds.length > 0) {
+        // When kloak-ws is enabled, presence is managed entirely by the realtime
+        // layer (useRealtimeUsers → bootstrapPresenceFromSocket). Fetching from the
+        // DB here would race with that layer and flash stale status values.
+        if (!isKloakSocketEnabled() && presenceTargetIds.length > 0) {
           const presenceData = await fetchUsersPresence(userId, presenceTargetIds);
           for (const row of presenceData) {
             if (!row?.id) continue;
@@ -128,6 +132,17 @@ export const useFriendStore = create<FriendState>((set, get) => ({
         const withPresence = <T extends { user?: Record<string, unknown> | null }>(row: T): T => {
           const targetUserId = typeof row.user?.id === 'string' ? row.user.id : null;
           if (!targetUserId) return row;
+
+          // When kloak-ws is enabled, presence comes exclusively from the realtime
+          // layer (which patches status/last_seen into the user cache). The RPC
+          // user data carries the DB-default 'online' status that's never updated
+          // on disconnect — strip it so components fall back to the cache (which
+          // reflects realtime presence) instead of a stale 'online'.
+          if (isKloakSocketEnabled()) {
+            const { status: _s, last_seen: _ls, ...rest } = row.user;
+            return { ...row, user: rest };
+          }
+
           const presence = presenceByUserId.get(targetUserId);
           if (!presence) return row;
           return {

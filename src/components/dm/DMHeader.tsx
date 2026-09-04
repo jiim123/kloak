@@ -8,7 +8,7 @@ import { useFriendStore } from "@/stores/friendStore";
 import { useAuthStore } from "@/stores/authStore";
 import { cn } from "@/lib/utils";
 import { getEffectivePresence } from "@/lib/presence";
-import { getUserFromCache } from "@/stores/userCacheStore";
+import { getUserFromCache, useUserCacheStore } from "@/stores/userCacheStore";
 import { toast } from "sonner";
 import type { User, UserStatus } from "@/types";
 import { useRateLimit } from "@/hooks/useRateLimit";
@@ -38,6 +38,12 @@ export const DMHeader = ({ otherUser, isProfilePanelOpen, onToggleProfilePanel }
   const [hoveredButton, setHoveredButton] = useState<string | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const checkBlockLimit = useRateLimit(10, 60_000);
+
+  // Re-render when the realtime presence system patches the user cache
+  // (via patchUserAcrossStores → upsertUser → version bump).
+  // Without this, getUserFromCache() returns stale data because it's a
+  // non-reactive call that doesn't trigger re-renders on cache changes.
+  useUserCacheStore((s) => s._version);
 
   // Prefer the user cache for the freshest status — it's kept up-to-date by
   // the realtime presence system (kloak-ws), while `otherUser` comes from

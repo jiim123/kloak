@@ -15,6 +15,17 @@ export type Config = {
   heartbeatIntervalMs: number;
   authTimeoutMs: number;
   supabaseFetchTimeoutMs: number;
+  /**
+   * DCTS-style presence grace: after a user's last socket closes, their
+   * presence is still reported to peers (and kept out of the offline sweep)
+   * until this long after their last presence update. Quick reconnects
+   * (network blips, tab switches, other sessions churning) therefore never
+   * flicker the roster — the user is only marked offline once this window
+   * passes with no live socket remaining.
+   */
+  presenceOfflineGraceMs: number;
+  /** How often the server re-checks quiet users and publishes offline events. */
+  presenceSweepMs: number;
 };
 
 loadDotenv();
@@ -89,4 +100,6 @@ export const config: Config = {
   heartbeatIntervalMs: integer("KLOAK_WS_HEARTBEAT_MS", 30_000),
   authTimeoutMs: integer("KLOAK_WS_AUTH_TIMEOUT_MS", 10_000),
   supabaseFetchTimeoutMs: integer("KLOAK_WS_SUPABASE_FETCH_TIMEOUT_MS", 12_000),
+  presenceOfflineGraceMs: integer("KLOAK_WS_PRESENCE_OFFLINE_GRACE_MS", 30_000),
+  presenceSweepMs: integer("KLOAK_WS_PRESENCE_SWEEP_MS", 5_000),
 };

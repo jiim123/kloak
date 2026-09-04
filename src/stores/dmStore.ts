@@ -449,7 +449,27 @@ export const useDMStore = create<DMState>((set, get) => ({
         ),
       );
 
-      if (participantIds.length > 0) {
+      // When kloak-ws is enabled, presence is managed entirely by the realtime
+      // layer (useRealtimeUsers → bootstrapPresenceFromSocket). The RPC returns
+      // the DB-default status ('online') which is never updated when a user goes
+      // offline — leaving it on the user objects would make everyone appear
+      // online. Strip the stale fields so the realtime layer is the sole source
+      // of truth for presence.
+      if (isKloakSocketEnabled()) {
+        for (const conv of conversations) {
+          if (conv.other_user) {
+            const { status: _s, last_seen: _ls, ...rest } = conv.other_user as any;
+            conv.other_user = rest;
+          }
+          if (conv.participants) {
+            conv.participants = conv.participants.map((pt) => {
+              if (!pt.user) return pt;
+              const { status: _s, last_seen: _ls, ...rest } = pt.user as any;
+              return { ...pt, user: rest };
+            });
+          }
+        }
+      } else if (participantIds.length > 0) {
         try {
           const presenceData = await fetchUsersPresence(userId, participantIds);
           const presenceByUserId = new Map<
@@ -502,7 +522,20 @@ export const useDMStore = create<DMState>((set, get) => ({
           ...(conversation.participants || []).map((participant) => participant.user),
         ].filter((entry): entry is User => !!entry?.id);
         if (users.length > 0) {
-          bulkSetUsersInCache(users);
+          // When kloak-ws is enabled, presence is managed by the realtime layer
+          // (patchUserAcrossStores). The RPC returns the DB-default status
+          // ('online') which is stale — writing it into the cache would overwrite
+          // the correct presence data the realtime layer already set.
+          if (isKloakSocketEnabled()) {
+            bulkSetUsersInCache(
+              users.map((u) => {
+                const { status: _s, last_seen: _ls, ...rest } = u as any;
+                return rest;
+              }),
+            );
+          } else {
+            bulkSetUsersInCache(users);
+          }
         }
       }
 
