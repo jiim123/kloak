@@ -49,8 +49,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import type { ServerMember, CustomServerRole, UserStatus } from "@/types";
 import { getEffectivePresence } from "@/lib/presence";
+import { isKloakSocketEnabled } from "@/lib/kloakConfig";
 import {
-  hasRecentRealtimePresence,
   isPresenceReady,
   subscribePresenceReady,
 } from "@/hooks/useRealtimeUsers";
@@ -141,17 +141,17 @@ const getMemberPresence = (member: ServerMember) => {
     return { status: "online" as UserStatus, isStale: false, isOffline: false };
   }
 
-  // Prefer the latest user-cache snapshot — patched on every presence event —
-  // over the (possibly stale) member.user payload from the initial server fetch.
   const cached = getUserFromCache(member.user_id);
-  const status = ((cached?.status ?? member.user?.status) as UserStatus | undefined) ?? "offline";
-  const lastSeen = cached?.last_seen ?? member.user?.last_seen;
 
-  // When the realtime presence channel has recent data for this user, trust
-  // its status verbatim regardless of value (including "offline" for Invisible).
-  if (hasRecentRealtimePresence(member.user_id)) {
-    return { status, isStale: false, isOffline: status === "offline" };
-  }
+  // When kloak-ws is enabled, status must come ONLY from the user cache
+  // (patched by the realtime layer) — never from member.user.status which
+  // can carry a stale "online" from the DB (the DB never clears status on
+  // disconnect). The cache strips status for kloak-ws, so this defaults to
+  // "offline" — getEffectivePresence then uses kloak-ws authoritative data.
+  const status = isKloakSocketEnabled()
+    ? ((cached?.status as UserStatus | undefined) ?? "offline")
+    : ((cached?.status ?? member.user?.status) as UserStatus | undefined) ?? "offline";
+  const lastSeen = cached?.last_seen ?? member.user?.last_seen;
 
   return getEffectivePresence(status, lastSeen, member.user_id);
 };

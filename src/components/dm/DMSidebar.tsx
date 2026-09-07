@@ -21,7 +21,6 @@ import { useAuthStore } from "@/stores/authStore";
 import { useUnreadDMsContext } from "@/hooks/useUnreadDMsContext";
 import { formatCompactTime } from "@/lib/format";
 import { getEffectivePresence } from "@/lib/presence";
-import { hasRecentRealtimePresence } from "@/hooks/useRealtimeUsers";
 import { getUserFromCache, useUserCacheStore } from "@/stores/userCacheStore";
 import { ConversationItemSkeleton } from "@/components/ui/skeletons";
 import { NameplateVideo } from "@/components/ui/nameplate-video";
@@ -267,9 +266,9 @@ export const DMSidebar = () => {
                             const cached = otherId ? getUserFromCache(otherId) : null;
                             const status = ((cached?.status ?? conversation.other_user?.status) as UserStatus) || "offline";
                             const lastSeen = cached?.last_seen ?? conversation.other_user?.last_seen;
-                            const presence = otherId && hasRecentRealtimePresence(otherId)
-                              ? { status, isStale: false, isOffline: status === "offline" }
-                              : getEffectivePresence(status, lastSeen, otherId);
+                            // Delegate to getEffectivePresence which handles kloak-ws authoritative
+                            // status and Supabase Realtime fallback correctly.
+                            const presence = getEffectivePresence(status, lastSeen, otherId);
                             return (
                               <div
                                 className={cn(

@@ -32,11 +32,6 @@ export function getEffectivePresence(
   lastSeen: string | null | undefined,
   userId?: string,
 ): EffectivePresence {
-  // If we have recent real-time Presence data for this user,
-  // trust the status as-is without last_seen override.
-  if (userId && hasRecentRealtimePresence(userId)) {
-    return { status, isStale: false, isOffline: status === 'offline' };
-  }
 
   // When kloak-ws is the presence transport, the server is the ONLY source of
   // truth. The DB `status` is never updated on disconnect (it stays 'online'
@@ -57,7 +52,17 @@ export function getEffectivePresence(
     if (authoritative) {
       return { status: authoritative, isStale: false, isOffline: authoritative === 'offline' };
     }
-    return { status: 'offline', isStale: status !== 'offline', isOffline: true };
+    // No kloak-ws data yet — default to offline. The status param may carry
+    // a stale "online" from the DB (never cleared on disconnect), so we must
+    // NOT trust it here. The profile popup gets this right because it reads
+    // from the user cache which the realtime layer patches correctly.
+    return { status: 'offline', isStale: false, isOffline: true };
+  }
+
+  // Supabase Realtime fallback: trust the status as-is when we have recent
+  // presence data (the realtime layer patched it into the cache correctly).
+  if (userId && hasRecentRealtimePresence(userId)) {
+    return { status, isStale: false, isOffline: status === 'offline' };
   }
 
   if (!lastSeen) {

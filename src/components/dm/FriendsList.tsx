@@ -19,7 +19,6 @@ import { FriendItemSkeleton } from "@/components/ui/skeletons";
 import { toast } from "sonner";
 import type { FriendWithUser, UserStatus } from "@/types";
 import { getEffectivePresence } from "@/lib/presence";
-import { hasRecentRealtimePresence } from "@/hooks/useRealtimeUsers";
 import { getUserFromCache, useUserCacheStore } from "@/stores/userCacheStore";
 import { useLocation } from "react-router-dom";
 import { openUserProfileModal } from "@/lib/userProfilePopover";
@@ -36,9 +35,8 @@ const getFriendListPresence = (friend: FriendWithUser) => {
   const cached = getUserFromCache(friend.id);
   const status = ((cached?.status ?? friend.status) as UserStatus) || "offline";
   const lastSeen = cached?.last_seen ?? friend.last_seen;
-  if (hasRecentRealtimePresence(friend.id)) {
-    return { status, isOffline: status === "offline" };
-  }
+  // Delegate to getEffectivePresence which handles kloak-ws authoritative
+  // status and Supabase Realtime fallback correctly.
   return getEffectivePresence(status, lastSeen, friend.id);
 };
 
