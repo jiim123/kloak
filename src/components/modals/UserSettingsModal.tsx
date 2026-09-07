@@ -1410,17 +1410,24 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
             <Sparkles className="w-4 h-4 mr-1.5" />
             {user?.profile_effect ? "Change Effect" : "Add Effect"}
           </Button>
-          {isSubscribed() && (
-            <Button
+          <Button
               variant="secondary"
               size="sm"
-              className="rounded-lg bg-background/60 hover:bg-background/80"
-              onClick={() => setShowNameplateModal(true)}
+              className={cn(
+                "rounded-lg bg-background/60 hover:bg-background/80 relative",
+                !isSubscribed() && "opacity-60 cursor-not-allowed"
+              )}
+              disabled={!isSubscribed()}
+              onClick={() => isSubscribed() && setShowNameplateModal(true)}
             >
               <Star className="w-4 h-4 mr-1.5" />
               {user?.nameplate ? "Change Nameplate" : "Add Nameplate"}
+              {!isSubscribed() && (
+                <span className="ml-1.5 inline-flex items-center rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-bold text-amber-500 leading-none">
+                  PRIME
+                </span>
+              )}
             </Button>
-          )}
         </div>
       </div>
 
