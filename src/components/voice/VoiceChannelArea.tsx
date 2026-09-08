@@ -35,6 +35,7 @@ import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { useTyping } from "@/hooks/useTyping";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { fetchAndCacheUser, getUserFromCache, useUserCacheStore } from "@/stores/userCacheStore";
+import { getNameFontCss } from "@/lib/nameStyle";
 import { useUIStore } from "@/stores/uiStore";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { openUserProfileModal, SIDE_ALIGNED_USER_PROFILE_POPOVER } from "@/lib/userProfilePopover";
@@ -79,10 +80,13 @@ function VideoPlayer({ track, className }: { track: VideoTrack; className?: stri
 function getMemberDisplayName(member: ServerMember | undefined, participant: AgoraParticipant): string {
   const cachedUser = getUserFromCache(participant.identity);
   const resolvedUser = member?.user ?? cachedUser;
+  let name: string;
   if (member) {
-    return member.nickname || resolvedUser?.display_name || resolvedUser?.username || participant.name;
+    name = member.nickname || resolvedUser?.display_name || resolvedUser?.username || participant.name;
+  } else {
+    name = resolvedUser?.display_name || resolvedUser?.username || participant.name || participant.identity.slice(0, 8);
   }
-  return resolvedUser?.display_name || resolvedUser?.username || participant.name || participant.identity.slice(0, 8);
+  return name;
 }
 
 function hasActiveScreenShare(participant: Pick<AgoraParticipant, "isScreenSharing" | "screenTrack">): boolean {

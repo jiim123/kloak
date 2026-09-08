@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
+import { StyledName } from "@/components/ui/styled-name";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -337,7 +338,10 @@ export const EditableProfilePreview = ({
                 className="flex items-center gap-2 hover:opacity-80 transition-opacity text-left"
               >
                 <span className="text-lg font-medium" style={{ color: fg }}>
-                  {displayName.trim() || user.display_name || user.username}
+                  <StyledName
+                    user={user}
+                    name={displayName.trim() || user.display_name || user.username}
+                  />
                 </span>
                 <Pencil className="w-3.5 h-3.5" style={{ color: muted }} />
               </button>

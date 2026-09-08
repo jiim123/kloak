@@ -17,6 +17,7 @@ import { ReportReasonDialog, type ReportReasonOption } from "@/components/modals
 import { toast } from "sonner";
 import type { Badge } from "@/types/badge";
 import type { User, UserStatus } from "@/types";
+import { StyledName } from "@/components/ui/styled-name";
 
 interface DMProfilePanelProps {
   user: User | null | undefined;
@@ -293,7 +294,9 @@ export const DMProfilePanel = ({ user }: DMProfilePanelProps) => {
               <div className="mt-3 flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex min-w-0 items-center gap-2">
-                    <h2 className="truncate text-[20px] font-extrabold leading-none">{displayName}</h2>
+                    <h2 className="truncate text-[20px] font-extrabold leading-none">
+                      <StyledName user={profileUser} name={displayName} fallback="Unknown" />
+                    </h2>
                     {profileUser.is_bot && <BotTag className="rounded-md px-1.5 py-0.5 text-[10px]" />}
                   </div>
                   <p className="mt-1 truncate text-[13px] font-medium text-white/75">@{profileUser.username}</p>

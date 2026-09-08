@@ -29,7 +29,7 @@ interface CachedEntry {
 const VISUAL_FIELDS: ReadonlySet<string> = new Set([
   'username', 'display_name', 'avatar_url', 'banner_url',
   'avatar_decoration', 'profile_effect', 'bio', 'tagline', 'banner_color',
-  'custom_status',
+  'custom_status', 'name_style',
 ]);
 
 /** Version counter per user — incremented only on visual field changes */
@@ -119,6 +119,11 @@ function hasVisualChanges(incoming: Partial<User>, existing?: User): boolean {
     // If no existing user, any visual field is a change
     if (!existing) return true;
     // Compare actual values
+    if (key === 'name_style') {
+      // Object field: compare by stable JSON, not reference
+      if (JSON.stringify((incoming as any)[key] ?? null) !== JSON.stringify((existing as any).name_style ?? null)) return true;
+      continue;
+    }
     if ((incoming as any)[key] !== (existing as any)[key]) return true;
   }
   return false;

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { AVAILABLE_NAMEPLATES } from "@/types";
 import { NameplateVideo } from "@/components/ui/nameplate-video";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
+import { StyledName } from "@/components/ui/styled-name";
 import { Check, X, Star } from "lucide-react";
 
 interface NameplateModalProps {
@@ -96,9 +97,11 @@ export const NameplateModal = ({ open, onOpenChange, onSelect }: NameplateModalP
 
                 {/* Name + status */}
                 <div className="flex-1 min-w-0 overflow-hidden">
-                  <span className="text-[14px] font-semibold truncate leading-tight text-foreground block">
-                    {previewName}
-                  </span>
+                  <StyledName
+                    user={user}
+                    name={previewName}
+                    className="text-[14px] font-semibold truncate leading-tight text-foreground block"
+                  />
                   <p className="text-[11px] truncate mt-0.5 text-muted-foreground/80 max-w-[180px]">
                     {previewStatus}
                   </p>

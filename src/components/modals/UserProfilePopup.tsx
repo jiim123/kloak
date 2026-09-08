@@ -44,6 +44,8 @@ import { ReportReasonDialog, type ReportReasonOption } from "@/components/modals
 import type { Badge } from "@/types/badge";
 import type { User, UserStatus } from "@/types";
 import type { UserProfileAnchorRect } from "@/lib/userProfilePopover";
+import { StyledName } from "@/components/ui/styled-name";
+import { parseNameStyle } from "@/lib/nameStyle";
 
 type UserProfileAnchorSide = "left" | "right";
 type UserProfileAnchorAlign = "auto" | "center";
@@ -125,6 +127,7 @@ const toProfileUser = (rawUser: any): User => ({
   last_seen: rawUser.last_seen,
   pronouns: rawUser.pronouns ?? null,
   is_bot: rawUser.is_bot ?? false,
+  name_style: parseNameStyle(rawUser.name_style),
 });
 
 const withAlpha = (hex: string, alphaHex: string) => {
@@ -1005,7 +1008,7 @@ export const UserProfilePopup = () => {
               <div className="min-w-0 flex-1">
                 <div className="flex min-w-0 items-center gap-2">
                   <h2 className="truncate text-[19px] font-extrabold leading-none tracking-normal">
-                    {profileUser.display_name || profileUser.username}
+                    <StyledName user={profileUser} fallback={profileUser.username} />
                   </h2>
                   {profileUser.is_bot && <BotTag className="rounded-md px-1.5 py-0.5 text-[10px]" />}
                 </div>

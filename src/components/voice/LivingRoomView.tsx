@@ -246,7 +246,9 @@ export function LivingRoomView({ participants, broadcastSeat, onWatchStream, wat
                     type="button"
                     className="relative flex items-center justify-center rounded-full"
                     onClick={() => handleSeatClick(seat.id)}
-                    title={member?.nickname || avatarUser?.display_name || avatarUser?.username || seat.label}
+                    title={
+                      member?.nickname || avatarUser?.display_name || avatarUser?.username || seat.label
+                    }
                   >
                     {/* Voice activity pulsing ring */}
                     {isSpeaking && (
@@ -299,7 +301,8 @@ export function LivingRoomView({ participants, broadcastSeat, onWatchStream, wat
                 const member = memberByUserId.get(p.identity);
                 const cachedUser = getUserFromCache(p.identity);
                 const avatarUser = member?.user ?? cachedUser ?? undefined;
-                const name = member?.nickname || avatarUser?.display_name || avatarUser?.username || p.identity.slice(0, 8);
+                const name =
+                  member?.nickname || avatarUser?.display_name || avatarUser?.username || p.identity.slice(0, 8);
                 const isSpeaking = p.isSpeaking && !p.hideVoiceActivity && visualVoiceIndicators;
                 const isScreenSharing = p.isScreenSharing ?? false;
 

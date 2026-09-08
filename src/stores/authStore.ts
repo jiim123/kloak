@@ -13,6 +13,7 @@ import {
 } from "@/lib/deviceKey";
 import { useUserCacheStore } from "@/stores/userCacheStore";
 import type { User, UserStatus } from "@/types";
+import { parseNameStyle } from "@/lib/nameStyle";
 let lastSeenTimestamp = 0;
 // Presence/status is not critical to be realtime; debounce + coalesce AUTO status updates
 // to avoid spamming `update_user_status` during tab switches/activity bursts.
@@ -138,6 +139,7 @@ const mapAuthUser = (userData: Record<string, unknown>, fallbackStatus: UserStat
   is_bot: (userData.is_bot as boolean | null) ?? false,
   is_staff: (userData.is_staff as boolean | null) ?? false,
   allow_nsfw: (userData.allow_nsfw as boolean | null) ?? false,
+  name_style: parseNameStyle(userData.name_style),
 });
 
 export const useAuthStore = create<AuthState>()(
@@ -627,6 +629,10 @@ export const useAuthStore = create<AuthState>()(
                 "nameplate" in normalizedUpdates
                   ? (normalizedUpdates.nameplate as string | null)
                   : ((userData.nameplate as string | null) ?? user.nameplate ?? null),
+              name_style:
+                "name_style" in normalizedUpdates
+                  ? parseNameStyle(normalizedUpdates.name_style)
+                  : (parseNameStyle(userData.name_style) ?? user.name_style ?? null),
             };
 
             set({ user: updatedUser });

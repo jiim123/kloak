@@ -28,6 +28,7 @@ import { AudioPlayer } from "./AudioPlayer";
 import { VideoPlayer } from "./VideoPlayer";
 import { Button } from "@/components/ui/button";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
+import { StyledName } from "@/components/ui/styled-name";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -1354,6 +1355,14 @@ export const MessageItem = memo(function MessageItem({
       : ({ color: topCustomRoleColor } as React.CSSProperties);
   }, [topCustomRoleColor, showGhostIdentity]);
 
+  // In servers, role colors win over the user's chosen name color/effect
+  // (custom role colors + base owner/admin/moderator colors).
+  const hasServerRoleColor = useMemo(() => {
+    if (isDM || showGhostIdentity) return false;
+    if (topCustomRoleColor) return true;
+    return Boolean(messageBaseRole && ROLE_COLORS[messageBaseRole]);
+  }, [isDM, showGhostIdentity, topCustomRoleColor, messageBaseRole]);
+
   const displayName = showGhostIdentity
     ? "Anonymous"
     : isDM
@@ -1544,7 +1553,11 @@ export const MessageItem = memo(function MessageItem({
               freezeGifUntilHover
             />
             <span className="flex-shrink-0 font-medium">
-              {canShowReplyAuthor ? authorName : <span className="italic">Anonymous</span>}
+              {canShowReplyAuthor ? (
+                <StyledName user={replyAuthor} name={authorName} fallback="unknown" />
+              ) : (
+                <span className="italic">Anonymous</span>
+              )}
             </span>
             {isPollMessageContent(replyContent) ? (
               <span className="truncate italic text-muted-foreground/90 sm:max-w-[320px] max-w-[190px]">poll</span>
@@ -1818,13 +1831,15 @@ export const MessageItem = memo(function MessageItem({
                     {/* Header */}
                     {compactMode ? (
                       <span className="inline font-[Inter,system-ui,sans-serif]">
-                        <span
-                          onClick={handleUsernameClick}
+                        <StyledName
+                          user={showGhostIdentity ? null : messageUser}
+                          name={displayName}
                           className={`text-[14px] font-medium leading-tight hover:underline cursor-pointer mr-1.5 ${usernameColorClass}`}
                           style={usernameColorStyle}
-                        >
-                          {displayName}
-                        </span>
+                          allowColor={!hasServerRoleColor}
+                          suppressEffect={hasServerRoleColor}
+                          onClick={handleUsernameClick}
+                        />
                         {isBotMessageAuthor && <BotTag className="mr-1.5" />}
                         {roleIconNode && priorityRoleWithIcon && (
                           <Tooltip>
@@ -1848,13 +1863,15 @@ export const MessageItem = memo(function MessageItem({
                       !isGrouped &&
                       messageUser && (
                         <div className="flex items-center gap-1.5 font-[Inter,system-ui,sans-serif]">
-                          <span
-                            onClick={handleUsernameClick}
+                          <StyledName
+                            user={showGhostIdentity ? null : messageUser}
+                            name={displayName}
                             className={`text-[14px] font-medium leading-tight hover:underline cursor-pointer ${usernameColorClass}`}
                             style={usernameColorStyle}
-                          >
-                            {displayName}
-                          </span>
+                            allowColor={!hasServerRoleColor}
+                            suppressEffect={hasServerRoleColor}
+                            onClick={handleUsernameClick}
+                          />
                           {isBotMessageAuthor && <BotTag />}
                           {roleIconNode && priorityRoleWithIcon && (
                             <Tooltip>

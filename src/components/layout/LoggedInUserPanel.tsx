@@ -10,6 +10,7 @@ import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { useAuthStore } from "@/stores/authStore";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { useUIStore } from "@/stores/uiStore";
+import { StyledName } from "@/components/ui/styled-name";
 
 const InvisibleIndicator = ({ className }: { className?: string }) => (
   <div
@@ -112,7 +113,7 @@ export const LoggedInUserPanel = ({
 
       {/* User info */}
       <div className="flex-1 min-w-0">
-        <p className="truncate text-sm font-medium leading-tight text-foreground">{user?.display_name || user?.username}</p>
+        <StyledName user={user} fallback={user?.username ?? ""} className="truncate text-sm font-medium leading-tight text-foreground" />
         <button
           type="button"
           onClick={() => openModal("set-status")}

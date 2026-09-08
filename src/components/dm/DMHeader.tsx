@@ -3,6 +3,7 @@ import { MoreHorizontal, Flag, Ban, Phone, ChevronLeft, PanelRight } from "lucid
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
+import { StyledName } from "@/components/ui/styled-name";
 import { useUIStore } from "@/stores/uiStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -124,7 +125,7 @@ export const DMHeader = ({ otherUser, isProfilePanelOpen, onToggleProfilePanel }
               />
             </div>
             <span className="font-medium text-foreground truncate">
-              {otherUser.display_name || otherUser.username || "Unknown"}
+              <StyledName user={otherUser} fallback="Unknown" />
             </span>
           </button>
         </div>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo, useLayoutEffect } from "react";
 import { ArrowDown, Ban } from "lucide-react";
 import { toast } from "sonner";
+import { StyledName } from "@/components/ui/styled-name";
 import { Button } from "@/components/ui/button";
 import { StackedAvatars } from "@/components/ui/stacked-avatars";
 import { useDMStore } from "@/stores/dmStore";
@@ -389,7 +390,9 @@ export const DMChatArea = () => {
                 )}
               </div>
             </div>
-            <h2 className="text-2xl font-medium text-foreground">{otherUser?.display_name || otherUser?.username}</h2>
+            <h2 className="text-2xl font-medium text-foreground">
+              <StyledName user={otherUser} fallback={otherUser?.username ?? "Unknown"} />
+            </h2>
           </div>
         )}
 

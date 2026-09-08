@@ -14,6 +14,45 @@ const corsHeaders = {
 
 const VALID_NAMEPLATES = new Set(["plate1", "plate2", "plate3", "plate4", "plate5"]);
 
+const VALID_NAME_FONTS = new Set([
+  // Current real-font ids (see src/lib/nameStyle.ts)
+  "default", "script", "boldScript", "elegant", "fantasy", "fraktur",
+  "display", "pixel", "calligraphy", "rounded", "futuristic", "mono",
+  "bold", "italic", "wide", "smallCaps",
+  // Legacy unicode-transform ids, accepted for backwards compatibility
+  "doubleStruck", "sans", "sansBold", "fullwidth",
+]);
+const VALID_NAME_EFFECTS = new Set(["solid", "gradient", "neon", "toon", "pop", "gummy", "prism"]);
+const HEX_COLOR_RE = /^#[0-9A-Fa-f]{6}$/;
+
+/** Validate + normalize a name_style payload; null means "clear". Returns undefined when invalid. */
+function parseNameStyle(raw: unknown): Record<string, string> | null | undefined {
+  if (raw === null || raw === undefined) return null;
+  if (typeof raw !== "object" || Array.isArray(raw)) return undefined;
+  const source = raw as Record<string, unknown>;
+  const result: Record<string, string> = {};
+
+  for (const key of ["font", "effect", "color"]) {
+    if (!(key in source)) continue;
+    const value = source[key];
+    if (value === null) continue;
+    if (typeof value !== "string") return undefined;
+    if (key === "font" && !VALID_NAME_FONTS.has(value)) return undefined;
+    if (key === "effect" && !VALID_NAME_EFFECTS.has(value)) return undefined;
+    if (key === "color" && !HEX_COLOR_RE.test(value)) return undefined;
+    result[key] = value;
+  }
+
+  // Reject unknown keys outright
+  for (const key of Object.keys(source)) {
+    if (key !== "font" && key !== "effect" && key !== "color") {
+      return undefined;
+    }
+  }
+
+  return Object.keys(result).length > 0 ? result : null;
+}
+
 function jsonResponse(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -112,6 +151,36 @@ serve(async (req) => {
       delete updates.nameplate;
     }
 
+    // Handle name_style separately — use a dedicated lightweight RPC to avoid PostgREST schema cache issues.
+    let nameStyleSaved = false;
+    let savedNameStyle: Record<string, string> | null = null;
+    if ("name_style" in updates) {
+      const value = parseNameStyle(updates.name_style);
+      if (value === undefined) {
+        return jsonResponse({ error: "Invalid name_style value" }, 400);
+      }
+
+      // Try the dedicated name_style RPC. If the function doesn't exist yet (pre-migration), silently skip.
+      try {
+        const { error: nameStyleErr } = await rpcClient.rpc("update_user_name_style", {
+          _user_id: auth.requestUserId,
+          _name_style: value,
+        });
+
+        if (nameStyleErr) {
+          console.warn("[name_style] RPC update failed (function may not exist yet):", nameStyleErr.message);
+        } else {
+          nameStyleSaved = true;
+          savedNameStyle = value;
+        }
+      } catch (e) {
+        console.warn("[name_style] RPC update exception (function may not exist yet):", e);
+      }
+
+      // Remove name_style from the updates so the main RPC doesn't choke on it.
+      delete updates.name_style;
+    }
+
     // If there are remaining fields, call the SQL RPC as before.
     let rpcResult: Record<string, unknown> | null = null;
     if (Object.keys(updates).length > 0) {
@@ -153,10 +222,18 @@ serve(async (req) => {
       rpcResult.nameplate = savedNameplateValue;
     }
 
-    // If we still have no result but nameplate saved successfully, return a minimal success.
+    // Merge name_style into the result so the client gets the updated value.
+    if (rpcResult && nameStyleSaved) {
+      rpcResult.name_style = savedNameStyle;
+    }
+
+    // If we still have no result but nameplate/name_style saved successfully, return a minimal success.
     if (!rpcResult) {
-      if (nameplateSaved) {
-        return jsonResponse({ ...auth.requestUserId ? { id: auth.requestUserId } : {}, nameplate: savedNameplateValue } as Record<string, unknown>, 200);
+      if (nameplateSaved || nameStyleSaved) {
+        const minimal: Record<string, unknown> = auth.requestUserId ? { id: auth.requestUserId } : {};
+        if (nameplateSaved) minimal.nameplate = savedNameplateValue;
+        if (nameStyleSaved) minimal.name_style = savedNameStyle;
+        return jsonResponse(minimal, 200);
       }
       return jsonResponse({ error: "Profile update failed" }, 500);
     }

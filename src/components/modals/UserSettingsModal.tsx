@@ -22,6 +22,7 @@ import {
   Clock,
   Sparkles,
   Volume2,
+  Wand2,
   Mic,
   AtSign,
   Reply,
@@ -66,6 +67,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AvatarDecorationModal } from "@/components/modals/AvatarDecorationModal";
 import { ProfileEffectModal } from "@/components/modals/ProfileEffectModal";
 import { NameplateModal } from "@/components/modals/NameplateModal";
+import { NameStyleModal } from "@/components/modals/NameStyleModal";
+import { StyledName } from "@/components/ui/styled-name";
 import { EditableProfilePreview } from "@/components/modals/EditableProfilePreview";
 import { BannerCropModal } from "@/components/modals/BannerCropModal";
 import { DockNavigation } from "@/components/ui/dock-navigation";
@@ -228,6 +231,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
   const [showAvatarDecorationModal, setShowAvatarDecorationModal] = useState(false);
   const [showProfileEffectModal, setShowProfileEffectModal] = useState(false);
   const [showNameplateModal, setShowNameplateModal] = useState(false);
+  const [showNameStyleModal, setShowNameStyleModal] = useState(false);
   const [isBannerUploading, setIsBannerUploading] = useState(false);
   const [browserPermissionStatus, setBrowserPermissionStatus] = useState<
     NotificationPermission | "unsupported" | "missing-vapid-key"
@@ -971,7 +975,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                   freezeGifUntilHover
                 />
                 <div className="min-w-0">
-                  <div className="text-sm font-medium truncate">{u.display_name || u.username}</div>
+                  <StyledName user={u as unknown as UserType} className="text-sm font-medium truncate" />
                   <div className="text-xs text-muted-foreground truncate">@{u.username}</div>
                 </div>
               </div>
@@ -1428,6 +1432,24 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
                 </span>
               )}
             </Button>
+          <Button
+              variant="secondary"
+              size="sm"
+              className={cn(
+                "rounded-lg bg-background/60 hover:bg-background/80 relative",
+                !isSubscribed() && "opacity-60 cursor-not-allowed"
+              )}
+              disabled={!isSubscribed()}
+              onClick={() => isSubscribed() && setShowNameStyleModal(true)}
+            >
+              <Wand2 className="w-4 h-4 mr-1.5" />
+              {user?.name_style ? "Change Name Style" : "Add Name Style"}
+              {!isSubscribed() && (
+                <span className="ml-1.5 inline-flex items-center rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-bold text-amber-500 leading-none">
+                  PRIME
+                </span>
+              )}
+            </Button>
         </div>
       </div>
 
@@ -1500,6 +1522,7 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
     { icon: Star, title: "Exclusive badge", desc: "Golden crown badge on your profile and in chat", color: "from-amber-400 to-yellow-500", bg: "bg-amber-500/10", text: "text-amber-400" },
     { icon: User, title: "Exclusive PFP & decorations", desc: "Premium avatar decorations and profile effects", color: "from-purple-400 to-pink-500", bg: "bg-purple-500/10", text: "text-purple-400" },
     { icon: Sparkles, title: "Exclusive nametags", desc: "Special nametag styles nobody else can get", color: "from-cyan-400 to-blue-500", bg: "bg-cyan-500/10", text: "text-cyan-400" },
+    { icon: Wand2, title: "Display name styles", desc: "Custom fonts, effects and colors on your name everywhere", color: "from-fuchsia-400 to-purple-500", bg: "bg-fuchsia-500/10", text: "text-fuchsia-400" },
     { icon: Download, title: "Higher upload limits", desc: "Share files up to 100MB", color: "from-emerald-400 to-teal-500", bg: "bg-emerald-500/10", text: "text-emerald-400" },
     { icon: Mic, title: "Higher voice & screenshare quality", desc: "Crystal-clear voice calls and HD screensharing", color: "from-rose-400 to-red-500", bg: "bg-rose-500/10", text: "text-rose-400" },
     { icon: Zap, title: "Early access to major updates", desc: "Try new features before they roll out to everyone else", color: "from-yellow-400 to-orange-500", bg: "bg-yellow-500/10", text: "text-yellow-400" },
@@ -2975,6 +2998,13 @@ const UserSettings = ({ variant }: { variant: UserSettingsVariant }) => {
           // Sync the local state so the save button reflects the change
           setSelectedNameplate(nameplate);
         }}
+      />
+
+      {/* Name Style Modal */}
+      <NameStyleModal
+        open={showNameStyleModal}
+        onOpenChange={setShowNameStyleModal}
+        onSelect={() => {}}
       />
     </>
   );

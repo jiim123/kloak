@@ -45,6 +45,7 @@ import { AvatarWithDecoration } from "@/components/ui/avatar-with-decoration";
 import { BotTag } from "@/components/ui/bot-tag";
 import { RoleIconPreview } from "@/components/ui/role-icon-preview";
 import { NameplateVideo } from "@/components/ui/nameplate-video";
+import { StyledName } from "@/components/ui/styled-name";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import type { ServerMember, CustomServerRole, UserStatus } from "@/types";
@@ -308,15 +309,17 @@ const MemberListItemContent = forwardRef<HTMLDivElement, MemberListItemContentPr
         <div className="flex-1 min-w-0 overflow-hidden z-[2] h-8 flex flex-col justify-center">
           <div className="flex items-center gap-1.5">
             {isServerOwner && <Crown className="w-3 h-3 text-amber-400 flex-shrink-0" />}
-            <span
+            <StyledName
+              user={member.user}
+              name={displayName}
               className={cn(
                 "text-[14px] font-semibold truncate leading-tight",
                 memberIsOffline ? "text-muted-foreground/70" : priorityCustomRoleColor ? "" : "text-foreground",
               )}
               style={nameStyle}
-            >
-              {displayName}
-            </span>
+              allowColor={!priorityCustomRoleColor}
+              suppressEffect={!!priorityCustomRoleColor}
+            />
             {member.user?.is_bot && <BotTag className="flex-shrink-0" />}
             {member.is_muted && <VolumeX className="w-3 h-3 text-muted-foreground/50 flex-shrink-0" />}
           </div>

@@ -25,6 +25,7 @@ import { openUserProfileModal } from "@/lib/userProfilePopover";
 import { useUIStore } from "@/stores/uiStore";
 import { useRateLimit } from "@/hooks/useRateLimit";
 import { rateLimitToast } from "@/lib/rateLimitToast";
+import { StyledName } from "@/components/ui/styled-name";
 
 interface FriendsListProps {
   onOpenDM: () => void;
@@ -192,7 +193,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="font-medium text-foreground hover:underline">{friend.display_name || friend.username}</span>
+            <StyledName user={friend} className="font-medium text-foreground hover:underline" />
             <span className="text-sm text-muted-foreground">{friend.username}</span>
           </div>
           {friend.custom_status ? (
@@ -254,7 +255,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
           <AvatarWithDecoration user={request} className="w-10 h-10" freezeGifUntilHover />
         </div>
         <div className="flex-1 min-w-0">
-          <span className="font-medium text-foreground hover:underline">{request.display_name || request.username}</span>
+          <StyledName user={request} className="font-medium text-foreground hover:underline" />
           <p className="text-sm text-muted-foreground">
             {isOutgoing ? "Outgoing Friend Request" : "Incoming Friend Request"}
           </p>
@@ -296,7 +297,7 @@ export const FriendsList = ({ onOpenDM }: FriendsListProps) => {
           <AvatarWithDecoration user={blocked} className="w-10 h-10 opacity-50" freezeGifUntilHover />
         </div>
         <div className="flex-1 min-w-0">
-          <span className="font-medium text-muted-foreground hover:underline">{blocked.display_name || blocked.username}</span>
+          <StyledName user={blocked} className="font-medium text-muted-foreground hover:underline" />
           <p className="text-sm text-muted-foreground">Blocked</p>
         </div>
       </button>

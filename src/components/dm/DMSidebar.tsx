@@ -24,6 +24,7 @@ import { getEffectivePresence } from "@/lib/presence";
 import { getUserFromCache, useUserCacheStore } from "@/stores/userCacheStore";
 import { ConversationItemSkeleton } from "@/components/ui/skeletons";
 import { NameplateVideo } from "@/components/ui/nameplate-video";
+import { StyledName } from "@/components/ui/styled-name";
 import type { DMConversation, UserStatus, User } from "@/types";
 import { useRateLimit } from "@/hooks/useRateLimit";
 import { rateLimitToast } from "@/lib/rateLimitToast";
@@ -291,9 +292,14 @@ export const DMSidebar = () => {
                             hasUnread ? "font-medium text-foreground" : "font-medium text-foreground",
                           )}
                         >
-                          {isGroup
-                            ? getGroupDisplayName()
-                            : conversation.other_user?.display_name || conversation.other_user?.username || "Unknown"}
+                          {isGroup ? (
+                            getGroupDisplayName()
+                          ) : (
+                            <StyledName
+                              user={conversation.other_user}
+                              fallback="Unknown"
+                            />
+                          )}
                         </span>
                         <div className="flex items-center gap-2">
                           {conversation.last_message && (

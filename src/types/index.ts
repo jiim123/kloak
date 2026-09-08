@@ -31,6 +31,8 @@ export interface User {
   is_staff?: boolean | null;
   allow_nsfw?: boolean;
   nameplate?: string | null;
+  /** Prime-exclusive display name style (font/effect/color) */
+  name_style?: UserNameStyle | null;
 }
 
 export interface UserProfile extends User {
@@ -652,6 +654,20 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     ],
   },
 ];
+
+// ============================================
+// Display Name Style Types (Prime-exclusive)
+// ============================================
+
+/** Custom style applied to a user's display name everywhere it is rendered */
+export interface UserNameStyle {
+  /** Font id from AVAILABLE_NAME_FONTS (real web font / CSS style), e.g. 'fraktur' */
+  font?: string | null;
+  /** Effect id from AVAILABLE_NAME_EFFECTS, e.g. 'neon' */
+  effect?: string | null;
+  /** Hex color like #RRGGBB, or null to inherit (role color / default text color) */
+  color?: string | null;
+}
 
 // ============================================
 // Nameplate Types (Prime-exclusive)
